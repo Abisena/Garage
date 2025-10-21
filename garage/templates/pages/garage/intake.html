@@ -1,0 +1,249 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Intake Customer & Kendaraan{% endblock %}
+
+{% block page_content %}
+<div class="portal-page portal-page--intake">
+    <section class="portal-hero portal-hero--sub">
+        <div class="container">
+            <p class="portal-eyebrow">Garage Portal</p>
+            <h1>Intake Customer & Kendaraan</h1>
+            <p>
+                Registrasikan customer, catat kendaraan yang dibawa ke bengkel, dan pantau master data
+                terbaru sebelum membuat service order.
+            </p>
+        </div>
+    </section>
+
+    {% set active_page = 'intake' %}
+    {% include "garage/templates/includes/portal_nav.html" %}
+
+    <section class="portal-section">
+        <div class="container">
+            <div class="portal-grid two-column">
+                <article class="portal-card">
+                    <div class="portal-card__header">
+                        <h2>Registrasi Customer & Kendaraan</h2>
+                        <p class="lead">
+                            Gunakan form berikut untuk membuat customer baru atau memilih data yang sudah ada,
+                            lalu kaitkan kendaraan yang akan diservis.
+                        </p>
+                    </div>
+                    <div class="form-banner">
+                        <strong>Alur singkat proses intake</strong>
+                        <p>
+                            Mulai dengan mengecek apakah customer sudah ada, lalu lengkapi informasi kontak dan detail kendaraan.
+                            Akhiri dengan catatan penting agar tim service memiliki konteks lengkap.
+                        </p>
+                        <ul class="form-banner__steps">
+                            <li>Langkah 1 · Data Customer</li>
+                            <li>Langkah 2 · Detail Kendaraan</li>
+                            <li>Langkah 3 · Catatan &amp; Konfirmasi</li>
+                        </ul>
+                    </div>
+                    <form id="customer-vehicle-form" class="form-grid">
+                        <div class="form-section">
+                            <header class="form-section__header">
+                                <span class="form-section__tag">Langkah 1</span>
+                                <h3 class="form-section__title">Data Customer</h3>
+                                <p class="form-section__subtitle">
+                                    Catat identitas customer dan informasi kontak utama untuk kebutuhan follow-up.
+                                </p>
+                            </header>
+                            <div class="form-section__grid two-column">
+                                <div class="form-field">
+                                    <label for="existing_customer">Gunakan Customer Eksisting</label>
+                                    <select id="existing_customer" name="existing_customer">
+                                        <option value="">— Customer Baru —</option>
+                                    </select>
+                                    <p class="form-hint">Pilih customer lama agar detail terisi otomatis.</p>
+                                </div>
+                                <div class="form-field">
+                                    <label for="customer_type">Tipe Customer</label>
+                                    <select id="customer_type" name="customer_type">
+                                        <option value="Individual">Individual</option>
+                                        <option value="Corporate">Corporate</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="customer_name">Nama Customer</label>
+                                    <input id="customer_name" name="customer_name" placeholder="Nama lengkap" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="phone">No. Telepon</label>
+                                    <input id="phone" name="phone" placeholder="08xxxxxxxxxx" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="email">Email</label>
+                                    <input id="email" name="email" type="email" placeholder="email@example.com" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="preferred_contact_method">Preferensi Kontak</label>
+                                    <select id="preferred_contact_method" name="preferred_contact_method">
+                                        <option value="Phone">Phone</option>
+                                        <option value="Email">Email</option>
+                                        <option value="WhatsApp">WhatsApp</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="is_vip">Customer VIP</label>
+                                    <select id="is_vip" name="is_vip" data-cast="int">
+                                        <option value="0">Tidak</option>
+                                        <option value="1">Ya</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="marketing_source">Sumber Marketing</label>
+                                    <select id="marketing_source" name="marketing_source">
+                                        <option value="">—</option>
+                                        <option value="Walk In">Walk In</option>
+                                        <option value="Referral">Referral</option>
+                                        <option value="Online">Online</option>
+                                        <option value="Social Media">Social Media</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <header class="form-section__header">
+                                <span class="form-section__tag">Langkah 2</span>
+                                <h3 class="form-section__title">Detail Kendaraan</h3>
+                                <p class="form-section__subtitle">
+                                    Pastikan kendaraan terkait sudah dikaitkan dengan customer yang tepat dan isi data unit lengkap.
+                                </p>
+                            </header>
+                            <div class="form-section__grid two-column">
+                                <div class="form-field">
+                                    <label for="vehicle_customer">Customer untuk Kendaraan</label>
+                                    <select id="vehicle_customer" name="vehicle_customer">
+                                        <option value="">Otomatis sesuai customer di atas</option>
+                                    </select>
+                                    <p class="form-hint">Biarkan default untuk mengikuti pilihan customer pada langkah sebelumnya.</p>
+                                </div>
+                                <div class="form-field">
+                                    <label for="license_plate">No. Polisi</label>
+                                    <input id="license_plate" name="license_plate" placeholder="B 1234 CD" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="brand">Merek</label>
+                                    <input id="brand" name="brand" placeholder="Toyota, Honda, ..." />
+                                </div>
+                                <div class="form-field">
+                                    <label for="model">Model</label>
+                                    <input id="model" name="model" placeholder="Avanza, Civic, ..." />
+                                </div>
+                                <div class="form-field">
+                                    <label for="vehicle_year">Tahun</label>
+                                    <input id="vehicle_year" name="vehicle_year" type="number" min="1980" max="2100" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="color">Warna</label>
+                                    <input id="color" name="color" placeholder="Hitam, Putih, ..." />
+                                </div>
+                                <div class="form-field">
+                                    <label for="transmission">Transmisi</label>
+                                    <select id="transmission" name="transmission">
+                                        <option value="">—</option>
+                                        <option value="Manual">Manual</option>
+                                        <option value="Automatic">Automatic</option>
+                                        <option value="CVT">CVT</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="fuel_type">Jenis BBM</label>
+                                    <select id="fuel_type" name="fuel_type">
+                                        <option value="">—</option>
+                                        <option value="Petrol">Petrol</option>
+                                        <option value="Diesel">Diesel</option>
+                                        <option value="Hybrid">Hybrid</option>
+                                        <option value="Electric">Electric</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="mileage">Odometer (km)</label>
+                                    <input id="mileage" name="mileage" type="number" min="0" step="100" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="last_service_date">Terakhir Servis</label>
+                                    <input id="last_service_date" name="last_service_date" type="date" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <header class="form-section__header">
+                                <span class="form-section__tag">Langkah 3</span>
+                                <h3 class="form-section__title">Catatan &amp; Konfirmasi</h3>
+                                <p class="form-section__subtitle">
+                                    Tambahkan catatan penting sebelum menyimpan intake untuk memastikan tim service siap menangani unit.
+                                </p>
+                            </header>
+                            <div class="form-section__grid">
+                                <div class="form-field">
+                                    <label for="notes">Catatan Tambahan</label>
+                                    <textarea id="notes" name="notes" placeholder="Informasi penting mengenai customer atau kendaraan"></textarea>
+                                    <p class="form-hint">Gunakan catatan untuk riwayat servis, permintaan khusus, atau peringatan teknis.</p>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button class="primary" type="submit">Simpan Data Intake</button>
+                                <button class="secondary" type="reset">Reset Form</button>
+                            </div>
+                        </div>
+                    </form>
+                </article>
+                <article class="portal-card">
+                    <div class="portal-card__header">
+                        <h2>Master Data Aktif</h2>
+                        <p class="lead">
+                            Ringkasan customer dan kendaraan terbaru. Klik nama dokumen untuk membuka detailnya di Desk.
+                        </p>
+                    </div>
+                    <div class="table-links table-links--wrap table-links--flush">
+                        <a data-desk-link="Garage Customer" target="_blank">Buka List Customer</a>
+                        <a data-desk-link="Garage Vehicle" target="_blank">Buka List Kendaraan</a>
+                    </div>
+                    <h3>Customer Terbaru</h3>
+                    <table class="simple-table">
+                        <thead>
+                            <tr>
+                                <th>Nama</th>
+                                <th>Tipe</th>
+                                <th>Kontak</th>
+                                <th>VIP</th>
+                            </tr>
+                        </thead>
+                        <tbody data-role="customer-table"></tbody>
+                    </table>
+                    <div class="list-empty" data-empty="customer">Belum ada data customer.</div>
+                    <h3 class="section-subtitle">Kendaraan Terdaftar</h3>
+                    <table class="simple-table">
+                        <thead>
+                            <tr>
+                                <th>No. Polisi</th>
+                                <th>Customer</th>
+                                <th>Model</th>
+                                <th>Terakhir Servis</th>
+                            </tr>
+                        </thead>
+                        <tbody data-role="vehicle-table"></tbody>
+                    </table>
+                    <div class="list-empty" data-empty="vehicle">Belum ada data kendaraan.</div>
+                </article>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+    frappe.require("/assets/garage/js/garage_portal.js");
+</script>
+{% endblock %}
+
+{% block page_style %}
+<style>@import url('/assets/garage/css/garage_portal.css');</style>
+{% endblock %}

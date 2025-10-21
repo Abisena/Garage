@@ -1,0 +1,229 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Pengadaan & Pergerakan Stok{% endblock %}
+
+{% block page_content %}
+<section class="portal-hero portal-hero--sub">
+    <div class="container">
+        <p class="portal-eyebrow">Garage Portal</p>
+        <h1>Pengadaan & Pergerakan Stok</h1>
+        <p>
+            Dokumentasikan kebutuhan pembelian dan mutasi gudang agar persediaan bengkel tetap terkontrol.
+            Setiap entri tersimpan sebagai DocType Garage Procurement Order atau Garage Stock Movement.
+        </p>
+    </div>
+</section>
+
+{% set active_page = 'procurement' %}
+{% include "garage/templates/includes/portal_nav.html" %}
+
+<section class="portal-section">
+    <div class="container">
+        <div class="portal-grid two-column">
+            <article class="portal-card">
+                <h2>Buat Procurement Order</h2>
+                <p class="lead">Isi data supplier, referensi dokumen, dan detail item yang perlu dipesan.</p>
+                <form id="procurement-form" class="form-grid">
+                    <div class="form-grid two-column">
+                        <div class="form-field">
+                            <label for="reference_type">Referensi</label>
+                            <select id="reference_type" name="reference_type">
+                                <option value="Service Order">Service Order</option>
+                                <option value="Spare Part Order">Spare Part Order</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="reference_name">Nomor Referensi</label>
+                            <input id="reference_name" name="reference_name" placeholder="Masukkan nomor dokumen" />
+                        </div>
+                        <div class="form-field">
+                            <label for="supplier">Supplier</label>
+                            <input id="supplier" name="supplier" placeholder="Nama supplier" />
+                        </div>
+                        <div class="form-field">
+                            <label for="order_date_proc">Tanggal Order</label>
+                            <input id="order_date_proc" name="order_date" type="date" />
+                        </div>
+                        <div class="form-field">
+                            <label for="expected_date">Tanggal Kedatangan</label>
+                            <input id="expected_date" name="expected_date" type="date" />
+                        </div>
+                        <div class="form-field">
+                            <label for="total_qty">Total Qty</label>
+                            <input id="total_qty" name="total_qty" type="number" min="0" step="0.01" data-cast="float" />
+                        </div>
+                        <div class="form-field">
+                            <label for="total_amount_proc">Total Nilai</label>
+                            <input id="total_amount_proc" name="total_amount" type="number" min="0" step="0.01" data-cast="float" />
+                        </div>
+                    </div>
+                    <div class="repeat-group" data-repeat="items">
+                        <header>
+                            <h3>Item Pengadaan</h3>
+                            <button class="secondary" type="button" data-action="add-row">Tambah Item</button>
+                        </header>
+                        <div class="repeat-rows" data-role="rows"></div>
+                        <template data-role="row-template">
+                            <div class="repeat-row columns-4">
+                                <div class="form-field">
+                                    <label>Kode</label>
+                                    <input data-field="item_code" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Nama</label>
+                                    <input data-field="item_name" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Qty</label>
+                                    <input data-field="qty" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Harga</label>
+                                    <input data-field="rate" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>UOM</label>
+                                    <input data-field="uom" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Total</label>
+                                    <input data-field="amount" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Service Order Ref</label>
+                                    <input data-field="service_order_ref" placeholder="Opsional" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Qty Diterima</label>
+                                    <input data-field="received_qty" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="form-field">
+                        <label for="remarks">Catatan</label>
+                        <textarea id="remarks" name="remarks"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button class="primary" type="submit">Simpan Procurement Order</button>
+                    </div>
+                </form>
+            </article>
+            <article class="portal-card">
+                <h2>Mutasi Stok & Monitoring</h2>
+                <p class="lead">Catat perpindahan barang antar gudang dan lihat pengadaan yang masih tertunda.</p>
+                <form id="stock-movement-form" class="form-grid">
+                    <div class="form-grid two-column">
+                        <div class="form-field">
+                            <label for="movement_type">Jenis Mutasi</label>
+                            <select id="movement_type" name="movement_type">
+                                <option value="Receipt">Receipt</option>
+                                <option value="Issue">Issue</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="movement_reference_type">Referensi</label>
+                            <select id="movement_reference_type" name="reference_type">
+                                <option value="Procurement Order">Procurement Order</option>
+                                <option value="Service Order">Service Order</option>
+                                <option value="Spare Part Order">Spare Part Order</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="movement_reference_name">Nomor Referensi</label>
+                            <input id="movement_reference_name" name="reference_name" placeholder="Nomor dokumen" />
+                        </div>
+                        <div class="form-field">
+                            <label for="posting_date">Tanggal Posting</label>
+                            <input id="posting_date" name="posting_date" type="date" />
+                        </div>
+                        <div class="form-field">
+                            <label for="posting_time">Jam Posting</label>
+                            <input id="posting_time" name="posting_time" type="time" />
+                        </div>
+                        <div class="form-field">
+                            <label for="movement_warehouse">Gudang</label>
+                            <input id="movement_warehouse" name="warehouse" placeholder="Gudang utama" />
+                        </div>
+                    </div>
+                    <div class="repeat-group" data-repeat="items">
+                        <header>
+                            <h3>Detail Item</h3>
+                            <button class="secondary" type="button" data-action="add-row">Tambah Item</button>
+                        </header>
+                        <div class="repeat-rows" data-role="rows"></div>
+                        <template data-role="row-template">
+                            <div class="repeat-row columns-4">
+                                <div class="form-field">
+                                    <label>Kode</label>
+                                    <input data-field="item_code" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Nama</label>
+                                    <input data-field="item_name" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Qty</label>
+                                    <input data-field="qty" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>UOM</label>
+                                    <input data-field="uom" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Gudang Asal</label>
+                                    <input data-field="source_warehouse" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Gudang Tujuan</label>
+                                    <input data-field="target_warehouse" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Status</label>
+                                    <select data-field="status">
+                                        <option value="Pending">Pending</option>
+                                        <option value="Submitted">Submitted</option>
+                                        <option value="Cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="form-field">
+                        <label for="movement_remarks">Catatan</label>
+                        <textarea id="movement_remarks" name="remarks"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button class="primary" type="submit">Simpan Mutasi Stok</button>
+                    </div>
+                </form>
+                <h3 class="section-subtitle">Pengadaan Tertunda</h3>
+                <table class="simple-table">
+                    <thead>
+                        <tr>
+                            <th>Nomor</th>
+                            <th>Supplier</th>
+                            <th>Status</th>
+                            <th>ETA</th>
+                        </tr>
+                    </thead>
+                    <tbody data-role="pending-procurement-table"></tbody>
+                </table>
+                <div class="list-empty" data-empty="pending-procurement">Belum ada pengadaan tertunda.</div>
+            </article>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script>
+    frappe.require("/assets/garage/js/garage_portal.js");
+</script>
+{% endblock %}
+
+{% block page_style %}
+<style>@import url('/assets/garage/css/garage_portal.css');</style>
+{% endblock %}

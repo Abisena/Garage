@@ -1,0 +1,317 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Penagihan & Pembayaran{% endblock %}
+
+{% block page_content %}
+<section class="portal-hero portal-hero--sub">
+    <div class="container">
+        <p class="portal-eyebrow">Garage Portal</p>
+        <h1>Penagihan & Pembayaran</h1>
+        <p>
+            Kelola sales invoice, jadwal pembayaran, serta pencatatan penerimaan kas/bank.
+            Gunakan halaman ini untuk memastikan arus kas bengkel tetap terpantau.
+        </p>
+    </div>
+</section>
+
+{% set active_page = 'finance' %}
+{% include "garage/templates/includes/portal_nav.html" %}
+
+<section class="portal-section">
+    <div class="container">
+        <div class="portal-grid two-column">
+            <article class="portal-card">
+                <h2>Buat Sales Invoice</h2>
+                <p class="lead">Catat invoice baru lengkap dengan detail item dan jadwal pembayaran.</p>
+                <form id="invoice-form" class="form-grid">
+                    <div class="form-grid two-column">
+                        <div class="form-field">
+                            <label for="invoice_customer">Customer</label>
+                            <select id="invoice_customer" name="customer">
+                                <option value="">— Pilih customer —</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="invoice_date">Tanggal Invoice</label>
+                            <input id="invoice_date" name="invoice_date" type="date" />
+                        </div>
+                        <div class="form-field">
+                            <label for="source_type">Sumber</label>
+                            <select id="source_type" name="source_type">
+                                <option value="">—</option>
+                                <option value="Service Order">Service Order</option>
+                                <option value="Spare Part Order">Spare Part Order</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="source_name">Nomor Sumber</label>
+                            <input id="source_name" name="source_name" placeholder="Nomor dokumen" />
+                        </div>
+                        <div class="form-field">
+                            <label for="due_date">Jatuh Tempo</label>
+                            <input id="due_date" name="due_date" type="date" />
+                        </div>
+                        <div class="form-field">
+                            <label for="invoice_total_amount">Total</label>
+                            <input id="invoice_total_amount" name="total_amount" type="number" min="0" step="0.01" data-cast="float" />
+                        </div>
+                    </div>
+                    <div class="repeat-group" data-repeat="items">
+                        <header>
+                            <h3>Item Invoice</h3>
+                            <button class="secondary" type="button" data-action="add-row">Tambah Item</button>
+                        </header>
+                        <div class="repeat-rows" data-role="rows"></div>
+                        <template data-role="row-template">
+                            <div class="repeat-row columns-4">
+                                <div class="form-field">
+                                    <label>Kode</label>
+                                    <input data-field="item_code" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Nama</label>
+                                    <input data-field="item_name" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Qty</label>
+                                    <input data-field="qty" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Harga</label>
+                                    <input data-field="rate" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Total</label>
+                                    <input data-field="amount" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="repeat-group" data-repeat="payment_schedule">
+                        <header>
+                            <h3>Jadwal Pembayaran</h3>
+                            <button class="secondary" type="button" data-action="add-row">Tambah Jadwal</button>
+                        </header>
+                        <div class="repeat-rows" data-role="rows"></div>
+                        <template data-role="row-template">
+                            <div class="repeat-row columns-3">
+                                <div class="form-field">
+                                    <label>Jatuh Tempo</label>
+                                    <input data-field="due_date" type="date" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Persentase</label>
+                                    <input data-field="percentage" type="number" min="0" max="100" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Nominal</label>
+                                    <input data-field="amount" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Status</label>
+                                    <select data-field="status">
+                                        <option value="Pending">Pending</option>
+                                        <option value="Paid">Paid</option>
+                                        <option value="Overdue">Overdue</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label>Deskripsi</label>
+                                    <input data-field="description" placeholder="Termin" />
+                                </div>
+                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="form-field">
+                        <label for="invoice_notes">Catatan</label>
+                        <textarea id="invoice_notes" name="notes"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button class="primary" type="submit">Simpan Invoice</button>
+                    </div>
+                </form>
+            </article>
+            <article class="portal-card">
+                <h2>Pembayaran & Bukti Bayar</h2>
+                <p class="lead">Catat penerimaan pembayaran dan terbitkan bukti penerimaan resmi.</p>
+                <form id="payment-form" class="form-grid">
+                    <div class="form-grid two-column">
+                        <div class="form-field">
+                            <label for="payment_customer">Customer</label>
+                            <select id="payment_customer" name="customer">
+                                <option value="">— Pilih customer —</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="payment_date">Tanggal Pembayaran</label>
+                            <input id="payment_date" name="payment_date" type="date" />
+                        </div>
+                        <div class="form-field">
+                            <label for="mode_of_payment">Metode</label>
+                            <select id="mode_of_payment" name="mode_of_payment">
+                                <option value="Cash">Cash</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="Credit">Credit</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="reference_no">No. Referensi</label>
+                            <input id="reference_no" name="reference_no" placeholder="No. transaksi bank" />
+                        </div>
+                        <div class="form-field">
+                            <label for="reference_date">Tanggal Referensi</label>
+                            <input id="reference_date" name="reference_date" type="date" />
+                        </div>
+                        <div class="form-field">
+                            <label for="paid_amount">Nilai Pembayaran</label>
+                            <input id="paid_amount" name="paid_amount" type="number" min="0" step="0.01" data-cast="float" />
+                        </div>
+                        <div class="form-field">
+                            <label for="received_amount">Nilai Diterima</label>
+                            <input id="received_amount" name="received_amount" type="number" min="0" step="0.01" data-cast="float" />
+                        </div>
+                    </div>
+                    <div class="repeat-group" data-repeat="allocations">
+                        <header>
+                            <h3>Alokasi ke Invoice</h3>
+                            <button class="secondary" type="button" data-action="add-row">Tambah Alokasi</button>
+                        </header>
+                        <div class="repeat-rows" data-role="rows"></div>
+                        <template data-role="row-template">
+                            <div class="repeat-row columns-3">
+                                <div class="form-field">
+                                    <label>Invoice</label>
+                                    <input data-field="invoice" placeholder="Nomor invoice" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Nilai Dialokasikan</label>
+                                    <input data-field="allocated_amount" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Outstanding Sebelum</label>
+                                    <input data-field="outstanding_before" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Outstanding Sesudah</label>
+                                    <input data-field="outstanding_after" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="form-field">
+                        <label for="payment_notes">Catatan</label>
+                        <textarea id="payment_notes" name="notes"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button class="primary" type="submit">Simpan Payment Entry</button>
+                    </div>
+                </form>
+                <form id="receipt-form" class="form-grid form-grid--stacked">
+                    <h3>Terbitkan Bukti Pembayaran</h3>
+                    <div class="form-grid two-column">
+                        <div class="form-field">
+                            <label for="receipt_payment_entry">Payment Entry</label>
+                            <select id="receipt_payment_entry" name="payment_entry">
+                                <option value="">— Pilih payment entry —</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="receipt_date">Tanggal Kwitansi</label>
+                            <input id="receipt_date" name="receipt_date" type="date" />
+                        </div>
+                        <div class="form-field">
+                            <label for="receipt_number">Nomor Kwitansi</label>
+                            <input id="receipt_number" name="receipt_number" placeholder="GAR/RC/001" />
+                        </div>
+                        <div class="form-field">
+                            <label for="delivery_method">Metode Pengiriman</label>
+                            <select id="delivery_method" name="delivery_method">
+                                <option value="Email">Email</option>
+                                <option value="Printed Copy">Printed Copy</option>
+                                <option value="WhatsApp">WhatsApp</option>
+                                <option value="SMS">SMS</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="issued_by">Diterbitkan Oleh</label>
+                            <input id="issued_by" name="issued_by" placeholder="User kasir" />
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label for="receipt_notes">Catatan</label>
+                        <textarea id="receipt_notes" name="notes"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button class="primary" type="submit">Simpan Receipt</button>
+                    </div>
+                </form>
+            </article>
+            <article class="portal-card">
+                <h2>Piutang & Pembayaran</h2>
+                <p class="lead">Monitor performa penagihan, outstanding, dan pembayaran terakhir.</p>
+                <div class="metric-grid metric-grid--spaced">
+                    <div class="metric-card">
+                        <h3>Total Invoice</h3>
+                        <div class="metric-value" data-metric="invoice-total">Rp0</div>
+                        <p class="metric-caption">Akumulasi nilai invoice yang diterbitkan.</p>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Outstanding</h3>
+                        <div class="metric-value" data-metric="outstanding-total">Rp0</div>
+                        <p class="metric-caption">Total piutang belum tertagih.</p>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Pembayaran Diterima</h3>
+                        <div class="metric-value" data-metric="payments-total">Rp0</div>
+                        <p class="metric-caption">Total penerimaan kas/bank.</p>
+                    </div>
+                </div>
+                <h3 class="section-subtitle">Invoice Aktif</h3>
+                <table class="simple-table">
+                    <thead>
+                        <tr>
+                            <th>Nomor</th>
+                            <th>Customer</th>
+                            <th>Jatuh Tempo</th>
+                            <th>Outstanding</th>
+                        </tr>
+                    </thead>
+                    <tbody data-role="open-invoice-table"></tbody>
+                </table>
+                <div class="list-empty" data-empty="open-invoice">Semua invoice sudah lunas.</div>
+                <h3 class="section-subtitle">Payment Entry Terakhir</h3>
+                <table class="simple-table">
+                    <thead>
+                        <tr>
+                            <th>Nomor</th>
+                            <th>Customer</th>
+                            <th>Tanggal</th>
+                            <th>Metode</th>
+                        </tr>
+                    </thead>
+                    <tbody data-role="payment-table"></tbody>
+                </table>
+                <div class="list-empty" data-empty="payment">Belum ada payment entry.</div>
+                <div class="table-links table-links--wrap table-links--trailing">
+                    <a data-desk-link="Garage Sales Invoice" target="_blank">List Invoice</a>
+                    <a data-desk-link="Garage Payment Entry" target="_blank">List Pembayaran</a>
+                    <a data-desk-link="Garage Receipt Document" target="_blank">List Receipt</a>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script>
+    frappe.require("/assets/garage/js/garage_portal.js");
+</script>
+{% endblock %}
+
+{% block page_style %}
+<style>@import url('/assets/garage/css/garage_portal.css');</style>
+{% endblock %}
