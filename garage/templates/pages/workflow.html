@@ -1,0 +1,200 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Garage Workflow{% endblock %}
+
+{% block page_content %}
+<section class="workflow-hero">
+    <div class="container">
+        <h1>Alur Layanan Bengkel</h1>
+        <p class="lead">
+            Halaman ini menjelaskan proses pelayanan bengkel dari kedatangan customer
+            hingga transaksi selesai dibayar. Diagram berikut mengikuti implementasi
+            yang ada di modul <code>garage.workflow</code>.
+        </p>
+    </div>
+</section>
+
+<section class="workflow-diagram">
+    <div class="container">
+        <div class="mermaid">
+            graph TD
+                A[Customer Datang] --> B{Jenis Layanan}
+
+                B -->|Service/Repair| C[Create Service Booking]
+                B -->|Beli Sparepart| D[Create Sales Order]
+
+                C --> E[Vehicle Inspection]
+                E --> F[Create Job Card]
+                F --> G[Estimate Biaya]
+
+                G --> H{Customer Setuju?}
+                H -->|Tidak| I[Cancel Job Card]
+                H -->|Ya| J[Work Order]
+
+                J --> K[Cek Stock Sparepart]
+                K --> L{Stock Tersedia?}
+
+                L -->|Tidak| M[Create Purchase Order]
+                M --> N[Receive Stock]
+                N --> O[Stock Entry]
+
+                L -->|Ya| P[Material Issue]
+                O --> P
+
+                P --> Q[Proses Pengerjaan]
+                Q --> R[Update Job Card Status]
+
+                R --> S{Pekerjaan Selesai?}
+                S -->|Belum| Q
+                S -->|Selesai| T[Quality Check]
+
+                T --> U[Complete Job Card]
+                U --> V[Generate Sales Invoice]
+
+                D --> W[Cek Stock Sparepart]
+                W --> X{Stock Tersedia?}
+                X -->|Tidak| M
+                X -->|Ya| Y[Create Delivery Note]
+                Y --> V
+
+                V --> Z[Payment Entry]
+                Z --> AA{Metode Bayar}
+
+                AA -->|Cash| AB[Cash Payment]
+                AA -->|Transfer| AC[Bank Transfer]
+                AA -->|Credit| AD[Create Payment Term]
+
+                AB --> AE[Print Invoice & Receipt]
+                AC --> AE
+                AD --> AF[Follow Up Piutang]
+                AF --> AE
+
+                AE --> AG[Customer Selesai]
+
+                AH[Stock Management] --> AI[Reorder Point Alert]
+                AI --> M
+
+                AJ[Dashboard & Reports] --> AK[Sales Report]
+                AJ --> AL[Inventory Report]
+                AJ --> AM[Job Card Report]
+                AJ --> AN[Financial Report]
+        </div>
+    </div>
+</section>
+
+<section class="workflow-details">
+    <div class="container">
+        <div class="detail-grid">
+            <article>
+                <h2>Keamanan & Kontrol</h2>
+                <p>
+                    Setiap aksi pada workflow dibatasi oleh Role Based Access Control (RBAC).
+                    Role seperti <strong>Service Advisor</strong>, <strong>Technician</strong>,
+                    dan <strong>Cashier</strong> hanya bisa melakukan tindakan yang relevan.
+                    Semua aktivitas terekam di audit log.
+                </p>
+            </article>
+            <article>
+                <h2>Manajemen Inventori</h2>
+                <p>
+                    Sistem memeriksa ketersediaan sparepart sebelum pengerjaan. Jika stok
+                    tidak cukup, Purchase Order otomatis dibuat dan stok baru akan menambah
+                    kuantitas ketika diterima.
+                </p>
+            </article>
+            <article>
+                <h2>Pembayaran yang Fleksibel</h2>
+                <p>
+                    Pencatatan pembayaran mendukung metode tunai, transfer bank, maupun
+                    kredit. Untuk transaksi kredit, sistem menyiapkan tugas tindak lanjut
+                    piutang hingga invoice lunas.
+                </p>
+            </article>
+            <article>
+                <h2>Laporan Real-time</h2>
+                <p>
+                    Fungsi <code>generate_reports</code> menyajikan ringkasan penjualan,
+                    status job card, kondisi stok, dan posisi keuangan. Data tersebut
+                    membantu pengambilan keputusan harian.
+                </p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="workflow-docs">
+    <div class="container">
+        <h2>Dokumentasi Developer</h2>
+        <p>
+            Implementasi lengkap workflow tersedia pada modul Python
+            <code>garage.workflow</code>. Panduan integrasi dan contoh kode dapat dibaca di
+            dokumentasi repository pada berkas <code>docs/workflow.md</code>.
+        </p>
+    </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js" integrity="sha384-K01wT3MckmlOcStF2Fy4ZwSEUXr9Ijt5RdO5HqlpkYFFuiOxU9RXf6+ukbJZQxC6" crossorigin="anonymous"></script>
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: "default" });
+</script>
+{% endblock %}
+
+{% block page_style %}
+<style>
+    .workflow-hero {
+        background: linear-gradient(90deg, #0f62fe 0%, #5aa9ff 100%);
+        color: #fff;
+        padding: 4rem 0 3rem;
+    }
+
+    .workflow-hero .lead {
+        max-width: 720px;
+    }
+
+    .workflow-diagram {
+        background: #f6f9fc;
+        padding: 3rem 0;
+    }
+
+    .mermaid {
+        background: #fff;
+        border-radius: 0.75rem;
+        box-shadow: 0 15px 35px rgba(31, 41, 55, 0.08);
+        padding: 1.5rem;
+    }
+
+    .workflow-details {
+        padding: 3rem 0;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 2rem;
+    }
+
+    .detail-grid article {
+        background: #ffffff;
+        border-radius: 0.75rem;
+        padding: 1.75rem;
+        box-shadow: 0 15px 30px rgba(15, 97, 254, 0.12);
+    }
+
+    .workflow-docs {
+        background: #0f172a;
+        color: #f8fafc;
+        padding: 3rem 0 4rem;
+    }
+
+    .workflow-docs a {
+        color: #38bdf8;
+        text-decoration: underline;
+    }
+
+    .workflow-docs a:hover {
+        color: #0ea5e9;
+    }
+</style>
+{% endblock %}
