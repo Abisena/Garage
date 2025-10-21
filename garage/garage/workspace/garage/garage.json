@@ -1,0 +1,100 @@
+{
+  "charts": [],
+  "content": "[{\"type\": \"header\", \"data\": {\"text\": \"Master Data\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Customer\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Vehicle\"}}, {\"type\": \"spacer\", \"data\": {}}, {\"type\": \"header\", \"data\": {\"text\": \"Operasional\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Service Order\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Spare Part Order\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Procurement Order\"}}, {\"type\": \"spacer\", \"data\": {}}, {\"type\": \"header\", \"data\": {\"text\": \"Keuangan\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Sales Invoice\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Payment Entry\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Receipt Document\"}}]",
+  "creation": "2024-07-02 00:00:00.000000",
+  "docstatus": 0,
+  "doctype": "Workspace",
+  "extends": "",
+  "for_user": "",
+  "hide_custom": 0,
+  "idx": 0,
+  "is_hidden": 0,
+  "label": "Garage",
+  "links": [],
+  "modified": "2024-07-02 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Garage",
+  "name": "Garage",
+  "owner": "Administrator",
+  "parent_page": "",
+  "public": 1,
+  "restrict_to_domain": "",
+  "roles": [],
+  "sequence_id": 1,
+  "shortcuts": [
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 0,
+      "label": "Garage Customer",
+      "link_to": "Garage Customer",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 1,
+      "label": "Garage Vehicle",
+      "link_to": "Garage Vehicle",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 2,
+      "label": "Garage Service Order",
+      "link_to": "Garage Service Order",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 3,
+      "label": "Garage Spare Part Order",
+      "link_to": "Garage Spare Part Order",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 4,
+      "label": "Garage Procurement Order",
+      "link_to": "Garage Procurement Order",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 5,
+      "label": "Garage Stock Movement",
+      "link_to": "Garage Stock Movement",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 6,
+      "label": "Garage Sales Invoice",
+      "link_to": "Garage Sales Invoice",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 7,
+      "label": "Garage Payment Entry",
+      "link_to": "Garage Payment Entry",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 8,
+      "label": "Garage Receipt Document",
+      "link_to": "Garage Receipt Document",
+      "type": "DocType"
+    }
+  ],
+  "title": "Garage",
+  "type": "Workspace"
+}
