@@ -77,7 +77,16 @@ Untuk penjualan sparepart langsung, gunakan DocType `Garage Spare Part Order`
 sebagai titik awal, lanjutkan dengan Procurement/Stock Movement bila stok tidak
 tersedia, lalu buat Delivery dan Invoice seperti biasa.
 
-## 5. Integrasi dengan Engine Python
+## 5. Portal Web Opsional
+
+Selain via Desk, admin dapat mengaktifkan halaman website `/garage` untuk tim
+front-office. Portal ini memakai API `garage.api.portal` sehingga seluruh data
+yang dimasukkan tetap muncul di Desk. Pastikan user yang mengakses portal
+memiliki permission yang sama seperti ketika bekerja di Desk (mis. Service
+Advisor dapat membuat `Garage Service Order`, Cashier dapat membuat `Garage
+Payment Entry`, dan seterusnya).
+
+## 6. Integrasi dengan Engine Python
 
 Workflow engine Python tetap dapat digunakan untuk otomatisasi atau API. Contoh
 pemakaian dari bench console:

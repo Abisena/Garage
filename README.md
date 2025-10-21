@@ -18,8 +18,11 @@ UI Frappe.
 * Developer documentation for the workflow is available at
   [`docs/workflow.md`](docs/workflow.md).
 * A lightweight public web page (`/workflow`) renders the flow diagram and a
-  step-by-step explanation using Mermaid so end users can understand the
-  process quickly.
+  step-by-step explanation using Mermaid so end users dapat memahami proses
+  dengan cepat.
+* Portal operasional lengkap tersedia di route `/garage` sehingga tim bengkel
+  dapat menjalankan intake, servis, penjualan sparepart, pengadaan, hingga
+  penagihan langsung dari website dengan data yang sama seperti di Desk.
 * Pravenya/Frappe site maintainers can follow
   [`docs/pravenya_setup.md`](docs/pravenya_setup.md) to install the DocType
   catalogue and try the workflow end-to-end langsung dari Desk.

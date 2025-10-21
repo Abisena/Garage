@@ -100,6 +100,21 @@ menyediakan DocType siap pakai pada folder `garage/garage/doctype/`:
 Instruksi instalasi serta contoh skenario uji tersedia di
 [`docs/pravenya_setup.md`](pravenya_setup.md).
 
+### Portal Web Terintegrasi
+
+- Halaman publik `/garage` menyajikan portal operasional lengkap yang menggunakan
+  API `garage.api.portal`. Seluruh form di portal ini menulis langsung ke DocType
+  yang sama dengan versi Desk sehingga data intake, service order, procurement,
+  hingga invoice tetap sinkron.
+- Portal menyediakan form cepat untuk registrasi customer & kendaraan, pembuatan
+  service order (beserta task, kebutuhan part, progress log, dan jadwal
+  pembayaran), order sparepart counter, procurement, mutasi stok, invoice,
+  payment entry, serta penerbitan bukti bayar.
+- Bagian insight menampilkan agregasi status dokumen dan nilai keuangan
+  (total invoice, outstanding, pembayaran) yang diambil dari fungsi
+  `portal_bootstrap`, memudahkan manajer memonitor operasional tanpa harus
+  masuk ke Desk.
+
 ## Contoh Penggunaan
 
 ```python
