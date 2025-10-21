@@ -5,12 +5,13 @@ For Your manage Garage
 ### Workflow System
 
 This repository ships with an in-memory but production-ready workflow engine
-located at `garage/workflow`. The module captures the full customer journey for
-service/repair jobs as well as counter sales: booking, inspection, job-card
-approval, purchase orders, inventory movement, quality control, invoicing, and
-payment collection. The engine enforces role based access control, validates
-incoming data, and produces audit logs so the workflow can be embedded safely in
-APIs, background workers, or UI components.
+located at `garage/workflow`. The module menangani seluruh perjalanan customer
+mulai dari registrasi customer & kendaraan, booking layanan, inspeksi,
+pembuatan job card & work order, pengadaan stok, penjualan counter, hingga
+penagihan dan tindak lanjut piutang. Fitur keamanannya meliputi role based
+access control, validasi state transition, audit log, serta dukungan payment
+term dan follow-up piutang agar aman diintegrasikan dengan API, worker, ataupun
+UI Frappe.
 
 ### Documentation & Demo Page
 

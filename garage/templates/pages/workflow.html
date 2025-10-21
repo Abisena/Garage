@@ -7,9 +7,10 @@
     <div class="container">
         <h1>Alur Layanan Bengkel</h1>
         <p class="lead">
-            Halaman ini menjelaskan proses pelayanan bengkel dari kedatangan customer
-            hingga transaksi selesai dibayar. Diagram berikut mengikuti implementasi
-            yang ada di modul <code>garage.workflow</code>.
+            Diagram berikut menunjukkan alur layanan bengkel yang kami implementasikan
+            pada modul <code>garage.workflow</code>. Seluruh langkah mengikuti praktik
+            standar bengkel profesional—mulai dari registrasi customer dan kendaraan,
+            inspeksi, pengelolaan stok, hingga penagihan dan tindak lanjut piutang.
         </p>
     </div>
 </section>
@@ -86,36 +87,43 @@
     <div class="container">
         <div class="detail-grid">
             <article>
-                <h2>Keamanan & Kontrol</h2>
+                <h2>Registrasi & Inspeksi</h2>
                 <p>
-                    Setiap aksi pada workflow dibatasi oleh Role Based Access Control (RBAC).
-                    Role seperti <strong>Service Advisor</strong>, <strong>Technician</strong>,
-                    dan <strong>Cashier</strong> hanya bisa melakukan tindakan yang relevan.
-                    Semua aktivitas terekam di audit log.
+                    Flow dimulai dari <strong>register_customer</strong> dan
+                    <strong>register_vehicle</strong> untuk memastikan data dasar valid.
+                    Setelah <strong>create_service_booking</strong>, advisor membuat
+                    <strong>Inspection Report</strong> dan <strong>Job Card</strong> yang
+                    siap dilanjutkan ke estimasi biaya.
                 </p>
             </article>
             <article>
-                <h2>Manajemen Inventori</h2>
+                <h2>Operasi Servis</h2>
                 <p>
-                    Sistem memeriksa ketersediaan sparepart sebelum pengerjaan. Jika stok
-                    tidak cukup, Purchase Order otomatis dibuat dan stok baru akan menambah
-                    kuantitas ketika diterima.
+                    Estimasi biaya disetujui lewat <code>record_customer_decision</code>,
+                    kemudian teknisi menjalankan <strong>Work Order</strong>. Material
+                    dikelola melalui <code>check_work_order_stock</code>,
+                    <code>create_purchase_order</code>, dan <code>issue_materials</code>.
+                    Progres, QC, dan penutupan job card mengikuti standar bengkel.
                 </p>
             </article>
             <article>
-                <h2>Pembayaran yang Fleksibel</h2>
+                <h2>Penjualan Sparepart</h2>
                 <p>
-                    Pencatatan pembayaran mendukung metode tunai, transfer bank, maupun
-                    kredit. Untuk transaksi kredit, sistem menyiapkan tugas tindak lanjut
-                    piutang hingga invoice lunas.
+                    Counter sales menggunakan <code>create_sales_order</code>,
+                    <code>reserve_sales_stock</code>, dan <code>create_delivery_note</code>.
+                    Apabila stok kurang, sistem memicu purchase order dan stock entry seperti
+                    alur servis sehingga gudang bekerja konsisten.
                 </p>
             </article>
             <article>
-                <h2>Laporan Real-time</h2>
+                <h2>Keuangan & Piutang</h2>
                 <p>
-                    Fungsi <code>generate_reports</code> menyajikan ringkasan penjualan,
-                    status job card, kondisi stok, dan posisi keuangan. Data tersebut
-                    membantu pengambilan keputusan harian.
+                    <code>generate_sales_invoice</code> menangani billing untuk servis maupun
+                    penjualan. Pembayaran tunai atau transfer dicatat via
+                    <code>record_payment</code>, sedangkan kredit menggunakan
+                    <code>create_payment_term</code> dan <code>follow_up_receivable</code>
+                    hingga invoice lunas. <code>print_receipt</code> menyiapkan dokumen
+                    resmi untuk customer.
                 </p>
             </article>
         </div>
@@ -126,9 +134,10 @@
     <div class="container">
         <h2>Dokumentasi Developer</h2>
         <p>
-            Implementasi lengkap workflow tersedia pada modul Python
-            <code>garage.workflow</code>. Panduan integrasi dan contoh kode dapat dibaca di
-            dokumentasi repository pada berkas <code>docs/workflow.md</code>.
+            Detail API, struktur data (Customer, Job Card, Work Order, Payment Term),
+            serta contoh kode lengkap tersedia di <code>docs/workflow.md</code>.
+            Dokumen tersebut menjelaskan cara menghubungkan modul dengan aplikasi web,
+            worker, maupun REST API sehingga workflow aman dijalankan di produksi.
         </p>
     </div>
 </section>
