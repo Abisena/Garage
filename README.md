@@ -20,6 +20,27 @@ UI Frappe.
 * A lightweight public web page (`/workflow`) renders the flow diagram and a
   step-by-step explanation using Mermaid so end users can understand the
   process quickly.
+* Pravenya/Frappe site maintainers can follow
+  [`docs/pravenya_setup.md`](docs/pravenya_setup.md) to install the DocType
+  catalogue and try the workflow end-to-end langsung dari Desk.
+
+### DocType Catalogue
+
+Folder `garage/garage/doctype` sekarang memuat DocType resmi yang memetakan
+setiap langkah pada diagram workflow:
+
+- `Garage Customer` & `Garage Vehicle` untuk data master pelanggan.
+- `Garage Service Order` beserta tabel anak inspeksi, task, parts, progress,
+  dan QC guna menangani jalur servis/repair.
+- `Garage Spare Part Order` untuk transaksi pembelian sparepart langsung.
+- `Garage Procurement Order` dan `Garage Stock Movement` untuk pengadaan serta
+  pergerakan stok.
+- `Garage Sales Invoice`, `Garage Payment Entry`, dan `Garage Receipt Document`
+  untuk penagihan hingga bukti penerimaan pembayaran.
+
+DocType ini ter-install otomatis ketika aplikasi di-`install-app` ke site Frappe
+sehingga pengguna dapat langsung melakukan uji coba atau menambahkan custom
+field sesuai kebutuhan operasi.
 
 ### Installation
 

@@ -83,6 +83,23 @@ stok, sampai penagihan dan tindak lanjut piutang.
 | `PaymentTerm` & `ReceivableFollowUp` | Penjadwalan dan eskalasi piutang kredit. |
 | `ReceiptDocument` | Ringkasan siap cetak untuk invoice & payment. |
 
+## DocType Frappe / Pravenya
+
+Untuk pengujian langsung di site Frappe seperti **Pravenya**, modul ini
+menyediakan DocType siap pakai pada folder `garage/garage/doctype/`:
+
+- **Garage Customer** & **Garage Vehicle** – data master pelanggan dan kendaraan.
+- **Garage Service Order** – dokumen inti yang menampung inspeksi, estimasi,
+  parts, progres, dan QC.
+- **Garage Procurement Order** & **Garage Stock Movement** – mendukung alur
+  pengadaan serta penerimaan/issue stok.
+- **Garage Spare Part Order** – jalur khusus untuk transaksi counter.
+- **Garage Sales Invoice**, **Garage Payment Entry**, dan **Garage Receipt
+  Document** – melengkapi proses billing hingga penerbitan bukti bayar.
+
+Instruksi instalasi serta contoh skenario uji tersedia di
+[`docs/pravenya_setup.md`](pravenya_setup.md).
+
 ## Contoh Penggunaan
 
 ```python
