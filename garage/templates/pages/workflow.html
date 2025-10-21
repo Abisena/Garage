@@ -1,0 +1,209 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Garage Workflow{% endblock %}
+
+{% block page_content %}
+<section class="workflow-hero">
+    <div class="container">
+        <h1>Alur Layanan Bengkel</h1>
+        <p class="lead">
+            Diagram berikut menunjukkan alur layanan bengkel yang kami implementasikan
+            pada modul <code>garage.workflow</code>. Seluruh langkah mengikuti praktik
+            standar bengkel profesional—mulai dari registrasi customer dan kendaraan,
+            inspeksi, pengelolaan stok, hingga penagihan dan tindak lanjut piutang.
+        </p>
+    </div>
+</section>
+
+<section class="workflow-diagram">
+    <div class="container">
+        <div class="mermaid">
+            graph TD
+                A[Customer Datang] --> B{Jenis Layanan}
+
+                B -->|Service/Repair| C[Create Service Booking]
+                B -->|Beli Sparepart| D[Create Sales Order]
+
+                C --> E[Vehicle Inspection]
+                E --> F[Create Job Card]
+                F --> G[Estimate Biaya]
+
+                G --> H{Customer Setuju?}
+                H -->|Tidak| I[Cancel Job Card]
+                H -->|Ya| J[Work Order]
+
+                J --> K[Cek Stock Sparepart]
+                K --> L{Stock Tersedia?}
+
+                L -->|Tidak| M[Create Purchase Order]
+                M --> N[Receive Stock]
+                N --> O[Stock Entry]
+
+                L -->|Ya| P[Material Issue]
+                O --> P
+
+                P --> Q[Proses Pengerjaan]
+                Q --> R[Update Job Card Status]
+
+                R --> S{Pekerjaan Selesai?}
+                S -->|Belum| Q
+                S -->|Selesai| T[Quality Check]
+
+                T --> U[Complete Job Card]
+                U --> V[Generate Sales Invoice]
+
+                D --> W[Cek Stock Sparepart]
+                W --> X{Stock Tersedia?}
+                X -->|Tidak| M
+                X -->|Ya| Y[Create Delivery Note]
+                Y --> V
+
+                V --> Z[Payment Entry]
+                Z --> AA{Metode Bayar}
+
+                AA -->|Cash| AB[Cash Payment]
+                AA -->|Transfer| AC[Bank Transfer]
+                AA -->|Credit| AD[Create Payment Term]
+
+                AB --> AE[Print Invoice & Receipt]
+                AC --> AE
+                AD --> AF[Follow Up Piutang]
+                AF --> AE
+
+                AE --> AG[Customer Selesai]
+
+                AH[Stock Management] --> AI[Reorder Point Alert]
+                AI --> M
+
+                AJ[Dashboard & Reports] --> AK[Sales Report]
+                AJ --> AL[Inventory Report]
+                AJ --> AM[Job Card Report]
+                AJ --> AN[Financial Report]
+        </div>
+    </div>
+</section>
+
+<section class="workflow-details">
+    <div class="container">
+        <div class="detail-grid">
+            <article>
+                <h2>Registrasi & Inspeksi</h2>
+                <p>
+                    Flow dimulai dari <strong>register_customer</strong> dan
+                    <strong>register_vehicle</strong> untuk memastikan data dasar valid.
+                    Setelah <strong>create_service_booking</strong>, advisor membuat
+                    <strong>Inspection Report</strong> dan <strong>Job Card</strong> yang
+                    siap dilanjutkan ke estimasi biaya.
+                </p>
+            </article>
+            <article>
+                <h2>Operasi Servis</h2>
+                <p>
+                    Estimasi biaya disetujui lewat <code>record_customer_decision</code>,
+                    kemudian teknisi menjalankan <strong>Work Order</strong>. Material
+                    dikelola melalui <code>check_work_order_stock</code>,
+                    <code>create_purchase_order</code>, dan <code>issue_materials</code>.
+                    Progres, QC, dan penutupan job card mengikuti standar bengkel.
+                </p>
+            </article>
+            <article>
+                <h2>Penjualan Sparepart</h2>
+                <p>
+                    Counter sales menggunakan <code>create_sales_order</code>,
+                    <code>reserve_sales_stock</code>, dan <code>create_delivery_note</code>.
+                    Apabila stok kurang, sistem memicu purchase order dan stock entry seperti
+                    alur servis sehingga gudang bekerja konsisten.
+                </p>
+            </article>
+            <article>
+                <h2>Keuangan & Piutang</h2>
+                <p>
+                    <code>generate_sales_invoice</code> menangani billing untuk servis maupun
+                    penjualan. Pembayaran tunai atau transfer dicatat via
+                    <code>record_payment</code>, sedangkan kredit menggunakan
+                    <code>create_payment_term</code> dan <code>follow_up_receivable</code>
+                    hingga invoice lunas. <code>print_receipt</code> menyiapkan dokumen
+                    resmi untuk customer.
+                </p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="workflow-docs">
+    <div class="container">
+        <h2>Dokumentasi Developer</h2>
+        <p>
+            Detail API, struktur data (Customer, Job Card, Work Order, Payment Term),
+            serta contoh kode lengkap tersedia di <code>docs/workflow.md</code>.
+            Dokumen tersebut menjelaskan cara menghubungkan modul dengan aplikasi web,
+            worker, maupun REST API sehingga workflow aman dijalankan di produksi.
+        </p>
+    </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js" integrity="sha384-K01wT3MckmlOcStF2Fy4ZwSEUXr9Ijt5RdO5HqlpkYFFuiOxU9RXf6+ukbJZQxC6" crossorigin="anonymous"></script>
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: "default" });
+</script>
+{% endblock %}
+
+{% block page_style %}
+<style>
+    .workflow-hero {
+        background: linear-gradient(90deg, #0f62fe 0%, #5aa9ff 100%);
+        color: #fff;
+        padding: 4rem 0 3rem;
+    }
+
+    .workflow-hero .lead {
+        max-width: 720px;
+    }
+
+    .workflow-diagram {
+        background: #f6f9fc;
+        padding: 3rem 0;
+    }
+
+    .mermaid {
+        background: #fff;
+        border-radius: 0.75rem;
+        box-shadow: 0 15px 35px rgba(31, 41, 55, 0.08);
+        padding: 1.5rem;
+    }
+
+    .workflow-details {
+        padding: 3rem 0;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 2rem;
+    }
+
+    .detail-grid article {
+        background: #ffffff;
+        border-radius: 0.75rem;
+        padding: 1.75rem;
+        box-shadow: 0 15px 30px rgba(15, 97, 254, 0.12);
+    }
+
+    .workflow-docs {
+        background: #0f172a;
+        color: #f8fafc;
+        padding: 3rem 0 4rem;
+    }
+
+    .workflow-docs a {
+        color: #38bdf8;
+        text-decoration: underline;
+    }
+
+    .workflow-docs a:hover {
+        color: #0ea5e9;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,256 @@
+{
+  "actions": [],
+  "allow_guest_to_edit": 0,
+  "allow_guest_to_view": 0,
+  "allow_import": 1,
+  "allow_rename": 0,
+  "autoname": "autoincrement",
+  "beta": 0,
+  "creation": "2024-06-02 00:00:00.000000",
+  "default_view": "Form",
+  "disable_prepared_report": 0,
+  "docstatus": 0,
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "service_order_type",
+    "order_category",
+    "status",
+    "priority",
+    "service_booking_date",
+    "customer",
+    "vehicle",
+    "service_advisor",
+    "primary_contact",
+    "job_card_status",
+    "work_order_status",
+    "qc_status",
+    "estimated_delivery_date",
+    "actual_delivery_date",
+    "total_estimated_amount",
+    "total_approved_amount",
+    "approval_date",
+    "customer_confirmation",
+    "rejection_reason",
+    "inspection_summary",
+    "service_notes",
+    "inspection_items",
+    "service_tasks",
+    "required_parts",
+    "progress_logs",
+    "quality_checks",
+    "payment_schedule"
+  ],
+  "fields": [
+    {
+      "fieldname": "service_order_type",
+      "fieldtype": "Select",
+      "label": "Service Type",
+      "options": "Service/Repair\nInspection\nWarranty\nInsurance Claim",
+      "default": "Service/Repair",
+      "reqd": 1
+    },
+    {
+      "fieldname": "order_category",
+      "fieldtype": "Select",
+      "label": "Order Category",
+      "options": "Workshop Service\nBody Repair\nQuick Service",
+      "default": "Workshop Service"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Draft\nInspection\nEstimate\nAwaiting Approval\nApproved\nWork In Progress\nAwaiting QC\nCompleted\nCancelled",
+      "default": "Draft",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "priority",
+      "fieldtype": "Select",
+      "label": "Priority",
+      "options": "Normal\nHigh\nCritical",
+      "default": "Normal"
+    },
+    {
+      "fieldname": "service_booking_date",
+      "fieldtype": "Datetime",
+      "label": "Booking Datetime"
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Customer",
+      "options": "Garage Customer",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "vehicle",
+      "fieldtype": "Link",
+      "label": "Vehicle",
+      "options": "Garage Vehicle",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "service_advisor",
+      "fieldtype": "Link",
+      "label": "Service Advisor",
+      "options": "User"
+    },
+    {
+      "fieldname": "primary_contact",
+      "fieldtype": "Data",
+      "label": "Primary Contact"
+    },
+    {
+      "fieldname": "job_card_status",
+      "fieldtype": "Select",
+      "label": "Job Card Status",
+      "options": "Not Created\nOpen\nOn Hold\nCompleted\nCancelled",
+      "default": "Not Created"
+    },
+    {
+      "fieldname": "work_order_status",
+      "fieldtype": "Select",
+      "label": "Work Order Status",
+      "options": "Not Created\nIn Progress\nAwaiting Parts\nCompleted\nCancelled",
+      "default": "Not Created"
+    },
+    {
+      "fieldname": "qc_status",
+      "fieldtype": "Select",
+      "label": "QC Status",
+      "options": "Not Required\nPending\nPassed\nFailed",
+      "default": "Not Required"
+    },
+    {
+      "fieldname": "estimated_delivery_date",
+      "fieldtype": "Date",
+      "label": "Estimated Delivery"
+    },
+    {
+      "fieldname": "actual_delivery_date",
+      "fieldtype": "Date",
+      "label": "Actual Delivery"
+    },
+    {
+      "fieldname": "total_estimated_amount",
+      "fieldtype": "Currency",
+      "label": "Estimated Amount"
+    },
+    {
+      "fieldname": "total_approved_amount",
+      "fieldtype": "Currency",
+      "label": "Approved Amount"
+    },
+    {
+      "fieldname": "approval_date",
+      "fieldtype": "Date",
+      "label": "Approval Date"
+    },
+    {
+      "fieldname": "customer_confirmation",
+      "fieldtype": "Check",
+      "label": "Customer Approved"
+    },
+    {
+      "fieldname": "rejection_reason",
+      "fieldtype": "Small Text",
+      "label": "Rejection Reason"
+    },
+    {
+      "fieldname": "inspection_summary",
+      "fieldtype": "Small Text",
+      "label": "Inspection Summary"
+    },
+    {
+      "fieldname": "service_notes",
+      "fieldtype": "Text",
+      "label": "Service Notes"
+    },
+    {
+      "fieldname": "inspection_items",
+      "fieldtype": "Table",
+      "label": "Inspection Details",
+      "options": "Garage Service Order Inspection"
+    },
+    {
+      "fieldname": "service_tasks",
+      "fieldtype": "Table",
+      "label": "Service Tasks",
+      "options": "Garage Service Order Task"
+    },
+    {
+      "fieldname": "required_parts",
+      "fieldtype": "Table",
+      "label": "Required Parts",
+      "options": "Garage Service Order Part"
+    },
+    {
+      "fieldname": "progress_logs",
+      "fieldtype": "Table",
+      "label": "Progress Logs",
+      "options": "Garage Service Order Progress"
+    },
+    {
+      "fieldname": "quality_checks",
+      "fieldtype": "Table",
+      "label": "Quality Checks",
+      "options": "Garage Service Order Quality"
+    },
+    {
+      "fieldname": "payment_schedule",
+      "fieldtype": "Table",
+      "label": "Payment Schedule",
+      "options": "Garage Payment Schedule Item"
+    }
+  ],
+  "has_web_view": 0,
+  "hide_heading": 0,
+  "hide_toolbar": 0,
+  "idx": 0,
+  "image_field": "",
+  "in_create": 0,
+  "info_fields": [],
+  "is_submittable": 0,
+  "issingle": 0,
+  "istable": 0,
+  "links": [],
+  "make_attachments_public": 0,
+  "max_attachments": 0,
+  "modified": "2024-06-02 00:00:00.000000",
+  "module": "Garage",
+  "name": "Garage Service Order",
+  "naming_rule": "",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1,
+      "export": 1
+    }
+  ],
+  "quick_entry": 0,
+  "read_only": 0,
+  "read_only_onload": 0,
+  "show_name_in_global_search": 1,
+  "show_preview_popup": 0,
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "subject": "",
+  "track_changes": 1,
+  "track_seen": 0,
+  "translated_doctype": 0,
+  "migration_hash": "",
+  "description": "Primary document orchestrating end-to-end workshop service flow."
+}
