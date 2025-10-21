@@ -1,0 +1,147 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Penjualan Sparepart{% endblock %}
+
+{% block page_content %}
+<section class="portal-hero portal-hero--sub">
+    <div class="container">
+        <p class="portal-eyebrow">Garage Portal</p>
+        <h1>Penjualan Sparepart</h1>
+        <p>
+            Kelola order sparepart counter, atur jadwal pengambilan atau pengiriman, dan pantau status
+            pemenuhan stok untuk setiap permintaan.
+        </p>
+    </div>
+</section>
+
+{% set active_page = 'sparepart' %}
+{% include "garage/templates/includes/portal_nav.html" %}
+
+<section class="portal-section">
+    <div class="container">
+        <div class="portal-grid two-column">
+            <article class="portal-card">
+                <h2>Buat Order Sparepart</h2>
+                <p class="lead">Isi detail customer dan item sparepart yang dibutuhkan pada form berikut.</p>
+                <form id="spare-order-form" class="form-grid">
+                    <div class="form-grid two-column">
+                        <div class="form-field">
+                            <label for="spare_customer">Customer</label>
+                            <select id="spare_customer" name="customer">
+                                <option value="">— Pilih customer —</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="order_date">Tanggal Order</label>
+                            <input id="order_date" name="order_date" type="date" />
+                        </div>
+                        <div class="form-field">
+                            <label for="pickup_method">Metode Pemenuhan</label>
+                            <select id="pickup_method" name="pickup_method">
+                                <option value="Pickup">Pickup</option>
+                                <option value="Delivery">Delivery</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="delivery_date">Tanggal Pengambilan/Pengiriman</label>
+                            <input id="delivery_date" name="delivery_date" type="date" />
+                        </div>
+                        <div class="form-field">
+                            <label for="warehouse">Gudang</label>
+                            <input id="warehouse" name="warehouse" placeholder="Gudang utama" />
+                        </div>
+                        <div class="form-field">
+                            <label for="total_amount">Total</label>
+                            <input id="total_amount" name="total_amount" type="number" min="0" step="0.01" data-cast="float" />
+                        </div>
+                    </div>
+                    <div class="repeat-group" data-repeat="items">
+                        <header>
+                            <h3>Detail Item</h3>
+                            <button class="secondary" type="button" data-action="add-row">Tambah Item</button>
+                        </header>
+                        <div class="repeat-rows" data-role="rows"></div>
+                        <template data-role="row-template">
+                            <div class="repeat-row columns-4">
+                                <div class="form-field">
+                                    <label>Kode</label>
+                                    <input data-field="item_code" placeholder="Kode barang" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Nama</label>
+                                    <input data-field="item_name" placeholder="Nama barang" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Qty</label>
+                                    <input data-field="qty" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Harga</label>
+                                    <input data-field="rate" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>UOM</label>
+                                    <input data-field="uom" placeholder="Unit" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Status Stok</label>
+                                    <select data-field="stock_status">
+                                        <option value="Pending Check">Pending Check</option>
+                                        <option value="Available">Available</option>
+                                        <option value="To Order">To Order</option>
+                                        <option value="Ordered">Ordered</option>
+                                        <option value="Received">Received</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label>Total</label>
+                                    <input data-field="amount" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="form-field">
+                        <label for="notes_spare">Catatan</label>
+                        <textarea id="notes_spare" name="notes" placeholder="Instruksi pengiriman atau catatan customer"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button class="primary" type="submit">Simpan Order Sparepart</button>
+                    </div>
+                </form>
+            </article>
+            <article class="portal-card">
+                <h2>Status Order Sparepart</h2>
+                <p class="lead">Pantau pesanan yang masuk, status pemenuhan stok, dan jadwal pengiriman.</p>
+                <ul class="status-list" data-status="spare-orders"></ul>
+                <h3 class="section-subtitle">Order Aktif</h3>
+                <table class="simple-table">
+                    <thead>
+                        <tr>
+                            <th>Nomor</th>
+                            <th>Customer</th>
+                            <th>Status</th>
+                            <th>Pengiriman</th>
+                        </tr>
+                    </thead>
+                    <tbody data-role="spare-table"></tbody>
+                </table>
+                <div class="list-empty" data-empty="spare">Belum ada order sparepart.</div>
+                <div class="table-links table-links--trailing">
+                    <a data-desk-link="Garage Spare Part Order" target="_blank">Buka di Desk</a>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script>
+    frappe.require("/assets/garage/js/garage_portal.js");
+</script>
+{% endblock %}
+
+{% block page_style %}
+<style>@import url('/assets/garage/css/garage_portal.css');</style>
+{% endblock %}

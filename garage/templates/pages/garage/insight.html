@@ -1,0 +1,89 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Insight & Monitoring{% endblock %}
+
+{% block page_content %}
+<section class="portal-hero portal-hero--sub">
+    <div class="container">
+        <p class="portal-eyebrow">Garage Portal</p>
+        <h1>Insight & Monitoring</h1>
+        <p>
+            Ringkas status workflow lintas modul Garage untuk membantu pengambilan keputusan cepat.
+            Gunakan tombol refresh untuk memperbarui data terbaru dari Desk.
+        </p>
+    </div>
+</section>
+
+{% set active_page = 'insight' %}
+{% include "garage/templates/includes/portal_nav.html" %}
+
+<section class="portal-section">
+    <div class="container">
+        <div class="portal-grid two-column">
+            <article class="portal-card">
+                <h2>Ringkasan Status Dokumen</h2>
+                <p class="lead">Pantau jumlah dokumen per status dari seluruh proses bengkel.</p>
+                <div class="metric-grid metric-grid--columns">
+                    <div>
+                        <h3 class="section-subtitle">Service Order</h3>
+                        <ul class="status-list" data-status="service-orders"></ul>
+                    </div>
+                    <div>
+                        <h3 class="section-subtitle">Sparepart</h3>
+                        <ul class="status-list" data-status="spare-orders"></ul>
+                    </div>
+                    <div>
+                        <h3 class="section-subtitle">Procurement</h3>
+                        <ul class="status-list" data-status="procurement-orders"></ul>
+                    </div>
+                    <div>
+                        <h3 class="section-subtitle">Stock Movement</h3>
+                        <ul class="status-list" data-status="stock-movements"></ul>
+                    </div>
+                    <div>
+                        <h3 class="section-subtitle">Sales Invoice</h3>
+                        <ul class="status-list" data-status="sales-invoices"></ul>
+                    </div>
+                    <div>
+                        <h3 class="section-subtitle">Payment Entry</h3>
+                        <ul class="status-list" data-status="payment-entries"></ul>
+                    </div>
+                </div>
+            </article>
+            <article class="portal-card">
+                <h2>Terhubung dengan Desk</h2>
+                <p class="lead">
+                    Semua data di portal ini adalah DocType yang sama dengan versi Desk/Pravenya.
+                    Gunakan tautan berikut ketika Anda ingin melakukan operasi lanjutan langsung di Desk.
+                </p>
+                <div class="table-links table-links--wrap table-links--flush">
+                    <a data-desk-link="Garage Service Order" target="_blank">Service Order Desk</a>
+                    <a data-desk-link="Garage Spare Part Order" target="_blank">Sparepart Desk</a>
+                    <a data-desk-link="Garage Procurement Order" target="_blank">Procurement Desk</a>
+                    <a data-desk-link="Garage Stock Movement" target="_blank">Stock Movement Desk</a>
+                    <a data-desk-link="Garage Sales Invoice" target="_blank">Sales Invoice Desk</a>
+                    <a data-desk-link="Garage Payment Entry" target="_blank">Payment Entry Desk</a>
+                    <a data-desk-link="Garage Receipt Document" target="_blank">Receipt Desk</a>
+                </div>
+                <div class="refresh-meta">
+                    <div>
+                        <span class="refresh-label">Terakhir disinkronkan:</span>
+                        <span class="refresh-value" data-role="refreshed-at">—</span>
+                    </div>
+                    <button class="secondary" type="button" data-action="refresh-portal">Refresh Data</button>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script>
+    frappe.require("/assets/garage/js/garage_portal.js");
+</script>
+{% endblock %}
+
+{% block page_style %}
+<style>@import url('/assets/garage/css/garage_portal.css');</style>
+{% endblock %}

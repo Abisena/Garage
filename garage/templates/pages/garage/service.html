@@ -1,0 +1,322 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Orkestrasi Servis Bengkel{% endblock %}
+
+{% block page_content %}
+<section class="portal-hero portal-hero--sub">
+    <div class="container">
+        <p class="portal-eyebrow">Garage Portal</p>
+        <h1>Orkestrasi Servis Bengkel</h1>
+        <p>
+            Buat service order, kelola task teknisi, dan pantau progres pengerjaan dalam satu halaman.
+            Seluruh data tersimpan di DocType Garage Service Order.
+        </p>
+    </div>
+</section>
+
+{% set active_page = 'service' %}
+{% include "garage/templates/includes/portal_nav.html" %}
+
+<section class="portal-section">
+    <div class="container">
+        <div class="portal-grid two-column">
+            <article class="portal-card">
+                <h2>Buat Service Order</h2>
+                <p class="lead">
+                    Isi detail pekerjaan bengkel, estimasi biaya, dan kebutuhan task untuk membuat service order baru.
+                </p>
+                <form id="service-order-form" class="form-grid">
+                    <div class="form-grid two-column">
+                        <div class="form-field">
+                            <label for="service_order_type">Jenis Servis</label>
+                            <select id="service_order_type" name="service_order_type">
+                                <option value="Service/Repair">Service/Repair</option>
+                                <option value="Inspection">Inspection</option>
+                                <option value="Warranty">Warranty</option>
+                                <option value="Insurance Claim">Insurance Claim</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="order_category">Kategori</label>
+                            <select id="order_category" name="order_category">
+                                <option value="Workshop Service">Workshop Service</option>
+                                <option value="Body Repair">Body Repair</option>
+                                <option value="Quick Service">Quick Service</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="priority">Prioritas</label>
+                            <select id="priority" name="priority">
+                                <option value="Normal">Normal</option>
+                                <option value="High">High</option>
+                                <option value="Critical">Critical</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="service_customer">Customer</label>
+                            <select id="service_customer" name="customer">
+                                <option value="">— Pilih customer —</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="service_vehicle">Kendaraan</label>
+                            <select id="service_vehicle" name="vehicle">
+                                <option value="">— Pilih kendaraan —</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="service_advisor">Service Advisor</label>
+                            <input id="service_advisor" name="service_advisor" placeholder="User ID atau email" />
+                        </div>
+                        <div class="form-field">
+                            <label for="estimated_delivery_date">Estimasi Selesai</label>
+                            <input id="estimated_delivery_date" name="estimated_delivery_date" type="date" />
+                        </div>
+                        <div class="form-field">
+                            <label for="total_estimated_amount">Estimasi Biaya</label>
+                            <input id="total_estimated_amount" name="total_estimated_amount" type="number" min="0" step="0.01" data-cast="float" />
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label for="inspection_summary">Ringkasan Inspeksi</label>
+                        <textarea id="inspection_summary" name="inspection_summary" placeholder="Temuan utama dari inspeksi awal"></textarea>
+                    </div>
+                    <div class="form-field">
+                        <label for="service_notes">Catatan Servis</label>
+                        <textarea id="service_notes" name="service_notes" placeholder="Catatan tambahan untuk teknisi"></textarea>
+                    </div>
+                    <div class="repeat-group" data-repeat="service_tasks">
+                        <header>
+                            <h3>Daftar Pekerjaan</h3>
+                            <button class="secondary" type="button" data-action="add-row">Tambah Task</button>
+                        </header>
+                        <div class="repeat-rows" data-role="rows"></div>
+                        <template data-role="row-template">
+                            <div class="repeat-row columns-4">
+                                <div class="form-field">
+                                    <label>Task</label>
+                                    <input data-field="task" placeholder="Nama tugas" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Teknisi</label>
+                                    <input data-field="technician" placeholder="User teknisi" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Estimasi Jam</label>
+                                    <input data-field="estimated_hours" type="number" step="0.1" min="0" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Status</label>
+                                    <select data-field="status">
+                                        <option value="Pending">Pending</option>
+                                        <option value="In Progress">In Progress</option>
+                                        <option value="Completed">Completed</option>
+                                        <option value="Deferred">Deferred</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label>Deskripsi</label>
+                                    <textarea data-field="description" placeholder="Detail tugas"></textarea>
+                                </div>
+                                <div class="form-field">
+                                    <label>Jam Aktual</label>
+                                    <input data-field="actual_hours" type="number" step="0.1" min="0" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Tgl Selesai</label>
+                                    <input data-field="completion_date" type="date" />
+                                </div>
+                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="repeat-group" data-repeat="required_parts">
+                        <header>
+                            <h3>Kebutuhan Sparepart</h3>
+                            <button class="secondary" type="button" data-action="add-row">Tambah Part</button>
+                        </header>
+                        <div class="repeat-rows" data-role="rows"></div>
+                        <template data-role="row-template">
+                            <div class="repeat-row columns-4">
+                                <div class="form-field">
+                                    <label>Kode Barang</label>
+                                    <input data-field="item_code" placeholder="Kode" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Nama Barang</label>
+                                    <input data-field="item_name" placeholder="Nama part" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Qty</label>
+                                    <input data-field="qty" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Status Stok</label>
+                                    <select data-field="stock_status">
+                                        <option value="Pending Check">Pending Check</option>
+                                        <option value="Available">Available</option>
+                                        <option value="To Order">To Order</option>
+                                        <option value="Ordered">Ordered</option>
+                                        <option value="Received">Received</option>
+                                        <option value="Issued">Issued</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label>Uraian</label>
+                                    <textarea data-field="description" placeholder="Detail kebutuhan"></textarea>
+                                </div>
+                                <div class="form-field">
+                                    <label>Gudang</label>
+                                    <input data-field="warehouse" placeholder="Gudang" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Harga</label>
+                                    <input data-field="rate" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Total</label>
+                                    <input data-field="amount" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="repeat-group" data-repeat="payment_schedule">
+                        <header>
+                            <h3>Jadwal Pembayaran</h3>
+                            <button class="secondary" type="button" data-action="add-row">Tambah Jadwal</button>
+                        </header>
+                        <div class="repeat-rows" data-role="rows"></div>
+                        <template data-role="row-template">
+                            <div class="repeat-row columns-3">
+                                <div class="form-field">
+                                    <label>Jatuh Tempo</label>
+                                    <input data-field="due_date" type="date" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Persentase</label>
+                                    <input data-field="percentage" type="number" min="0" max="100" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Nilai</label>
+                                    <input data-field="amount" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Status</label>
+                                    <select data-field="status">
+                                        <option value="Pending">Pending</option>
+                                        <option value="Paid">Paid</option>
+                                        <option value="Overdue">Overdue</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label>Deskripsi</label>
+                                    <input data-field="description" placeholder="Termin" />
+                                </div>
+                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="form-actions">
+                        <button class="primary" type="submit">Simpan Service Order</button>
+                    </div>
+                </form>
+            </article>
+            <article class="portal-card">
+                <h2>Status Servis</h2>
+                <p class="lead">Ikhtisar service order yang sedang berjalan dan kemajuan pengerjaan.</p>
+                <div class="metric-grid metric-grid--spaced">
+                    <div class="metric-card">
+                        <h3>Nilai Estimasi</h3>
+                        <div class="metric-value" data-metric="service-estimate">Rp0</div>
+                        <p class="metric-caption">Total estimasi biaya seluruh service order.</p>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Order Aktif</h3>
+                        <div class="metric-value" data-metric="service-open-count">0</div>
+                        <p class="metric-caption">Service order dengan status aktif.</p>
+                    </div>
+                    <div class="metric-card">
+                        <h3>QC Pending</h3>
+                        <div class="metric-value" data-metric="qc-pending">0</div>
+                        <p class="metric-caption">Order menunggu quality check.</p>
+                    </div>
+                </div>
+                <h3 class="section-subtitle">Ringkasan Status</h3>
+                <ul class="status-list" data-status="service-orders"></ul>
+                <h3 class="section-subtitle">Service Order Aktif</h3>
+                <table class="simple-table">
+                    <thead>
+                        <tr>
+                            <th>Nomor</th>
+                            <th>Customer</th>
+                            <th>Status</th>
+                            <th>Target Selesai</th>
+                        </tr>
+                    </thead>
+                    <tbody data-role="open-service-table"></tbody>
+                </table>
+                <div class="list-empty" data-empty="open-service">Belum ada order aktif.</div>
+                <div class="table-links table-links--trailing">
+                    <a data-desk-link="Garage Service Order" target="_blank">Buka di Desk</a>
+                </div>
+            </article>
+            <article class="portal-card">
+                <h2>Catat Progres Servis</h2>
+                <p class="lead">Tambahkan log progres untuk mengisi tabel progress_logs pada service order yang aktif.</p>
+                <form id="progress-form" class="form-grid">
+                    <div class="form-field">
+                        <label for="progress_service_order">Service Order</label>
+                        <select id="progress_service_order" name="name">
+                            <option value="">— Pilih service order —</option>
+                        </select>
+                    </div>
+                    <div class="form-grid two-column">
+                        <div class="form-field">
+                            <label for="progress_log_date">Tanggal</label>
+                            <input id="progress_log_date" name="log_date" type="date" />
+                        </div>
+                        <div class="form-field">
+                            <label for="progress_status">Status</label>
+                            <select id="progress_status" name="status">
+                                <option value="Started">Started</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Awaiting Parts">Awaiting Parts</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Paused">Paused</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-grid two-column">
+                        <div class="form-field">
+                            <label for="progress_technician">Teknisi</label>
+                            <input id="progress_technician" name="technician" placeholder="User teknisi" />
+                        </div>
+                        <div class="form-field">
+                            <label for="progress_percent">Persentase (%)</label>
+                            <input id="progress_percent" name="percent_complete" type="number" min="0" max="100" step="1" data-cast="float" />
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label for="progress_notes">Catatan</label>
+                        <textarea id="progress_notes" name="progress_notes" placeholder="Detail progres"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button class="primary" type="submit">Tambahkan Progres</button>
+                    </div>
+                </form>
+            </article>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script>
+    frappe.require("/assets/garage/js/garage_portal.js");
+</script>
+{% endblock %}
+
+{% block page_style %}
+<style>@import url('/assets/garage/css/garage_portal.css');</style>
+{% endblock %}
