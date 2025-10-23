@@ -1,33 +1,1175 @@
 {% extends "templates/web.html" %}
 
-{% block title %}Penagihan & Pembayaran{% endblock %}
+{% block title %}Intake Customer & Kendaraan{% endblock %}
+
+{% block head_include %}
+<style>
+/* ============================================
+   GARAGE INTAKE PAGE - REFINED STYLES
+   ============================================ */
+
+:root {
+    /* Color Palette */
+    --primary-color: #2563eb;
+    --primary-dark: #1e40af;
+    --primary-light: #3b82f6;
+    --primary-lightest: #dbeafe;
+    --success-color: #10b981;
+    --success-light: #d1fae5;
+    --danger-color: #ef4444;
+    --danger-light: #fee2e2;
+    --warning-color: #f59e0b;
+    --warning-light: #fef3c7;
+    
+    /* Text Colors */
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --text-white: #ffffff;
+    
+    /* Background Colors */
+    --bg-body: #f9fafb;
+    --bg-white: #ffffff;
+    --bg-gray-50: #f9fafb;
+    --bg-gray-100: #f3f4f6;
+    --bg-gray-200: #e5e7eb;
+    
+    /* Border Colors */
+    --border-color: #e5e7eb;
+    --border-color-light: #f3f4f6;
+    --border-focus: #2563eb;
+    
+    /* Shadows */
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+    
+    /* Spacing Scale */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+    
+    /* Border Radius */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-full: 9999px;
+    
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Typography */
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+}
+
+/* ============================================
+   RESET & BASE STYLES
+   ============================================ */
+
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-sans) !important;
+    background: linear-gradient(180deg, #f0f9ff 0%, #f9fafb 100%) !important;
+    color: var(--text-primary) !important;
+    line-height: 1.6 !important;
+    font-size: 15px !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   CONTAINER & LAYOUT
+   ============================================ */
+
+.container {
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+    padding: 0 var(--space-6) !important;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 var(--space-4) !important;
+    }
+}
+
+.portal-page {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #f0f9ff 0%, #f9fafb 100%);
+    padding-top: 0 !important;
+}
+
+/* ============================================
+   HERO SECTION
+   ============================================ */
+
+.portal-hero--sub {
+    padding: var(--space-12) 0 !important;
+    background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%) !important;
+    position: relative;
+    overflow: hidden;
+    color: var(--text-white) !important;
+    margin-bottom: var(--space-8) !important;
+}
+
+.portal-hero--sub::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: 
+        radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+    z-index: 0;
+}
+
+.portal-hero--sub::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.6;
+    z-index: 0;
+}
+
+.portal-hero--sub .container {
+    position: relative;
+    z-index: 1;
+}
+
+.portal-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.813rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.85) !important;
+    margin-bottom: var(--space-3) !important;
+    background: rgba(255, 255, 255, 0.1);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    backdrop-filter: blur(10px);
+}
+
+.portal-hero--sub h1 {
+    font-size: clamp(1.75rem, 5vw, 2.5rem) !important;
+    margin-bottom: var(--space-4) !important;
+    font-weight: 700 !important;
+    color: var(--text-white) !important;
+    line-height: 1.2 !important;
+    letter-spacing: -0.02em;
+}
+
+.portal-hero--sub p {
+    font-size: 1.063rem !important;
+    opacity: 0.92;
+    max-width: 700px;
+    line-height: 1.7 !important;
+    color: var(--text-white) !important;
+}
+
+/* ============================================
+   NAVIGATION TABS
+   ============================================ */
+
+.portal-nav {
+    display: flex !important;
+    gap: var(--space-2) !important;
+    background: var(--bg-white) !important;
+    padding: var(--space-3) !important;
+    border-radius: var(--radius-2xl) !important;
+    box-shadow: var(--shadow-lg) !important;
+    margin-bottom: var(--space-12) !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    border: 1px solid var(--border-color-light);
+}
+
+@media (max-width: 768px) {
+    .portal-nav {
+        gap: var(--space-2) !important;
+    }
+}
+
+.portal-nav a {
+    padding: var(--space-3) var(--space-5) !important;
+    border-radius: var(--radius-lg) !important;
+    text-decoration: none !important;
+    color: var(--text-secondary) !important;
+    font-weight: 600 !important;
+    font-size: 0.938rem;
+    transition: all var(--transition-base) !important;
+    white-space: nowrap;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.portal-nav a::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%) scaleX(0);
+    width: 70%;
+    height: 2px;
+    background: var(--primary-color);
+    transition: transform var(--transition-base);
+    border-radius: var(--radius-full);
+}
+
+.portal-nav a:hover {
+    background: var(--primary-lightest) !important;
+    color: var(--primary-color) !important;
+    transform: translateY(-1px);
+}
+
+.portal-nav a:hover::after {
+    transform: translateX(-50%) scaleX(1);
+}
+
+.portal-nav a.active {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light)) !important;
+    color: var(--text-white) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.portal-nav a.active::after {
+    display: none;
+}
+/* ============================================
+   GRID & SECTIONS
+   ============================================ */
+
+.portal-grid {
+    display: grid !important;
+    gap: var(--space-8) !important;
+    margin-bottom: var(--space-8) !important;
+}
+
+.portal-grid.two-column {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+    .portal-grid.two-column {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.portal-section {
+    padding: var(--space-12) 0 !important;
+}
+
+/* ============================================
+   CARDS
+   ============================================ */
+
+.portal-card {
+    background: var(--bg-white) !important;
+    border-radius: var(--radius-xl) !important;
+    padding: var(--space-8) !important;
+    box-shadow: var(--shadow-sm) !important;
+    transition: all var(--transition-base) !important;
+    border: 1px solid var(--border-color-light) !important;
+    animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.portal-card:hover {
+    box-shadow: var(--shadow-md) !important;
+    transform: translateY(-2px);
+    border-color: var(--border-color);
+}
+
+.portal-card > h2 {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    color: var(--text-primary) !important;
+    margin-bottom: var(--space-4) !important;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.portal-card > h2::before {
+    content: '';
+    width: 4px;
+    height: 1.5rem;
+    background: linear-gradient(180deg, var(--primary-color), var(--primary-light));
+    border-radius: var(--radius-full);
+}
+
+.portal-card > h3 {
+    font-size: 1.125rem !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    margin: var(--space-8) 0 var(--space-4) 0 !important;
+}
+
+.portal-card .lead {
+    font-size: 0.938rem !important;
+    color: var(--text-secondary) !important;
+    margin-bottom: var(--space-6) !important;
+    line-height: 1.6;
+}
+
+.section-subtitle {
+    font-size: 1.125rem !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    margin: var(--space-8) 0 var(--space-4) 0 !important;
+    padding-bottom: var(--space-3);
+    border-bottom: 2px solid var(--bg-gray-100);
+}
+
+/* ============================================
+   FORMS
+   ============================================ */
+
+.form-grid {
+    display: grid;
+    gap: var(--space-6);
+}
+
+.form-grid.two-column {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .form-grid.two-column {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.form-grid.form-grid--stacked {
+    margin-top: var(--space-8);
+    padding-top: var(--space-8);
+    border-top: 2px solid var(--bg-gray-100);
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.form-field label {
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.form-field label.required::after {
+    content: '*';
+    color: var(--danger-color);
+    font-size: 1rem;
+}
+
+.form-field input[type="text"],
+.form-field input[type="email"],
+.form-field input[type="tel"],
+.form-field input[type="number"],
+.form-field input[type="date"],
+.form-field input[type="time"],
+.form-field input[type="datetime-local"],
+.form-field select,
+.form-field textarea {
+    width: 100%;
+    padding: var(--space-3) var(--space-4) !important;
+    border: 1.5px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+    font-size: 0.938rem !important;
+    color: var(--text-primary) !important;
+    background: var(--bg-white) !important;
+    transition: all var(--transition-base) !important;
+    font-family: var(--font-sans) !important;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+    outline: none !important;
+    border-color: var(--border-focus) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+    transform: translateY(-1px);
+}
+
+.form-field textarea {
+    min-height: 100px;
+    resize: vertical;
+    line-height: 1.6;
+}
+
+.form-field input::placeholder,
+.form-field textarea::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+button,
+.btn {
+    padding: var(--space-3) var(--space-6) !important;
+    border-radius: var(--radius-md) !important;
+    font-size: 0.938rem !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all var(--transition-base) !important;
+    border: none !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    text-decoration: none !important;
+    white-space: nowrap;
+}
+
+button.primary,
+.btn.primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light)) !important;
+    color: var(--text-white) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+button.primary:hover,
+.btn.primary:hover {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary-color)) !important;
+    box-shadow: var(--shadow-md) !important;
+    transform: translateY(-2px);
+}
+
+button.secondary,
+.btn.secondary {
+    background: var(--bg-white) !important;
+    color: var(--text-secondary) !important;
+    border: 1.5px solid var(--border-color) !important;
+}
+
+button.secondary:hover,
+.btn.secondary:hover {
+    background: var(--bg-gray-50) !important;
+    border-color: var(--text-secondary) !important;
+    color: var(--text-primary) !important;
+    transform: translateY(-1px);
+}
+
+button.remove-row,
+.btn.danger {
+    background: var(--danger-light) !important;
+    color: var(--danger-color) !important;
+    border: 1.5px solid var(--danger-color) !important;
+    padding: var(--space-2) var(--space-4) !important;
+    font-size: 0.875rem !important;
+}
+
+button.remove-row:hover,
+.btn.danger:hover {
+    background: var(--danger-color) !important;
+    color: var(--text-white) !important;
+    transform: translateY(-1px);
+}
+
+button:disabled,
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    transform: none !important;
+}
+
+.form-actions {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin-top: var(--space-4);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--border-color-light);
+}
+
+/* ============================================
+   REPEATER GROUPS
+   ============================================ */
+
+.repeat-group {
+    background: var(--bg-gray-50);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    margin: var(--space-6) 0;
+}
+
+.repeat-group > header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-6);
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+
+.repeat-group > header h3 {
+    font-size: 1.063rem !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    margin: 0 !important;
+}
+
+.repeat-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.repeat-row {
+    background: var(--bg-white);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-5);
+    display: grid;
+    gap: var(--space-4);
+    position: relative;
+    transition: all var(--transition-base);
+}
+
+.repeat-row:hover {
+    border-color: var(--primary-light);
+    box-shadow: var(--shadow-sm);
+}
+
+.repeat-row.columns-2 {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .repeat-row.columns-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.repeat-row.columns-3 {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .repeat-row.columns-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .repeat-row.columns-3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.repeat-row.columns-4 {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .repeat-row.columns-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .repeat-row.columns-4 {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.repeat-row > button.remove-row {
+    grid-column: 1 / -1;
+    width: fit-content;
+    margin-left: auto;
+}
+
+/* ============================================
+   TABLES
+   ============================================ */
+
+.simple-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--bg-white);
+    margin: var(--space-4) 0;
+}
+
+.simple-table thead {
+    background: var(--bg-gray-50);
+}
+
+.simple-table thead th {
+    padding: var(--space-4) var(--space-5) !important;
+    text-align: left !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid var(--border-color) !important;
+}
+
+.simple-table tbody tr {
+    transition: background var(--transition-fast);
+    border-bottom: 1px solid var(--border-color-light);
+}
+
+.simple-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.simple-table tbody tr:hover {
+    background: var(--bg-gray-50) !important;
+}
+
+.simple-table tbody td {
+    padding: var(--space-4) var(--space-5) !important;
+    font-size: 0.938rem !important;
+    color: var(--text-secondary) !important;
+}
+
+.simple-table tbody td:first-child {
+    font-weight: 500;
+    color: var(--text-primary) !important;
+}
+
+.list-empty {
+    text-align: center;
+    padding: var(--space-10) var(--space-4);
+    color: var(--text-muted);
+    font-size: 0.938rem;
+    background: var(--bg-gray-50);
+    border: 1.5px dashed var(--border-color);
+    border-radius: var(--radius-lg);
+    margin: var(--space-4) 0;
+}
+
+.table-links {
+    display: flex;
+    gap: var(--space-4);
+    margin-top: var(--space-6);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--border-color-light);
+}
+
+.table-links--wrap {
+    flex-wrap: wrap;
+}
+
+.table-links--trailing {
+    justify-content: flex-end;
+}
+
+.table-links a {
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-md);
+    text-decoration: none !important;
+    color: var(--primary-color) !important;
+    font-weight: 500;
+    font-size: 0.938rem;
+    border: 1.5px solid var(--primary-light);
+    background: var(--primary-lightest);
+    transition: all var(--transition-base);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.table-links a:hover {
+    background: var(--primary-color);
+    color: var(--text-white) !important;
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* ============================================
+   METRICS
+   ============================================ */
+
+.metric-grid {
+    display: grid;
+    gap: var(--space-5);
+    margin: var(--space-6) 0;
+}
+
+@media (min-width: 640px) {
+    .metric-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .metric-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.metric-grid.metric-grid--spaced {
+    gap: var(--space-6);
+}
+
+.metric-card {
+    background: linear-gradient(135deg, var(--bg-white) 0%, var(--bg-gray-50) 100%);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    transition: all var(--transition-base);
+}
+
+.metric-card:hover {
+    border-color: var(--primary-light);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-3px);
+}
+
+.metric-card h3 {
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    color: var(--text-secondary) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-3) !important;
+}
+
+.metric-value {
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    color: var(--primary-color) !important;
+    margin-bottom: var(--space-2);
+    font-variant-numeric: tabular-nums;
+}
+
+.metric-caption {
+    font-size: 0.813rem !important;
+    color: var(--text-muted) !important;
+    line-height: 1.5;
+    margin: 0 !important;
+}
+
+/* ============================================
+   BADGES & STATUS
+   ============================================ */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    font-size: 0.813rem;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.badge.badge--success {
+    background: var(--success-light);
+    color: var(--success-color);
+}
+
+.badge.badge--warning {
+    background: var(--warning-light);
+    color: var(--warning-color);
+}
+
+.badge.badge--danger {
+    background: var(--danger-light);
+    color: var(--danger-color);
+}
+
+.badge.badge--primary {
+    background: var(--primary-lightest);
+    color: var(--primary-color);
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.text-center {
+    text-align: center !important;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+.mt-0 { margin-top: 0 !important; }
+.mt-2 { margin-top: var(--space-2) !important; }
+.mt-4 { margin-top: var(--space-4) !important; }
+.mt-6 { margin-top: var(--space-6) !important; }
+.mt-8 { margin-top: var(--space-8) !important; }
+
+.mb-0 { margin-bottom: 0 !important; }
+.mb-2 { margin-bottom: var(--space-2) !important; }
+.mb-4 { margin-bottom: var(--space-4) !important; }
+.mb-6 { margin-bottom: var(--space-6) !important; }
+.mb-8 { margin-bottom: var(--space-8) !important; }
+
+.hidden {
+    display: none !important;
+}
+
+/* ============================================
+   RESPONSIVE UTILITIES
+   ============================================ */
+
+@media (max-width: 640px) {
+    .hide-mobile {
+        display: none !important;
+    }
+}
+
+@media (min-width: 641px) {
+    .show-mobile {
+        display: none !important;
+    }
+}
+
+/* ============================================
+   LOADING & ANIMATIONS
+   ============================================ */
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.loading {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spinner {
+    animation: spin 1s linear infinite;
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+
+@media print {
+    .portal-nav,
+    .form-actions,
+    button {
+        display: none !important;
+    }
+    
+    .portal-card {
+        box-shadow: none !important;
+        border: 1px solid var(--border-color) !important;
+        page-break-inside: avoid;
+    }
+}
+</style>
+{% endblock %}
 
 {% block page_content %}
-<section class="portal-hero portal-hero--sub">
-    <div class="container">
-        <p class="portal-eyebrow">Garage Portal</p>
-        <h1>Penagihan & Pembayaran</h1>
-        <p>
-            Kelola sales invoice, jadwal pembayaran, serta pencatatan penerimaan kas/bank.
-            Gunakan halaman ini untuk memastikan arus kas bengkel tetap terpantau.
-        </p>
+<section class="portal-page">
+    <div class="portal-hero--sub">
+        <div class="container">
+            <div class="portal-eyebrow">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                </svg>
+                Garage Management System
+            </div>
+            <h1>Penagihan & Pembayaran</h1>
+            <p>
+                Kelola sales invoice, jadwal pembayaran, serta pencatatan penerimaan kas/bank.
+                Gunakan halaman ini untuk memastikan arus kas bengkel tetap terpantau.
+            </p>
+        </div>
     </div>
-</section>
 
-{% set active_page = 'finance' %}
-{% include "garage/templates/includes/portal_nav.html" %}
-
-<section class="portal-section">
     <div class="container">
-        <div class="portal-grid two-column">
+        <nav class="portal-nav">
+            <a href="/garage">Overview</a>
+            <a href="/garage/intake">Intake</a>
+            <a href="/garage/service">Servis</a>
+            <a href="/garage/sparepart">Sparepart</a>
+            <a href="/garage/procurement">Pengadaan</a>
+            <a href="/garage/finance" class="active">Keuangan</a>
+            <a href="/garage/insight">Insight</a>
+        </nav>
+
+        <div class="portal-grid">
+            <!-- Customer Registration -->
             <article class="portal-card">
-                <h2>Buat Sales Invoice</h2>
-                <p class="lead">Catat invoice baru lengkap dengan detail item dan jadwal pembayaran.</p>
+                <h2>Registrasi Customer Baru</h2>
+                <p class="lead">Daftarkan customer baru dengan lengkap untuk kemudahan tracking service dan komunikasi.</p>
+                
+                <form id="customer-form" class="form-grid">
+                    <div class="form-grid two-column">
+                        <div class="form-field">
+                            <label for="customer_name" class="required">Nama Lengkap</label>
+                            <input id="customer_name" name="customer_name" type="text" placeholder="John Doe" required />
+                        </div>
+                        <div class="form-field">
+                            <label for="phone">No. Telepon</label>
+                            <input id="phone" name="phone" type="tel" placeholder="08123456789" />
+                        </div>
+                        <div class="form-field">
+                            <label for="email">Email</label>
+                            <input id="email" name="email" type="email" placeholder="customer@email.com" />
+                        </div>
+                        <div class="form-field">
+                            <label for="customer_type">Tipe Customer</label>
+                            <select id="customer_type" name="customer_type">
+                                <option value="Individual">Individual</option>
+                                <option value="Company">Company</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="address">Alamat Lengkap</label>
+                        <textarea id="address" name="address" placeholder="Jl. Contoh No. 123, Jakarta"></textarea>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button class="primary" type="submit">Simpan Customer</button>
+                        <button class="secondary" type="reset">Reset Form</button>
+                    </div>
+                </form>
+            </article>
+
+            <!-- Vehicle Registration -->
+            <article class="portal-card">
+                <h2>Registrasi Kendaraan</h2>
+                <p class="lead">Daftarkan kendaraan customer dengan detail spesifikasi dan riwayat service.</p>
+                
+                <form id="vehicle-form" class="form-grid">
+                    <div class="form-grid two-column">
+                        <div class="form-field">
+                            <label for="vehicle_customer" class="required">Customer</label>
+                            <select id="vehicle_customer" name="customer" required>
+                                <option value="">— Pilih customer —</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="license_plate" class="required">Nomor Polisi</label>
+                            <input id="license_plate" name="license_plate" type="text" placeholder="B 1234 XYZ" required />
+                        </div>
+                        <div class="form-field">
+                            <label for="make">Merk</label>
+                            <input id="make" name="make" type="text" placeholder="Toyota" />
+                        </div>
+                        <div class="form-field">
+                            <label for="model">Model</label>
+                            <input id="model" name="model" type="text" placeholder="Avanza" />
+                        </div>
+                        <div class="form-field">
+                            <label for="year">Tahun</label>
+                            <input id="year" name="year" type="number" min="1900" max="2099" placeholder="2020" />
+                        </div>
+                        <div class="form-field">
+                            <label for="vin">VIN / Nomor Rangka</label>
+                            <input id="vin" name="vin" type="text" placeholder="MHFM123456789" />
+                        </div>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="notes">Catatan Kendaraan</label>
+                        <textarea id="notes" name="notes" placeholder="Catatan khusus tentang kondisi kendaraan"></textarea>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button class="primary" type="submit">Simpan Kendaraan</button>
+                        <button class="secondary" type="reset">Reset Form</button>
+                    </div>
+                </form>
+            </article>
+
+            <!-- Service Order -->
+            <article class="portal-card">
+                <h2>Service Order</h2>
+                <p class="lead">Buat work order untuk service kendaraan dengan detail pekerjaan dan sparepart.</p>
+                
+                <form id="order-form" class="form-grid">
+                    <div class="form-grid two-column">
+                        <div class="form-field">
+                            <label for="order_customer" class="required">Customer</label>
+                            <select id="order_customer" name="customer" required>
+                                <option value="">— Pilih customer —</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="order_vehicle" class="required">Kendaraan</label>
+                            <select id="order_vehicle" name="vehicle" required>
+                                <option value="">— Pilih kendaraan —</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="order_date">Tanggal Order</label>
+                            <input id="order_date" name="order_date" type="date" />
+                        </div>
+                        <div class="form-field">
+                            <label for="expected_delivery">Est. Selesai</label>
+                            <input id="expected_delivery" name="expected_delivery" type="datetime-local" />
+                        </div>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="issue_description">Deskripsi Keluhan</label>
+                        <textarea id="issue_description" name="issue_description" placeholder="Jelaskan keluhan atau kebutuhan service"></textarea>
+                    </div>
+                    
+                    <!-- Work Items -->
+                    <div class="repeat-group" data-repeat="work_items">
+                        <header>
+                            <h3>Item Pekerjaan</h3>
+                            <button class="secondary" type="button" data-action="add-row">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Tambah Item
+                            </button>
+                        </header>
+                        <div class="repeat-rows" data-role="rows"></div>
+                        <template data-role="row-template">
+                            <div class="repeat-row columns-3">
+                                <div class="form-field">
+                                    <label>Jenis Pekerjaan</label>
+                                    <select data-field="work_type">
+                                        <option value="Service">Service</option>
+                                        <option value="Repair">Repair</option>
+                                        <option value="Inspection">Inspection</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label>Deskripsi</label>
+                                    <input data-field="description" placeholder="Ganti oli mesin" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Biaya (Rp)</label>
+                                    <input data-field="cost" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <button class="remove-row" type="button" data-action="remove-row">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                    Hapus
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- Spare Parts -->
+                    <div class="repeat-group" data-repeat="parts">
+                        <header>
+                            <h3>Sparepart</h3>
+                            <button class="secondary" type="button" data-action="add-row">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Tambah Part
+                            </button>
+                        </header>
+                        <div class="repeat-rows" data-role="rows"></div>
+                        <template data-role="row-template">
+                            <div class="repeat-row columns-4">
+                                <div class="form-field">
+                                    <label>Nama Part</label>
+                                    <input data-field="part_name" placeholder="Oli mesin SAE 10W-40" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Qty</label>
+                                    <input data-field="qty" type="number" min="1" data-cast="int" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Harga Satuan (Rp)</label>
+                                    <input data-field="unit_price" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Total (Rp)</label>
+                                    <input data-field="total" type="number" min="0" step="0.01" readonly />
+                                </div>
+                                <button class="remove-row" type="button" data-action="remove-row">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                    Hapus
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button class="primary" type="submit">Simpan Service Order</button>
+                        <button class="secondary" type="reset">Reset Form</button>
+                    </div>
+                </form>
+            </article>
+
+            <!-- Invoice & Payment -->
+            <article class="portal-card">
+                <h2>Invoice Layanan</h2>
+                <p class="lead">Terbitkan invoice untuk layanan yang telah diberikan kepada customer.</p>
+                
                 <form id="invoice-form" class="form-grid">
                     <div class="form-grid two-column">
                         <div class="form-field">
-                            <label for="invoice_customer">Customer</label>
-                            <select id="invoice_customer" name="customer">
+                            <label for="invoice_customer" class="required">Customer</label>
+                            <select id="invoice_customer" name="customer" required>
                                 <option value="">— Pilih customer —</option>
                             </select>
                         </div>
@@ -36,111 +1178,82 @@
                             <input id="invoice_date" name="invoice_date" type="date" />
                         </div>
                         <div class="form-field">
-                            <label for="source_type">Sumber</label>
-                            <select id="source_type" name="source_type">
-                                <option value="">—</option>
-                                <option value="Garage Service Order">Service Order</option>
-                                <option value="Garage Spare Part Order">Spare Part Order</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label for="source_name">Nomor Sumber</label>
-                            <input id="source_name" name="source_name" placeholder="Nomor dokumen" />
-                        </div>
-                        <div class="form-field">
                             <label for="due_date">Jatuh Tempo</label>
                             <input id="due_date" name="due_date" type="date" />
                         </div>
                         <div class="form-field">
-                            <label for="invoice_total_amount">Total</label>
-                            <input id="invoice_total_amount" name="total_amount" type="number" min="0" step="0.01" data-cast="float" />
+                            <label for="payment_terms">Terms</label>
+                            <select id="payment_terms" name="payment_terms">
+                                <option value="Net 7">Net 7 hari</option>
+                                <option value="Net 14">Net 14 hari</option>
+                                <option value="Net 30">Net 30 hari</option>
+                                <option value="Cash">Cash</option>
+                            </select>
                         </div>
                     </div>
+                    
+                    <!-- Invoice Items -->
                     <div class="repeat-group" data-repeat="items">
                         <header>
                             <h3>Item Invoice</h3>
-                            <button class="secondary" type="button" data-action="add-row">Tambah Item</button>
+                            <button class="secondary" type="button" data-action="add-row">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Tambah Item
+                            </button>
                         </header>
                         <div class="repeat-rows" data-role="rows"></div>
                         <template data-role="row-template">
                             <div class="repeat-row columns-4">
                                 <div class="form-field">
-                                    <label>Kode</label>
-                                    <input data-field="item_code" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Nama</label>
-                                    <input data-field="item_name" />
+                                    <label>Deskripsi</label>
+                                    <input data-field="description" placeholder="Jasa service" />
                                 </div>
                                 <div class="form-field">
                                     <label>Qty</label>
-                                    <input data-field="qty" type="number" min="0" step="0.01" data-cast="float" />
+                                    <input data-field="qty" type="number" min="1" data-cast="int" />
                                 </div>
                                 <div class="form-field">
-                                    <label>Harga</label>
+                                    <label>Harga (Rp)</label>
                                     <input data-field="rate" type="number" min="0" step="0.01" data-cast="float" />
                                 </div>
                                 <div class="form-field">
-                                    <label>Total</label>
-                                    <input data-field="amount" type="number" min="0" step="0.01" data-cast="float" />
+                                    <label>Total (Rp)</label>
+                                    <input data-field="amount" type="number" min="0" step="0.01" readonly />
                                 </div>
-                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
+                                <button class="remove-row" type="button" data-action="remove-row">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                    Hapus
+                                </button>
                             </div>
                         </template>
                     </div>
-                    <div class="repeat-group" data-repeat="payment_schedule">
-                        <header>
-                            <h3>Jadwal Pembayaran</h3>
-                            <button class="secondary" type="button" data-action="add-row">Tambah Jadwal</button>
-                        </header>
-                        <div class="repeat-rows" data-role="rows"></div>
-                        <template data-role="row-template">
-                            <div class="repeat-row columns-3">
-                                <div class="form-field">
-                                    <label>Jatuh Tempo</label>
-                                    <input data-field="due_date" type="date" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Persentase</label>
-                                    <input data-field="percentage" type="number" min="0" max="100" step="0.01" data-cast="float" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Nominal</label>
-                                    <input data-field="amount" type="number" min="0" step="0.01" data-cast="float" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Status</label>
-                                    <select data-field="status">
-                                        <option value="Pending">Pending</option>
-                                        <option value="Paid">Paid</option>
-                                        <option value="Overdue">Overdue</option>
-                                    </select>
-                                </div>
-                                <div class="form-field">
-                                    <label>Deskripsi</label>
-                                    <input data-field="description" placeholder="Termin" />
-                                </div>
-                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
-                            </div>
-                        </template>
-                    </div>
+                    
                     <div class="form-field">
-                        <label for="invoice_notes">Catatan</label>
-                        <textarea id="invoice_notes" name="notes"></textarea>
+                        <label for="invoice_notes">Catatan / Terms</label>
+                        <textarea id="invoice_notes" name="notes" placeholder="Terima kasih atas kepercayaan Anda"></textarea>
                     </div>
+                    
                     <div class="form-actions">
                         <button class="primary" type="submit">Simpan Invoice</button>
                     </div>
                 </form>
             </article>
+
+            <!-- Payment Entry -->
             <article class="portal-card">
                 <h2>Pembayaran & Bukti Bayar</h2>
                 <p class="lead">Catat penerimaan pembayaran dan terbitkan bukti penerimaan resmi.</p>
+                
                 <form id="payment-form" class="form-grid">
                     <div class="form-grid two-column">
                         <div class="form-field">
-                            <label for="payment_customer">Customer</label>
-                            <select id="payment_customer" name="customer">
+                            <label for="payment_customer" class="required">Customer</label>
+                            <select id="payment_customer" name="customer" required>
                                 <option value="">— Pilih customer —</option>
                             </select>
                         </div>
@@ -154,6 +1267,8 @@
                                 <option value="Cash">Cash</option>
                                 <option value="Bank Transfer">Bank Transfer</option>
                                 <option value="Credit">Credit</option>
+                                <option value="Debit Card">Debit Card</option>
+                                <option value="E-Wallet">E-Wallet</option>
                             </select>
                         </div>
                         <div class="form-field">
@@ -173,10 +1288,18 @@
                             <input id="received_amount" name="received_amount" type="number" min="0" step="0.01" data-cast="float" />
                         </div>
                     </div>
+                    
+                    <!-- Allocation -->
                     <div class="repeat-group" data-repeat="allocations">
                         <header>
                             <h3>Alokasi ke Invoice</h3>
-                            <button class="secondary" type="button" data-action="add-row">Tambah Alokasi</button>
+                            <button class="secondary" type="button" data-action="add-row">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Tambah Alokasi
+                            </button>
                         </header>
                         <div class="repeat-rows" data-role="rows"></div>
                         <template data-role="row-template">
@@ -197,24 +1320,33 @@
                                     <label>Outstanding Sesudah</label>
                                     <input data-field="outstanding_after" type="number" min="0" step="0.01" data-cast="float" />
                                 </div>
-                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
+                                <button class="remove-row" type="button" data-action="remove-row">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                    Hapus
+                                </button>
                             </div>
                         </template>
                     </div>
+                    
                     <div class="form-field">
                         <label for="payment_notes">Catatan</label>
                         <textarea id="payment_notes" name="notes"></textarea>
                     </div>
+                    
                     <div class="form-actions">
                         <button class="primary" type="submit">Simpan Payment Entry</button>
                     </div>
                 </form>
+
+                <!-- Receipt Form -->
                 <form id="receipt-form" class="form-grid form-grid--stacked">
                     <h3>Terbitkan Bukti Pembayaran</h3>
                     <div class="form-grid two-column">
                         <div class="form-field">
-                            <label for="receipt_payment_entry">Payment Entry</label>
-                            <select id="receipt_payment_entry" name="payment_entry">
+                            <label for="receipt_payment_entry" class="required">Payment Entry</label>
+                            <select id="receipt_payment_entry" name="payment_entry" required>
                                 <option value="">— Pilih payment entry —</option>
                             </select>
                         </div>
@@ -240,35 +1372,41 @@
                             <input id="issued_by" name="issued_by" placeholder="User kasir" />
                         </div>
                     </div>
+                    
                     <div class="form-field">
                         <label for="receipt_notes">Catatan</label>
                         <textarea id="receipt_notes" name="notes"></textarea>
                     </div>
+                    
                     <div class="form-actions">
                         <button class="primary" type="submit">Simpan Receipt</button>
                     </div>
                 </form>
             </article>
+
+            <!-- Accounts Receivable Dashboard -->
             <article class="portal-card">
                 <h2>Piutang & Pembayaran</h2>
                 <p class="lead">Monitor performa penagihan, outstanding, dan pembayaran terakhir.</p>
+                
                 <div class="metric-grid metric-grid--spaced">
                     <div class="metric-card">
                         <h3>Total Invoice</h3>
-                        <div class="metric-value" data-metric="invoice-total">Rp0</div>
+                        <div class="metric-value" data-metric="invoice-total">Rp 0</div>
                         <p class="metric-caption">Akumulasi nilai invoice yang diterbitkan.</p>
                     </div>
                     <div class="metric-card">
                         <h3>Outstanding</h3>
-                        <div class="metric-value" data-metric="outstanding-total">Rp0</div>
+                        <div class="metric-value" data-metric="outstanding-total">Rp 0</div>
                         <p class="metric-caption">Total piutang belum tertagih.</p>
                     </div>
                     <div class="metric-card">
                         <h3>Pembayaran Diterima</h3>
-                        <div class="metric-value" data-metric="payments-total">Rp0</div>
+                        <div class="metric-value" data-metric="payments-total">Rp 0</div>
                         <p class="metric-caption">Total penerimaan kas/bank.</p>
                     </div>
                 </div>
+                
                 <h3 class="section-subtitle">Invoice Aktif</h3>
                 <table class="simple-table">
                     <thead>
@@ -276,12 +1414,21 @@
                             <th>Nomor</th>
                             <th>Customer</th>
                             <th>Jatuh Tempo</th>
-                            <th>Outstanding</th>
+                            <th class="text-right">Outstanding</th>
                         </tr>
                     </thead>
-                    <tbody data-role="open-invoice-table"></tbody>
+                    <tbody data-role="open-invoice-table">
+                        <!-- Dynamic rows will be inserted here -->
+                    </tbody>
                 </table>
-                <div class="list-empty" data-empty="open-invoice">Semua invoice sudah lunas.</div>
+                <div class="list-empty" data-empty="open-invoice">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.3; margin: 0 auto var(--space-3);">
+                        <path d="M9 11l3 3L22 4"></path>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                    </svg>
+                    Semua invoice sudah lunas.
+                </div>
+                
                 <h3 class="section-subtitle">Payment Entry Terakhir</h3>
                 <table class="simple-table">
                     <thead>
@@ -290,15 +1437,45 @@
                             <th>Customer</th>
                             <th>Tanggal</th>
                             <th>Metode</th>
+                            <th class="text-right">Nilai</th>
                         </tr>
                     </thead>
-                    <tbody data-role="payment-table"></tbody>
+                    <tbody data-role="payment-table">
+                        <!-- Dynamic rows will be inserted here -->
+                    </tbody>
                 </table>
-                <div class="list-empty" data-empty="payment">Belum ada payment entry.</div>
+                <div class="list-empty" data-empty="payment">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.3; margin: 0 auto var(--space-3);">
+                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                        <line x1="1" y1="10" x2="23" y2="10"></line>
+                    </svg>
+                    Belum ada payment entry.
+                </div>
+                
                 <div class="table-links table-links--wrap table-links--trailing">
-                    <a data-desk-link="Garage Sales Invoice" target="_blank">List Invoice</a>
-                    <a data-desk-link="Garage Payment Entry" target="_blank">List Pembayaran</a>
-                    <a data-desk-link="Garage Receipt Document" target="_blank">List Receipt</a>
+                    <a data-desk-link="Garage Sales Invoice" target="_blank">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        List Invoice
+                    </a>
+                    <a data-desk-link="Garage Payment Entry" target="_blank">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                            <line x1="1" y1="10" x2="23" y2="10"></line>
+                        </svg>
+                        List Pembayaran
+                    </a>
+                    <a data-desk-link="Garage Receipt Document" target="_blank">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                        List Receipt
+                    </a>
                 </div>
             </article>
         </div>

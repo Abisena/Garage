@@ -5,424 +5,290 @@
 {% block head_include %}
 <style>
 /* ============================================
-   GARAGE OVERVIEW PAGE - COMPLETE STYLES
+   GARAGE OVERVIEW PAGE - REFINED STYLES
    ============================================ */
 
 :root {
+    /* Color Palette */
     --primary-color: #2563eb;
     --primary-dark: #1e40af;
     --primary-light: #3b82f6;
     --primary-lightest: #dbeafe;
     --success-color: #10b981;
+    --success-light: #d1fae5;
     --danger-color: #ef4444;
+    --danger-light: #fee2e2;
+    --warning-color: #f59e0b;
+    --warning-light: #fef3c7;
+    
+    /* Text Colors */
     --text-primary: #111827;
     --text-secondary: #6b7280;
     --text-muted: #9ca3af;
+    --text-white: #ffffff;
+    
+    /* Background Colors */
     --bg-body: #f9fafb;
     --bg-white: #ffffff;
-    --bg-gray-light: #f3f4f6;
-    --bg-gray: #e5e7eb;
+    --bg-gray-50: #f9fafb;
+    --bg-gray-100: #f3f4f6;
+    --bg-gray-200: #e5e7eb;
+    
+    /* Border Colors */
     --border-color: #e5e7eb;
     --border-color-light: #f3f4f6;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    --spacing-xs: 0.25rem;
-    --spacing-sm: 0.5rem;
-    --spacing-md: 1rem;
-    --spacing-lg: 1.5rem;
-    --spacing-xl: 2rem;
-    --spacing-2xl: 3rem;
+    --border-focus: #2563eb;
+    
+    /* Shadows */
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+    
+    /* Spacing Scale */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+    
+    /* Border Radius */
     --radius-sm: 0.375rem;
     --radius-md: 0.5rem;
     --radius-lg: 0.75rem;
     --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-full: 9999px;
+    
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Typography */
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
 }
 
-* {
+/* ============================================
+   RESET & BASE STYLES
+   ============================================ */
+
+*,
+*::before,
+*::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-family: var(--font-sans) !important;
     background: linear-gradient(180deg, #f0f9ff 0%, #f9fafb 100%) !important;
     color: var(--text-primary) !important;
     line-height: 1.6 !important;
     font-size: 15px !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
 }
+
+/* ============================================
+   CONTAINER
+   ============================================ */
 
 .container {
     max-width: 1400px !important;
     margin: 0 auto !important;
-    padding: 0 var(--spacing-lg) !important;
+    padding: 0 var(--space-6) !important;
 }
 
-/* --- HERO SECTION --- */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 var(--space-4) !important;
+    }
+}
+
+/* ============================================
+   HERO SECTION
+   ============================================ */
+
 .portal-hero {
-    padding: var(--spacing-2xl) 0 !important;
-    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;
+    padding: var(--space-12) 0 !important;
+    background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%) !important;
     position: relative;
     overflow: hidden;
-    color: white !important;
-    margin-bottom: var(--spacing-xl) !important;
-    box-shadow: var(--shadow-lg) !important;
+    color: var(--text-white) !important;
+    margin-bottom: var(--space-8) !important;
+    box-shadow: var(--shadow-xl) !important;
 }
 
 .portal-hero::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    opacity: 0.1;
+    background-image: 
+        radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.06) 0%, transparent 50%),
+        radial-gradient(circle at 40% 80%, rgba(255, 255, 255, 0.04) 0%, transparent 50%);
+    z-index: 0;
+}
+
+.portal-hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.5;
     z-index: 0;
 }
 
 .portal-hero .container {
     position: relative;
-    z-index: 1;
+    z-index: var(--z-base);
 }
 
 .portal-eyebrow {
-    font-size: 0.875rem !important;
-    font-weight: 600 !important;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.813rem !important;
+    font-weight: 700 !important;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: rgba(255, 255, 255, 0.8) !important;
-    margin-bottom: var(--spacing-sm) !important;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.9) !important;
+    margin-bottom: var(--space-5) !important;
+    background: rgba(255, 255, 255, 0.15);
+    padding: var(--space-2) var(--space-6);
+    border-radius: var(--radius-full);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .portal-hero h1 {
-    font-size: 2.5rem !important;
-    font-weight: 700 !important;
-    margin-bottom: var(--spacing-md) !important;
-    color: white !important;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: clamp(2rem, 6vw, 3rem) !important;
+    font-weight: 800 !important;
+    margin-bottom: var(--space-5) !important;
+    color: var(--text-white) !important;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    line-height: 1.15 !important;
+    letter-spacing: -0.03em;
 }
 
 .portal-hero p {
-    font-size: 1.125rem !important;
-    max-width: 800px;
-    line-height: 1.7 !important;
+    font-size: clamp(1rem, 2vw, 1.188rem) !important;
+    max-width: 850px;
+    line-height: 1.75 !important;
     opacity: 0.95;
-    color: white !important;
+    color: var(--text-white) !important;
 }
 
-/* --- NAVIGATION --- */
+/* ============================================
+   NAVIGATION
+   ============================================ */
+
 .portal-nav {
     display: flex !important;
-    gap: var(--spacing-sm) !important;
+    gap: var(--space-2) !important;
     background: var(--bg-white) !important;
-    padding: var(--spacing-sm) !important;
-    border-radius: var(--radius-xl) !important;
+    padding: var(--space-3) !important;
+    border-radius: var(--radius-2xl) !important;
     box-shadow: var(--shadow-lg) !important;
-    margin-bottom: var(--spacing-2xl) !important;
+    margin-bottom: var(--space-12) !important;
     flex-wrap: wrap !important;
     justify-content: center !important;
+    border: 1px solid var(--border-color-light);
+}
+
+@media (max-width: 768px) {
+    .portal-nav {
+        gap: var(--space-2) !important;
+    }
 }
 
 .portal-nav a {
-    padding: var(--spacing-md) var(--spacing-lg) !important;
-    border-radius: var(--radius-md) !important;
+    padding: var(--space-3) var(--space-5) !important;
+    border-radius: var(--radius-lg) !important;
     text-decoration: none !important;
     color: var(--text-secondary) !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
+    font-size: 0.938rem;
     transition: all var(--transition-base) !important;
     white-space: nowrap;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.portal-nav a::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%) scaleX(0);
+    width: 70%;
+    height: 2px;
+    background: var(--primary-color);
+    transition: transform var(--transition-base);
+    border-radius: var(--radius-full);
 }
 
 .portal-nav a:hover {
     background: var(--primary-lightest) !important;
     color: var(--primary-color) !important;
-    transform: translateY(-2px);
+    transform: translateY(-1px);
+}
+
+.portal-nav a:hover::after {
+    transform: translateX(-50%) scaleX(1);
 }
 
 .portal-nav a.active {
-    background: var(--primary-color) !important;
-    color: white !important;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light)) !important;
+    color: var(--text-white) !important;
     box-shadow: var(--shadow-md) !important;
 }
 
-/* --- SECTIONS --- */
+.portal-nav a.active::after {
+    display: none;
+}
+
+/* ============================================
+   SECTIONS
+   ============================================ */
+
 .portal-section {
-    padding: var(--spacing-2xl) 0 !important;
+    padding: var(--space-16) 0 !important;
 }
 
 .portal-section--muted {
     background: var(--bg-white) !important;
+    border-top: 2px solid var(--border-color-light);
+    border-bottom: 2px solid var(--border-color-light);
 }
 
-/* --- GRID LAYOUTS --- */
+/* ============================================
+   GRID LAYOUTS
+   ============================================ */
+
 .portal-grid {
     display: grid !important;
-    gap: var(--spacing-xl) !important;
-    margin-bottom: var(--spacing-xl) !important;
+    gap: var(--space-8) !important;
+    margin-bottom: var(--space-8) !important;
 }
 
 .portal-grid--overview {
     grid-template-columns: 1fr;
 }
 
-/* --- CARDS --- */
-.portal-card {
-    background: var(--bg-white) !important;
-    border-radius: var(--radius-lg) !important;
-    padding: var(--spacing-xl) !important;
-    box-shadow: var(--shadow-md) !important;
-    transition: all var(--transition-base) !important;
-    border: 1px solid var(--border-color-light) !important;
-    display: flex;
-    flex-direction: column;
-    animation: slideUp 0.4s ease-out;
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.portal-card:hover {
-    box-shadow: var(--shadow-xl) !important;
-    transform: translateY(-4px);
-}
-
-.portal-card--link {
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-}
-
-.portal-card--link::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: var(--primary-color);
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform var(--transition-base);
-}
-
-.portal-card--link:hover::after {
-    transform: scaleX(1);
-}
-
-.portal-card--compact {
-    padding: var(--spacing-lg) !important;
-}
-
-.portal-card__header {
-    margin-bottom: var(--spacing-lg) !important;
-}
-
-.portal-card__header h3 {
-    font-size: 1.5rem !important;
-    font-weight: 600 !important;
-    color: var(--text-primary) !important;
-    margin-bottom: var(--spacing-sm) !important;
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-}
-
-.portal-card__header h3::before {
-    content: '📌';
-    font-size: 1.25rem;
-}
-
-.portal-card h3 {
-    font-size: 1.25rem !important;
-    font-weight: 600 !important;
-    color: var(--text-primary) !important;
-    margin-bottom: var(--spacing-md) !important;
-}
-
-.portal-card__header .lead,
-.portal-card .lead {
-    color: var(--text-secondary) !important;
-    line-height: 1.6 !important;
-    font-size: 0.9375rem !important;
-}
-
-.portal-card__list {
-    list-style: none !important;
-    padding: 0 !important;
-    margin: var(--spacing-lg) 0 !important;
-    flex-grow: 1;
-}
-
-.portal-card__list li {
-    padding: var(--spacing-sm) 0 var(--spacing-sm) var(--spacing-xl) !important;
-    position: relative;
-    color: var(--text-secondary) !important;
-    line-height: 1.6 !important;
-    font-size: 0.9375rem !important;
-}
-
-.portal-card__list li::before {
-    content: '✓';
-    position: absolute;
-    left: 0;
-    top: var(--spacing-sm);
-    color: var(--success-color);
-    font-weight: 700;
-    font-size: 1.125rem;
-}
-
-.portal-card__action {
-    display: inline-flex !important;
-    align-items: center;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-md) var(--spacing-lg) !important;
-    background: var(--primary-color) !important;
-    color: white !important;
-    text-decoration: none !important;
-    border-radius: var(--radius-md) !important;
-    font-weight: 500 !important;
-    font-size: 0.9375rem !important;
-    transition: all var(--transition-base) !important;
-    box-shadow: var(--shadow-sm) !important;
-    margin-top: auto;
-}
-
-.portal-card__action:hover {
-    background: var(--primary-dark) !important;
-    box-shadow: var(--shadow-md) !important;
-    transform: translateY(-1px);
-}
-
-.portal-card__action::after {
-    content: '→';
-    font-weight: 700;
-    transition: transform var(--transition-base);
-}
-
-.portal-card__action:hover::after {
-    transform: translateX(4px);
-}
-
-/* --- TABLE LINKS --- */
-.table-links {
-    display: flex !important;
-    gap: var(--spacing-sm) !important;
-    flex-wrap: wrap !important;
-    margin: var(--spacing-lg) 0 !important;
-}
-
-.table-links--wrap {
-    flex-wrap: wrap;
-}
-
-.table-links a,
-[data-desk-link] {
-    display: inline-flex !important;
-    align-items: center;
-    gap: var(--spacing-xs);
-    padding: var(--spacing-sm) var(--spacing-md) !important;
-    background: var(--primary-lightest) !important;
-    color: var(--primary-color) !important;
-    text-decoration: none !important;
-    border-radius: var(--radius-sm) !important;
-    font-size: 0.8125rem !important;
-    font-weight: 500 !important;
-    transition: all var(--transition-base) !important;
-    border: 1px solid transparent;
-}
-
-.table-links a:hover,
-[data-desk-link]:hover {
-    background: var(--primary-color) !important;
-    color: white !important;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-sm) !important;
-}
-
-.table-links a::after,
-[data-desk-link]::after {
-    content: '→';
-    font-weight: 700;
-    font-size: 0.875rem;
-}
-
-/* --- REFRESH META --- */
-.refresh-meta {
-    display: flex !important;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--spacing-md);
-    padding-top: var(--spacing-lg) !important;
-    margin-top: var(--spacing-lg) !important;
-    border-top: 2px solid var(--border-color-light) !important;
-    flex-wrap: wrap;
-}
-
-.refresh-label {
-    font-weight: 600 !important;
-    color: var(--text-primary) !important;
-    font-size: 0.875rem !important;
-    margin-right: var(--spacing-xs);
-}
-
-.refresh-value {
-    color: var(--text-secondary) !important;
-    font-size: 0.875rem !important;
-}
-
-/* --- BUTTONS --- */
-button, .btn {
-    padding: var(--spacing-md) var(--spacing-xl) !important;
-    border: none !important;
-    border-radius: var(--radius-md) !important;
-    font-size: 0.9375rem !important;
-    font-weight: 500 !important;
-    cursor: pointer !important;
-    transition: all var(--transition-base) !important;
-    text-decoration: none !important;
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    gap: var(--spacing-sm);
-    font-family: inherit !important;
-}
-
-button.primary, .btn-primary {
-    background: var(--primary-color) !important;
-    color: white !important;
-    box-shadow: var(--shadow-sm) !important;
-}
-
-button.primary:hover, .btn-primary:hover {
-    background: var(--primary-dark) !important;
-    box-shadow: var(--shadow-md) !important;
-    transform: translateY(-1px);
-}
-
-button.secondary, .btn-secondary {
-    background: var(--bg-gray-light) !important;
-    color: var(--text-primary) !important;
-    border: 2px solid var(--border-color) !important;
-    padding: calc(var(--spacing-md) - 2px) calc(var(--spacing-xl) - 2px) !important;
-}
-
-button.secondary:hover, .btn-secondary:hover {
-    background: var(--bg-gray) !important;
-    border-color: var(--primary-color) !important;
-    color: var(--primary-color) !important;
-}
-
-/* --- RESPONSIVE --- */
 @media (min-width: 768px) {
     .portal-grid--overview {
         grid-template-columns: repeat(2, 1fr);
@@ -433,19 +299,330 @@ button.secondary:hover, .btn-secondary:hover {
     .portal-grid--overview {
         grid-template-columns: repeat(3, 1fr);
     }
-    
-    .portal-hero h1 {
-        font-size: 2.5rem !important;
+}
+
+/* ============================================
+   CARDS
+   ============================================ */
+
+.portal-card {
+    background: var(--bg-white) !important;
+    border-radius: var(--radius-2xl) !important;
+    padding: var(--space-8) !important;
+    box-shadow: var(--shadow-sm) !important;
+    transition: all var(--transition-base) !important;
+    border: 2px solid var(--border-color-light) !important;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.5s ease-out;
+    position: relative;
+    overflow: hidden;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
     }
-    
-    .portal-hero p {
-        font-size: 1.125rem !important;
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
+.portal-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, var(--primary-color), var(--primary-light), var(--primary-lighter));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--transition-base);
+}
+
+.portal-card:hover {
+    box-shadow: var(--shadow-xl) !important;
+    transform: translateY(-6px);
+    border-color: var(--primary-lightest);
+}
+
+.portal-card:hover::before {
+    transform: scaleX(1);
+}
+
+.portal-card--link {
+    cursor: pointer;
+}
+
+.portal-card--link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.02), rgba(59, 130, 246, 0.02));
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+
+.portal-card--link:hover::after {
+    opacity: 1;
+}
+
+.portal-card--compact {
+    padding: var(--space-8) !important;
+}
+
+.portal-card__header {
+    margin-bottom: var(--space-6) !important;
+    position: relative;
+    z-index: var(--z-base);
+}
+
+.portal-card__header h3 {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    color: var(--text-primary) !important;
+    margin-bottom: var(--space-3) !important;
+    line-height: 1.3;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.portal-card__header h3::before {
+    content: '';
+    width: 6px;
+    height: 1.5rem;
+    background: linear-gradient(180deg, var(--primary-color), var(--primary-light));
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+}
+
+.portal-card__header p.lead {
+    font-size: 0.938rem !important;
+    color: var(--text-secondary) !important;
+    line-height: 1.6;
+    margin: 0 !important;
+}
+
+.portal-card__list {
+    list-style: none;
+    margin: var(--space-6) 0 !important;
+    padding: 0 !important;
+    flex-grow: 1;
+    position: relative;
+    z-index: var(--z-base);
+}
+
+.portal-card__list li {
+    padding: var(--space-3) 0 var(--space-3) var(--space-8);
+    font-size: 0.938rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    position: relative;
+    border-bottom: 1px solid var(--bg-gray-100);
+}
+
+.portal-card__list li:last-child {
+    border-bottom: none;
+}
+
+.portal-card__list li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    top: var(--space-3);
+    width: var(--space-6);
+    height: var(--space-6);
+    background: linear-gradient(135deg, var(--success-light), var(--success-color));
+    color: var(--success-dark);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.portal-card__action {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+    color: var(--text-white) !important;
+    text-decoration: none !important;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    font-size: 0.938rem;
+    transition: all var(--transition-base);
+    box-shadow: var(--shadow-sm);
+    margin-top: var(--space-4);
+    position: relative;
+    z-index: var(--z-base);
+}
+
+.portal-card__action::after {
+    content: '→';
+    transition: transform var(--transition-base);
+}
+
+.portal-card__action:hover {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+    box-shadow: var(--shadow-md);
+    transform: translateX(4px);
+}
+
+.portal-card__action:hover::after {
+    transform: translateX(4px);
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+button,
+.btn {
+    padding: var(--space-3) var(--space-6) !important;
+    border-radius: var(--radius-lg) !important;
+    font-size: 0.938rem !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all var(--transition-base) !important;
+    border: none !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    text-decoration: none !important;
+    white-space: nowrap;
+    font-family: var(--font-sans) !important;
+}
+
+button.primary,
+.btn.primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light)) !important;
+    color: var(--text-white) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+button.primary:hover,
+.btn.primary:hover {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary-color)) !important;
+    box-shadow: var(--shadow-md) !important;
+    transform: translateY(-2px);
+}
+
+button.secondary,
+.btn.secondary {
+    background: var(--bg-white) !important;
+    color: var(--text-secondary) !important;
+    border: 2px solid var(--border-color) !important;
+}
+
+button.secondary:hover,
+.btn.secondary:hover {
+    background: var(--bg-gray-50) !important;
+    border-color: var(--text-secondary) !important;
+    color: var(--text-primary) !important;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm) !important;
+}
+
+button:disabled,
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    transform: none !important;
+    pointer-events: none;
+}
+
+/* ============================================
+   TABLE LINKS
+   ============================================ */
+
+.table-links {
+    display: flex;
+    gap: var(--space-3);
+    margin: var(--space-6) 0;
+    flex-wrap: wrap;
+}
+
+.table-links--wrap {
+    flex-wrap: wrap;
+}
+
+.table-links a {
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-lg);
+    text-decoration: none !important;
+    color: var(--primary-color) !important;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border: 2px solid var(--primary-light);
+    background: var(--primary-lightest);
+    transition: all var(--transition-base);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.table-links a:hover {
+    background: var(--primary-color);
+    color: var(--text-white) !important;
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* ============================================
+   REFRESH META
+   ============================================ */
+
+.refresh-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-4);
+    margin-top: var(--space-8);
+    padding-top: var(--space-6);
+    border-top: 2px solid var(--bg-gray-100);
+    flex-wrap: wrap;
+}
+
+.refresh-label {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-right: var(--space-2);
+}
+
+.refresh-value {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-family: var(--font-mono);
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.lead {
+    font-size: 1rem !important;
+    color: var(--text-secondary) !important;
+    line-height: 1.7;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
 @media (max-width: 767px) {
     .portal-hero {
-        padding: var(--spacing-lg) 0 !important;
+        padding: var(--space-8) 0 !important;
     }
     
     .portal-hero h1 {
@@ -457,7 +634,7 @@ button.secondary:hover, .btn-secondary:hover {
     }
     
     .portal-card {
-        padding: var(--spacing-lg) !important;
+        padding: var(--space-6) !important;
     }
     
     .portal-card__header h3 {
@@ -468,32 +645,63 @@ button.secondary:hover, .btn-secondary:hover {
         flex-direction: column;
         align-items: flex-start;
     }
+    
+    .portal-nav a {
+        padding: var(--space-2) var(--space-4) !important;
+        font-size: 0.875rem;
+    }
 }
 
-/* --- SCROLLBAR --- */
+/* ============================================
+   SCROLLBAR
+   ============================================ */
+
 ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--bg-gray-light);
+    background: var(--bg-gray-100);
+    border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb {
     background: var(--border-color);
-    border-radius: 5px;
+    border-radius: var(--radius-full);
+    border: 2px solid var(--bg-gray-100);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--text-muted);
+    background: var(--text-secondary);
 }
 
-/* --- PRINT STYLES --- */
+/* ============================================
+   SCROLL BEHAVIOR
+   ============================================ */
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* ============================================
+   FOCUS VISIBLE
+   ============================================ */
+
+*:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+
 @media print {
     .portal-nav,
     button,
-    .table-links {
+    .table-links,
+    .portal-card__action {
         display: none !important;
     }
     
@@ -501,6 +709,14 @@ button.secondary:hover, .btn-secondary:hover {
         box-shadow: none !important;
         border: 1px solid var(--border-color) !important;
         page-break-inside: avoid;
+    }
+    
+    body {
+        background: white !important;
+    }
+    
+    .portal-hero {
+        background: var(--primary-color) !important;
     }
 }
 </style>
@@ -521,19 +737,20 @@ button.secondary:hover, .btn-secondary:hover {
 
 <div class="container">
     <nav class="portal-nav">
-        <a href="/" class="active">🏠 Overview</a>
-        <a href="/garage/intake">📋 Intake</a>
-        <a href="/garage/service">🔧 Servis</a>
-        <a href="/garage/sparepart">📦 Sparepart</a>
-        <a href="/garage/procurement">🛒 Pengadaan</a>
-        <a href="/garage/finance">💰 Keuangan</a>
-        <a href="/garage/insight">📊 Insight</a>
+        <a href="/" class="active">Overview</a>
+        <a href="/garage/intake">Intake</a>
+        <a href="/garage/service">Servis</a>
+        <a href="/garage/sparepart">Sparepart</a>
+        <a href="/garage/procurement">Pengadaan</a>
+        <a href="/garage/finance">Keuangan</a>
+        <a href="/garage/insight">Insight</a>
     </nav>
 </div>
 
 <section class="portal-section">
     <div class="container">
         <div class="portal-grid portal-grid--overview">
+            <!-- Intake Card -->
             <article class="portal-card portal-card--link" onclick="window.location.href='/garage/intake'">
                 <header class="portal-card__header">
                     <h3>Intake Customer & Kendaraan</h3>
@@ -547,6 +764,7 @@ button.secondary:hover, .btn-secondary:hover {
                 <a class="portal-card__action" href="/garage/intake">Buka halaman Intake</a>
             </article>
             
+            <!-- Service Card -->
             <article class="portal-card portal-card--link" onclick="window.location.href='/garage/service'">
                 <header class="portal-card__header">
                     <h3>Orkestrasi Servis Bengkel</h3>
@@ -560,6 +778,7 @@ button.secondary:hover, .btn-secondary:hover {
                 <a class="portal-card__action" href="/garage/service">Buka halaman Servis</a>
             </article>
             
+            <!-- Sparepart Card -->
             <article class="portal-card portal-card--link" onclick="window.location.href='/garage/sparepart'">
                 <header class="portal-card__header">
                     <h3>Penjualan Sparepart</h3>
@@ -573,6 +792,7 @@ button.secondary:hover, .btn-secondary:hover {
                 <a class="portal-card__action" href="/garage/sparepart">Buka halaman Sparepart</a>
             </article>
             
+            <!-- Procurement Card -->
             <article class="portal-card portal-card--link" onclick="window.location.href='/garage/procurement'">
                 <header class="portal-card__header">
                     <h3>Pengadaan & Pergerakan Stok</h3>
@@ -586,6 +806,7 @@ button.secondary:hover, .btn-secondary:hover {
                 <a class="portal-card__action" href="/garage/procurement">Buka halaman Pengadaan</a>
             </article>
             
+            <!-- Finance Card -->
             <article class="portal-card portal-card--link" onclick="window.location.href='/garage/finance'">
                 <header class="portal-card__header">
                     <h3>Penagihan & Pembayaran</h3>
@@ -599,6 +820,7 @@ button.secondary:hover, .btn-secondary:hover {
                 <a class="portal-card__action" href="/garage/finance">Buka halaman Keuangan</a>
             </article>
             
+            <!-- Insight Card -->
             <article class="portal-card portal-card--link" onclick="window.location.href='/garage/insight'">
                 <header class="portal-card__header">
                     <h3>Insight & Monitoring</h3>
@@ -619,8 +841,10 @@ button.secondary:hover, .btn-secondary:hover {
     <div class="container">
         <div class="portal-grid">
             <article class="portal-card portal-card--compact">
-                <h3>🔗 Koneksi ke Desk</h3>
-                <p class="lead">
+                <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-3);">
+                    🔗 Koneksi ke Desk
+                </h3>
+                <p class="lead" style="margin-bottom: var(--space-6);">
                     Setiap form di portal ini menulis dokumen asli yang sama dengan versi Desk/Frappe.
                     Gunakan tautan berikut untuk membuka daftar dokumen terkait secara langsung.
                 </p>
