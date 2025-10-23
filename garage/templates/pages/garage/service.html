@@ -3,23 +3,24 @@
 {% block title %}Orkestrasi Servis Bengkel{% endblock %}
 
 {% block page_content %}
-<section class="portal-hero portal-hero--sub">
-    <div class="container">
-        <p class="portal-eyebrow">Garage Portal</p>
-        <h1>Orkestrasi Servis Bengkel</h1>
-        <p>
-            Buat service order, kelola task teknisi, dan pantau progres pengerjaan dalam satu halaman.
-            Seluruh data tersimpan di DocType Garage Service Order.
-        </p>
-    </div>
-</section>
+<div class="portal-page portal-page--service">
+    <section class="portal-hero portal-hero--sub">
+        <div class="container">
+            <p class="portal-eyebrow">Garage Portal</p>
+            <h1>Orkestrasi Servis Bengkel</h1>
+            <p>
+                Buat service order, kelola task teknisi, dan pantau progres pengerjaan dalam satu halaman.
+                Seluruh data tersimpan di DocType Garage Service Order.
+            </p>
+        </div>
+    </section>
 
-{% set active_page = 'service' %}
-{% include "garage/templates/includes/portal_nav.html" %}
+    {% set active_page = 'service' %}
+    {% include "garage/templates/includes/portal_nav.html" %}
 
-<section class="portal-section">
-    <div class="container">
-        <div class="portal-grid two-column">
+    <section class="portal-section">
+        <div class="container">
+            <div class="portal-grid two-column">
             <article class="portal-card">
                 <h2>Buat Service Order</h2>
                 <p class="lead">
@@ -306,9 +307,10 @@
                     </div>
                 </form>
             </article>
+            </div>
         </div>
-    </div>
-</section>
+    </section>
+</div>
 {% endblock %}
 
 {% block page_js %}
@@ -318,5 +320,5 @@
 {% endblock %}
 
 {% block page_style %}
-<style>@import url('/assets/garage/css/garage_portal.css');</style>
+<link rel="stylesheet" href="/assets/garage/css/garage_portal.css">
 {% endblock %}

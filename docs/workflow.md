@@ -19,23 +19,27 @@ stok, sampai penagihan dan tindak lanjut piutang.
 5. **Estimate Biaya** – `create_estimate` menghitung biaya tenaga kerja dan
    sparepart dengan objek `EstimateLine` terstruktur.
 6. **Persetujuan Customer** – `record_customer_decision` menutup job card jika
-   ditolak, atau membuat `WorkOrder` jika disetujui.
-7. **Cek Stok Sparepart** – `check_work_order_stock` memberi daftar kekurangan.
-8. **Create Purchase Order / Stock Entry** – `create_purchase_order`,
+   ditolak atau menandai job card sebagai `APPROVED`.
+7. **Create Work Order** – `create_work_order` membuat dokumen work order baru
+   yang siap diisi task serta kebutuhan sparepart.
+8. **Cek Stok Sparepart** – `check_work_order_stock` memberi daftar kekurangan.
+9. **Create Purchase Order / Stock Entry** – `create_purchase_order`,
    `receive_purchase_order`, dan `create_stock_entry` menambah stok yang kurang.
-9. **Material Issue** – `issue_materials` mengurangi stok dan mencatat
-   `StockMovement`.
-10. **Proses Pengerjaan** – `start_work`, `update_job_progress`, dan
-    `complete_work` mengatur progres teknisi hingga siap QC.
-11. **Quality Check** – `perform_quality_check` menandai hasil QC
+10. **Material Issue** – `issue_materials` mengurangi stok dan mencatat
+    `StockMovement`.
+11. **Proses Pengerjaan** – `start_work`, `update_job_progress`, dan
+    `complete_work` mengatur progres teknisi hingga siap QC; `start_work`
+    otomatis memverifikasi seluruh sparepart wajib sudah dikeluarkan.
+12. **Quality Check** – `perform_quality_check` menandai hasil QC
     (`QualityResult`). Jika lulus, lanjut ke `complete_job_card`.
-12. **Generate Sales Invoice** – `generate_sales_invoice` mencatat nilai akhir
-    layanan sebelum customer melakukan pembayaran.
-13. **Payment Entry** – `record_payment` menangani pembayaran cash/transfer.
+13. **Generate Sales Invoice** – `generate_sales_invoice` mencatat nilai akhir
+    layanan sebelum customer melakukan pembayaran dan menolak pembuatan invoice
+    jika job card belum `CLOSED` atau sales order belum dikirim.
+14. **Payment Entry** – `record_payment` menangani pembayaran cash/transfer.
     Untuk kredit gunakan `create_payment_term` lalu `follow_up_receivable` untuk
     tindak lanjut piutang.
-14. **Print Invoice & Receipt** – `print_receipt` membuat dokumen siap cetak.
-15. **Customer Selesai** – `close_customer_interaction` memastikan seluruh
+15. **Print Invoice & Receipt** – `print_receipt` membuat dokumen siap cetak.
+16. **Customer Selesai** – `close_customer_interaction` memastikan seluruh
     invoice lunas sebelum menutup interaksi.
 
 ### Penjualan Sparepart
@@ -144,7 +148,8 @@ booking = engine.create_service_booking(advisor, customer.customer_id, vehicle.v
 report = engine.record_inspection(advisor, booking.booking_id, advisor, "Perlu servis berkala", InspectionSeverity.MEDIUM)
 job_card = engine.create_job_card(advisor, booking.booking_id, tech)
 estimate = engine.create_estimate(advisor, job_card.job_card_id, advisor, labor_hours=2, labor_rate=150000)
-job_card, work_order = engine.record_customer_decision(advisor, job_card.job_card_id, approved=True)
+job_card = engine.record_customer_decision(advisor, job_card.job_card_id, approved=True)
+work_order = engine.create_work_order(advisor, job_card.job_card_id)
 engine.prepare_work_order(advisor, work_order.work_order_id, tasks=["Ganti oli"], required_parts={"OLI-001": 1})
 
 engine.register_inventory_item(manager, "OLI-001", "Oli 10W-40", quantity=10, reorder_level=2)

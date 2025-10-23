@@ -3,23 +3,24 @@
 {% block title %}Pengadaan & Pergerakan Stok{% endblock %}
 
 {% block page_content %}
-<section class="portal-hero portal-hero--sub">
-    <div class="container">
-        <p class="portal-eyebrow">Garage Portal</p>
-        <h1>Pengadaan & Pergerakan Stok</h1>
-        <p>
-            Dokumentasikan kebutuhan pembelian dan mutasi gudang agar persediaan bengkel tetap terkontrol.
-            Setiap entri tersimpan sebagai DocType Garage Procurement Order atau Garage Stock Movement.
-        </p>
-    </div>
-</section>
+<div class="portal-page portal-page--procurement">
+    <section class="portal-hero portal-hero--sub">
+        <div class="container">
+            <p class="portal-eyebrow">Garage Portal</p>
+            <h1>Pengadaan & Pergerakan Stok</h1>
+            <p>
+                Dokumentasikan kebutuhan pembelian dan mutasi gudang agar persediaan bengkel tetap terkontrol.
+                Setiap entri tersimpan sebagai DocType Garage Procurement Order atau Garage Stock Movement.
+            </p>
+        </div>
+    </section>
 
-{% set active_page = 'procurement' %}
-{% include "garage/templates/includes/portal_nav.html" %}
+    {% set active_page = 'procurement' %}
+    {% include "garage/templates/includes/portal_nav.html" %}
 
-<section class="portal-section">
-    <div class="container">
-        <div class="portal-grid two-column">
+    <section class="portal-section">
+        <div class="container">
+            <div class="portal-grid two-column">
             <article class="portal-card">
                 <h2>Buat Procurement Order</h2>
                 <p class="lead">Isi data supplier, referensi dokumen, dan detail item yang perlu dipesan.</p>
@@ -213,9 +214,10 @@
                 </table>
                 <div class="list-empty" data-empty="pending-procurement">Belum ada pengadaan tertunda.</div>
             </article>
+            </div>
         </div>
-    </div>
-</section>
+    </section>
+</div>
 {% endblock %}
 
 {% block page_js %}
@@ -225,5 +227,5 @@
 {% endblock %}
 
 {% block page_style %}
-<style>@import url('/assets/garage/css/garage_portal.css');</style>
+<link rel="stylesheet" href="/assets/garage/css/garage_portal.css">
 {% endblock %}

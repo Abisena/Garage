@@ -3,23 +3,24 @@
 {% block title %}Penagihan & Pembayaran{% endblock %}
 
 {% block page_content %}
-<section class="portal-hero portal-hero--sub">
-    <div class="container">
-        <p class="portal-eyebrow">Garage Portal</p>
-        <h1>Penagihan & Pembayaran</h1>
-        <p>
-            Kelola sales invoice, jadwal pembayaran, serta pencatatan penerimaan kas/bank.
-            Gunakan halaman ini untuk memastikan arus kas bengkel tetap terpantau.
-        </p>
-    </div>
-</section>
+<div class="portal-page portal-page--finance">
+    <section class="portal-hero portal-hero--sub">
+        <div class="container">
+            <p class="portal-eyebrow">Garage Portal</p>
+            <h1>Penagihan & Pembayaran</h1>
+            <p>
+                Kelola sales invoice, jadwal pembayaran, serta pencatatan penerimaan kas/bank.
+                Gunakan halaman ini untuk memastikan arus kas bengkel tetap terpantau.
+            </p>
+        </div>
+    </section>
 
-{% set active_page = 'finance' %}
-{% include "garage/templates/includes/portal_nav.html" %}
+    {% set active_page = 'finance' %}
+    {% include "garage/templates/includes/portal_nav.html" %}
 
-<section class="portal-section">
-    <div class="container">
-        <div class="portal-grid two-column">
+    <section class="portal-section">
+        <div class="container">
+            <div class="portal-grid two-column">
             <article class="portal-card">
                 <h2>Buat Sales Invoice</h2>
                 <p class="lead">Catat invoice baru lengkap dengan detail item dan jadwal pembayaran.</p>
@@ -301,9 +302,10 @@
                     <a data-desk-link="Garage Receipt Document" target="_blank">List Receipt</a>
                 </div>
             </article>
+            </div>
         </div>
-    </div>
-</section>
+    </section>
+</div>
 {% endblock %}
 
 {% block page_js %}
@@ -313,5 +315,5 @@
 {% endblock %}
 
 {% block page_style %}
-<style>@import url('/assets/garage/css/garage_portal.css');</style>
+<link rel="stylesheet" href="/assets/garage/css/garage_portal.css">
 {% endblock %}

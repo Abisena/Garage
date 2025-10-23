@@ -3,23 +3,24 @@
 {% block title %}Insight & Monitoring{% endblock %}
 
 {% block page_content %}
-<section class="portal-hero portal-hero--sub">
-    <div class="container">
-        <p class="portal-eyebrow">Garage Portal</p>
-        <h1>Insight & Monitoring</h1>
-        <p>
-            Ringkas status workflow lintas modul Garage untuk membantu pengambilan keputusan cepat.
-            Gunakan tombol refresh untuk memperbarui data terbaru dari Desk.
-        </p>
-    </div>
-</section>
+<div class="portal-page portal-page--insight">
+    <section class="portal-hero portal-hero--sub">
+        <div class="container">
+            <p class="portal-eyebrow">Garage Portal</p>
+            <h1>Insight & Monitoring</h1>
+            <p>
+                Ringkas status workflow lintas modul Garage untuk membantu pengambilan keputusan cepat.
+                Gunakan tombol refresh untuk memperbarui data terbaru dari Desk.
+            </p>
+        </div>
+    </section>
 
-{% set active_page = 'insight' %}
-{% include "garage/templates/includes/portal_nav.html" %}
+    {% set active_page = 'insight' %}
+    {% include "garage/templates/includes/portal_nav.html" %}
 
-<section class="portal-section">
-    <div class="container">
-        <div class="portal-grid two-column">
+    <section class="portal-section">
+        <div class="container">
+            <div class="portal-grid two-column">
             <article class="portal-card">
                 <h2>Ringkasan Status Dokumen</h2>
                 <p class="lead">Pantau jumlah dokumen per status dari seluruh proses bengkel.</p>
@@ -73,9 +74,10 @@
                     <button class="secondary" type="button" data-action="refresh-portal">Refresh Data</button>
                 </div>
             </article>
+            </div>
         </div>
-    </div>
-</section>
+    </section>
+</div>
 {% endblock %}
 
 {% block page_js %}
@@ -85,5 +87,5 @@
 {% endblock %}
 
 {% block page_style %}
-<style>@import url('/assets/garage/css/garage_portal.css');</style>
+<link rel="stylesheet" href="/assets/garage/css/garage_portal.css">
 {% endblock %}

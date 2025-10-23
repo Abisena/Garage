@@ -1,11 +1,11 @@
-<div class="portal-nav-wrapper">
+<div class="container">
     <nav class="portal-nav">
-        <a href="/garage" class="{{ 'is-active' if active_page == 'overview' else '' }}">Overview</a>
-        <a href="/garage/intake" class="{{ 'is-active' if active_page == 'intake' else '' }}">Intake</a>
-        <a href="/garage/service" class="{{ 'is-active' if active_page == 'service' else '' }}">Servis</a>
-        <a href="/garage/sparepart" class="{{ 'is-active' if active_page == 'sparepart' else '' }}">Sparepart</a>
-        <a href="/garage/procurement" class="{{ 'is-active' if active_page == 'procurement' else '' }}">Pengadaan</a>
-        <a href="/garage/finance" class="{{ 'is-active' if active_page == 'finance' else '' }}">Keuangan</a>
-        <a href="/garage/insight" class="{{ 'is-active' if active_page == 'insight' else '' }}">Insight</a>
+        <a href="/garage" class="{{ 'active' if active_page == 'overview' else '' }}" {% if active_page == 'overview' %}aria-current="page"{% endif %}>🏠 Overview</a>
+        <a href="/garage/intake" class="{{ 'active' if active_page == 'intake' else '' }}" {% if active_page == 'intake' %}aria-current="page"{% endif %}>📋 Intake</a>
+        <a href="/garage/service" class="{{ 'active' if active_page == 'service' else '' }}" {% if active_page == 'service' %}aria-current="page"{% endif %}>🔧 Servis</a>
+        <a href="/garage/sparepart" class="{{ 'active' if active_page == 'sparepart' else '' }}" {% if active_page == 'sparepart' %}aria-current="page"{% endif %}>📦 Sparepart</a>
+        <a href="/garage/procurement" class="{{ 'active' if active_page == 'procurement' else '' }}" {% if active_page == 'procurement' %}aria-current="page"{% endif %}>🛒 Pengadaan</a>
+        <a href="/garage/finance" class="{{ 'active' if active_page == 'finance' else '' }}" {% if active_page == 'finance' %}aria-current="page"{% endif %}>💰 Keuangan</a>
+        <a href="/garage/insight" class="{{ 'active' if active_page == 'insight' else '' }}" {% if active_page == 'insight' %}aria-current="page"{% endif %}>📊 Insight</a>
     </nav>
 </div>
