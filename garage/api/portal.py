@@ -6,7 +6,6 @@ from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional
 import frappe
 from frappe import _
 from frappe.utils import cint, flt, now_datetime, nowdate
-from frappe.utils.data import scrub
 
 # Whitelisted DocTypes that can be created/updated from the public portal along with
 # the permitted fields. The definition intentionally mirrors the JSON DocType schema
@@ -515,7 +514,7 @@ def _sum_field(doctype: str, field: str, filters: Optional[Any] = None) -> float
 
 
 def _desk_route(doctype: str) -> Dict[str, str]:
-    slug = scrub(doctype)
+    slug = frappe.scrub(doctype)
     return {
         "list": f"/app/{slug}",
         "form": f"/app/{slug}/{{name}}",
