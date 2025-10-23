@@ -799,6 +799,35 @@ button:disabled {
 }
 
 /* ============================================
+   REFRESH META
+   ============================================ */
+
+.refresh-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-4);
+    margin-top: var(--space-8);
+    padding-top: var(--space-6);
+    border-top: 2px solid var(--bg-gray-100);
+    flex-wrap: wrap;
+}
+
+.refresh-label {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-right: var(--space-2);
+}
+
+.refresh-value {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-family: var(--font-mono);
+}
+
+/* ============================================
    RESPONSIVE
    ============================================ */
 
@@ -811,13 +840,24 @@ button:disabled {
         padding: var(--space-2) var(--space-4) !important;
         font-size: 0.875rem;
     }
-    
+
     .repeat-group {
         padding: var(--space-4);
     }
-    
+
     .repeat-row {
         padding: var(--space-4);
+    }
+
+    .refresh-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-3);
+    }
+
+    .refresh-meta button {
+        width: 100%;
+        justify-content: center;
     }
 }
 
@@ -1088,9 +1128,31 @@ button:disabled {
                     </thead>
                     <tbody data-role="open-service-table"></tbody>
                 </table>
-                <div class="list-empty" data-empty="open-service">Belum ada order aktif.</div>
+                <div class="list-empty" data-empty="open-service">Belum ada order aktif. Semua order mungkin sudah selesai.</div>
+                <h3 class="section-subtitle">Riwayat Service Order</h3>
+                <table class="simple-table">
+                    <thead>
+                        <tr>
+                            <th>Nomor</th>
+                            <th>Customer</th>
+                            <th>Status</th>
+                            <th>Kendaraan</th>
+                            <th>Pembaruan Terakhir</th>
+                            <th>Estimasi</th>
+                        </tr>
+                    </thead>
+                    <tbody data-role="service-history-table"></tbody>
+                </table>
+                <div class="list-empty" data-empty="service-history">Belum ada riwayat service order.</div>
                 <div class="table-links table-links--trailing">
                     <a data-desk-link="Garage Service Order" target="_blank">📋 Buka di Desk</a>
+                </div>
+                <div class="refresh-meta">
+                    <div>
+                        <span class="refresh-label">Terakhir disinkronkan:</span>
+                        <span class="refresh-value" data-role="refreshed-at">—</span>
+                    </div>
+                    <button class="secondary" type="button" data-action="refresh-portal">🔄 Refresh Data</button>
                 </div>
             </article>
             <article class="portal-card">

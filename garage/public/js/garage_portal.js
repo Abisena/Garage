@@ -2,6 +2,10 @@
     class GaragePortal {
         constructor() {
             this.state = {};
+            this.isFetching = false;
+            this.pendingFetchOptions = null;
+            this.lastErrorMessage = null;
+            this.autoRefreshHandle = null;
             this.currencyFormatter = new Intl.NumberFormat('id-ID', {
                 style: 'currency',
                 currency: 'IDR',
@@ -13,7 +17,8 @@
             this.cacheDom();
             this.bindEvents();
             this.initRepeaters();
-            this.fetchBootstrap(false);
+            this.fetchBootstrap({ showSuccess: false });
+            this.startAutoRefresh();
         }
 
         cacheDom() {
@@ -45,6 +50,7 @@
                 customers: document.querySelector('[data-role="customer-table"]'),
                 vehicles: document.querySelector('[data-role="vehicle-table"]'),
                 openService: document.querySelector('[data-role="open-service-table"]'),
+                serviceHistory: document.querySelector('[data-role="service-history-table"]'),
                 spareOrders: document.querySelector('[data-role="spare-table"]'),
                 pendingProcurement: document.querySelector('[data-role="pending-procurement-table"]'),
                 openInvoices: document.querySelector('[data-role="open-invoice-table"]'),
@@ -55,6 +61,7 @@
                 customer: document.querySelector('[data-empty="customer"]'),
                 vehicle: document.querySelector('[data-empty="vehicle"]'),
                 openService: document.querySelector('[data-empty="open-service"]'),
+                serviceHistory: document.querySelector('[data-empty="service-history"]'),
                 spare: document.querySelector('[data-empty="spare"]'),
                 pendingProcurement: document.querySelector('[data-empty="pending-procurement"]'),
                 openInvoice: document.querySelector('[data-empty="open-invoice"]'),
@@ -260,8 +267,12 @@
             }
 
             this.refreshButtons.forEach((button) => {
-                button.addEventListener('click', () => this.fetchBootstrap());
+                button.addEventListener('click', () =>
+                    this.fetchBootstrap({ showSuccess: true, freeze: true, source: 'manual' })
+                );
             });
+
+            window.addEventListener('beforeunload', () => this.stopAutoRefresh());
         }
 
         initRepeaters() {
@@ -295,18 +306,104 @@
             });
         }
 
-        fetchBootstrap(showNotification = true) {
+        fetchBootstrap({ showSuccess = true, freeze = false, source = 'manual' } = {}) {
+            if (this.isFetching) {
+                if (source === 'auto') {
+                    return;
+                }
+                this.pendingFetchOptions = { showSuccess, freeze, source };
+                return;
+            }
+            this.isFetching = true;
             frappe.call({
                 method: 'garage.api.portal.portal_bootstrap',
-                freeze: true,
+                freeze,
                 callback: (response) => {
                     this.state = response.message || {};
                     this.render();
-                    if (showNotification) {
+                    this.lastErrorMessage = null;
+                    if (showSuccess) {
                         frappe.show_alert({ message: __('Data portal diperbarui.'), indicator: 'green' });
                     }
                 },
+                error: (error) => {
+                    this.handleBootstrapError(error, source);
+                },
+                always: () => {
+                    this.isFetching = false;
+                    if (this.pendingFetchOptions) {
+                        const next = this.pendingFetchOptions;
+                        this.pendingFetchOptions = null;
+                        window.setTimeout(() => this.fetchBootstrap(next), 0);
+                    }
+                },
             });
+        }
+
+        startAutoRefresh() {
+            const intervalAttr = document.body?.dataset?.portalRefreshInterval;
+            const parsedSeconds = parseInt(intervalAttr, 10);
+            const intervalMs = Number.isFinite(parsedSeconds) && parsedSeconds > 0 ? parsedSeconds * 1000 : 60000;
+            this.stopAutoRefresh();
+            this.autoRefreshHandle = window.setInterval(() => {
+                if (document.hidden) {
+                    return;
+                }
+                this.fetchBootstrap({ showSuccess: false, freeze: false, source: 'auto' });
+            }, intervalMs);
+        }
+
+        stopAutoRefresh() {
+            if (this.autoRefreshHandle) {
+                window.clearInterval(this.autoRefreshHandle);
+                this.autoRefreshHandle = null;
+            }
+        }
+
+        handleBootstrapError(error, source) {
+            const message = this.extractErrorMessage(error);
+            if (source === 'auto' && this.lastErrorMessage === message) {
+                return;
+            }
+            this.lastErrorMessage = message;
+            frappe.show_alert({ message, indicator: 'red' });
+        }
+
+        extractErrorMessage(error) {
+            const fallback = __('Tidak dapat memuat data portal. Silakan coba lagi.');
+            if (!error) {
+                return fallback;
+            }
+
+            if (error._server_messages) {
+                try {
+                    const messages = JSON.parse(error._server_messages);
+                    if (Array.isArray(messages) && messages.length) {
+                        const last = messages[messages.length - 1];
+                        if (typeof last === 'string' && last) {
+                            return this.stripHtml(last);
+                        }
+                    }
+                } catch (parseError) {
+                    // ignore JSON parse issues and fall back to other fields
+                }
+            }
+
+            if (typeof error.message === 'string' && error.message) {
+                return this.stripHtml(error.message);
+            }
+
+            if (typeof error.exception === 'string' && error.exception) {
+                return this.stripHtml(error.exception);
+            }
+
+            return fallback;
+        }
+
+        stripHtml(value) {
+            const temp = document.createElement('div');
+            temp.innerHTML = value;
+            return temp.textContent || temp.innerText || value;
         }
 
         render() {
@@ -382,6 +479,7 @@
         renderServiceSection() {
             const serviceOrders = this.state.service_orders || [];
             const openService = this.state.open_service_orders || [];
+            const recentService = serviceOrders.slice(0, 10);
 
             const totalEstimate = serviceOrders.reduce((acc, row) => acc + (parseFloat(row.total_estimated_amount) || 0), 0);
             const qcPending = serviceOrders.filter((row) => (row.qc_status || '').toLowerCase() === 'pending').length;
@@ -398,8 +496,17 @@
                 this.renderLink('Garage Service Order', row.name),
                 row.customer || '-',
                 row.status || '-',
-                row.estimated_delivery_date || '-',
+                this.formatDate(row.estimated_delivery_date || row.service_booking_date),
             ], this.emptyStates.openService);
+
+            this.renderTable(this.tables.serviceHistory, recentService, (row) => [
+                this.renderLink('Garage Service Order', row.name),
+                row.customer || '-',
+                row.status || '-',
+                row.vehicle || '-',
+                this.formatDate(row.modified || row.actual_delivery_date || row.estimated_delivery_date),
+                this.currencyFormatter.format(parseFloat(row.total_estimated_amount) || 0),
+            ], this.emptyStates.serviceHistory);
 
             const progressOptions = serviceOrders.map((row) => ({ value: row.name, label: `${row.name} – ${row.customer || '-'}` }));
             this.populateSelect(this.selects.progressServiceOrder, progressOptions, {
@@ -606,7 +713,7 @@
                 callback: () => {
                     frappe.show_alert({ message: __(successMessage), indicator: 'green' });
                     this.resetForm(form);
-                    this.fetchBootstrap(false);
+                    this.fetchBootstrap({ showSuccess: false, source: 'form' });
                 },
                 always: () => {
                     if (primaryButton) {
@@ -672,6 +779,17 @@
                 this.refreshedAtLabel.textContent = frappe.datetime.str_to_user(this.state.refreshed_at);
             } catch (error) {
                 this.refreshedAtLabel.textContent = this.state.refreshed_at;
+            }
+        }
+
+        formatDate(value) {
+            if (!value) {
+                return '-';
+            }
+            try {
+                return frappe.datetime.str_to_user(value);
+            } catch (error) {
+                return value;
             }
         }
 
