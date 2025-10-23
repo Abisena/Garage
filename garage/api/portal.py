@@ -489,6 +489,7 @@ def _list_dicts(doctype: str, fields: Iterable[str], *, filters: Optional[Any] =
         filters=filters or [],
         order_by="modified desc",
         limit_page_length=limit,
+        ignore_permissions=True,
     )
     return [dict(row) for row in rows]
 
@@ -500,6 +501,7 @@ def _group_status(doctype: str) -> Dict[str, int]:
             fields=["status", "count(*) as total"],
             group_by="status",
             order_by="total desc",
+            ignore_permissions=True,
         )
     except Exception:
         return {}
@@ -507,7 +509,12 @@ def _group_status(doctype: str) -> Dict[str, int]:
 
 
 def _sum_field(doctype: str, field: str, filters: Optional[Any] = None) -> float:
-    result = frappe.db.get_all(doctype, filters=filters or [], fields=[f"sum({field}) as total"])
+    result = frappe.db.get_all(
+        doctype,
+        filters=filters or [],
+        fields=[f"sum({field}) as total"],
+        ignore_permissions=True,
+    )
     if result:
         return flt(result[0].get("total") or 0)
     return 0.0
