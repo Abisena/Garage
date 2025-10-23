@@ -443,6 +443,10 @@ def _apply_defaults(doctype: str, doc: frappe.Document) -> None:
 def _new_document(doctype: str, data: Mapping[str, Any]) -> frappe.Document:
     config = ALLOWED_DOCS[doctype]
     doc = frappe.new_doc(doctype)
+    # The portal is intended for operational staff that may not have explicit Desk
+    # permissions for every DocType. We always create records on their behalf, so
+    # bypass standard permission checks while still enforcing validation rules.
+    doc.flags.ignore_permissions = True
     doc.update(_filter_fields(data, config.get("fields", [])))
 
     for table_field, child_config in config.get("children", {}).items():
@@ -458,6 +462,7 @@ def _update_document(doctype: str, name: str, data: Mapping[str, Any]) -> frappe
     config = ALLOWED_DOCS[doctype]
     allowed_fields = config.get("update_fields", config.get("fields", []))
     doc = frappe.get_doc(doctype, name)
+    doc.flags.ignore_permissions = True
 
     updates = _filter_fields(data, allowed_fields)
     for field, value in updates.items():

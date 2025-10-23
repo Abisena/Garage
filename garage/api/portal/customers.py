@@ -29,12 +29,14 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         customer_name = customer_doc.name
         created["customer"] = customer_doc.name
     else:
-        frappe.get_doc("Garage Customer", existing_customer)
+        if not frappe.db.exists("Garage Customer", existing_customer):
+            frappe.throw(_("Customer tidak ditemukan."))
 
     vehicle_fields = ALLOWED_DOCS["Garage Vehicle"]["fields"] - {"customer"}
     vehicle_payload = _filter_fields(data, vehicle_fields)
     if vehicle_payload:
         vehicle_doc = frappe.new_doc("Garage Vehicle")
+        vehicle_doc.flags.ignore_permissions = True
         vehicle_doc.update(vehicle_payload)
         vehicle_doc.customer = data.get("vehicle_customer") or customer_name
         if not vehicle_doc.customer:

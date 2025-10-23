@@ -47,6 +47,7 @@ def append_service_progress(name: str, log_entry: Optional[Any] = None) -> Dict[
     if not row:
         frappe.throw(_("Data progres tidak boleh kosong."))
     doc = frappe.get_doc("Garage Service Order", name)
+    doc.flags.ignore_permissions = True
     doc.append("progress_logs", row[0])
     doc.save()
     return {"name": doc.name, "progress_count": len(doc.progress_logs)}
