@@ -45,6 +45,7 @@
                 customers: document.querySelector('[data-role="customer-table"]'),
                 vehicles: document.querySelector('[data-role="vehicle-table"]'),
                 openService: document.querySelector('[data-role="open-service-table"]'),
+                serviceHistory: document.querySelector('[data-role="service-history-table"]'),
                 spareOrders: document.querySelector('[data-role="spare-table"]'),
                 pendingProcurement: document.querySelector('[data-role="pending-procurement-table"]'),
                 openInvoices: document.querySelector('[data-role="open-invoice-table"]'),
@@ -55,6 +56,7 @@
                 customer: document.querySelector('[data-empty="customer"]'),
                 vehicle: document.querySelector('[data-empty="vehicle"]'),
                 openService: document.querySelector('[data-empty="open-service"]'),
+                serviceHistory: document.querySelector('[data-empty="service-history"]'),
                 spare: document.querySelector('[data-empty="spare"]'),
                 pendingProcurement: document.querySelector('[data-empty="pending-procurement"]'),
                 openInvoice: document.querySelector('[data-empty="open-invoice"]'),
@@ -382,6 +384,7 @@
         renderServiceSection() {
             const serviceOrders = this.state.service_orders || [];
             const openService = this.state.open_service_orders || [];
+            const recentService = serviceOrders.slice(0, 10);
 
             const totalEstimate = serviceOrders.reduce((acc, row) => acc + (parseFloat(row.total_estimated_amount) || 0), 0);
             const qcPending = serviceOrders.filter((row) => (row.qc_status || '').toLowerCase() === 'pending').length;
@@ -398,8 +401,17 @@
                 this.renderLink('Garage Service Order', row.name),
                 row.customer || '-',
                 row.status || '-',
-                row.estimated_delivery_date || '-',
+                this.formatDate(row.estimated_delivery_date || row.service_booking_date),
             ], this.emptyStates.openService);
+
+            this.renderTable(this.tables.serviceHistory, recentService, (row) => [
+                this.renderLink('Garage Service Order', row.name),
+                row.customer || '-',
+                row.status || '-',
+                row.vehicle || '-',
+                this.formatDate(row.modified || row.actual_delivery_date || row.estimated_delivery_date),
+                this.currencyFormatter.format(parseFloat(row.total_estimated_amount) || 0),
+            ], this.emptyStates.serviceHistory);
 
             const progressOptions = serviceOrders.map((row) => ({ value: row.name, label: `${row.name} – ${row.customer || '-'}` }));
             this.populateSelect(this.selects.progressServiceOrder, progressOptions, {
@@ -672,6 +684,17 @@
                 this.refreshedAtLabel.textContent = frappe.datetime.str_to_user(this.state.refreshed_at);
             } catch (error) {
                 this.refreshedAtLabel.textContent = this.state.refreshed_at;
+            }
+        }
+
+        formatDate(value) {
+            if (!value) {
+                return '-';
+            }
+            try {
+                return frappe.datetime.str_to_user(value);
+            } catch (error) {
+                return value;
             }
         }
 
