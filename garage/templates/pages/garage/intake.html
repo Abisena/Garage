@@ -950,7 +950,7 @@ html {
                 <article class="portal-card">
                     <h2>Form Intake Terpadu</h2>
                     
-                    <form id="intake-form">
+                    <form id="customer-vehicle-form">
                         <!-- Section 1: Customer Info -->
                         <div class="form-section">
                             <header class="form-section__header">
@@ -960,13 +960,23 @@ html {
                                     Masukkan data customer dengan lengkap. Field bertanda <span style="color: var(--danger-color); font-weight: 700;">*</span> wajib diisi.
                                 </p>
                             </header>
-                            
+
                             <div class="form-section__grid two-column">
                                 <div class="form-field">
+                                    <label for="existing_customer">Gunakan Customer Terdaftar</label>
+                                    <select id="existing_customer" name="existing_customer">
+                                        <option value="">— Customer Baru —</option>
+                                    </select>
+                                    <p class="form-hint">
+                                        Pilih untuk melampirkan kendaraan baru ke customer yang sudah ada.
+                                    </p>
+                                </div>
+
+                                <div class="form-field">
                                     <label for="customer_name" class="required">Nama Lengkap</label>
-                                    <input 
-                                        id="customer_name" 
-                                        name="customer_name" 
+                                    <input
+                                        id="customer_name"
+                                        name="customer_name"
                                         type="text" 
                                         placeholder="John Doe" 
                                         required 
@@ -983,9 +993,9 @@ html {
                                 
                                 <div class="form-field">
                                     <label for="phone">No. Telepon</label>
-                                    <input 
-                                        id="phone" 
-                                        name="phone" 
+                                    <input
+                                        id="phone"
+                                        name="phone"
                                         type="tel" 
                                         placeholder="08123456789" 
                                     />
@@ -1001,10 +1011,10 @@ html {
                                         placeholder="customer@example.com" 
                                     />
                                 </div>
-                                
+
                                 <div class="form-field">
-                                    <label for="preferred_contact">Metode Kontak Preferensi</label>
-                                    <select id="preferred_contact" name="preferred_contact">
+                                    <label for="preferred_contact_method">Metode Kontak Preferensi</label>
+                                    <select id="preferred_contact_method" name="preferred_contact_method">
                                         <option value="">— Pilih metode —</option>
                                         <option value="Phone">Phone</option>
                                         <option value="Email">Email</option>
@@ -1132,13 +1142,14 @@ html {
                                 
                                 <div class="form-field">
                                     <label for="mileage">Odometer (km)</label>
-                                    <input 
-                                        id="mileage" 
-                                        name="mileage" 
-                                        type="number" 
-                                        min="0" 
-                                        step="100" 
-                                        placeholder="50000" 
+                                    <input
+                                        id="mileage"
+                                        name="mileage"
+                                        type="number"
+                                        min="0"
+                                        step="100"
+                                        data-cast="int"
+                                        placeholder="50000"
                                     />
                                 </div>
                                 
