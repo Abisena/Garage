@@ -2,6 +2,628 @@
 
 {% block title %}Intake Customer & Kendaraan{% endblock %}
 
+{% block head_include %}
+<style>
+/* ============================================
+   GARAGE INTAKE PAGE - INLINE STYLES
+   ============================================ */
+
+:root {
+    --primary-color: #2563eb;
+    --primary-dark: #1e40af;
+    --primary-light: #3b82f6;
+    --primary-lightest: #dbeafe;
+    --success-color: #10b981;
+    --danger-color: #ef4444;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --bg-body: #f9fafb;
+    --bg-white: #ffffff;
+    --bg-gray-light: #f3f4f6;
+    --bg-gray: #e5e7eb;
+    --border-color: #e5e7eb;
+    --border-color-light: #f3f4f6;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    background: linear-gradient(180deg, #f0f9ff 0%, #f9fafb 100%) !important;
+    color: var(--text-primary) !important;
+    line-height: 1.6 !important;
+    font-size: 15px !important;
+}
+
+.container {
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+    padding: 0 var(--spacing-lg) !important;
+}
+
+.portal-page {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #f0f9ff 0%, #f9fafb 100%);
+    padding-top: 0 !important;
+}
+
+.portal-hero--sub {
+    padding: var(--spacing-xl) 0 !important;
+    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%) !important;
+    position: relative;
+    overflow: hidden;
+    color: white !important;
+    margin-bottom: var(--spacing-xl) !important;
+}
+
+.portal-hero--sub::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.08;
+    z-index: 0;
+}
+
+.portal-hero--sub .container {
+    position: relative;
+    z-index: 1;
+}
+
+.portal-eyebrow {
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.8) !important;
+    margin-bottom: var(--spacing-sm) !important;
+}
+
+.portal-hero--sub h1 {
+    font-size: 2rem !important;
+    margin-bottom: var(--spacing-sm) !important;
+    font-weight: 700 !important;
+    color: white !important;
+}
+
+.portal-hero--sub p {
+    font-size: 1rem !important;
+    opacity: 0.9;
+    max-width: 700px;
+    line-height: 1.7 !important;
+    color: white !important;
+}
+
+.portal-nav {
+    display: flex !important;
+    gap: var(--spacing-sm) !important;
+    background: var(--bg-white) !important;
+    padding: var(--spacing-sm) !important;
+    border-radius: var(--radius-xl) !important;
+    box-shadow: var(--shadow-lg) !important;
+    margin-bottom: var(--spacing-2xl) !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+}
+
+.portal-nav a {
+    padding: var(--spacing-md) var(--spacing-lg) !important;
+    border-radius: var(--radius-md) !important;
+    text-decoration: none !important;
+    color: var(--text-secondary) !important;
+    font-weight: 500 !important;
+    transition: all var(--transition-base) !important;
+    white-space: nowrap;
+}
+
+.portal-nav a:hover {
+    background: var(--primary-lightest) !important;
+    color: var(--primary-color) !important;
+    transform: translateY(-2px);
+}
+
+.portal-nav a.active {
+    background: var(--primary-color) !important;
+    color: white !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.portal-grid {
+    display: grid !important;
+    gap: var(--spacing-xl) !important;
+    margin-bottom: var(--spacing-xl) !important;
+}
+
+.portal-grid.two-column {
+    grid-template-columns: 1fr;
+}
+
+.portal-section {
+    padding: var(--spacing-2xl) 0 !important;
+}
+
+.portal-card {
+    background: var(--bg-white) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: var(--spacing-xl) !important;
+    box-shadow: var(--shadow-md) !important;
+    transition: all var(--transition-base) !important;
+    border: 1px solid var(--border-color-light) !important;
+    animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.portal-card:hover {
+    box-shadow: var(--shadow-lg) !important;
+}
+
+.portal-card__header {
+    margin-bottom: var(--spacing-xl) !important;
+    padding-bottom: var(--spacing-lg) !important;
+    border-bottom: 2px solid var(--border-color-light) !important;
+}
+
+.portal-card__header h2 {
+    font-size: 1.75rem !important;
+    font-weight: 700 !important;
+    color: var(--text-primary) !important;
+    margin-bottom: var(--spacing-sm) !important;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.portal-card__header h2::before {
+    content: '';
+    width: 4px;
+    height: 28px;
+    background: var(--primary-color);
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.portal-card__header .lead {
+    color: var(--text-secondary) !important;
+    line-height: 1.6 !important;
+}
+
+.form-banner {
+    background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%) !important;
+    border-left: 4px solid var(--primary-color) !important;
+    border-radius: var(--radius-md) !important;
+    padding: var(--spacing-lg) !important;
+    margin-bottom: var(--spacing-xl) !important;
+}
+
+.form-banner strong {
+    display: block;
+    font-size: 1.125rem !important;
+    color: var(--primary-dark) !important;
+    margin-bottom: var(--spacing-sm) !important;
+}
+
+.form-banner p {
+    color: var(--text-secondary) !important;
+    line-height: 1.6 !important;
+    margin-bottom: var(--spacing-md) !important;
+}
+
+.form-banner__steps {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    gap: var(--spacing-md) !important;
+    flex-wrap: wrap;
+}
+
+.form-banner__steps li {
+    font-size: 0.8125rem !important;
+    font-weight: 500 !important;
+    color: var(--primary-color) !important;
+    background: white !important;
+    padding: var(--spacing-xs) var(--spacing-md) !important;
+    border-radius: var(--radius-sm) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.form-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--spacing-lg) !important;
+}
+
+.form-section {
+    margin-bottom: var(--spacing-2xl) !important;
+    padding-bottom: var(--spacing-2xl) !important;
+    border-bottom: 2px solid var(--border-color-light) !important;
+}
+
+.form-section:last-of-type {
+    border-bottom: none !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.form-section__header {
+    margin-bottom: var(--spacing-lg) !important;
+}
+
+.form-section__tag {
+    display: inline-block !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: white !important;
+    background: var(--primary-color) !important;
+    padding: 4px 12px !important;
+    border-radius: 12px !important;
+    margin-bottom: var(--spacing-sm) !important;
+}
+
+.form-section__title {
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    margin-bottom: var(--spacing-xs) !important;
+}
+
+.form-section__subtitle {
+    font-size: 0.9375rem !important;
+    color: var(--text-secondary) !important;
+    line-height: 1.6 !important;
+}
+
+.form-section__grid {
+    display: grid !important;
+    gap: var(--spacing-md) !important;
+    grid-template-columns: 1fr;
+}
+
+.form-section__grid.two-column {
+    grid-template-columns: 1fr;
+}
+
+.form-field {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--spacing-sm) !important;
+    position: relative;
+}
+
+.form-field label {
+    font-weight: 500 !important;
+    color: var(--text-primary) !important;
+    font-size: 0.875rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    display: flex !important;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.form-field label::before {
+    content: '•';
+    color: var(--primary-color) !important;
+    font-weight: 700 !important;
+    font-size: 1.25rem !important;
+    line-height: 1;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+    padding: var(--spacing-md) !important;
+    border: 2px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+    font-size: 0.9375rem !important;
+    transition: all var(--transition-base) !important;
+    background: var(--bg-white) !important;
+    font-family: inherit !important;
+    width: 100% !important;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+    outline: none !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 3px var(--primary-lightest) !important;
+}
+
+.form-field input:hover,
+.form-field select:hover,
+.form-field textarea:hover {
+    border-color: var(--primary-light) !important;
+}
+
+.form-field textarea {
+    min-height: 120px !important;
+    resize: vertical;
+}
+
+.form-hint {
+    font-size: 0.8125rem !important;
+    color: var(--text-muted) !important;
+    margin-top: var(--spacing-xs) !important;
+    line-height: 1.4 !important;
+    font-style: italic;
+}
+
+.form-actions {
+    display: flex !important;
+    gap: var(--spacing-md) !important;
+    align-items: center;
+    flex-wrap: wrap;
+    padding-top: var(--spacing-lg) !important;
+    border-top: 2px solid var(--border-color-light) !important;
+    margin-top: var(--spacing-lg) !important;
+}
+
+.form-actions button {
+    min-width: 200px !important;
+}
+
+button, .btn {
+    padding: var(--spacing-md) var(--spacing-xl) !important;
+    border: none !important;
+    border-radius: var(--radius-md) !important;
+    font-size: 0.9375rem !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all var(--transition-base) !important;
+    text-decoration: none !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    font-family: inherit !important;
+}
+
+button.primary, .btn-primary {
+    background: var(--primary-color) !important;
+    color: white !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+button.primary:hover, .btn-primary:hover {
+    background: var(--primary-dark) !important;
+    box-shadow: var(--shadow-md) !important;
+    transform: translateY(-1px);
+}
+
+button.secondary, .btn-secondary {
+    background: var(--bg-gray-light) !important;
+    color: var(--text-primary) !important;
+    border: 2px solid var(--border-color) !important;
+}
+
+button.secondary:hover, .btn-secondary:hover {
+    background: var(--bg-gray) !important;
+    border-color: var(--primary-color) !important;
+    color: var(--primary-color) !important;
+}
+
+.simple-table {
+    width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+    overflow: hidden;
+    background: var(--bg-white) !important;
+    margin-top: var(--spacing-md) !important;
+}
+
+.simple-table thead {
+    background: var(--bg-gray-light) !important;
+}
+
+.simple-table th {
+    padding: var(--spacing-md) !important;
+    text-align: left !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    font-size: 0.875rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    border-bottom: 2px solid var(--border-color) !important;
+    white-space: nowrap;
+}
+
+.simple-table td {
+    padding: var(--spacing-md) !important;
+    border-bottom: 1px solid var(--border-color-light) !important;
+    color: var(--text-secondary) !important;
+    font-size: 0.9375rem !important;
+}
+
+.simple-table tbody tr {
+    transition: background 150ms !important;
+    cursor: pointer;
+}
+
+.simple-table tbody tr:hover {
+    background: var(--primary-lightest) !important;
+}
+
+.simple-table tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+.table-links {
+    display: flex !important;
+    gap: var(--spacing-md) !important;
+    flex-wrap: wrap;
+}
+
+.table-links--flush {
+    margin-bottom: var(--spacing-lg) !important;
+    padding-bottom: var(--spacing-lg) !important;
+    border-bottom: 2px solid var(--border-color-light) !important;
+}
+
+.table-links a {
+    display: inline-flex !important;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md) !important;
+    background: var(--primary-lightest) !important;
+    color: var(--primary-color) !important;
+    text-decoration: none !important;
+    border-radius: var(--radius-sm) !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    transition: all var(--transition-base) !important;
+}
+
+.table-links a:hover {
+    background: var(--primary-color) !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.table-links a::after {
+    content: '→';
+    font-weight: 700;
+}
+
+.portal-card h3 {
+    font-size: 1.125rem !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    margin: var(--spacing-lg) 0 var(--spacing-md) 0 !important;
+}
+
+.section-subtitle {
+    font-size: 1.125rem !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    margin: var(--spacing-xl) 0 var(--spacing-md) 0 !important;
+    padding-top: var(--spacing-lg) !important;
+    border-top: 2px solid var(--border-color-light) !important;
+}
+
+.list-empty {
+    display: none;
+    padding: var(--spacing-2xl) !important;
+    text-align: center !important;
+    color: var(--text-muted) !important;
+    font-style: italic;
+    border: 2px dashed var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+    background: linear-gradient(135deg, var(--bg-gray-light) 0%, var(--bg-white) 100%) !important;
+}
+
+.list-empty.show {
+    display: block !important;
+}
+
+.list-empty::before {
+    content: '📋';
+    display: block;
+    font-size: 3rem;
+    margin-bottom: var(--spacing-md);
+    opacity: 0.5;
+}
+
+@media (min-width: 768px) {
+    .form-section__grid.two-column {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+@media (min-width: 1024px) {
+    .portal-grid.two-column {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    
+    .portal-hero--sub h1 {
+        font-size: 2.5rem !important;
+    }
+    
+    .portal-hero--sub p {
+        font-size: 1.125rem !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .portal-hero--sub {
+        padding: var(--spacing-lg) 0 !important;
+    }
+    
+    .portal-hero--sub h1 {
+        font-size: 1.5rem !important;
+    }
+    
+    .form-banner {
+        padding: var(--spacing-md) !important;
+    }
+    
+    .form-banner strong {
+        font-size: 1rem !important;
+    }
+    
+    .form-banner__steps {
+        flex-direction: column;
+    }
+    
+    .form-section__tag {
+        font-size: 0.6875rem !important;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .form-actions button {
+        width: 100% !important;
+        min-width: auto !important;
+    }
+    
+    .portal-card {
+        padding: var(--spacing-lg) !important;
+    }
+    
+    .portal-card__header h2 {
+        font-size: 1.5rem !important;
+    }
+}
+</style>
+{% endblock %}
+
 {% block page_content %}
 <div class="portal-page portal-page--intake">
     <section class="portal-hero portal-hero--sub">
@@ -15,8 +637,16 @@
         </div>
     </section>
 
-    {% set active_page = 'intake' %}
-    {% include "garage/templates/includes/portal_nav.html" %}
+    <div class="container">
+        <nav class="portal-nav">
+            <a href="/" class="active">📋 Intake</a>
+            <a href="/service">🔧 Servis</a>
+            <a href="/sparepart">📦 Sparepart</a>
+            <a href="/procurement">🛒 Pengadaan</a>
+            <a href="/finance">💰 Keuangan</a>
+            <a href="/insight">📊 Insight</a>
+        </nav>
+    </div>
 
     <section class="portal-section">
         <div class="container">
@@ -135,7 +765,7 @@
                                 </div>
                                 <div class="form-field">
                                     <label for="vehicle_year">Tahun</label>
-                                    <input id="vehicle_year" name="vehicle_year" type="number" min="1980" max="2100" />
+                                    <input id="vehicle_year" name="vehicle_year" type="number" min="1980" max="2100" placeholder="2020" />
                                 </div>
                                 <div class="form-field">
                                     <label for="color">Warna</label>
@@ -164,7 +794,7 @@
                                 </div>
                                 <div class="form-field">
                                     <label for="mileage">Odometer (km)</label>
-                                    <input id="mileage" name="mileage" type="number" min="0" step="100" />
+                                    <input id="mileage" name="mileage" type="number" min="0" step="100" placeholder="50000" />
                                 </div>
                                 <div class="form-field">
                                     <label for="last_service_date">Terakhir Servis</label>
@@ -183,13 +813,13 @@
                             <div class="form-section__grid">
                                 <div class="form-field">
                                     <label for="notes">Catatan Tambahan</label>
-                                    <textarea id="notes" name="notes" placeholder="Informasi penting mengenai customer atau kendaraan"></textarea>
+                                    <textarea id="notes" name="notes" placeholder="Informasi penting mengenai customer atau kendaraan (contoh: riwayat servis, keluhan khusus, permintaan customer)"></textarea>
                                     <p class="form-hint">Gunakan catatan untuk riwayat servis, permintaan khusus, atau peringatan teknis.</p>
                                 </div>
                             </div>
                             <div class="form-actions">
-                                <button class="primary" type="submit">Simpan Data Intake</button>
-                                <button class="secondary" type="reset">Reset Form</button>
+                                <button class="primary" type="submit">💾 Simpan Data Intake</button>
+                                <button class="secondary" type="reset">🔄 Reset Form</button>
                             </div>
                         </div>
                     </form>
@@ -201,9 +831,9 @@
                             Ringkasan customer dan kendaraan terbaru. Klik nama dokumen untuk membuka detailnya di Desk.
                         </p>
                     </div>
-                    <div class="table-links table-links--wrap table-links--flush">
-                        <a data-desk-link="Garage Customer" target="_blank">Buka List Customer</a>
-                        <a data-desk-link="Garage Vehicle" target="_blank">Buka List Kendaraan</a>
+                    <div class="table-links table-links--flush">
+                        <a href="#" data-desk-link="Garage Customer" target="_blank">📁 Buka List Customer</a>
+                        <a href="#" data-desk-link="Garage Vehicle" target="_blank">🚗 Buka List Kendaraan</a>
                     </div>
                     <h3>Customer Terbaru</h3>
                     <table class="simple-table">
@@ -215,9 +845,15 @@
                                 <th>VIP</th>
                             </tr>
                         </thead>
-                        <tbody data-role="customer-table"></tbody>
+                        <tbody data-role="customer-table">
+                            <tr>
+                                <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                    ⏳ Loading data customer...
+                                </td>
+                            </tr>
+                        </tbody>
                     </table>
-                    <div class="list-empty" data-empty="customer">Belum ada data customer.</div>
+                    <div class="list-empty" data-empty="customer">Belum ada data customer yang terdaftar.</div>
                     <h3 class="section-subtitle">Kendaraan Terdaftar</h3>
                     <table class="simple-table">
                         <thead>
@@ -228,9 +864,15 @@
                                 <th>Terakhir Servis</th>
                             </tr>
                         </thead>
-                        <tbody data-role="vehicle-table"></tbody>
+                        <tbody data-role="vehicle-table">
+                            <tr>
+                                <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                    ⏳ Loading data kendaraan...
+                                </td>
+                            </tr>
+                        </tbody>
                     </table>
-                    <div class="list-empty" data-empty="vehicle">Belum ada data kendaraan.</div>
+                    <div class="list-empty" data-empty="vehicle">Belum ada data kendaraan yang terdaftar.</div>
                 </article>
             </div>
         </div>
@@ -238,12 +880,8 @@
 </div>
 {% endblock %}
 
-{% block page_js %}
+{% block script %}
 <script>
     frappe.require("/assets/garage/js/garage_portal.js");
 </script>
-{% endblock %}
-
-{% block page_style %}
-<style>@import url('/assets/garage/css/garage_portal.css');</style>
 {% endblock %}
