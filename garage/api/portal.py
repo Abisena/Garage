@@ -6,7 +6,6 @@ from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional
 import frappe
 from frappe import _
 from frappe.utils import cint, flt, now_datetime, nowdate
-from frappe.utils.data import scrub
 
 # Whitelisted DocTypes that can be created/updated from the public portal along with
 # the permitted fields. The definition intentionally mirrors the JSON DocType schema
@@ -490,6 +489,7 @@ def _list_dicts(doctype: str, fields: Iterable[str], *, filters: Optional[Any] =
         filters=filters or [],
         order_by="modified desc",
         limit_page_length=limit,
+        ignore_permissions=True,
     )
     return [dict(row) for row in rows]
 
@@ -501,6 +501,7 @@ def _group_status(doctype: str) -> Dict[str, int]:
             fields=["status", "count(*) as total"],
             group_by="status",
             order_by="total desc",
+            ignore_permissions=True,
         )
     except Exception:
         return {}
@@ -508,14 +509,19 @@ def _group_status(doctype: str) -> Dict[str, int]:
 
 
 def _sum_field(doctype: str, field: str, filters: Optional[Any] = None) -> float:
-    result = frappe.db.get_all(doctype, filters=filters or [], fields=[f"sum({field}) as total"])
+    result = frappe.db.get_all(
+        doctype,
+        filters=filters or [],
+        fields=[f"sum({field}) as total"],
+        ignore_permissions=True,
+    )
     if result:
         return flt(result[0].get("total") or 0)
     return 0.0
 
 
 def _desk_route(doctype: str) -> Dict[str, str]:
-    slug = scrub(doctype)
+    slug = frappe.scrub(doctype)
     return {
         "list": f"/app/{slug}",
         "form": f"/app/{slug}/{{name}}",
