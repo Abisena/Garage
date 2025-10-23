@@ -1088,7 +1088,22 @@ button:disabled {
                     </thead>
                     <tbody data-role="open-service-table"></tbody>
                 </table>
-                <div class="list-empty" data-empty="open-service">Belum ada order aktif.</div>
+                <div class="list-empty" data-empty="open-service">Belum ada order aktif. Semua order mungkin sudah selesai.</div>
+                <h3 class="section-subtitle">Riwayat Service Order</h3>
+                <table class="simple-table">
+                    <thead>
+                        <tr>
+                            <th>Nomor</th>
+                            <th>Customer</th>
+                            <th>Status</th>
+                            <th>Kendaraan</th>
+                            <th>Pembaruan Terakhir</th>
+                            <th>Estimasi</th>
+                        </tr>
+                    </thead>
+                    <tbody data-role="service-history-table"></tbody>
+                </table>
+                <div class="list-empty" data-empty="service-history">Belum ada riwayat service order.</div>
                 <div class="table-links table-links--trailing">
                     <a data-desk-link="Garage Service Order" target="_blank">📋 Buka di Desk</a>
                 </div>

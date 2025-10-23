@@ -565,11 +565,21 @@ def portal_bootstrap() -> Dict[str, Any]:
             "job_card_status",
             "work_order_status",
             "qc_status",
+            "modified",
         ],
     )
     open_service_orders = _list_dicts(
         "Garage Service Order",
-        ["name", "status", "customer", "vehicle", "priority", "estimated_delivery_date"],
+        [
+            "name",
+            "status",
+            "customer",
+            "vehicle",
+            "priority",
+            "estimated_delivery_date",
+            "service_booking_date",
+            "modified",
+        ],
         filters=[["status", "not in", ["Completed", "Cancelled"]]],
     )
     spare_orders = _list_dicts(
