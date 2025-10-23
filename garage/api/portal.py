@@ -5,8 +5,7 @@ from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional
 
 import frappe
 from frappe import _
-from frappe.utils import cint, flt, now_datetime, nowdate
-from frappe.utils.data import scrub
+from frappe.utils import cint, flt, now_datetime, nowdate, scrub
 
 # Whitelisted DocTypes that can be created/updated from the public portal along with
 # the permitted fields. The definition intentionally mirrors the JSON DocType schema
