@@ -2,6 +2,10 @@
     class GaragePortal {
         constructor() {
             this.state = {};
+            this.isFetching = false;
+            this.pendingFetchOptions = null;
+            this.lastErrorMessage = null;
+            this.autoRefreshHandle = null;
             this.currencyFormatter = new Intl.NumberFormat('id-ID', {
                 style: 'currency',
                 currency: 'IDR',
@@ -13,7 +17,8 @@
             this.cacheDom();
             this.bindEvents();
             this.initRepeaters();
-            this.fetchBootstrap(false);
+            this.fetchBootstrap({ showSuccess: false });
+            this.startAutoRefresh();
         }
 
         cacheDom() {
@@ -262,8 +267,12 @@
             }
 
             this.refreshButtons.forEach((button) => {
-                button.addEventListener('click', () => this.fetchBootstrap());
+                button.addEventListener('click', () =>
+                    this.fetchBootstrap({ showSuccess: true, freeze: true, source: 'manual' })
+                );
             });
+
+            window.addEventListener('beforeunload', () => this.stopAutoRefresh());
         }
 
         initRepeaters() {
@@ -297,18 +306,104 @@
             });
         }
 
-        fetchBootstrap(showNotification = true) {
+        fetchBootstrap({ showSuccess = true, freeze = false, source = 'manual' } = {}) {
+            if (this.isFetching) {
+                if (source === 'auto') {
+                    return;
+                }
+                this.pendingFetchOptions = { showSuccess, freeze, source };
+                return;
+            }
+            this.isFetching = true;
             frappe.call({
                 method: 'garage.api.portal.portal_bootstrap',
-                freeze: true,
+                freeze,
                 callback: (response) => {
                     this.state = response.message || {};
                     this.render();
-                    if (showNotification) {
+                    this.lastErrorMessage = null;
+                    if (showSuccess) {
                         frappe.show_alert({ message: __('Data portal diperbarui.'), indicator: 'green' });
                     }
                 },
+                error: (error) => {
+                    this.handleBootstrapError(error, source);
+                },
+                always: () => {
+                    this.isFetching = false;
+                    if (this.pendingFetchOptions) {
+                        const next = this.pendingFetchOptions;
+                        this.pendingFetchOptions = null;
+                        window.setTimeout(() => this.fetchBootstrap(next), 0);
+                    }
+                },
             });
+        }
+
+        startAutoRefresh() {
+            const intervalAttr = document.body?.dataset?.portalRefreshInterval;
+            const parsedSeconds = parseInt(intervalAttr, 10);
+            const intervalMs = Number.isFinite(parsedSeconds) && parsedSeconds > 0 ? parsedSeconds * 1000 : 60000;
+            this.stopAutoRefresh();
+            this.autoRefreshHandle = window.setInterval(() => {
+                if (document.hidden) {
+                    return;
+                }
+                this.fetchBootstrap({ showSuccess: false, freeze: false, source: 'auto' });
+            }, intervalMs);
+        }
+
+        stopAutoRefresh() {
+            if (this.autoRefreshHandle) {
+                window.clearInterval(this.autoRefreshHandle);
+                this.autoRefreshHandle = null;
+            }
+        }
+
+        handleBootstrapError(error, source) {
+            const message = this.extractErrorMessage(error);
+            if (source === 'auto' && this.lastErrorMessage === message) {
+                return;
+            }
+            this.lastErrorMessage = message;
+            frappe.show_alert({ message, indicator: 'red' });
+        }
+
+        extractErrorMessage(error) {
+            const fallback = __('Tidak dapat memuat data portal. Silakan coba lagi.');
+            if (!error) {
+                return fallback;
+            }
+
+            if (error._server_messages) {
+                try {
+                    const messages = JSON.parse(error._server_messages);
+                    if (Array.isArray(messages) && messages.length) {
+                        const last = messages[messages.length - 1];
+                        if (typeof last === 'string' && last) {
+                            return this.stripHtml(last);
+                        }
+                    }
+                } catch (parseError) {
+                    // ignore JSON parse issues and fall back to other fields
+                }
+            }
+
+            if (typeof error.message === 'string' && error.message) {
+                return this.stripHtml(error.message);
+            }
+
+            if (typeof error.exception === 'string' && error.exception) {
+                return this.stripHtml(error.exception);
+            }
+
+            return fallback;
+        }
+
+        stripHtml(value) {
+            const temp = document.createElement('div');
+            temp.innerHTML = value;
+            return temp.textContent || temp.innerText || value;
         }
 
         render() {
@@ -618,7 +713,7 @@
                 callback: () => {
                     frappe.show_alert({ message: __(successMessage), indicator: 'green' });
                     this.resetForm(form);
-                    this.fetchBootstrap(false);
+                    this.fetchBootstrap({ showSuccess: false, source: 'form' });
                 },
                 always: () => {
                     if (primaryButton) {
