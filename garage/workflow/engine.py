@@ -66,6 +66,7 @@ class AccessController:
             "create_job_card",
             "create_estimate",
             "record_customer_decision",
+            "create_work_order",
             "prepare_work_order",
             "check_work_order_stock",
             "create_purchase_order",
@@ -98,6 +99,7 @@ class AccessController:
             "create_job_card",
             "create_estimate",
             "record_customer_decision",
+            "create_work_order",
             "prepare_work_order",
             "generate_sales_invoice",
         ),
@@ -376,7 +378,7 @@ class GarageWorkflowEngine:
         job_card_id: str,
         approved: bool,
         reason: Optional[str] = None,
-    ) -> Tuple[JobCard, Optional[WorkOrder]]:
+    ) -> JobCard:
         self.access.require(user, "record_customer_decision")
         job_card = self._get_job_card(job_card_id)
         if job_card.status != JobCardStatus.AWAITING_APPROVAL:
@@ -387,13 +389,29 @@ class GarageWorkflowEngine:
             job_card.cancellation_reason = reason or "Customer rejected estimate"
             booking.status = BookingStatus.CANCELLED
             self._log_action(user, "cancel_job_card", job_card.job_card_id, asdict(job_card))
-            return job_card, None
+            return job_card
         job_card.status = JobCardStatus.APPROVED
         job_card.approval_timestamp = datetime.utcnow()
+        self._log_action(user, "approve_job_card", job_card.job_card_id, {})
+        return job_card
+
+    def create_work_order(self, user: User, job_card_id: str) -> WorkOrder:
+        self.access.require(user, "create_work_order")
+        job_card = self._get_job_card(job_card_id)
+        if job_card.status != JobCardStatus.APPROVED:
+            raise InvalidTransitionError("Work order can only be created after job card approval")
+        for existing in self.store.work_orders.values():
+            if existing.job_card_id == job_card.job_card_id:
+                raise InvalidTransitionError("Work order already exists for this job card")
         work_order = WorkOrder(work_order_id=_generate_id("WORK"), job_card_id=job_card.job_card_id, tasks=[])
         self.store.work_orders[work_order.work_order_id] = work_order
-        self._log_action(user, "approve_job_card", job_card.job_card_id, {"work_order": work_order.work_order_id})
-        return job_card, work_order
+        self._log_action(
+            user,
+            "create_work_order",
+            work_order.work_order_id,
+            {"job_card_id": job_card.job_card_id},
+        )
+        return work_order
 
     def prepare_work_order(
         self,
@@ -525,6 +543,16 @@ class GarageWorkflowEngine:
         if job_card.status not in {JobCardStatus.APPROVED, JobCardStatus.IN_PROGRESS}:
             raise InvalidTransitionError("Job must be approved before work can start")
         work_order = self._get_work_order_by_job(job_card_id)
+        pending_materials = {
+            item_code: qty - work_order.issued_parts.get(item_code, 0)
+            for item_code, qty in work_order.required_parts.items()
+            if work_order.issued_parts.get(item_code, 0) < qty
+        }
+        if pending_materials:
+            missing_list = ", ".join(f"{code} ({short})" for code, short in pending_materials.items())
+            raise InvalidTransitionError(
+                "Cannot start work before issuing required materials: " + missing_list
+            )
         work_order.status = WorkOrderStatus.IN_PROGRESS
         work_order.started_at = datetime.utcnow()
         job_card.status = JobCardStatus.IN_PROGRESS
@@ -680,6 +708,12 @@ class GarageWorkflowEngine:
         self.access.require(user, "generate_sales_invoice")
         if amount <= 0:
             raise ValidationError("Invoice amount must be positive")
+        job_card = self.store.job_cards.get(source_reference)
+        if job_card and job_card.status != JobCardStatus.CLOSED:
+            raise InvalidTransitionError("Job card must be closed before invoicing")
+        sales_order = self.store.sales_orders.get(source_reference)
+        if sales_order and sales_order.status != SalesOrderStatus.DELIVERED:
+            raise InvalidTransitionError("Sales order must be delivered before invoicing")
         invoice = SalesInvoice(
             invoice_id=_generate_id("INV"),
             source_reference=source_reference,
