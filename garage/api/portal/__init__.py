@@ -1,26 +1,29 @@
-"""Public API surface for the Garage web portal."""
+"""Portal API surface grouped by domain modules."""
 from __future__ import annotations
 
-from .portal import (
-    ALLOWED_DOCS,
-    DOC_TYPES,
-    append_service_progress,
+from .common import ALLOWED_DOCS, DOC_TYPES
+from .customers import register_customer_vehicle
+from .dashboard import portal_bootstrap
+from .finance import (
     create_payment_entry,
-    create_procurement_order,
     create_receipt_document,
     create_sales_invoice,
-    create_service_order,
-    create_spare_part_order,
-    create_stock_movement,
-    portal_bootstrap,
-    register_customer_vehicle,
     update_payment_entry,
-    update_procurement_order,
     update_receipt_document,
     update_sales_invoice,
-    update_service_order,
+)
+from .procurement import (
+    create_procurement_order,
+    create_spare_part_order,
+    create_stock_movement,
+    update_procurement_order,
     update_spare_part_order,
     update_stock_movement,
+)
+from .service_orders import (
+    append_service_progress,
+    create_service_order,
+    update_service_order,
 )
 
 __all__ = [
