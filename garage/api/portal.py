@@ -597,19 +597,21 @@ def portal_bootstrap() -> Dict[str, Any]:
         ["name", "customer_name", "customer_type", "phone", "email", "is_vip"],
         limit=100,
     )
+    vehicle_fields = [
+        "name",
+        "customer",
+        "license_plate",
+        "brand",
+        "model",
+        "color",
+        "last_service_date",
+        "creation",
+    ]
+    if frappe.db.has_column("Garage Vehicle", "last_service_logged_at"):
+        vehicle_fields.append("last_service_logged_at")
     vehicles = _list_dicts(
         "Garage Vehicle",
-        [
-            "name",
-            "customer",
-            "license_plate",
-            "brand",
-            "model",
-            "color",
-            "last_service_date",
-            "last_service_logged_at",
-            "creation",
-        ],
+        vehicle_fields,
         limit=100,
     )
     service_orders = _list_dicts(
