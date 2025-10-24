@@ -1,6 +1,7 @@
 """Frappe API endpoints powering the Garage website workflow portal."""
 from __future__ import annotations
 
+from contextlib import contextmanager
 from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional
 
 import frappe
@@ -398,6 +399,22 @@ def _require_login() -> None:
         frappe.throw(_("Silakan login untuk mengakses portal Garage."), frappe.PermissionError)
 
 
+@contextmanager
+def _ignoring_permissions():
+    """Temporarily bypass DocType permission checks."""
+
+    had_previous = hasattr(frappe.flags, "ignore_permissions")
+    previous = getattr(frappe.flags, "ignore_permissions", None)
+    frappe.flags.ignore_permissions = True
+    try:
+        yield
+    finally:
+        if had_previous:
+            frappe.flags.ignore_permissions = previous
+        else:
+            delattr(frappe.flags, "ignore_permissions")
+
+
 def _ensure_dict(payload: Any) -> MutableMapping[str, Any]:
     data = frappe.parse_json(payload) if isinstance(payload, str) else payload
     if not isinstance(data, MutableMapping):
@@ -459,10 +476,15 @@ def _new_document(doctype: str, data: Mapping[str, Any]) -> frappe.Document:
     return doc
 
 
+def _insert_document(doctype: str, data: Mapping[str, Any]) -> frappe.Document:
+    doc = _new_document(doctype, data)
+    return _insert_doc(doc)
+
+
 def _update_document(doctype: str, name: str, data: Mapping[str, Any]) -> frappe.Document:
     config = ALLOWED_DOCS[doctype]
     allowed_fields = config.get("update_fields", config.get("fields", []))
-    doc = frappe.get_doc(doctype, name)
+    doc = _get_doc(doctype, name)
 
     updates = _filter_fields(data, allowed_fields)
     for field, value in updates.items():
@@ -478,7 +500,7 @@ def _update_document(doctype: str, name: str, data: Mapping[str, Any]) -> frappe
             for row in child_rows:
                 doc.append(table_field, row)
 
-    doc.save()
+    _save_doc(doc)
     return doc
 
 
@@ -518,6 +540,23 @@ def _sum_field(doctype: str, field: str, filters: Optional[Any] = None) -> float
     if result:
         return flt(result[0].get("total") or 0)
     return 0.0
+
+
+def _get_doc(doctype: str, name: str) -> frappe.Document:
+    with _ignoring_permissions():
+        return frappe.get_doc(doctype, name)
+
+
+def _insert_doc(doc: frappe.Document) -> frappe.Document:
+    with _ignoring_permissions():
+        doc.insert(ignore_permissions=True)
+    return doc
+
+
+def _save_doc(doc: frappe.Document) -> frappe.Document:
+    with _ignoring_permissions():
+        doc.save(ignore_permissions=True)
+    return doc
 
 
 def _desk_route(doctype: str) -> Dict[str, str]:
@@ -681,12 +720,11 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         customer_payload = _filter_fields(data, ALLOWED_DOCS["Garage Customer"]["fields"])
         if not customer_payload.get("customer_name"):
             frappe.throw(_("Nama customer wajib diisi."))
-        customer_doc = _new_document("Garage Customer", customer_payload)
-        customer_doc.insert()
+        customer_doc = _insert_document("Garage Customer", customer_payload)
         customer_name = customer_doc.name
         created["customer"] = customer_doc.name
     else:
-        frappe.get_doc("Garage Customer", existing_customer)  # validate existence
+        _get_doc("Garage Customer", existing_customer)  # validate existence
 
     vehicle_fields = ALLOWED_DOCS["Garage Vehicle"]["fields"] - {"customer"}
     vehicle_payload = _filter_fields(data, vehicle_fields)
@@ -698,7 +736,7 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
             frappe.throw(_("Pilih customer untuk kendaraan."))
         if not vehicle_doc.license_plate:
             frappe.throw(_("Nomor polisi kendaraan wajib diisi."))
-        vehicle_doc.insert()
+        _insert_doc(vehicle_doc)
         created["vehicle"] = vehicle_doc.name
     elif data.get("vehicle_customer"):
         # Vehicle fields empty but explicit request to attach? ignore gracefully.
@@ -712,8 +750,7 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
 def create_service_order(order: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
     data = _ensure_dict(order or {})
-    doc = _new_document("Garage Service Order", data)
-    doc.insert()
+    doc = _insert_document("Garage Service Order", data)
     return {"name": doc.name, "status": doc.status}
 
 
@@ -733,9 +770,9 @@ def append_service_progress(name: str, log_entry: Optional[Any] = None) -> Dict[
     row = _sanitize_child_rows("progress_logs", [data], progress_config)
     if not row:
         frappe.throw(_("Data progres tidak boleh kosong."))
-    doc = frappe.get_doc("Garage Service Order", name)
+    doc = _get_doc("Garage Service Order", name)
     doc.append("progress_logs", row[0])
-    doc.save()
+    _save_doc(doc)
     return {"name": doc.name, "progress_count": len(doc.progress_logs)}
 
 
@@ -743,8 +780,7 @@ def append_service_progress(name: str, log_entry: Optional[Any] = None) -> Dict[
 def create_spare_part_order(order: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
     data = _ensure_dict(order or {})
-    doc = _new_document("Garage Spare Part Order", data)
-    doc.insert()
+    doc = _insert_document("Garage Spare Part Order", data)
     return {"name": doc.name, "status": doc.status}
 
 
@@ -760,8 +796,7 @@ def update_spare_part_order(name: str, updates: Optional[Any] = None) -> Dict[st
 def create_procurement_order(order: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
     data = _ensure_dict(order or {})
-    doc = _new_document("Garage Procurement Order", data)
-    doc.insert()
+    doc = _insert_document("Garage Procurement Order", data)
     return {"name": doc.name, "status": doc.status}
 
 
@@ -777,8 +812,7 @@ def update_procurement_order(name: str, updates: Optional[Any] = None) -> Dict[s
 def create_stock_movement(movement: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
     data = _ensure_dict(movement or {})
-    doc = _new_document("Garage Stock Movement", data)
-    doc.insert()
+    doc = _insert_document("Garage Stock Movement", data)
     return {"name": doc.name, "status": doc.status}
 
 
@@ -794,8 +828,7 @@ def update_stock_movement(name: str, updates: Optional[Any] = None) -> Dict[str,
 def create_sales_invoice(invoice: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
     data = _ensure_dict(invoice or {})
-    doc = _new_document("Garage Sales Invoice", data)
-    doc.insert()
+    doc = _insert_document("Garage Sales Invoice", data)
     return {"name": doc.name, "status": doc.status}
 
 
@@ -811,8 +844,7 @@ def update_sales_invoice(name: str, updates: Optional[Any] = None) -> Dict[str, 
 def create_payment_entry(entry: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
     data = _ensure_dict(entry or {})
-    doc = _new_document("Garage Payment Entry", data)
-    doc.insert()
+    doc = _insert_document("Garage Payment Entry", data)
     return {"name": doc.name, "status": doc.status}
 
 
@@ -828,8 +860,7 @@ def update_payment_entry(name: str, updates: Optional[Any] = None) -> Dict[str, 
 def create_receipt_document(receipt: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
     data = _ensure_dict(receipt or {})
-    doc = _new_document("Garage Receipt Document", data)
-    doc.insert()
+    doc = _insert_document("Garage Receipt Document", data)
     return {"name": doc.name}
 
 
