@@ -34,6 +34,9 @@ from .models import (
     SalesOrder,
     SalesOrderStatus,
     ServiceBooking,
+    ServiceFlow,
+    ServiceFlowEvent,
+    ServiceFlowStage,
     ServiceType,
     StockEntry,
     StockItem,
@@ -62,6 +65,7 @@ class AccessController:
             "register_inventory_item",
             "adjust_inventory",
             "create_service_booking",
+            "check_service_queue",
             "record_inspection",
             "create_job_card",
             "create_estimate",
@@ -73,11 +77,13 @@ class AccessController:
             "receive_purchase_order",
             "create_stock_entry",
             "issue_materials",
+            "record_material_release",
             "start_work",
             "update_job_progress",
             "complete_work",
             "perform_quality_check",
             "complete_job_card",
+            "log_opl_entry",
             "create_sales_order",
             "check_sales_order_stock",
             "reserve_sales_stock",
@@ -88,6 +94,7 @@ class AccessController:
             "follow_up_receivable",
             "print_receipt",
             "close_customer_interaction",
+            "finish_service_check",
             "generate_reports",
             "evaluate_reorder_levels",
         ),
@@ -95,12 +102,16 @@ class AccessController:
             "register_customer",
             "register_vehicle",
             "create_service_booking",
+            "check_service_queue",
             "record_inspection",
             "create_job_card",
             "create_estimate",
             "record_customer_decision",
             "create_work_order",
             "prepare_work_order",
+            "log_opl_entry",
+            "finish_service_check",
+            "close_customer_interaction",
             "generate_sales_invoice",
         ),
         Role.TECHNICIAN: (
@@ -118,6 +129,7 @@ class AccessController:
             "receive_purchase_order",
             "create_stock_entry",
             "issue_materials",
+            "record_material_release",
             "reserve_sales_stock",
             "create_delivery_note",
             "evaluate_reorder_levels",
@@ -166,6 +178,8 @@ class InMemoryStore:
         self.payment_terms: Dict[str, PaymentTerm] = {}
         self.receivable_followups: Dict[str, List[ReceivableFollowUp]] = {}
         self.receipts: Dict[str, ReceiptDocument] = {}
+        self.service_flows: Dict[str, ServiceFlow] = {}
+        self.service_flow_index: Dict[str, str] = {}
         self.audit_log: List[AuditLogEntry] = []
 
 
@@ -267,6 +281,69 @@ class GarageWorkflowEngine:
         self.store.audit_log.append(entry)
 
     # ------------------------------------------------------------------
+    # Service flow helpers
+    # ------------------------------------------------------------------
+
+    def _create_service_flow(self, user: User, booking: ServiceBooking) -> ServiceFlow:
+        stage = ServiceFlowStage.PRE_BOOKING if booking.prebooked else ServiceFlowStage.QUEUE_CHECK
+        flow = ServiceFlow(
+            flow_id=_generate_id("FLOW"),
+            booking_id=booking.booking_id,
+            vehicle_id=booking.vehicle_id,
+            stage=stage,
+            metadata={
+                "reserved_parts": dict(booking.reserved_parts),
+                "estimated_cost": booking.estimated_cost,
+                "scheduled_at": booking.scheduled_at.isoformat() if booking.scheduled_at else None,
+                "prebooked": booking.prebooked,
+            },
+        )
+        self.store.service_flows[flow.flow_id] = flow
+        self.store.service_flow_index[booking.booking_id] = flow.flow_id
+        self._log_flow_event(user, flow, stage, note="Flow initialized")
+        return flow
+
+    def _get_flow(self, flow_id: str) -> ServiceFlow:
+        try:
+            return self.store.service_flows[flow_id]
+        except KeyError as exc:
+            raise ValidationError(f"Service flow {flow_id} not found") from exc
+
+    def _get_flow_by_booking(self, booking_id: str) -> ServiceFlow:
+        try:
+            flow_id = self.store.service_flow_index[booking_id]
+        except KeyError as exc:
+            raise ValidationError(f"No service flow registered for booking {booking_id}") from exc
+        return self._get_flow(flow_id)
+
+    def _log_flow_event(
+        self,
+        user: User,
+        flow: ServiceFlow,
+        stage: ServiceFlowStage,
+        *,
+        note: Optional[str] = None,
+        extra: Optional[Dict[str, object]] = None,
+    ) -> ServiceFlowEvent:
+        if extra:
+            flow.metadata.update({key: value for key, value in extra.items() if value is not None})
+        event = ServiceFlowEvent(timestamp=datetime.utcnow(), actor_id=user.user_id, stage=stage, note=note)
+        flow.history.append(event)
+        self._log_action(
+            user,
+            "service_flow_stage",
+            flow.flow_id,
+            {
+                "booking_id": flow.booking_id,
+                "stage": stage.value,
+                "note": note,
+                **(extra or {}),
+            },
+        )
+        flow.stage = stage
+        return event
+
+    # ------------------------------------------------------------------
     # Service bookings & inspections
     # ------------------------------------------------------------------
 
@@ -278,6 +355,11 @@ class GarageWorkflowEngine:
         service_type: ServiceType,
         concern: Optional[str] = None,
         notes: Optional[str] = None,
+        *,
+        scheduled_at: Optional[datetime] = None,
+        reserved_parts: Optional[Dict[str, int]] = None,
+        estimated_cost: Optional[float] = None,
+        prebooked: bool = True,
     ) -> ServiceBooking:
         self.access.require(user, "create_service_booking")
         customer = self._get_customer(customer_id)
@@ -289,11 +371,16 @@ class GarageWorkflowEngine:
             customer_id=customer.customer_id,
             vehicle_id=vehicle.vehicle_id,
             service_type=service_type,
+            prebooked=prebooked,
+            scheduled_at=scheduled_at,
+            reserved_parts=dict(reserved_parts or {}),
+            estimated_cost=estimated_cost,
             concern=concern,
             notes=notes,
         )
         self.store.bookings[booking.booking_id] = booking
         self._log_action(user, "create_service_booking", booking.booking_id, asdict(booking))
+        self._create_service_flow(user, booking)
         return booking
 
     def record_inspection(
@@ -394,6 +481,383 @@ class GarageWorkflowEngine:
         job_card.approval_timestamp = datetime.utcnow()
         self._log_action(user, "approve_job_card", job_card.job_card_id, {})
         return job_card
+
+    # ------------------------------------------------------------------
+    # Flow alignment with operational diagram
+    # ------------------------------------------------------------------
+
+    def check_service_queue(
+        self,
+        user: User,
+        booking_id: str,
+        available: bool,
+        *,
+        note: Optional[str] = None,
+    ) -> ServiceFlow:
+        self.access.require(user, "check_service_queue")
+        booking = self._get_booking(booking_id)
+        flow = self._get_flow_by_booking(booking.booking_id)
+        if flow.stage != ServiceFlowStage.QUEUE_CHECK:
+            raise InvalidTransitionError("Queue checking is only applicable before PKB creation")
+        if not available:
+            raise ValidationError("Service queue is not available for immediate handling")
+        self._log_flow_event(
+            user,
+            flow,
+            ServiceFlowStage.QUEUE_CHECK,
+            note=note or "Queue available",
+            extra={"queue_available": True, "queue_note": note},
+        )
+        return flow
+
+    def create_pkb_document(
+        self,
+        user: User,
+        booking_id: str,
+        technician: User,
+        *,
+        inspection_notes: str,
+        severity: InspectionSeverity = InspectionSeverity.MEDIUM,
+        print_reference: Optional[str] = None,
+    ) -> JobCard:
+        booking = self._get_booking(booking_id)
+        flow = self._get_flow_by_booking(booking.booking_id)
+        if flow.stage not in {ServiceFlowStage.PRE_BOOKING, ServiceFlowStage.QUEUE_CHECK}:
+            raise InvalidTransitionError("PKB can only be created after pre-booking or queue confirmation")
+        if flow.stage == ServiceFlowStage.QUEUE_CHECK and not flow.metadata.get("queue_available"):
+            raise InvalidTransitionError("Service queue must be confirmed before creating PKB for walk-in customer")
+        self.record_inspection(user, booking.booking_id, user, inspection_notes, severity)
+        job_card = self.create_job_card(user, booking.booking_id, technician)
+        reserved_parts = flow.metadata.get("reserved_parts", {}) or {}
+        estimate_lines = [
+            EstimateLine(description=f"Part {code}", quantity=qty, unit_price=0.0, item_code=code)
+            for code, qty in reserved_parts.items()
+        ]
+        estimate = self.create_estimate(
+            user,
+            job_card.job_card_id,
+            user,
+            labor_hours=0.0,
+            labor_rate=0.0,
+            lines=estimate_lines,
+            additional_costs=booking.estimated_cost or 0.0,
+            notes="Auto-generated from booking",
+        )
+        self.record_customer_decision(user, job_card.job_card_id, approved=True)
+        flow.metadata["estimate_id"] = estimate.estimate_id
+        flow.metadata.update({"job_card_id": job_card.job_card_id, "technician": technician.user_id, "pkb_print": print_reference})
+        self._log_flow_event(
+            user,
+            flow,
+            ServiceFlowStage.PKB_CREATED,
+            note="PKB created and printed",
+            extra={"inspection_id": booking.inspection_id},
+        )
+        return job_card
+
+    def distribute_mechanical_task(
+        self,
+        user: User,
+        booking_id: str,
+        *,
+        tasks: Optional[Iterable[str]] = None,
+        required_parts: Optional[Dict[str, int]] = None,
+    ) -> WorkOrder:
+        booking = self._get_booking(booking_id)
+        flow = self._get_flow_by_booking(booking.booking_id)
+        if flow.stage != ServiceFlowStage.PKB_CREATED:
+            raise InvalidTransitionError("Mechanical task distribution must follow PKB creation")
+        job_card_id = flow.metadata.get("job_card_id")
+        if not job_card_id:
+            raise ValidationError("Job card is required before distributing tasks")
+        work_order_id = flow.metadata.get("work_order_id")
+        if work_order_id:
+            work_order = self._get_work_order(work_order_id)
+        else:
+            work_order = self.create_work_order(user, job_card_id)
+            flow.metadata["work_order_id"] = work_order.work_order_id
+        work_order = self.prepare_work_order(user, work_order.work_order_id, tasks=tasks, required_parts=required_parts)
+        self._log_flow_event(
+            user,
+            flow,
+            ServiceFlowStage.TASK_DISTRIBUTED,
+            note="Work order distributed",
+            extra={"tasks": work_order.tasks, "required_parts": work_order.required_parts},
+        )
+        return work_order
+
+    def record_local_purchase(
+        self,
+        user: User,
+        booking_id: str,
+        items: Dict[str, int],
+        *,
+        auto_receive: bool = True,
+    ) -> PurchaseOrder:
+        booking = self._get_booking(booking_id)
+        flow = self._get_flow_by_booking(booking.booking_id)
+        if flow.stage not in {
+            ServiceFlowStage.TASK_DISTRIBUTED,
+            ServiceFlowStage.PARTS_PURCHASED,
+            ServiceFlowStage.PARTS_ISSUED,
+            ServiceFlowStage.MATERIAL_ISSUED,
+        }:
+            raise InvalidTransitionError("Local purchase can only be recorded after task distribution")
+        job_card_id = flow.metadata.get("job_card_id")
+        if not job_card_id:
+            raise ValidationError("Job card reference missing on service flow")
+        purchase_order = self.create_purchase_order(user, job_card_id, items)
+        if auto_receive:
+            self.receive_purchase_order(user, purchase_order.purchase_order_id)
+            self.create_stock_entry(user, purchase_order.purchase_order_id)
+        self._log_flow_event(
+            user,
+            flow,
+            ServiceFlowStage.PARTS_PURCHASED,
+            note="Local parts purchased",
+            extra={"purchase_order_id": purchase_order.purchase_order_id},
+        )
+        return purchase_order
+
+    def record_part_release(self, user: User, booking_id: str, items: Dict[str, int]) -> None:
+        booking = self._get_booking(booking_id)
+        flow = self._get_flow_by_booking(booking.booking_id)
+        if flow.stage not in {
+            ServiceFlowStage.TASK_DISTRIBUTED,
+            ServiceFlowStage.PARTS_PURCHASED,
+            ServiceFlowStage.PARTS_ISSUED,
+            ServiceFlowStage.MATERIAL_ISSUED,
+        }:
+            raise InvalidTransitionError("Parts can only be issued after task distribution")
+        job_card_id = flow.metadata.get("job_card_id")
+        if not job_card_id:
+            raise ValidationError("Job card reference missing on service flow")
+        self.issue_materials(user, job_card_id, items)
+        self._log_flow_event(
+            user,
+            flow,
+            ServiceFlowStage.PARTS_ISSUED,
+            note="Local parts issued",
+            extra={"issued_parts": items},
+        )
+
+    def record_material_release(
+        self,
+        user: User,
+        booking_id: str,
+        description: str,
+    ) -> ServiceFlow:
+        self.access.require(user, "record_material_release")
+        booking = self._get_booking(booking_id)
+        flow = self._get_flow_by_booking(booking.booking_id)
+        if flow.stage not in {
+            ServiceFlowStage.PARTS_ISSUED,
+            ServiceFlowStage.PARTS_PURCHASED,
+            ServiceFlowStage.TASK_DISTRIBUTED,
+            ServiceFlowStage.MATERIAL_ISSUED,
+        }:
+            raise InvalidTransitionError("Material release follows parts issuance or purchase")
+        self._log_flow_event(
+            user,
+            flow,
+            ServiceFlowStage.MATERIAL_ISSUED,
+            note=description,
+        )
+        return flow
+
+    def start_repair_process(self, user: User, booking_id: str) -> WorkOrder:
+        booking = self._get_booking(booking_id)
+        flow = self._get_flow_by_booking(booking.booking_id)
+        if flow.stage not in {ServiceFlowStage.MATERIAL_ISSUED, ServiceFlowStage.PARTS_ISSUED}:
+            raise InvalidTransitionError("Repair can only start after materials have been issued")
+        job_card_id = flow.metadata.get("job_card_id")
+        if not job_card_id:
+            raise ValidationError("Job card reference missing on service flow")
+        work_order = self.start_work(user, job_card_id)
+        self._log_flow_event(
+            user,
+            flow,
+            ServiceFlowStage.REPAIR_IN_PROGRESS,
+            note="Repair started",
+        )
+        return work_order
+
+    def update_repair_progress(self, user: User, booking_id: str, note: str) -> JobCard:
+        booking = self._get_booking(booking_id)
+        flow = self._get_flow_by_booking(booking.booking_id)
+        if flow.stage not in {
+            ServiceFlowStage.REPAIR_IN_PROGRESS,
+            ServiceFlowStage.PROGRESS_UPDATED,
+        }:
+            raise InvalidTransitionError("Progress updates require an active repair")
+        job_card_id = flow.metadata.get("job_card_id")
+        if not job_card_id:
+            raise ValidationError("Job card reference missing on service flow")
+        job_card = self.update_job_progress(user, job_card_id, note)
+        self._log_flow_event(
+            user,
+            flow,
+            ServiceFlowStage.PROGRESS_UPDATED,
+            note=note,
+        )
+        return job_card
+
+    def complete_repair_work(self, user: User, booking_id: str) -> JobCard:
+        booking = self._get_booking(booking_id)
+        flow = self._get_flow_by_booking(booking.booking_id)
+        if flow.stage not in {ServiceFlowStage.PROGRESS_UPDATED, ServiceFlowStage.REPAIR_IN_PROGRESS}:
+            raise InvalidTransitionError("Repair completion follows progress updates")
+        job_card_id = flow.metadata.get("job_card_id")
+        if not job_card_id:
+            raise ValidationError("Job card reference missing on service flow")
+        job_card = self.complete_work(user, job_card_id)
+        self._log_flow_event(
+            user,
+            flow,
+            ServiceFlowStage.REPAIR_COMPLETED,
+            note="Repair completed",
+        )
+        return job_card
+
+    def perform_foreman_check(
+        self,
+        user: User,
+        booking_id: str,
+        *,
+        passed: bool,
+        notes: Optional[str] = None,
+    ) -> JobCard:
+        booking = self._get_booking(booking_id)
+        flow = self._get_flow_by_booking(booking.booking_id)
+        if flow.stage != ServiceFlowStage.REPAIR_COMPLETED:
+            raise InvalidTransitionError("Foreman inspection happens after repair completion")
+        job_card_id = flow.metadata.get("job_card_id")
+        if not job_card_id:
+            raise ValidationError("Job card reference missing on service flow")
+        job_card = self.perform_quality_check(user, job_card_id, passed=passed, notes=notes)
+        if passed:
+            self.complete_job_card(user, job_card_id)
+        self._log_flow_event(
+            user,
+            flow,
+            ServiceFlowStage.FOREMAN_CHECKED,
+            note=notes or ("Passed" if passed else "Failed"),
+            extra={"quality_result": job_card.quality_result.value},
+        )
+        return job_card
+
+    def log_opl_entry(self, user: User, booking_id: str, note: str) -> ServiceFlow:
+        self.access.require(user, "log_opl_entry")
+        booking = self._get_booking(booking_id)
+        flow = self._get_flow_by_booking(booking.booking_id)
+        if flow.stage != ServiceFlowStage.FOREMAN_CHECKED:
+            raise InvalidTransitionError("OPL documentation follows foreman inspection")
+        self._log_flow_event(
+            user,
+            flow,
+            ServiceFlowStage.OPL_LOGGED,
+            note=note,
+        )
+        return flow
+
+    def print_service_invoice_document(
+        self,
+        user: User,
+        booking_id: str,
+        *,
+        amount: Optional[float] = None,
+        currency: str = "IDR",
+    ) -> SalesInvoice:
+        booking = self._get_booking(booking_id)
+        flow = self._get_flow_by_booking(booking.booking_id)
+        if flow.stage != ServiceFlowStage.OPL_LOGGED:
+            raise InvalidTransitionError("Invoice printing follows OPL documentation")
+        job_card_id = flow.metadata.get("job_card_id")
+        if not job_card_id:
+            raise ValidationError("Job card reference missing on service flow")
+        computed_amount = amount
+        if computed_amount is None:
+            estimate_id = flow.metadata.get("estimate_id")
+            if estimate_id:
+                estimate = self.store.estimates.get(estimate_id)
+                if estimate:
+                    computed_amount = estimate.grand_total
+        if computed_amount is None:
+            computed_amount = booking.estimated_cost or 0.0
+        invoice = self.generate_sales_invoice(user, job_card_id, computed_amount, currency=currency)
+        self._log_flow_event(
+            user,
+            flow,
+            ServiceFlowStage.SERVICE_INVOICE_PRINTED,
+            note="Service invoice generated",
+            extra={"invoice_id": invoice.invoice_id, "invoice_amount": invoice.amount},
+        )
+        return invoice
+
+    def process_service_payment(
+        self,
+        user: User,
+        booking_id: str,
+        method: PaymentMethod,
+        amount: float,
+        *,
+        notes: Optional[str] = None,
+    ) -> PaymentRecord:
+        booking = self._get_booking(booking_id)
+        flow = self._get_flow_by_booking(booking.booking_id)
+        if flow.stage != ServiceFlowStage.SERVICE_INVOICE_PRINTED:
+            raise InvalidTransitionError("Payment is recorded after invoice generation")
+        invoice_id = flow.metadata.get("invoice_id")
+        if not invoice_id:
+            raise ValidationError("No invoice registered on service flow")
+        payment = self.record_payment(user, invoice_id, method, amount, notes=notes)
+        self._log_flow_event(
+            user,
+            flow,
+            ServiceFlowStage.PAYMENT_PROCESSED,
+            note="Payment received",
+            extra={"payment_id": payment.payment_id, "payment_method": method.value},
+        )
+        return payment
+
+    def print_final_service_invoice(self, user: User, booking_id: str) -> ReceiptDocument:
+        booking = self._get_booking(booking_id)
+        flow = self._get_flow_by_booking(booking.booking_id)
+        if flow.stage != ServiceFlowStage.PAYMENT_PROCESSED:
+            raise InvalidTransitionError("Final invoice print requires completed payment")
+        invoice_id = flow.metadata.get("invoice_id")
+        payment_id = flow.metadata.get("payment_id")
+        if not invoice_id or not payment_id:
+            raise ValidationError("Invoice and payment references are required for receipt printing")
+        receipt = self.print_receipt(user, invoice_id, payment_id)
+        self._log_flow_event(
+            user,
+            flow,
+            ServiceFlowStage.FINAL_INVOICE_PRINTED,
+            note="Final invoice printed",
+            extra={"receipt_id": receipt.receipt_id},
+        )
+        return receipt
+
+    def finish_service_check(
+        self,
+        user: User,
+        booking_id: str,
+        *,
+        note: Optional[str] = None,
+    ) -> ServiceBooking:
+        self.access.require(user, "finish_service_check")
+        booking = self._get_booking(booking_id)
+        flow = self._get_flow_by_booking(booking.booking_id)
+        if flow.stage != ServiceFlowStage.FINAL_INVOICE_PRINTED:
+            raise InvalidTransitionError("Service advisor finish check happens after final invoice print")
+        self._log_flow_event(
+            user,
+            flow,
+            ServiceFlowStage.FINISH_CHECK,
+            note=note or "Service advisor final check",
+        )
+        return self.close_customer_interaction(user, booking.booking_id)
 
     def create_work_order(self, user: User, job_card_id: str) -> WorkOrder:
         self.access.require(user, "create_work_order")
@@ -861,6 +1325,11 @@ class GarageWorkflowEngine:
                 "Cannot close interaction while invoices remain unpaid: " + ", ".join(outstanding_invoices)
             )
         self._log_action(user, "close_customer_interaction", booking.booking_id, {"status": booking.status.value})
+        try:
+            flow = self._get_flow_by_booking(booking.booking_id)
+        except ValidationError:
+            return booking
+        self._log_flow_event(user, flow, ServiceFlowStage.CLOSED, note="Interaction closed")
         return booking
 
     # ------------------------------------------------------------------

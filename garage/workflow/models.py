@@ -30,6 +30,26 @@ class BookingStatus(str, Enum):
     COMPLETED = "completed"
 
 
+class ServiceFlowStage(str, Enum):
+    PRE_BOOKING = "pre_booking"
+    QUEUE_CHECK = "queue_check"
+    PKB_CREATED = "pkb_created"
+    TASK_DISTRIBUTED = "task_distributed"
+    PARTS_PURCHASED = "parts_purchased"
+    PARTS_ISSUED = "parts_issued"
+    MATERIAL_ISSUED = "material_issued"
+    REPAIR_IN_PROGRESS = "repair_in_progress"
+    PROGRESS_UPDATED = "progress_updated"
+    REPAIR_COMPLETED = "repair_completed"
+    FOREMAN_CHECKED = "foreman_checked"
+    OPL_LOGGED = "opl_logged"
+    SERVICE_INVOICE_PRINTED = "service_invoice_printed"
+    PAYMENT_PROCESSED = "payment_processed"
+    FINAL_INVOICE_PRINTED = "final_invoice_printed"
+    FINISH_CHECK = "finish_check"
+    CLOSED = "closed"
+
+
 class JobCardStatus(str, Enum):
     INSPECTION = "inspection"
     ESTIMATED = "estimated"
@@ -139,11 +159,33 @@ class ServiceBooking:
     customer_id: str
     vehicle_id: str
     service_type: ServiceType
+    prebooked: bool = True
+    scheduled_at: Optional[datetime] = None
+    reserved_parts: Dict[str, int] = field(default_factory=dict)
+    estimated_cost: Optional[float] = None
     concern: Optional[str] = None
     status: BookingStatus = BookingStatus.OPEN
     notes: Optional[str] = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     inspection_id: Optional[str] = None
+
+
+@dataclass(slots=True)
+class ServiceFlowEvent:
+    timestamp: datetime
+    actor_id: str
+    stage: ServiceFlowStage
+    note: Optional[str] = None
+
+
+@dataclass(slots=True)
+class ServiceFlow:
+    flow_id: str
+    booking_id: str
+    vehicle_id: str
+    stage: ServiceFlowStage
+    metadata: Dict[str, object] = field(default_factory=dict)
+    history: List[ServiceFlowEvent] = field(default_factory=list)
 
 
 @dataclass(slots=True)
