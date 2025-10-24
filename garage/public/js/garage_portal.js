@@ -325,8 +325,8 @@
         }
 
         renderIntakeSection() {
-            const customers = this.state.customers || [];
-            const vehicles = this.state.vehicles || [];
+            const customers = this.asArray(this.state.customers);
+            const vehicles = this.asArray(this.state.vehicles);
 
             this.populateSelect(this.selects.existingCustomer, customers, {
                 valueKey: 'name',
@@ -407,8 +407,8 @@
         }
 
         renderServiceSection() {
-            const serviceOrders = this.state.service_orders || [];
-            const openService = this.state.open_service_orders || [];
+            const serviceOrders = this.asArray(this.state.service_orders);
+            const openService = this.asArray(this.state.open_service_orders);
 
             const totalEstimate = serviceOrders.reduce((acc, row) => acc + (parseFloat(row.total_estimated_amount) || 0), 0);
             const qcPending = serviceOrders.filter((row) => (row.qc_status || '').toLowerCase() === 'pending').length;
@@ -435,7 +435,7 @@
         }
 
         renderSpareOrders() {
-            const spareOrders = this.state.spare_orders || [];
+            const spareOrders = this.asArray(this.state.spare_orders);
             this.renderTable(this.tables.spareOrders, spareOrders, (row) => [
                 this.renderLink('Garage Spare Part Order', row.name),
                 row.customer || '-',
@@ -445,7 +445,7 @@
         }
 
         renderProcurement() {
-            const pending = this.state.pending_procurement || [];
+            const pending = this.asArray(this.state.pending_procurement);
             this.renderTable(this.tables.pendingProcurement, pending, (row) => [
                 this.renderLink('Garage Procurement Order', row.name),
                 row.supplier || '-',
@@ -455,8 +455,8 @@
         }
 
         renderFinance() {
-            const invoices = this.state.open_invoices || [];
-            const payments = this.state.payment_entries || [];
+            const invoices = this.asArray(this.state.open_invoices);
+            const payments = this.asArray(this.state.payment_entries);
 
             const totals = this.state.totals || {};
             this.updateMetric(this.metrics.invoiceTotal, totals.invoice_total || 0);
@@ -477,7 +477,7 @@
                 row.mode_of_payment || '-',
             ], this.emptyStates.payment);
 
-            const receiptOptions = (this.state.payment_entries || []).map((row) => ({
+            const receiptOptions = payments.map((row) => ({
                 value: row.name,
                 label: `${row.name} – ${row.customer || '-'}`,
             }));
@@ -604,6 +604,19 @@
             return 1;
         }
 
+        asArray(value) {
+            if (Array.isArray(value)) {
+                return value;
+            }
+            if (!value) {
+                return [];
+            }
+            if (typeof value === 'object') {
+                return Object.values(value);
+            }
+            return [];
+        }
+
         renderLink(doctype, name, label) {
             const link = document.createElement('a');
             link.href = this.getFormRoute(doctype, name);
@@ -723,7 +736,7 @@
             if (!select) {
                 return;
             }
-            const vehicles = this.state.vehicles || [];
+            const vehicles = this.asArray(this.state.vehicles);
             const selectedCustomer = this.selects.serviceCustomer ? this.selects.serviceCustomer.value : '';
             const options = vehicles
                 .filter((vehicle) => !selectedCustomer || vehicle.customer === selectedCustomer)
