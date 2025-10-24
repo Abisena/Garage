@@ -65,6 +65,57 @@ atas dalam bentuk visual yang identik dengan gambar referensi.
   operasional bisa memverifikasi kesesuaian implementasi dengan gambar
   referensi.
 
+### Fungsi `garage/workflow/models.py`
+
+`models.py` dapat dianggap sebagai definisi skema data untuk seluruh
+entitas yang terlibat pada flow.
+
+- **Enumerasi status** seperti `ServiceFlowStage`, `JobCardStatus`, atau
+  `InvoiceStatus` memastikan tiap langkah di diagram punya representasi
+  status yang eksplisit sehingga mesin hanya bisa berpindah antar tahapan
+  yang valid.
+- **Entitas pelanggan & kendaraan** (`Customer`, `Vehicle`) menampung
+  identitas dasar yang dibutuhkan sebelum service dimulai.
+- **Objek booking & flow** (`ServiceBooking`, `ServiceFlow`,
+  `ServiceFlowEvent`) menyatukan detail booking, status flow, serta log
+  histori sehingga kita dapat mengaudit kapan sebuah tahap dijalankan dan
+  oleh siapa.
+- **Dokumen pendukung** seperti `InspectionReport`, `JobCard`,
+  `Estimate`, `WorkOrder`, `PurchaseOrder`, hingga `SalesInvoice` memberi
+  tempat untuk menyimpan hasil inspeksi, estimasi biaya, kebutuhan part,
+  dan transaksi finansial.
+- **Catatan keuangan** (`PaymentRecord`, `PaymentTerm`,
+  `ReceivableFollowUp`, `ReceiptDocument`) menjaga agar alur pembayaran
+  dan penagihan sesuai dengan blok cashier pada diagram.
+
+Tidak ada logika prosedural di file ini; struktur datanya dipakai oleh
+`engine.py` sebagai kontrak input/output.
+
+### Fungsi `garage/workflow/engine.py`
+
+`engine.py` adalah implementasi orkestrator yang menghidupkan diagram.
+Beberapa komponen pentingnya:
+
+- **`AccessController`** memetakan peran (`Role`) ke daftar aksi yang
+  boleh dijalankan sehingga setiap pemanggilan fungsi publik memeriksa
+  izin terlebih dahulu.
+- **`InMemoryStore`** menjadi database sementara. Semua entitas dari
+  `models.py` disimpan di sini untuk memudahkan lookup antar langkah.
+- **`GarageWorkflowEngine`** berisi kumpulan metode domain seperti
+  `create_service_booking`, `create_pkb_document`,
+  `distribute_mechanical_task`, `record_part_release`,
+  `start_repair_process`, `perform_foreman_check`, sampai
+  `finish_service_check`. Masing-masing metode memvalidasi prasyarat,
+  memperbarui status flow (`ServiceFlowStage`), menulis riwayat ke
+  `ServiceFlowEvent`, dan memodifikasi entitas terkait di store.
+- **Helper privat** seperti `_log_flow_event`, `_require_flow_stage`, dan
+  `_ensure_inventory` menjaga agar transisi antar tahap mengikuti urutan
+  diagram dan stok part terkontrol.
+
+Singkatnya, `engine.py` adalah mesin yang menjalankan prosedur bisnis,
+sedangkan `models.py` adalah definisi struktur data yang dipakai mesin
+tersebut.
+
 ## Entitas Data
 
 | Entitas | Deskripsi |
