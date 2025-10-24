@@ -2,17 +2,163 @@
 
 {% block title %}Insight & Monitoring{% endblock %}
 
+{% block head_include %}
+<style>
+:root {
+    --primary: #0066FF;
+    --primary-dark: #0052CC;
+    --primary-darker: #003D99;
+}
+
+.portal-hero--sub {
+    position: relative;
+    padding: 4rem 0 3.5rem !important;
+    background: linear-gradient(160deg,
+        var(--primary-darker) 0%,
+        var(--primary-dark) 40%,
+        var(--primary) 100%) !important;
+    overflow: hidden;
+}
+
+.portal-hero--sub::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.08) 0%, transparent 55%),
+        radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.05) 0%, transparent 55%);
+    z-index: 0;
+}
+
+.portal-hero--sub .container {
+    position: relative;
+    z-index: 1;
+}
+
+.portal-hero__brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.portal-hero__icon {
+    width: 3rem;
+    height: 3rem;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.portal-hero--sub h1 {
+    color: #ffffff !important;
+    font-size: 2.25rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.75rem !important;
+}
+
+.portal-hero--sub p {
+    color: rgba(255, 255, 255, 0.85) !important;
+    margin: 0 !important;
+    font-size: 1rem !important;
+    line-height: 1.6 !important;
+}
+
+.portal-nav-wrapper {
+    background: linear-gradient(160deg,
+        var(--primary-darker) 0%,
+        var(--primary-dark) 40%,
+        var(--primary) 100%);
+    padding: 0 0 2.5rem 0;
+    box-shadow: 0 10px 30px rgba(0, 46, 102, 0.3);
+}
+
+.portal-nav {
+    display: flex !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    backdrop-filter: blur(20px) !important;
+    padding: 0.5rem !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    overflow-x: auto !important;
+    max-width: fit-content;
+    margin: 0 auto;
+}
+
+.portal-nav a {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    padding: 0.6rem 1.1rem !important;
+    border-radius: 12px !important;
+    font-size: 0.95rem !important;
+    font-weight: 500 !important;
+    text-decoration: none !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid transparent !important;
+    position: relative;
+    transition: all 0.2s ease !important;
+}
+
+.portal-nav a::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.portal-nav a:hover::before {
+    opacity: 1;
+}
+
+.portal-nav a:hover {
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    transform: translateY(-1px);
+}
+
+.portal-nav a.active {
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: var(--primary) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 6px 16px rgba(0, 51, 153, 0.2) !important;
+}
+
+.portal-nav a.active::before {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .portal-hero__brand {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}
+
 {% block page_content %}
-<section class="portal-hero portal-hero--sub">
+<header class="portal-hero--sub">
     <div class="container">
-        <p class="portal-eyebrow">Garage Portal</p>
-        <h1>Insight & Monitoring</h1>
-        <p>
-            Ringkas status workflow lintas modul Garage untuk membantu pengambilan keputusan cepat.
-            Gunakan tombol refresh untuk memperbarui data terbaru dari Desk.
-        </p>
+        <div class="portal-hero__brand">
+            <div class="portal-hero__icon">📊</div>
+            <div>
+                <h1>Insight & Monitoring</h1>
+                <p>Ringkas status workflow lintas modul Garage untuk keputusan cepat dan data terkini.</p>
+            </div>
+        </div>
     </div>
-</section>
+</header>
 
 {% set active_page = 'insight' %}
 {% include "garage/templates/includes/portal_nav.html" %}
