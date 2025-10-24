@@ -106,7 +106,6 @@
                         'transmission',
                         'fuel_type',
                         'mileage',
-                        'last_service_date',
                         'notes',
                     ]);
                     this.submitForm(this.forms.intake, 'garage.api.portal.register_customer_vehicle', { payload }, 'Data intake tersimpan.');
@@ -370,11 +369,12 @@
 
             this.renderTable(this.tables.vehicles, vehicles.slice(0, 8), (row) => {
                 const model = [row.brand, row.model].filter(Boolean).join(' ');
+                const serviceTimestamp = row.last_service_logged_at || row.last_service_date || row.creation;
                 return [
                     this.renderLink('Garage Vehicle', row.name, row.license_plate || row.name),
                     row.customer || '-',
                     model || '-',
-                    row.last_service_date || '-',
+                    this.formatTimestamp(serviceTimestamp),
                 ];
             }, this.emptyStates.vehicle);
         }
@@ -529,6 +529,17 @@
             link.target = '_blank';
             link.textContent = label || name;
             return link;
+        }
+
+        formatTimestamp(value) {
+            if (!value) {
+                return '-';
+            }
+            try {
+                return frappe.datetime.str_to_user(value);
+            } catch (error) {
+                return value;
+            }
         }
 
         updateMetric(node, value) {
