@@ -41,6 +41,30 @@ Diagram mermaid terbaru tersedia di halaman web
 `garage/templates/pages/workflow.html` dan menampilkan langkah-langkah di
 atas dalam bentuk visual yang identik dengan gambar referensi.
 
+## Struktur Modul
+
+- **`garage/workflow/models.py`** menyimpan seluruh *data class* yang
+  menjadi kontrak data workflow, seperti `ServiceBooking`,
+  `ServiceFlow`, `ServiceFlowEvent`, serta entitas turunan lain yang
+  dipakai mesin workflow untuk menyimpan inspeksi, job card, invoice,
+  pembayaran, dan catatan audit. File ini tidak memiliki logika bisnis;
+  fokusnya hanya mendefinisikan bentuk data dan enumerasi status agar
+  tiap tahap pada diagram punya representasi yang jelas.
+- **`garage/workflow/engine.py`** merupakan pusat logika alur service.
+  Di sini terdapat `GarageWorkflowEngine`, *in-memory store*, helper
+  untuk pengecekan izin (`AccessController`), serta fungsi-fungsi yang
+  menjalankan tiap node diagram—mulai dari registrasi pelanggan,
+  penjadwalan booking, pencetakan PKB, distribusi pekerjaan mekanik,
+  pembelian & pengeluaran part, sampai pencetakan invoice dan penutupan
+  flow. File inilah yang memanfaatkan model-model di atas untuk
+  menyimpan state, melakukan validasi, dan menuliskan riwayat event.
+- **`garage/templates/pages/workflow.html`** menjadi dokumentasi
+  interaktif yang menggambarkan ulang diagram "Service Business Regular
+  Booking & Non Booking". Template ini merender diagram Mermaid yang
+  bersumber dari state/aksi yang tersedia di `engine.py` sehingga tim
+  operasional bisa memverifikasi kesesuaian implementasi dengan gambar
+  referensi.
+
 ## Entitas Data
 
 | Entitas | Deskripsi |
