@@ -42,8 +42,7 @@
             };
 
             this.tables = {
-                customers: document.querySelector('[data-role="customer-table"]'),
-                vehicles: document.querySelector('[data-role="vehicle-table"]'),
+                customerVehicles: document.querySelector('[data-role="customer-vehicle-table"]'),
                 openService: document.querySelector('[data-role="open-service-table"]'),
                 spareOrders: document.querySelector('[data-role="spare-table"]'),
                 pendingProcurement: document.querySelector('[data-role="pending-procurement-table"]'),
@@ -52,8 +51,7 @@
             };
 
             this.emptyStates = {
-                customer: document.querySelector('[data-empty="customer"]'),
-                vehicle: document.querySelector('[data-empty="vehicle"]'),
+                customerVehicles: document.querySelector('[data-empty="customer-vehicle"]'),
                 openService: document.querySelector('[data-empty="open-service"]'),
                 spare: document.querySelector('[data-empty="spare"]'),
                 pendingProcurement: document.querySelector('[data-empty="pending-procurement"]'),
@@ -106,7 +104,6 @@
                         'transmission',
                         'fuel_type',
                         'mileage',
-                        'last_service_date',
                         'notes',
                     ]);
                     this.submitForm(this.forms.intake, 'garage.api.portal.register_customer_vehicle', { payload }, 'Data intake tersimpan.');
@@ -300,11 +297,18 @@
                 method: 'garage.api.portal.portal_bootstrap',
                 freeze: true,
                 callback: (response) => {
+                    if (response?.exc || response?.exception) {
+                        this.handleBootstrapFailure(response);
+                        return;
+                    }
                     this.state = response.message || {};
                     this.render();
                     if (showNotification) {
                         frappe.show_alert({ message: __('Data portal diperbarui.'), indicator: 'green' });
                     }
+                },
+                error: (error) => {
+                    this.handleBootstrapFailure(error);
                 },
             });
         }
@@ -321,8 +325,8 @@
         }
 
         renderIntakeSection() {
-            const customers = this.state.customers || [];
-            const vehicles = this.state.vehicles || [];
+            const customers = this.asArray(this.state.customers);
+            const vehicles = this.asArray(this.state.vehicles);
 
             this.populateSelect(this.selects.existingCustomer, customers, {
                 valueKey: 'name',
@@ -358,30 +362,53 @@
 
             this.updateServiceVehicleOptions();
 
-            this.renderTable(this.tables.customers, customers.slice(0, 8), (row) => {
-                const contact = [row.phone, row.email].filter(Boolean).join(' / ');
+            const customerMap = new Map(customers.map((customer) => [customer.name, customer]));
+            const combinedRows = vehicles.slice(0, 8).map((vehicle) => {
+                const customer = customerMap.get(vehicle.customer);
+                const contact = customer ? [customer.phone, customer.email].filter(Boolean).join(' / ') : '';
+                const model = [vehicle.brand, vehicle.model].filter(Boolean).join(' ') || '-';
+                const serviceTimestamp = vehicle.last_service_logged_at || vehicle.last_service_date || vehicle.creation;
                 return [
-                    this.renderLink('Garage Customer', row.name, row.customer_name),
-                    row.customer_type || '-',
+                    this.renderLink(
+                        'Garage Customer',
+                        customer?.name || vehicle.customer,
+                        customer?.customer_name || vehicle.customer || '-'
+                    ),
+                    customer?.customer_type || '-',
                     contact || '-',
-                    row.is_vip ? 'Ya' : 'Tidak',
+                    customer?.is_vip ? 'Ya' : 'Tidak',
+                    this.renderLink('Garage Vehicle', vehicle.name, vehicle.license_plate || vehicle.name),
+                    model,
+                    this.formatTimestamp(serviceTimestamp),
                 ];
-            }, this.emptyStates.customer);
+            });
 
-            this.renderTable(this.tables.vehicles, vehicles.slice(0, 8), (row) => {
-                const model = [row.brand, row.model].filter(Boolean).join(' ');
-                return [
-                    this.renderLink('Garage Vehicle', row.name, row.license_plate || row.name),
-                    row.customer || '-',
-                    model || '-',
-                    row.last_service_date || '-',
-                ];
-            }, this.emptyStates.vehicle);
+            if (!combinedRows.length) {
+                customers.slice(0, 8).forEach((customer) => {
+                    const contact = [customer.phone, customer.email].filter(Boolean).join(' / ');
+                    combinedRows.push([
+                        this.renderLink('Garage Customer', customer.name, customer.customer_name || customer.name),
+                        customer.customer_type || '-',
+                        contact || '-',
+                        customer.is_vip ? 'Ya' : 'Tidak',
+                        '—',
+                        '—',
+                        '—',
+                    ]);
+                });
+            }
+
+            this.renderTable(
+                this.tables.customerVehicles,
+                combinedRows,
+                (row) => row,
+                this.emptyStates.customerVehicles
+            );
         }
 
         renderServiceSection() {
-            const serviceOrders = this.state.service_orders || [];
-            const openService = this.state.open_service_orders || [];
+            const serviceOrders = this.asArray(this.state.service_orders);
+            const openService = this.asArray(this.state.open_service_orders);
 
             const totalEstimate = serviceOrders.reduce((acc, row) => acc + (parseFloat(row.total_estimated_amount) || 0), 0);
             const qcPending = serviceOrders.filter((row) => (row.qc_status || '').toLowerCase() === 'pending').length;
@@ -408,7 +435,7 @@
         }
 
         renderSpareOrders() {
-            const spareOrders = this.state.spare_orders || [];
+            const spareOrders = this.asArray(this.state.spare_orders);
             this.renderTable(this.tables.spareOrders, spareOrders, (row) => [
                 this.renderLink('Garage Spare Part Order', row.name),
                 row.customer || '-',
@@ -418,7 +445,7 @@
         }
 
         renderProcurement() {
-            const pending = this.state.pending_procurement || [];
+            const pending = this.asArray(this.state.pending_procurement);
             this.renderTable(this.tables.pendingProcurement, pending, (row) => [
                 this.renderLink('Garage Procurement Order', row.name),
                 row.supplier || '-',
@@ -428,8 +455,8 @@
         }
 
         renderFinance() {
-            const invoices = this.state.open_invoices || [];
-            const payments = this.state.payment_entries || [];
+            const invoices = this.asArray(this.state.open_invoices);
+            const payments = this.asArray(this.state.payment_entries);
 
             const totals = this.state.totals || {};
             this.updateMetric(this.metrics.invoiceTotal, totals.invoice_total || 0);
@@ -450,7 +477,7 @@
                 row.mode_of_payment || '-',
             ], this.emptyStates.payment);
 
-            const receiptOptions = (this.state.payment_entries || []).map((row) => ({
+            const receiptOptions = payments.map((row) => ({
                 value: row.name,
                 label: `${row.name} – ${row.customer || '-'}`,
             }));
@@ -523,12 +550,90 @@
             });
         }
 
+        handleBootstrapFailure(error) {
+            if (window.frappe && frappe.show_alert) {
+                frappe.show_alert({
+                    message: __('Gagal memuat data portal. Pastikan Anda sudah login lalu coba lagi.'),
+                    indicator: 'red',
+                });
+            }
+            if (window.console && console.error) {
+                console.error('Garage portal bootstrap failed', error);
+            }
+            this.state = {};
+            this.render();
+            this.showTableStatus(
+                this.tables.customerVehicles,
+                __('Tidak dapat memuat data master. Silakan refresh halaman.'),
+                this.emptyStates.customerVehicles
+            );
+        }
+
+        showTableStatus(table, message, emptyState) {
+            if (!table) {
+                return;
+            }
+            const columns = this.getColumnCount(table);
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+            cell.colSpan = columns;
+            cell.textContent = message;
+            cell.style.textAlign = 'center';
+            cell.style.padding = '2rem';
+            cell.style.color = 'var(--text-muted)';
+            row.appendChild(cell);
+            table.innerHTML = '';
+            table.appendChild(row);
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+        }
+
+        getColumnCount(tableBody) {
+            const table = tableBody ? tableBody.closest('table') : null;
+            if (table) {
+                const headers = table.querySelectorAll('thead th');
+                if (headers.length) {
+                    return headers.length;
+                }
+            }
+            const sampleRow = tableBody ? tableBody.querySelector('tr') : null;
+            if (sampleRow) {
+                return sampleRow.children.length || 1;
+            }
+            return 1;
+        }
+
+        asArray(value) {
+            if (Array.isArray(value)) {
+                return value;
+            }
+            if (!value) {
+                return [];
+            }
+            if (typeof value === 'object') {
+                return Object.values(value);
+            }
+            return [];
+        }
+
         renderLink(doctype, name, label) {
             const link = document.createElement('a');
             link.href = this.getFormRoute(doctype, name);
             link.target = '_blank';
             link.textContent = label || name;
             return link;
+        }
+
+        formatTimestamp(value) {
+            if (!value) {
+                return '-';
+            }
+            try {
+                return frappe.datetime.str_to_user(value);
+            } catch (error) {
+                return value;
+            }
         }
 
         updateMetric(node, value) {
@@ -631,7 +736,7 @@
             if (!select) {
                 return;
             }
-            const vehicles = this.state.vehicles || [];
+            const vehicles = this.asArray(this.state.vehicles);
             const selectedCustomer = this.selects.serviceCustomer ? this.selects.serviceCustomer.value : '';
             const options = vehicles
                 .filter((vehicle) => !selectedCustomer || vehicle.customer === selectedCustomer)
