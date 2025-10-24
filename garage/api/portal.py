@@ -62,6 +62,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "mileage",
             "engine_number",
             "last_service_date",
+            "last_service_logged_at",
             "notes",
         },
         "update_fields": {
@@ -76,6 +77,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "mileage",
             "engine_number",
             "last_service_date",
+            "last_service_logged_at",
             "notes",
         },
     },
@@ -597,7 +599,17 @@ def portal_bootstrap() -> Dict[str, Any]:
     )
     vehicles = _list_dicts(
         "Garage Vehicle",
-        ["name", "customer", "license_plate", "brand", "model", "color", "last_service_date"],
+        [
+            "name",
+            "customer",
+            "license_plate",
+            "brand",
+            "model",
+            "color",
+            "last_service_date",
+            "last_service_logged_at",
+            "creation",
+        ],
         limit=100,
     )
     service_orders = _list_dicts(
@@ -743,6 +755,10 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
     if vehicle_payload:
         vehicle_doc = frappe.new_doc("Garage Vehicle")
         vehicle_doc.update(vehicle_payload)
+        timestamp = now_datetime()
+        vehicle_doc.last_service_logged_at = timestamp
+        if not vehicle_doc.last_service_date:
+            vehicle_doc.last_service_date = nowdate()
         vehicle_doc.customer = data.get("vehicle_customer") or customer_name
         if not vehicle_doc.customer:
             frappe.throw(_("Pilih customer untuk kendaraan."))

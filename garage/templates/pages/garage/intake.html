@@ -670,6 +670,18 @@ header .navbar-nav li button {
     line-height: var(--line-height-relaxed) !important;
 }
 
+.form-static-value {
+    display: block;
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    border: 1.5px dashed var(--border-base);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-relaxed);
+}
+
 .form-hint {
     font-size: var(--font-size-xs) !important;
     line-height: var(--line-height-relaxed) !important;
@@ -1231,8 +1243,9 @@ button:disabled {
                                     <input id="mileage" name="mileage" type="number" min="0" step="100" placeholder="50000" />
                                 </div>
                                 <div class="form-field">
-                                    <label for="last_service_date">Terakhir Servis</label>
-                                    <input id="last_service_date" name="last_service_date" type="date" />
+                                    <label>Terakhir Servis</label>
+                                    <div class="form-static-value">Terisi otomatis saat registrasi disimpan.</div>
+                                    <p class="form-hint">Sistem mencatat tanggal &amp; jam registrasi sebagai riwayat servis terakhir.</p>
                                 </div>
                             </div>
                         </div>
