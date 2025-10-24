@@ -416,7 +416,7 @@ header .navbar-nav li button {
 
 @media (min-width: 1024px) {
     .portal-grid.two-column {
-        grid-template-columns: 1.5fr 1fr;
+        grid-template-columns: 1fr;
         gap: var(--space-10) !important;
     }
 }
@@ -514,6 +514,29 @@ header .navbar-nav li button {
     background: rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+/* === FORM GRID LAYOUT === */
+.form-grid {
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: var(--space-6) !important;
+}
+
+.form-grid .form-section {
+    margin-bottom: 0 !important;
+}
+
+@media (min-width: 1024px) {
+    .form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-8) !important;
+        align-items: start;
+    }
+
+    .form-grid .form-section:last-child {
+        grid-column: 1 / -1;
+    }
 }
 
 /* === FORM SECTIONS === */
