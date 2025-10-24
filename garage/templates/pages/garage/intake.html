@@ -1,8 +1,13 @@
 {% extends "templates/web.html" %}
 
-{% block title %}Intake Customer & Kendaraan{% endblock %}
+{% block title %}Registrasi Customer & Kendaraan{% endblock %}
 
 {% block head_include %}
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
 /* ============================================================================
    GARAGE INTAKE PAGE - PREMIUM ELEGANT DESIGN
@@ -84,7 +89,7 @@
     --space-24: 96px;
     
     /* Typography */
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-sans: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
     
     --font-size-xs: 0.75rem;      /* 12px */
@@ -149,6 +154,62 @@ body {
     overflow-x: hidden;
 }
 
+/* Hide default Frappe navbar styling */
+.navbar {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.navbar-default {
+    background-color: transparent !important;
+    border-color: transparent !important;
+}
+
+/* Remove blue background from hamburger menu */
+.navbar-toggle {
+    background-color: transparent !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+.navbar-toggle:hover,
+.navbar-toggle:focus {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Remove blue background from active/selected navbar items */
+.navbar-nav > li > a {
+    background-color: transparent !important;
+}
+
+.navbar-nav > li.active > a,
+.navbar-nav > li.active > a:hover,
+.navbar-nav > li.active > a:focus {
+    background-color: transparent !important;
+    color: inherit !important;
+}
+
+/* Remove any default blue backgrounds */
+.navbar-default .navbar-nav > .active > a,
+.navbar-default .navbar-nav > .active > a:hover,
+.navbar-default .navbar-nav > .active > a:focus {
+    background-color: transparent !important;
+}
+
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+    background-color: transparent !important;
+    border-color: transparent !important;
+}
+
+/* Target any blue background in navbar area */
+header .navbar-nav li a,
+header .navbar-nav li button {
+    background-color: transparent !important;
+}
+
 /* === CONTAINER === */
 .container {
     max-width: 1440px !important;
@@ -164,23 +225,16 @@ body {
     }
 }
 
-/* === PAGE WRAPPER === */
-.portal-page {
-    min-height: 100vh;
-    background: var(--bg-body) !important;
-    padding-top: 0 !important;
-}
-
-/* === HERO SECTION (SUB) === */
+/* === HEADER SECTION === */
 .portal-hero--sub {
     position: relative;
-    padding: var(--space-12) 0 var(--space-10) !important;
     background: linear-gradient(160deg, 
         var(--primary-darker) 0%, 
         var(--primary-dark) 40%, 
-        var(--primary) 100%) !important;
+        var(--primary) 100%);
+    padding: var(--space-6) 0 var(--space-4) 0;
+    margin-top: var(--space-6);
     overflow: hidden;
-    margin-bottom: var(--space-12) !important;
 }
 
 /* Animated Background Pattern */
@@ -189,21 +243,34 @@ body {
     position: absolute;
     inset: 0;
     background-image: 
-        radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
-        radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
-    background-size: 100% 100%;
-    animation: subtleFloat 20s ease-in-out infinite;
+        radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
     z-index: 0;
-}
-
-@keyframes subtleFloat {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 0.5; }
 }
 
 .portal-hero--sub .container {
     position: relative;
     z-index: 1;
+}
+
+.portal-hero__brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+}
+
+.portal-hero__icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .portal-eyebrow {
@@ -223,99 +290,124 @@ body {
 }
 
 .portal-hero--sub h1 {
-    font-size: var(--font-size-4xl) !important;
+    font-size: var(--font-size-2xl) !important;
     font-weight: var(--font-weight-bold) !important;
     line-height: var(--line-height-tight) !important;
     color: var(--text-inverse) !important;
-    margin-bottom: var(--space-4) !important;
+    margin: 0 !important;
     letter-spacing: -0.02em;
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
 
 .portal-hero--sub p {
-    font-size: var(--font-size-base) !important;
+    font-size: var(--font-size-sm) !important;
     line-height: var(--line-height-relaxed) !important;
-    color: rgba(255, 255, 255, 0.95) !important;
-    max-width: 800px;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    color: rgba(255, 255, 255, 0.85) !important;
+    margin: 0 !important;
+}
+
+/* === NAVIGATION WRAPPER === */
+.portal-nav-wrapper {
+    background: linear-gradient(160deg, 
+        var(--primary-darker) 0%, 
+        var(--primary-dark) 40%, 
+        var(--primary) 100%);
+    padding: 0 0 var(--space-6) 0;
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 0;
 }
 
 /* === NAVIGATION === */
 .portal-nav {
-    position: relative;
     display: flex !important;
-    align-items: center;
-    justify-content: center;
+    justify-content: center !important;
     gap: var(--space-2) !important;
-    flex-wrap: wrap !important;
-    background: var(--bg-surface) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(20px) !important;
     padding: var(--space-2) !important;
-    border-radius: var(--radius-2xl) !important;
-    box-shadow: var(--shadow-xl) !important;
-    border: 1px solid var(--border-light) !important;
-    margin-bottom: var(--space-12) !important;
+    border-radius: var(--radius-lg) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    overflow-x: auto !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
     max-width: fit-content;
-    margin-left: auto;
-    margin-right: auto;
-    backdrop-filter: blur(20px);
-    z-index: var(--z-sticky);
+    margin: 0 auto;
+}
+
+.portal-nav::-webkit-scrollbar {
+    height: 6px;
+}
+
+.portal-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.portal-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-full);
 }
 
 .portal-nav a {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: var(--space-2) !important;
     padding: var(--space-3) var(--space-5) !important;
+    border-radius: var(--radius-md) !important;
     font-size: var(--font-size-sm) !important;
-    font-weight: var(--font-weight-semibold) !important;
-    color: var(--text-secondary) !important;
+    font-weight: var(--font-weight-medium) !important;
     text-decoration: none !important;
-    border-radius: var(--radius-lg) !important;
-    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.9) !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
     transition: all var(--transition-base) !important;
-    overflow: hidden;
+    white-space: nowrap !important;
+    position: relative;
 }
 
 .portal-nav a::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: var(--gray-100);
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
     opacity: 0;
-    transition: opacity var(--transition-fast);
-    z-index: -1;
-}
-
-.portal-nav a:hover {
-    color: var(--primary) !important;
-    transform: translateY(-2px);
+    transition: opacity var(--transition-base);
 }
 
 .portal-nav a:hover::before {
     opacity: 1;
 }
 
-.portal-nav a.active {
+.portal-nav a:hover {
     color: var(--text-inverse) !important;
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
-    box-shadow: var(--shadow-md), 0 0 0 1px rgba(0, 102, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    transform: translateY(-1px);
+}
+
+.portal-nav a.active {
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: var(--primary) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
 .portal-nav a.active::before {
-    opacity: 0;
+    display: none;
 }
 
-/* === SECTIONS === */
+/* === SECTION SPACING === */
 .portal-section {
     padding: var(--space-12) 0 var(--space-16) !important;
+}
+
+.portal-section:first-of-type {
+    padding-top: var(--space-8) !important;
 }
 
 /* === GRID SYSTEM === */
 .portal-grid {
     display: grid !important;
     gap: var(--space-8) !important;
-    margin-bottom: var(--space-8) !important;
+    
 }
 
 .portal-grid.two-column {
@@ -795,7 +887,7 @@ button:disabled {
     }
     
     .portal-hero--sub {
-        padding: var(--space-10) 0 var(--space-8) !important;
+        padding: var(--space-5) 0 var(--space-3) 0;
     }
     
     .portal-hero--sub h1 {
@@ -807,7 +899,7 @@ button:disabled {
     }
     
     .portal-nav {
-        margin-bottom: var(--space-8) !important;
+        
         padding: var(--space-2) !important;
         gap: var(--space-1) !important;
     }
@@ -888,6 +980,8 @@ button:disabled {
 
 /* === PRINT STYLES === */
 @media print {
+    .portal-hero--sub,
+    .portal-nav-wrapper,
     .portal-nav,
     button,
     .table-links {
@@ -899,12 +993,6 @@ button:disabled {
         box-shadow: none !important;
         border: 1px solid var(--border-base) !important;
         page-break-inside: avoid;
-    }
-    
-    .portal-hero--sub {
-        background: var(--text-primary) !important;
-        color-adjust: exact;
-        -webkit-print-color-adjust: exact;
     }
 }
 
@@ -943,22 +1031,25 @@ button:disabled {
 {% endblock %}
 
 {% block page_content %}
-<div class="portal-page portal-page--intake">
-    <section class="portal-hero portal-hero--sub">
-        <div class="container">
-            <p class="portal-eyebrow">Garage Portal</p>
-            <h1>Intake Customer & Kendaraan</h1>
-            <p>
-                Registrasikan customer, catat kendaraan yang dibawa ke bengkel, dan pantau master data
-                terbaru sebelum membuat service order.
-            </p>
+<!-- Header Section -->
+<header class="portal-hero--sub">
+    <div class="container">
+        <div class="portal-hero__brand">
+            <div class="portal-hero__icon">📋</div>
+            <div>
+                <h1>Registrasi Customer & Kendaraan</h1>
+                <p>Registrasi customer baru dan catat detail kendaraan untuk service</p>
+            </div>
         </div>
-    </section>
+    </div>
+</header>
 
+<!-- Navigation Wrapper -->
+<div class="portal-nav-wrapper">
     <div class="container">
         <nav class="portal-nav">
             <a href="/garage">🏠 Overview</a>
-            <a href="/garage/intake" class="active">📋 Intake</a>
+            <a href="/garage/intake" class="active">📋 Registrasi</a>
             <a href="/garage/service">🔧 Servis</a>
             <a href="/garage/sparepart">📦 Sparepart</a>
             <a href="/garage/procurement">🛒 Pengadaan</a>
@@ -966,8 +1057,9 @@ button:disabled {
             <a href="/garage/insight">📊 Insight</a>
         </nav>
     </div>
+</div>
 
-    <section class="portal-section">
+<section class="portal-section">
         <div class="container">
             <div class="portal-grid two-column">
                 <article class="portal-card">
@@ -1196,7 +1288,6 @@ button:disabled {
             </div>
         </div>
     </section>
-</div>
 {% endblock %}
 
 {% block script %}
