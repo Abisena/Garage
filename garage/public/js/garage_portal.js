@@ -297,11 +297,18 @@
                 method: 'garage.api.portal.portal_bootstrap',
                 freeze: true,
                 callback: (response) => {
+                    if (response?.exc || response?.exception) {
+                        this.handleBootstrapFailure(response);
+                        return;
+                    }
                     this.state = response.message || {};
                     this.render();
                     if (showNotification) {
                         frappe.show_alert({ message: __('Data portal diperbarui.'), indicator: 'green' });
                     }
+                },
+                error: (error) => {
+                    this.handleBootstrapFailure(error);
                 },
             });
         }
@@ -541,6 +548,60 @@
                 });
                 table.appendChild(tr);
             });
+        }
+
+        handleBootstrapFailure(error) {
+            if (window.frappe && frappe.show_alert) {
+                frappe.show_alert({
+                    message: __('Gagal memuat data portal. Pastikan Anda sudah login lalu coba lagi.'),
+                    indicator: 'red',
+                });
+            }
+            if (window.console && console.error) {
+                console.error('Garage portal bootstrap failed', error);
+            }
+            this.state = {};
+            this.render();
+            this.showTableStatus(
+                this.tables.customerVehicles,
+                __('Tidak dapat memuat data master. Silakan refresh halaman.'),
+                this.emptyStates.customerVehicles
+            );
+        }
+
+        showTableStatus(table, message, emptyState) {
+            if (!table) {
+                return;
+            }
+            const columns = this.getColumnCount(table);
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+            cell.colSpan = columns;
+            cell.textContent = message;
+            cell.style.textAlign = 'center';
+            cell.style.padding = '2rem';
+            cell.style.color = 'var(--text-muted)';
+            row.appendChild(cell);
+            table.innerHTML = '';
+            table.appendChild(row);
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+        }
+
+        getColumnCount(tableBody) {
+            const table = tableBody ? tableBody.closest('table') : null;
+            if (table) {
+                const headers = table.querySelectorAll('thead th');
+                if (headers.length) {
+                    return headers.length;
+                }
+            }
+            const sampleRow = tableBody ? tableBody.querySelector('tr') : null;
+            if (sampleRow) {
+                return sampleRow.children.length || 1;
+            }
+            return 1;
         }
 
         renderLink(doctype, name, label) {
