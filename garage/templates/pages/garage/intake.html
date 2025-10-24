@@ -416,7 +416,7 @@ header .navbar-nav li button {
 
 @media (min-width: 1024px) {
     .portal-grid.two-column {
-        grid-template-columns: 1.5fr 1fr;
+        grid-template-columns: 1fr;
         gap: var(--space-10) !important;
     }
 }
@@ -514,6 +514,29 @@ header .navbar-nav li button {
     background: rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+/* === FORM GRID LAYOUT === */
+.form-grid {
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: var(--space-6) !important;
+}
+
+.form-grid .form-section {
+    margin-bottom: 0 !important;
+}
+
+@media (min-width: 1024px) {
+    .form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-8) !important;
+        align-items: start;
+    }
+
+    .form-grid .form-section:last-child {
+        grid-column: 1 / -1;
+    }
 }
 
 /* === FORM SECTIONS === */
@@ -645,6 +668,18 @@ header .navbar-nav li button {
     min-height: 120px;
     resize: vertical;
     line-height: var(--line-height-relaxed) !important;
+}
+
+.form-static-value {
+    display: block;
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    border: 1.5px dashed var(--border-base);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-relaxed);
 }
 
 .form-hint {
@@ -1208,8 +1243,9 @@ button:disabled {
                                     <input id="mileage" name="mileage" type="number" min="0" step="100" placeholder="50000" />
                                 </div>
                                 <div class="form-field">
-                                    <label for="last_service_date">Terakhir Servis</label>
-                                    <input id="last_service_date" name="last_service_date" type="date" />
+                                    <label>Terakhir Servis</label>
+                                    <div class="form-static-value">Terisi otomatis saat registrasi disimpan.</div>
+                                    <p class="form-hint">Sistem mencatat tanggal &amp; jam registrasi sebagai riwayat servis terakhir.</p>
                                 </div>
                             </div>
                         </div>
