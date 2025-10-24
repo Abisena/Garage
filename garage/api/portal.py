@@ -412,7 +412,10 @@ def _ignoring_permissions():
         if had_previous:
             frappe.flags.ignore_permissions = previous
         else:
-            delattr(frappe.flags, "ignore_permissions")
+            try:
+                delattr(frappe.flags, "ignore_permissions")
+            except AttributeError:
+                pass
 
 
 def _ensure_dict(payload: Any) -> MutableMapping[str, Any]:
@@ -505,38 +508,47 @@ def _update_document(doctype: str, name: str, data: Mapping[str, Any]) -> frappe
 
 
 def _list_dicts(doctype: str, fields: Iterable[str], *, filters: Optional[Any] = None, limit: int = DEFAULT_LIMIT) -> List[Dict[str, Any]]:
-    rows = frappe.get_all(
-        doctype,
-        fields=list(fields),
-        filters=filters or [],
-        order_by="modified desc",
-        limit_page_length=limit,
-        ignore_permissions=True,
-    )
+    try:
+        with _ignoring_permissions():
+            rows = frappe.get_all(
+                doctype,
+                fields=list(fields),
+                filters=filters or [],
+                order_by="modified desc",
+                limit_page_length=limit,
+                ignore_permissions=True,
+            )
+    except Exception:
+        return []
     return [dict(row) for row in rows]
 
 
 def _group_status(doctype: str) -> Dict[str, int]:
     try:
-        rows = frappe.db.get_all(
-            doctype,
-            fields=["status", "count(*) as total"],
-            group_by="status",
-            order_by="total desc",
-            ignore_permissions=True,
-        )
+        with _ignoring_permissions():
+            rows = frappe.db.get_all(
+                doctype,
+                fields=["status", "count(*) as total"],
+                group_by="status",
+                order_by="total desc",
+                ignore_permissions=True,
+            )
     except Exception:
         return {}
     return {row.get("status") or "Unknown": cint(row.get("total") or 0) for row in rows}
 
 
 def _sum_field(doctype: str, field: str, filters: Optional[Any] = None) -> float:
-    result = frappe.db.get_all(
-        doctype,
-        filters=filters or [],
-        fields=[f"sum({field}) as total"],
-        ignore_permissions=True,
-    )
+    try:
+        with _ignoring_permissions():
+            result = frappe.db.get_all(
+                doctype,
+                filters=filters or [],
+                fields=[f"sum({field}) as total"],
+                ignore_permissions=True,
+            )
+    except Exception:
+        return 0.0
     if result:
         return flt(result[0].get("total") or 0)
     return 0.0
