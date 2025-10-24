@@ -205,6 +205,26 @@ body {
     z-index: 1;
 }
 
+.portal-hero__brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+}
+
+.portal-hero__icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 .portal-eyebrow {
     display: inline-flex;
     align-items: center;
@@ -239,88 +259,93 @@ body {
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* === NAVIGATION WRAPPER === */
+.portal-nav-wrapper {
+    background: linear-gradient(160deg,
+        var(--primary-darker) 0%,
+        var(--primary-dark) 40%,
+        var(--primary) 100%);
+    padding: 0 0 var(--space-6) 0;
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 0;
+}
+
 /* === NAVIGATION === */
 .portal-nav {
-    position: relative;
     display: flex !important;
-    align-items: center;
-    justify-content: center;
+    justify-content: center !important;
     gap: var(--space-2) !important;
-    flex-wrap: wrap !important;
-    background: var(--bg-surface) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(20px) !important;
     padding: var(--space-2) !important;
-    border-radius: var(--radius-2xl) !important;
-    box-shadow: var(--shadow-xl) !important;
-    border: 1px solid var(--border-light) !important;
-    margin-bottom: var(--space-12) !important;
+    border-radius: var(--radius-lg) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    overflow-x: auto !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
     max-width: fit-content;
-    margin-left: auto;
-    margin-right: auto;
-    backdrop-filter: blur(20px);
-    z-index: var(--z-sticky);
+    margin: 0 auto;
 }
 
-.portal-nav::before {
-    content: '';
-    position: absolute;
-    inset: -1px;
-    border-radius: var(--radius-2xl);
-    padding: 1px;
-    background: linear-gradient(135deg, var(--primary-light), var(--primary));
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0;
-    transition: opacity var(--transition-base);
+.portal-nav::-webkit-scrollbar {
+    height: 6px;
 }
 
-.portal-nav:hover::before {
-    opacity: 0.6;
+.portal-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.portal-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-full);
 }
 
 .portal-nav a {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: var(--space-2) !important;
     padding: var(--space-3) var(--space-5) !important;
+    border-radius: var(--radius-md) !important;
     font-size: var(--font-size-sm) !important;
-    font-weight: var(--font-weight-semibold) !important;
-    color: var(--text-secondary) !important;
+    font-weight: var(--font-weight-medium) !important;
     text-decoration: none !important;
-    border-radius: var(--radius-lg) !important;
-    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.9) !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
     transition: all var(--transition-base) !important;
-    overflow: hidden;
+    white-space: nowrap !important;
+    position: relative;
 }
 
 .portal-nav a::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: var(--gray-100);
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
     opacity: 0;
-    transition: opacity var(--transition-fast);
-    z-index: -1;
-}
-
-.portal-nav a:hover {
-    color: var(--primary) !important;
-    transform: translateY(-2px);
+    transition: opacity var(--transition-base);
 }
 
 .portal-nav a:hover::before {
     opacity: 1;
 }
 
-.portal-nav a.active {
+.portal-nav a:hover {
     color: var(--text-inverse) !important;
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
-    box-shadow: var(--shadow-md), 0 0 0 1px rgba(0, 102, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    transform: translateY(-1px);
+}
+
+.portal-nav a.active {
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: var(--primary) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
 .portal-nav a.active::before {
-    opacity: 0;
+    display: none;
 }
 
 /* === SECTIONS === */
@@ -960,18 +985,19 @@ button:disabled {
 {% endblock %}
 
 {% block page_content %}
-<section class="portal-hero portal-hero--sub">
+<header class="portal-hero--sub">
     <div class="container">
-        <p class="portal-eyebrow">Garage Portal</p>
-        <h1>Pengadaan & Pergerakan Stok</h1>
-        <p>
-            Dokumentasikan kebutuhan pembelian dan mutasi gudang agar persediaan bengkel tetap terkontrol.
-            Setiap entri tersimpan sebagai DocType Garage Procurement Order atau Garage Stock Movement.
-        </p>
+        <div class="portal-hero__brand">
+            <div class="portal-hero__icon">🛒</div>
+            <div>
+                <h1>Pengadaan & Pergerakan Stok</h1>
+                <p>Dokumentasikan kebutuhan pembelian dan mutasi gudang agar persediaan selalu terkendali.</p>
+            </div>
+        </div>
     </div>
-</section>
+</header>
 
-<section class="portal-section">
+<div class="portal-nav-wrapper">
     <div class="container">
         <nav class="portal-nav">
             <a href="/garage">🏠 Overview</a>
@@ -982,6 +1008,10 @@ button:disabled {
             <a href="/garage/finance">💰 Keuangan</a>
             <a href="/garage/insight">📊 Insight</a>
         </nav>
+    </div>
+</div>
+
+<section class="portal-section">
     <div class="container">
         <div class="portal-grid two-column">
             <article class="portal-card">
