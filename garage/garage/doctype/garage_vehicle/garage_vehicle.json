@@ -26,6 +26,7 @@
     "mileage",
     "engine_number",
     "last_service_date",
+    "last_service_logged_at",
     "notes"
   ],
   "fields": [
@@ -95,6 +96,12 @@
       "fieldname": "last_service_date",
       "fieldtype": "Date",
       "label": "Last Service Date"
+    },
+    {
+      "fieldname": "last_service_logged_at",
+      "fieldtype": "Datetime",
+      "label": "Last Service Logged At",
+      "read_only": 1
     },
     {
       "fieldname": "notes",
