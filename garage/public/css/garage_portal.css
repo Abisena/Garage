@@ -128,7 +128,8 @@ body {
     color: var(--portal-text);
 }
 
-.portal-nav a.is-active {
+.portal-nav a.is-active,
+.portal-nav a.active {
     background: var(--portal-accent);
     color: #ffffff;
     box-shadow: 0 2px 8px rgba(17, 17, 17, 0.2);
