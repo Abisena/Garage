@@ -1,206 +1,227 @@
 # Sistem Workflow Bengkel
 
-Dokumen ini menjelaskan implementasi workflow layanan bengkel pada modul
-`garage.workflow`. Implementasi ini mengikuti diagram Mermaid yang diberikan
-pada permintaan awal dan memecahnya menjadi langkah operasional lengkap sesuai
-praktik bengkel modern: dari booking layanan, inspeksi kendaraan, pengelolaan
-stok, sampai penagihan dan tindak lanjut piutang.
+Dokumen ini menjabarkan ulang modul `garage.workflow` agar meniru persis
+alur "Service Business Regular Booking & Non Booking" sebagaimana diagram
+referensi. Seluruh langkah sekarang dipetakan ke objek `ServiceFlow` dan
+`ServiceFlowStage` yang menjaga urutan pekerjaan, dari keputusan booking
+hingga pemeriksaan akhir Service Advisor.
 
 ## Ringkasan Alur
 
-### Service & Repair
-1. **Registrasi Customer & Kendaraan** – `register_customer` dan
-   `register_vehicle` memastikan data awal tervalidasi.
-2. **Create Service Booking** – `create_service_booking` menandai customer
-   datang dan memilih `service_type` (service/repair) serta mencatat keluhan.
-3. **Vehicle Inspection** – `record_inspection` menghasilkan `InspectionReport`
-   dan mengubah status booking menjadi `INSPECTED`.
-4. **Create Job Card** – `create_job_card` membuat job card untuk teknisi.
-5. **Estimate Biaya** – `create_estimate` menghitung biaya tenaga kerja dan
-   sparepart dengan objek `EstimateLine` terstruktur.
-6. **Persetujuan Customer** – `record_customer_decision` menutup job card jika
-   ditolak atau menandai job card sebagai `APPROVED`.
-7. **Create Work Order** – `create_work_order` membuat dokumen work order baru
-   yang siap diisi task serta kebutuhan sparepart.
-8. **Cek Stok Sparepart** – `check_work_order_stock` memberi daftar kekurangan.
-9. **Create Purchase Order / Stock Entry** – `create_purchase_order`,
-   `receive_purchase_order`, dan `create_stock_entry` menambah stok yang kurang.
-10. **Material Issue** – `issue_materials` mengurangi stok dan mencatat
-    `StockMovement`.
-11. **Proses Pengerjaan** – `start_work`, `update_job_progress`, dan
-    `complete_work` mengatur progres teknisi hingga siap QC; `start_work`
-    otomatis memverifikasi seluruh sparepart wajib sudah dikeluarkan.
-12. **Quality Check** – `perform_quality_check` menandai hasil QC
-    (`QualityResult`). Jika lulus, lanjut ke `complete_job_card`.
-13. **Generate Sales Invoice** – `generate_sales_invoice` mencatat nilai akhir
-    layanan sebelum customer melakukan pembayaran dan menolak pembuatan invoice
-    jika job card belum `CLOSED` atau sales order belum dikirim.
-14. **Payment Entry** – `record_payment` menangani pembayaran cash/transfer.
-    Untuk kredit gunakan `create_payment_term` lalu `follow_up_receivable` untuk
-    tindak lanjut piutang.
-15. **Print Invoice & Receipt** – `print_receipt` membuat dokumen siap cetak.
-16. **Customer Selesai** – `close_customer_interaction` memastikan seluruh
-    invoice lunas sebelum menutup interaksi.
+1. **Booking vs Walk-in**  – `create_service_booking` menerima parameter
+   `prebooked`, jadwal, estimasi biaya, dan part yang dipesan. Untuk
+   pelanggan tanpa booking, gunakan `prebooked=False` lalu panggil
+   `check_service_queue` agar PTM memastikan ketersediaan slot.
+2. **PKB & Approval** – `create_pkb_document` mencetak PKB sekaligus
+   membuat inspeksi, estimasi otomatis dari data booking, dan mengunci
+   persetujuan customer. Tahap ini akan mengubah status flow menjadi
+   `PKB_CREATED`.
+3. **Distribusi Tugas Mekanik** – `distribute_mechanical_task` membuat
+   work order beserta task dan kebutuhan part. Kekurangan part dapat
+   ditangani dengan `record_local_purchase`, sedangkan pengeluaran part
+   & bahan lokal dicatat melalui `record_part_release` dan
+   `record_material_release`.
+4. **Proses Mekanik** – `start_repair_process`,
+   `update_repair_progress`, dan `complete_repair_work` menandai
+   pengerjaan mekanik sesuai jalur PTM. Validasi memastikan repair tidak
+   dapat dimulai sebelum seluruh material wajib dikeluarkan.
+5. **QC Foreman & OPL** – `perform_foreman_check` memanggil QC; ketika
+   lulus sistem otomatis menutup job card. Dokumentasi OPL dilakukan
+   lewat `log_opl_entry` yang memindahkan flow ke tahap berikutnya.
+6. **Billing & Payment** – `print_service_invoice_document` menerbitkan
+   faktur service, `process_service_payment` menangani pembayaran kas,
+   transfer, maupun kredit (dengan `PaymentMethod`). Bukti final
+   dicetak melalui `print_final_service_invoice`.
+7. **Finish Check & Close** – `finish_service_check` melakukan pemeriksaan
+   akhir SA sebelum menutup interaksi dengan `close_customer_interaction`
+   (dipanggil otomatis). Flow ditandai `CLOSED` hanya ketika semua
+   invoice sudah lunas sesuai diagram.
 
-### Penjualan Sparepart
-1. **Create Sales Order** – `create_sales_order` menampung permintaan barang.
-2. **Cek Stock Sparepart** – `check_sales_order_stock` mengecek ketersediaan.
-3. **Purchase Order bila perlu** – alirannya sama dengan service.
-4. **Reserve Stock & Delivery** – `reserve_sales_stock` lalu
-   `create_delivery_note` mengeluarkan barang dari gudang.
-5. **Generate Sales Invoice & Pembayaran** – proses sama seperti servis.
+Diagram mermaid terbaru tersedia di halaman web
+`garage/templates/pages/workflow.html` dan menampilkan langkah-langkah di
+atas dalam bentuk visual yang identik dengan gambar referensi.
 
-### Pengelolaan Stok & Laporan
-- `register_inventory_item`, `adjust_inventory`, dan
-  `evaluate_reorder_levels` membantu tim gudang menjaga stok aman.
-- `generate_reports` menghasilkan Sales Report, Inventory Report, Job Card
-  Report, dan Financial Report sesuai node pelaporan pada diagram.
+## Struktur Modul
 
-## Keamanan & Audit
+- **`garage/workflow/models.py`** menyimpan seluruh *data class* yang
+  menjadi kontrak data workflow, seperti `ServiceBooking`,
+  `ServiceFlow`, `ServiceFlowEvent`, serta entitas turunan lain yang
+  dipakai mesin workflow untuk menyimpan inspeksi, job card, invoice,
+  pembayaran, dan catatan audit. File ini tidak memiliki logika bisnis;
+  fokusnya hanya mendefinisikan bentuk data dan enumerasi status agar
+  tiap tahap pada diagram punya representasi yang jelas.
+- **`garage/workflow/engine.py`** merupakan pusat logika alur service.
+  Di sini terdapat `GarageWorkflowEngine`, *in-memory store*, helper
+  untuk pengecekan izin (`AccessController`), serta fungsi-fungsi yang
+  menjalankan tiap node diagram—mulai dari registrasi pelanggan,
+  penjadwalan booking, pencetakan PKB, distribusi pekerjaan mekanik,
+  pembelian & pengeluaran part, sampai pencetakan invoice dan penutupan
+  flow. File inilah yang memanfaatkan model-model di atas untuk
+  menyimpan state, melakukan validasi, dan menuliskan riwayat event.
+- **`garage/templates/pages/workflow.html`** menjadi dokumentasi
+  interaktif yang menggambarkan ulang diagram "Service Business Regular
+  Booking & Non Booking". Template ini merender diagram Mermaid yang
+  bersumber dari state/aksi yang tersedia di `engine.py` sehingga tim
+  operasional bisa memverifikasi kesesuaian implementasi dengan gambar
+  referensi.
 
-- **Role Based Access Control (RBAC)** –
-  `AccessController` memetakan aksi ke role (`SERVICE_ADVISOR`, `TECHNICIAN`,
-  `INVENTORY_CONTROLLER`, `CASHIER`, `MANAGER`). Semua method memanggil
-  `self.access.require` sebelum mengeksekusi.
-- **Validasi State Transition** – Method mengangkat
-  `InvalidTransitionError` atau `ValidationError` jika urutan alur tidak
-  sesuai (misalnya mengeluarkan material sebelum job disetujui).
-- **Audit Trail** – Tiap aksi memanggil `_log_action` untuk menyimpan
-  `AuditLogEntry` di `InMemoryStore.audit_log`. Informasi user, referensi, dan
-  payload tersimpan sebagai dict sehingga mudah dipersist ke database
-  produksi.
+### Fungsi `garage/workflow/models.py`
 
-## Struktur Data Penting
+`models.py` dapat dianggap sebagai definisi skema data untuk seluruh
+entitas yang terlibat pada flow.
 
-| Entitas | Penjelasan |
+- **Enumerasi status** seperti `ServiceFlowStage`, `JobCardStatus`, atau
+  `InvoiceStatus` memastikan tiap langkah di diagram punya representasi
+  status yang eksplisit sehingga mesin hanya bisa berpindah antar tahapan
+  yang valid.
+- **Entitas pelanggan & kendaraan** (`Customer`, `Vehicle`) menampung
+  identitas dasar yang dibutuhkan sebelum service dimulai.
+- **Objek booking & flow** (`ServiceBooking`, `ServiceFlow`,
+  `ServiceFlowEvent`) menyatukan detail booking, status flow, serta log
+  histori sehingga kita dapat mengaudit kapan sebuah tahap dijalankan dan
+  oleh siapa.
+- **Dokumen pendukung** seperti `InspectionReport`, `JobCard`,
+  `Estimate`, `WorkOrder`, `PurchaseOrder`, hingga `SalesInvoice` memberi
+  tempat untuk menyimpan hasil inspeksi, estimasi biaya, kebutuhan part,
+  dan transaksi finansial.
+- **Catatan keuangan** (`PaymentRecord`, `PaymentTerm`,
+  `ReceivableFollowUp`, `ReceiptDocument`) menjaga agar alur pembayaran
+  dan penagihan sesuai dengan blok cashier pada diagram.
+
+Tidak ada logika prosedural di file ini; struktur datanya dipakai oleh
+`engine.py` sebagai kontrak input/output.
+
+### Fungsi `garage/workflow/engine.py`
+
+`engine.py` adalah implementasi orkestrator yang menghidupkan diagram.
+Beberapa komponen pentingnya:
+
+- **`AccessController`** memetakan peran (`Role`) ke daftar aksi yang
+  boleh dijalankan sehingga setiap pemanggilan fungsi publik memeriksa
+  izin terlebih dahulu.
+- **`InMemoryStore`** menjadi database sementara. Semua entitas dari
+  `models.py` disimpan di sini untuk memudahkan lookup antar langkah.
+- **`GarageWorkflowEngine`** berisi kumpulan metode domain seperti
+  `create_service_booking`, `create_pkb_document`,
+  `distribute_mechanical_task`, `record_part_release`,
+  `start_repair_process`, `perform_foreman_check`, sampai
+  `finish_service_check`. Masing-masing metode memvalidasi prasyarat,
+  memperbarui status flow (`ServiceFlowStage`), menulis riwayat ke
+  `ServiceFlowEvent`, dan memodifikasi entitas terkait di store.
+- **Helper privat** seperti `_log_flow_event`, `_require_flow_stage`, dan
+  `_ensure_inventory` menjaga agar transisi antar tahap mengikuti urutan
+  diagram dan stok part terkontrol.
+
+Singkatnya, `engine.py` adalah mesin yang menjalankan prosedur bisnis,
+sedangkan `models.py` adalah definisi struktur data yang dipakai mesin
+tersebut.
+
+## Entitas Data
+
+| Entitas | Deskripsi |
 | --- | --- |
-| `Customer` & `Vehicle` | Identitas customer dan kendaraan yang dilayani. |
-| `ServiceBooking` | Mewakili kedatangan customer dan tipe layanan. |
-| `InspectionReport` | Catatan hasil inspeksi awal. |
-| `JobCard` | Track status pengerjaan termasuk QC (`QualityResult`). |
-| `Estimate` | Kalkulasi biaya per line item (`EstimateLine`). |
-| `WorkOrder` | Daftar tugas teknisi + kebutuhan sparepart. |
-| `PurchaseOrder` & `StockEntry` | Proses pengadaan ketika stok kurang. |
-| `StockItem` & `StockMovement` | Menjaga stok, reserved quantity, dan history. |
-| `SalesOrder` & `DeliveryNote` | Flow penjualan counter. |
-| `SalesInvoice` & `PaymentRecord` | Penagihan dan pembayaran customer. |
-| `PaymentTerm` & `ReceivableFollowUp` | Penjadwalan dan eskalasi piutang kredit. |
-| `ReceiptDocument` | Ringkasan siap cetak untuk invoice & payment. |
+| `ServiceBooking` | Kini menyimpan `prebooked`, `scheduled_at`, `reserved_parts`, dan `estimated_cost` untuk mendukung pra-booking. |
+| `ServiceFlow` | Menyimpan status `ServiceFlowStage`, metadata (job card, invoice, pembayaran), serta riwayat `ServiceFlowEvent`. |
+| `ServiceFlowStage` | Enum yang memetakan setiap node pada diagram: `PRE_BOOKING`, `QUEUE_CHECK`, `PKB_CREATED`, `TASK_DISTRIBUTED`, `PARTS_PURCHASED`, `PARTS_ISSUED`, `MATERIAL_ISSUED`, `REPAIR_IN_PROGRESS`, `PROGRESS_UPDATED`, `REPAIR_COMPLETED`, `FOREMAN_CHECKED`, `OPL_LOGGED`, `SERVICE_INVOICE_PRINTED`, `PAYMENT_PROCESSED`, `FINAL_INVOICE_PRINTED`, `FINISH_CHECK`, `CLOSED`. |
+| `Estimate`, `JobCard`, `WorkOrder` | Tetap digunakan, namun terhubung otomatis dari `create_pkb_document` dan `distribute_mechanical_task`. |
+| `SalesInvoice`, `PaymentRecord`, `ReceiptDocument` | Dipakai pada tahap billing & payment untuk meniru blok "Adm Service" dan "Cashier". |
 
-## DocType Frappe / Pravenya
+## Akses & Audit
 
-Untuk pengujian langsung di site Frappe seperti **Pravenya**, modul ini
-menyediakan DocType siap pakai pada folder `garage/garage/doctype/`:
+Access Control List diperluas agar role mengikuti diagram:
 
-- **Garage Customer** & **Garage Vehicle** – data master pelanggan dan kendaraan.
-- **Garage Service Order** – dokumen inti yang menampung inspeksi, estimasi,
-  parts, progres, dan QC.
-- **Garage Procurement Order** & **Garage Stock Movement** – mendukung alur
-  pengadaan serta penerimaan/issue stok.
-- **Garage Spare Part Order** – jalur khusus untuk transaksi counter.
-- **Garage Sales Invoice**, **Garage Payment Entry**, dan **Garage Receipt
-  Document** – melengkapi proses billing hingga penerbitan bukti bayar.
+- **Service Advisor** dapat menjalankan `check_service_queue`,
+  `create_pkb_document`, distribusi tugas, OPL, dan `finish_service_check`
+  sekaligus `close_customer_interaction`.
+- **Inventory Controller** memiliki aksi `record_material_release` untuk
+  pengeluaran bahan.
+- **Manager** memperoleh seluruh aksi baru termasuk logging OPL.
+- **Cashier** tetap bertugas pada pembayaran dan pencetakan bukti bayar.
 
-Instruksi instalasi serta contoh skenario uji tersedia di
-[`docs/pravenya_setup.md`](pravenya_setup.md).
-
-### Portal Web Terintegrasi
-
-- Halaman publik `/garage` menyajikan portal operasional lengkap yang menggunakan
-  API `garage.api.portal`. Seluruh form di portal ini menulis langsung ke DocType
-  yang sama dengan versi Desk sehingga data intake, service order, procurement,
-  hingga invoice tetap sinkron.
-- Portal menyediakan form cepat untuk registrasi customer & kendaraan, pembuatan
-  service order (beserta task, kebutuhan part, progress log, dan jadwal
-  pembayaran), order sparepart counter, procurement, mutasi stok, invoice,
-  payment entry, serta penerbitan bukti bayar.
-- Bagian insight menampilkan agregasi status dokumen dan nilai keuangan
-  (total invoice, outstanding, pembayaran) yang diambil dari fungsi
-  `portal_bootstrap`, memudahkan manajer memonitor operasional tanpa harus
-  masuk ke Desk.
+Setiap mutasi memanggil `_log_flow_event` sehingga audit log mencatat
+perubahan stage beserta metadata (job card, invoice, payment ID,
+referensi cetakan).
 
 ## Contoh Penggunaan
 
 ```python
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from garage.workflow import (
     GarageWorkflowEngine,
-    InspectionSeverity,
     PaymentMethod,
     Role,
     ServiceType,
+    ServiceFlowStage,
 )
 from garage.workflow.models import User
 
 engine = GarageWorkflowEngine()
-manager = User(user_id="USR-MGR", full_name="Manager", role=Role.MANAGER)
-engine.register_user(manager)
 
-advisor = User(user_id="USR-ADV", full_name="Advisor", role=Role.SERVICE_ADVISOR)
+manager = User(user_id="USR-MGR", full_name="Manager", role=Role.MANAGER)
+advisor = User(user_id="USR-SA", full_name="Service Advisor", role=Role.SERVICE_ADVISOR)
 tech = User(user_id="USR-TECH", full_name="Technician", role=Role.TECHNICIAN)
-engine.register_user(advisor, acting_user=manager)
-engine.register_user(tech, acting_user=manager)
+inventory = User(user_id="USR-INV", full_name="Inventory", role=Role.INVENTORY_CONTROLLER)
+cashier = User(user_id="USR-CASH", full_name="Cashier", role=Role.CASHIER)
+
+for actor in [manager, advisor, tech, inventory, cashier]:
+    engine.register_user(actor, acting_user=manager if actor is not manager else None)
 
 customer = engine.register_customer(advisor, "Budi", phone="0812")
 vehicle = engine.register_vehicle(advisor, customer.customer_id, "B 1234 CD", make="Toyota")
-booking = engine.create_service_booking(advisor, customer.customer_id, vehicle.vehicle_id, ServiceType.SERVICE)
-report = engine.record_inspection(advisor, booking.booking_id, advisor, "Perlu servis berkala", InspectionSeverity.MEDIUM)
-job_card = engine.create_job_card(advisor, booking.booking_id, tech)
-estimate = engine.create_estimate(advisor, job_card.job_card_id, advisor, labor_hours=2, labor_rate=150000)
-job_card = engine.record_customer_decision(advisor, job_card.job_card_id, approved=True)
-work_order = engine.create_work_order(advisor, job_card.job_card_id)
-engine.prepare_work_order(advisor, work_order.work_order_id, tasks=["Ganti oli"], required_parts={"OLI-001": 1})
+booking = engine.create_service_booking(
+    advisor,
+    customer.customer_id,
+    vehicle.vehicle_id,
+    ServiceType.SERVICE,
+    concern="Servis berkala",
+    prebooked=True,
+    scheduled_at=datetime.utcnow(),
+    reserved_parts={"OLI-001": 1},
+    estimated_cost=450000,
+)
 
-engine.register_inventory_item(manager, "OLI-001", "Oli 10W-40", quantity=10, reorder_level=2)
-shortages = engine.check_work_order_stock(manager, work_order.work_order_id)
-if shortages:
-    po = engine.create_purchase_order(manager, job_card.job_card_id, shortages)
-    engine.receive_purchase_order(manager, po.purchase_order_id)
-    engine.create_stock_entry(manager, po.purchase_order_id)
+job_card = engine.create_pkb_document(
+    advisor,
+    booking.booking_id,
+    tech,
+    inspection_notes="Checklist standar",
+)
 
-engine.issue_materials(manager, job_card.job_card_id, {"OLI-001": 1})
-engine.start_work(tech, job_card.job_card_id)
-engine.complete_work(tech, job_card.job_card_id)
-engine.perform_quality_check(manager, job_card.job_card_id, passed=True)
-engine.complete_job_card(manager, job_card.job_card_id)
+work_order = engine.distribute_mechanical_task(
+    advisor,
+    booking.booking_id,
+    tasks=["Ganti oli", "Cek rem"],
+    required_parts={"OLI-001": 1},
+)
 
-invoice = engine.generate_sales_invoice(manager, job_card.job_card_id, amount=450000)
-term = engine.create_payment_term(manager, invoice.invoice_id, datetime.utcnow() + timedelta(days=14), amount=450000)
-engine.follow_up_receivable(manager, term.term_id, contact_person="Budi", method="WhatsApp", notes="Reminder jatuh tempo")
-payment = engine.record_payment(manager, invoice.invoice_id, PaymentMethod.TRANSFER, amount=450000)
-receipt = engine.print_receipt(manager, invoice.invoice_id, payment.payment_id)
-engine.close_customer_interaction(manager, booking.booking_id)
+engine.register_inventory_item(manager, "OLI-001", "Oli 10W-40", quantity=5)
+engine.record_part_release(manager, booking.booking_id, {"OLI-001": 1})
+engine.record_material_release(inventory, booking.booking_id, "Keluar kain lap & brake cleaner")
 
-reports = engine.generate_reports(manager)
+engine.start_repair_process(tech, booking.booking_id)
+engine.update_repair_progress(tech, booking.booking_id, "Pekerjaan 50%")
+engine.complete_repair_work(tech, booking.booking_id)
+engine.perform_foreman_check(manager, booking.booking_id, passed=True, notes="Layak jalan")
+engine.log_opl_entry(advisor, booking.booking_id, "Catatan best practice mekanik")
+
+invoice = engine.print_service_invoice_document(advisor, booking.booking_id)
+payment = engine.process_service_payment(cashier, booking.booking_id, PaymentMethod.CASH, invoice.amount)
+engine.print_final_service_invoice(cashier, booking.booking_id)
+closed_booking = engine.finish_service_check(advisor, booking.booking_id)
+
+assert engine._get_flow_by_booking(booking.booking_id).stage == ServiceFlowStage.CLOSED
 ```
 
-> Catatan: contoh di atas menggunakan `InMemoryStore`. Untuk produksi disarankan
-> membuat adaptor persistence (database) dan mengganti mekanisme autentikasi
-> sesuai platform (misalnya session Frappe, OAuth2, dsb.).
+Untuk pelanggan **walk-in** tanpa booking, buat service booking dengan
+`prebooked=False`, panggil `check_service_queue` (wajib `available=True`),
+kemudian lanjutkan langkah yang sama mulai dari `create_pkb_document`.
 
-## Rekomendasi Implementasi Produksi
+## Tips Implementasi Produksi
 
-- **Persistensi** – Simpan entitas penting (`Customer`, `JobCard`, `SalesInvoice`,
-  dll.) ke database dan bangun repository pattern agar `GarageWorkflowEngine`
-  dapat diganti backend-nya tanpa mengubah API publik.
-- **Integrasi UI / API** – Gunakan modul ini sebagai service layer di Frappe,
-  FastAPI, atau worker. Pastikan mapping role aplikasi selaras dengan enum
-  `Role`.
-- **Monitoring** – Gunakan output `generate_reports` dan audit log untuk
-  dashboard real-time. Tambahkan alert otomatis untuk item dengan
-  `reorder_level` rendah menggunakan `evaluate_reorder_levels`.
-
-## Pengujian
-
-- Buat test unit untuk skenario utama: penolakan customer, kekurangan stok,
-  quality check gagal, penjadwalan piutang, serta pembayaran parsial.
-- Gunakan fixture untuk membuat user per role agar validasi RBAC tetap terjaga.
-- Pastikan error `ValidationError` dan `InvalidTransitionError` muncul ketika
-  urutan alur dilanggar.
-
-## Referensi
-
-- [Frappe Framework Documentation](https://frappeframework.com/docs/)
-- [Python Dataclasses](https://docs.python.org/3/library/dataclasses.html)
-- [State Machine Design Patterns](https://martinfowler.com/articles/richer-message.html)
+- Persist `ServiceFlow` dan `ServiceFlowEvent` ke database agar histori
+  dapat diaudit.
+- Gunakan metadata yang tersimpan (job_card_id, invoice_id,
+  payment_id) untuk menautkan dokumen Frappe/ERP lainnya.
+- Integrasikan `ServiceFlowStage` ke dashboard monitoring sehingga
+  supervisor dapat melihat posisi setiap kendaraan secara real-time.

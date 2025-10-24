@@ -7,10 +7,11 @@
     <div class="container">
         <h1>Alur Layanan Bengkel</h1>
         <p class="lead">
-            Diagram berikut menunjukkan alur layanan bengkel yang kami implementasikan
-            pada modul <code>garage.workflow</code>. Seluruh langkah mengikuti praktik
-            standar bengkel profesional—mulai dari registrasi customer dan kendaraan,
-            inspeksi, pengelolaan stok, hingga penagihan dan tindak lanjut piutang.
+            Workflow baru ini meniru diagram "Service Business Regular Booking &amp; Non
+            Booking" secara persis. Setiap node pada gambar dipetakan ke
+            <code>ServiceFlowStage</code> di modul <code>garage.workflow</code>, sehingga
+            tim bengkel dapat menjalankan pra-booking, distribusi tugas, pembayaran,
+            hingga pemeriksaan akhir Service Advisor tanpa melewatkan langkah apa pun.
         </p>
     </div>
 </section>
@@ -19,66 +20,26 @@
     <div class="container">
         <div class="mermaid">
             graph TD
-                A[Customer Datang] --> B{Jenis Layanan}
-
-                B -->|Service/Repair| C[Create Service Booking]
-                B -->|Beli Sparepart| D[Create Sales Order]
-
-                C --> E[Vehicle Inspection]
-                E --> F[Create Job Card]
-                F --> G[Estimate Biaya]
-
-                G --> H{Customer Setuju?}
-                H -->|Tidak| I[Cancel Job Card]
-                H -->|Ya| J[Work Order]
-
-                J --> K[Cek Stock Sparepart]
-                K --> L{Stock Tersedia?}
-
-                L -->|Tidak| M[Create Purchase Order]
-                M --> N[Receive Stock]
-                N --> O[Stock Entry]
-
-                L -->|Ya| P[Material Issue]
-                O --> P
-
-                P --> Q[Proses Pengerjaan]
-                Q --> R[Update Job Card Status]
-
-                R --> S{Pekerjaan Selesai?}
-                S -->|Belum| Q
-                S -->|Selesai| T[Quality Check]
-
-                T --> U[Complete Job Card]
-                U --> V[Generate Sales Invoice]
-
-                D --> W[Cek Stock Sparepart]
-                W --> X{Stock Tersedia?}
-                X -->|Tidak| M
-                X -->|Ya| Y[Create Delivery Note]
-                Y --> V
-
-                V --> Z[Payment Entry]
-                Z --> AA{Metode Bayar}
-
-                AA -->|Cash| AB[Cash Payment]
-                AA -->|Transfer| AC[Bank Transfer]
-                AA -->|Credit| AD[Create Payment Term]
-
-                AB --> AE[Print Invoice & Receipt]
-                AC --> AE
-                AD --> AF[Follow Up Piutang]
-                AF --> AE
-
-                AE --> AG[Customer Selesai]
-
-                AH[Stock Management] --> AI[Reorder Point Alert]
-                AI --> M
-
-                AJ[Dashboard & Reports] --> AK[Sales Report]
-                AJ --> AL[Inventory Report]
-                AJ --> AM[Job Card Report]
-                AJ --> AN[Financial Report]
+                A[Customer] --> B{Booking?}
+                B -->|Ya| C[Pre Booking<br/>Reserv waktu &amp; estimasi]
+                B -->|Tidak| D[PTM:<br/>Cek antrian service]
+                D --> E{Slot tersedia?}
+                E -->|Ya| F[SA:<br/>Create &amp; Print PKB]
+                C --> F
+                F --> G[PTM:<br/>Distribusi tugas mekanik]
+                G --> H[Partman:<br/>Pengeluaran Part lokal]
+                G --> I[Pembelian Part/<br/>Material lokal]
+                I --> H
+                H --> J[Adm de part:<br/>Pengeluaran Bahan]
+                J --> K[Mekanik:<br/>Repair Process]
+                K --> L[PTM:<br/>Update progress]
+                L --> M[Foreman:<br/>Pemeriksaan pekerjaan]
+                M --> N[OPL]
+                N --> O[Adm Service:<br/>Cetak faktur service]
+                O --> P[Cashier:<br/>Payment process]
+                P --> Q[Adm Service:<br/>Cetak faktur akhir]
+                Q --> R[SA:<br/>Finish Check]
+                R --> S[Customer selesai]
         </div>
     </div>
 </section>
@@ -87,44 +48,45 @@
     <div class="container">
         <div class="detail-grid">
             <article>
-                <h2>Registrasi & Inspeksi</h2>
+                <h2>Pra-Booking & Walk-in</h2>
                 <p>
-                    Flow dimulai dari <strong>register_customer</strong> dan
-                    <strong>register_vehicle</strong> untuk memastikan data dasar valid.
-                    Setelah <strong>create_service_booking</strong>, advisor membuat
-                    <strong>Inspection Report</strong> dan <strong>Job Card</strong> yang
-                    siap dilanjutkan ke estimasi biaya.
+                    Gunakan <code>create_service_booking</code> dengan parameter
+                    <code>prebooked</code> dan <code>scheduled_at</code> untuk pelanggan
+                    yang reservasi. Untuk walk-in, panggil
+                    <code>check_service_queue</code> agar PTM memastikan slot tersedia
+                    sebelum Service Advisor mencetak PKB melalui
+                    <code>create_pkb_document</code>.
                 </p>
             </article>
             <article>
-                <h2>Operasi Servis</h2>
+                <h2>Distribusi & Pengadaan</h2>
                 <p>
-                    Estimasi biaya disetujui lewat <code>record_customer_decision</code>,
-                    dilanjutkan dengan <code>create_work_order</code> sebelum teknisi
-                    menjalankan <strong>Work Order</strong>. Material dikelola melalui
-                    <code>check_work_order_stock</code>,
-                    <code>create_purchase_order</code>, dan <code>issue_materials</code>.
-                    Progres, QC, dan penutupan job card mengikuti standar bengkel.
+                    <code>distribute_mechanical_task</code> membuat work order dan task
+                    mekanik. Kekurangan part ditangani dengan
+                    <code>record_local_purchase</code>, sedangkan pengeluaran part dan
+                    bahan lokal tercatat lewat <code>record_part_release</code> dan
+                    <code>record_material_release</code> sesuai peran Partman dan
+                    Admin Departemen.
                 </p>
             </article>
             <article>
-                <h2>Penjualan Sparepart</h2>
+                <h2>Pengerjaan & QC</h2>
                 <p>
-                    Counter sales menggunakan <code>create_sales_order</code>,
-                    <code>reserve_sales_stock</code>, dan <code>create_delivery_note</code>.
-                    Apabila stok kurang, sistem memicu purchase order dan stock entry seperti
-                    alur servis sehingga gudang bekerja konsisten.
+                    Mekanik menjalankan <code>start_repair_process</code> dan
+                    <code>update_repair_progress</code>. Setelah pekerjaan selesai,
+                    <code>complete_repair_work</code> dan
+                    <code>perform_foreman_check</code> memastikan hasil diperiksa
+                    foreman sebelum dokumentasi OPL.
                 </p>
             </article>
             <article>
-                <h2>Keuangan & Piutang</h2>
+                <h2>Billing & Penyelesaian</h2>
                 <p>
-                    <code>generate_sales_invoice</code> menangani billing untuk servis maupun
-                    penjualan. Pembayaran tunai atau transfer dicatat via
-                    <code>record_payment</code>, sedangkan kredit menggunakan
-                    <code>create_payment_term</code> dan <code>follow_up_receivable</code>
-                    hingga invoice lunas. <code>print_receipt</code> menyiapkan dokumen
-                    resmi untuk customer.
+                    <code>print_service_invoice_document</code> dan
+                    <code>process_service_payment</code> mewakili langkah Admin Service
+                    dan Kasir. Setelah <code>print_final_service_invoice</code>, Service
+                    Advisor menutup interaksi lewat <code>finish_service_check</code>,
+                    memaksa invoice lunas sebelum flow bertanda <strong>closed</strong>.
                 </p>
             </article>
         </div>
@@ -135,10 +97,11 @@
     <div class="container">
         <h2>Dokumentasi Developer</h2>
         <p>
-            Detail API, struktur data (Customer, Job Card, Work Order, Payment Term),
-            serta contoh kode lengkap tersedia di <code>docs/workflow.md</code>.
-            Dokumen tersebut menjelaskan cara menghubungkan modul dengan aplikasi web,
-            worker, maupun REST API sehingga workflow aman dijalankan di produksi.
+            Detail API, struktur data baru (<code>ServiceFlow</code>,
+            <code>ServiceFlowStage</code>, metadata booking), serta contoh kode lengkap
+            tersedia di <code>docs/workflow.md</code>. Dokumen tersebut menuntun integrasi
+            modul ini dengan aplikasi web, worker, maupun REST API agar alur bengkel
+            berjalan sesuai diagram referensi.
         </p>
     </div>
 </section>
