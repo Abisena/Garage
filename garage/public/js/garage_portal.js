@@ -7,9 +7,8 @@
                 currency: 'IDR',
                 minimumFractionDigits: 0,
             });
-            this.customerIndex = new Map();
-            this.vehicleIndex = new Map();
-            this.lastPrefilledPlate = null;
+            this.cachedServiceOrders = [];
+            this.handleStatusModalKeydown = this.handleStatusModalKeydown.bind(this);
         }
 
         init() {
@@ -87,6 +86,20 @@
             this.refreshButtons = document.querySelectorAll('[data-action="refresh-portal"]');
             this.refreshedAtLabel = document.querySelector('[data-role="refreshed-at"]');
             this.deskLinks = document.querySelectorAll('[data-desk-link]');
+
+            this.modals = {
+                status: document.getElementById('service-status-modal'),
+            };
+
+            this.statusModal = {
+                container: document.getElementById('service-status-modal'),
+                title: document.querySelector('[data-role="status-modal-title"]'),
+                summary: document.querySelector('[data-role="status-modal-summary"]'),
+                tableBody: document.querySelector('[data-role="status-modal-table"]'),
+                tableWrapper: document.querySelector('[data-role="status-modal-table-wrapper"]'),
+                emptyState: document.querySelector('[data-role="status-modal-empty"]'),
+                closeButtons: document.querySelectorAll('[data-role="status-modal-close"]'),
+            };
         }
 
         bindEvents() {
@@ -278,6 +291,20 @@
             this.refreshButtons.forEach((button) => {
                 button.addEventListener('click', () => this.fetchBootstrap());
             });
+
+            if (this.statusModal?.closeButtons) {
+                this.statusModal.closeButtons.forEach((button) => {
+                    button.addEventListener('click', () => this.closeStatusModal());
+                });
+            }
+
+            if (this.statusModal?.container) {
+                this.statusModal.container.addEventListener('click', (event) => {
+                    if (event.target === this.statusModal.container) {
+                        this.closeStatusModal();
+                    }
+                });
+            }
         }
 
         applyExistingCustomerSelection() {
@@ -647,6 +674,7 @@
         renderServiceSection() {
             const serviceOrders = this.asArray(this.state.service_orders);
             const openService = this.asArray(this.state.open_service_orders);
+            this.cachedServiceOrders = serviceOrders;
 
             const totalEstimate = serviceOrders.reduce((acc, row) => acc + (parseFloat(row.total_estimated_amount) || 0), 0);
             const qcPending = serviceOrders.filter((row) => (row.qc_status || '').toLowerCase() === 'pending').length;
@@ -754,6 +782,19 @@
                     value.textContent = total;
                     item.appendChild(label);
                     item.appendChild(value);
+                    if (key === 'service-orders') {
+                        item.classList.add('status-list__item--interactive');
+                        item.setAttribute('role', 'button');
+                        item.setAttribute('tabindex', '0');
+                        const openModal = () => this.openServiceStatusModal(status);
+                        item.addEventListener('click', openModal);
+                        item.addEventListener('keydown', (event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                openModal();
+                            }
+                        });
+                    }
                     list.appendChild(item);
                 });
             });
@@ -853,6 +894,107 @@
                 return Object.values(value);
             }
             return [];
+        }
+
+        openServiceStatusModal(status) {
+            if (!this.statusModal?.container) {
+                return;
+            }
+
+            const safeStatus = status || __('Tidak diketahui');
+            const normalizedStatus = (status || '').toLowerCase();
+            const matching = this.cachedServiceOrders.filter(
+                (order) => (order.status || '').toLowerCase() === normalizedStatus
+            );
+
+            if (this.statusModal.title) {
+                this.statusModal.title.textContent = `Detail Status Servis – ${safeStatus}`;
+            }
+
+            if (this.statusModal.summary) {
+                if (matching.length) {
+                    const totalEstimate = matching.reduce(
+                        (sum, order) => sum + (parseFloat(order.total_estimated_amount) || 0),
+                        0
+                    );
+                    this.statusModal.summary.textContent = `${matching.length} service order dengan status ${safeStatus}. Total estimasi pekerjaan ${this.currencyFormatter.format(totalEstimate)}.`;
+                } else {
+                    this.statusModal.summary.textContent = `Tidak ada service order dengan status ${safeStatus}.`;
+                }
+            }
+
+            if (this.statusModal.tableBody) {
+                this.statusModal.tableBody.innerHTML = '';
+            }
+
+            if (matching.length && this.statusModal.tableBody) {
+                matching.forEach((order) => {
+                    const row = document.createElement('tr');
+                    const cells = [
+                        this.renderLink('Garage Service Order', order.name),
+                        order.customer || '-',
+                        order.vehicle || '-',
+                        order.priority || '-',
+                        order.status || '-',
+                        this.formatTimestamp(order.service_booking_date),
+                        this.formatTimestamp(order.estimated_delivery_date),
+                        this.formatTimestamp(order.actual_delivery_date),
+                        order.qc_status || '-',
+                    ];
+                    cells.forEach((cellValue) => {
+                        const cell = document.createElement('td');
+                        if (cellValue instanceof HTMLElement) {
+                            cell.appendChild(cellValue);
+                        } else {
+                            cell.textContent = cellValue;
+                        }
+                        row.appendChild(cell);
+                    });
+                    this.statusModal.tableBody.appendChild(row);
+                });
+            }
+
+            if (this.statusModal.tableWrapper) {
+                this.statusModal.tableWrapper.style.display = matching.length ? 'block' : 'none';
+            }
+            if (this.statusModal.emptyState) {
+                this.statusModal.emptyState.classList.toggle('is-visible', !matching.length);
+            }
+
+            this.previousFocus = document.activeElement;
+            this.statusModal.container.classList.add('is-open');
+            this.statusModal.container.setAttribute('aria-hidden', 'false');
+            this.bodyOverflowCache = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            document.addEventListener('keydown', this.handleStatusModalKeydown);
+
+            const closeButton = this.statusModal.container.querySelector('.portal-modal__close');
+            if (closeButton) {
+                closeButton.focus();
+            }
+        }
+
+        closeStatusModal() {
+            if (!this.statusModal?.container) {
+                return;
+            }
+            this.statusModal.container.classList.remove('is-open');
+            this.statusModal.container.setAttribute('aria-hidden', 'true');
+            document.removeEventListener('keydown', this.handleStatusModalKeydown);
+            if (typeof this.bodyOverflowCache === 'string') {
+                document.body.style.overflow = this.bodyOverflowCache;
+            } else {
+                document.body.style.removeProperty('overflow');
+            }
+            if (this.previousFocus && typeof this.previousFocus.focus === 'function') {
+                this.previousFocus.focus();
+            }
+        }
+
+        handleStatusModalKeydown(event) {
+            if (event.key === 'Escape') {
+                this.closeStatusModal();
+            }
         }
 
         renderLink(doctype, name, label) {

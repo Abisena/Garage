@@ -814,6 +814,171 @@ button:disabled {
     transform: translateX(4px);
 }
 
+.status-list__item--interactive {
+    cursor: pointer;
+    outline: none;
+}
+
+.status-list__item--interactive:focus-visible {
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.35);
+    border-color: var(--primary-lightest);
+}
+
+.status-list__item--interactive .badge {
+    pointer-events: none;
+}
+
+/* === STATUS MODAL === */
+.portal-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity var(--transition-base), visibility var(--transition-base);
+    z-index: var(--z-modal);
+}
+
+.portal-modal.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.portal-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-overlay);
+    opacity: 0.95;
+}
+
+.portal-modal__dialog {
+    position: relative;
+    z-index: 1;
+    width: min(960px, 100%);
+    max-height: 85vh;
+    background: var(--bg-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-2xl);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.portal-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-5) var(--space-6);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.portal-modal__title {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.portal-modal__close {
+    appearance: none;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: var(--font-size-2xl);
+    line-height: 1;
+    cursor: pointer;
+    padding: var(--space-1);
+    transition: color var(--transition-fast);
+}
+
+.portal-modal__close:hover {
+    color: var(--primary);
+}
+
+.portal-modal__body {
+    padding: var(--space-5) var(--space-6) var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    overflow: hidden;
+}
+
+.portal-modal__summary {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.portal-modal__table-wrapper {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-xs);
+    max-height: 55vh;
+}
+
+.portal-modal__table-scroll {
+    max-height: 55vh;
+    overflow: auto;
+}
+
+.portal-modal__empty {
+    display: none;
+    padding: var(--space-5);
+    text-align: center;
+    color: var(--text-muted);
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+}
+
+.portal-modal__empty.is-visible {
+    display: block;
+}
+
+.modal-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.modal-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--gray-50);
+    z-index: 1;
+}
+
+.modal-table tbody tr:hover {
+    background: var(--gray-100);
+}
+
+.modal-table td:nth-child(1),
+.modal-table td:nth-child(2) {
+    white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+    .portal-modal {
+        padding: var(--space-4);
+    }
+
+    .portal-modal__dialog {
+        border-radius: var(--radius-lg);
+    }
+
+    .portal-modal__header,
+    .portal-modal__body {
+        padding: var(--space-4);
+    }
+}
+
 /* === TABLES === */
 .simple-table {
     width: 100%;
@@ -1397,6 +1562,40 @@ button:disabled {
         </div>
     </div>
 </section>
+
+<div class="portal-modal" id="service-status-modal" aria-hidden="true">
+    <div class="portal-modal__backdrop" data-role="status-modal-close"></div>
+    <div class="portal-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="service-status-modal-title">
+        <header class="portal-modal__header">
+            <h3 class="portal-modal__title" id="service-status-modal-title" data-role="status-modal-title">Detail Status Servis</h3>
+            <button class="portal-modal__close" type="button" aria-label="Tutup" data-role="status-modal-close">&times;</button>
+        </header>
+        <div class="portal-modal__body">
+            <p class="portal-modal__summary" data-role="status-modal-summary"></p>
+            <div class="portal-modal__table-wrapper" data-role="status-modal-table-wrapper">
+                <div class="portal-modal__table-scroll">
+                    <table class="simple-table modal-table">
+                        <thead>
+                            <tr>
+                                <th>Nomor</th>
+                                <th>Customer</th>
+                                <th>Kendaraan</th>
+                                <th>Prioritas</th>
+                                <th>Status</th>
+                                <th>Booking</th>
+                                <th>Target Selesai</th>
+                                <th>Tanggal Selesai</th>
+                                <th>QC Status</th>
+                            </tr>
+                        </thead>
+                        <tbody data-role="status-modal-table"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="portal-modal__empty" data-role="status-modal-empty">Tidak ada service order dengan status ini.</div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block script %}
