@@ -898,12 +898,28 @@
                 this.metrics.qcPending.textContent = qcPending.toString();
             }
 
-            this.renderTable(this.tables.openService, openService, (row) => [
-                this.renderLink('Garage Service Order', row.name),
-                row.customer || '-',
-                row.status || '-',
-                row.estimated_delivery_date || '-',
-            ], this.emptyStates.openService);
+            this.renderTable(
+                this.tables.openService,
+                openService,
+                (row) => {
+                    const noteCell = document.createElement('div');
+                    noteCell.className = 'table-note';
+                    if (row.service_notes) {
+                        noteCell.textContent = row.service_notes;
+                        noteCell.title = row.service_notes;
+                    } else {
+                        noteCell.textContent = '-';
+                    }
+                    return [
+                        this.renderLink('Garage Service Order', row.name),
+                        row.customer || '-',
+                        noteCell,
+                        row.status || '-',
+                        row.estimated_delivery_date || '-',
+                    ];
+                },
+                this.emptyStates.openService,
+            );
 
             const progressOptions = serviceOrders.map((row) => ({ value: row.name, label: `${row.name} – ${row.customer || '-'}` }));
             this.populateSelect(this.selects.progressServiceOrder, progressOptions, {

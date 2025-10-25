@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 import re
-from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional
+from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence
 
 import frappe
 from frappe import _
@@ -449,6 +449,34 @@ def _normalized_plate_expression(column: str) -> str:
     return expr
 
 
+def _find_vehicle_by_plate(license_plate: str, *, fields: Sequence[str] = ("name",)) -> Optional[Dict[str, Any]]:
+    normalized = _normalize_license_plate(license_plate or "")
+    if not normalized:
+        return None
+
+    selected_fields = tuple(dict.fromkeys(fields)) or ("name",)
+    columns = ", ".join(f"`tabGarage Vehicle`.`{field}`" for field in selected_fields)
+    normalized_expr = _normalized_plate_expression("`tabGarage Vehicle`.license_plate")
+
+    with _ignoring_permissions():
+        rows = frappe.db.sql(
+            f"""
+            select {columns}
+            from `tabGarage Vehicle`
+            where {normalized_expr} = %s
+            order by modified desc
+            limit 1
+            """,
+            normalized,
+            as_dict=True,
+        )
+
+    if not rows:
+        return None
+
+    return rows[0]
+
+
 def _sanitize_child_rows(table_field: str, rows: Any, config: Mapping[str, Any]) -> List[Dict[str, Any]]:
     if not rows:
         return []
@@ -655,11 +683,20 @@ def portal_bootstrap() -> Dict[str, Any]:
             "job_card_status",
             "work_order_status",
             "qc_status",
+            "service_notes",
         ],
     )
     open_service_orders = _list_dicts(
         "Garage Service Order",
-        ["name", "status", "customer", "vehicle", "priority", "estimated_delivery_date"],
+        [
+            "name",
+            "status",
+            "customer",
+            "vehicle",
+            "priority",
+            "estimated_delivery_date",
+            "service_notes",
+        ],
         filters=[["status", "not in", ["Completed", "Cancelled"]]],
     )
     spare_orders = _list_dicts(
@@ -828,7 +865,7 @@ def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, An
 
 @frappe.whitelist()
 def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
-    """Create a new Garage Customer and/or Vehicle from the intake form."""
+    """Create master data from the intake form and enqueue a service order."""
 
     _require_login()
     data = _ensure_dict(payload or {})
@@ -849,6 +886,9 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
 
     vehicle_fields = ALLOWED_DOCS["Garage Vehicle"]["fields"] - {"customer"}
     vehicle_payload = _filter_fields(data, vehicle_fields)
+    intake_notes = (data.get("notes") or "").strip()
+    vehicle_name: Optional[str] = None
+
     if vehicle_payload:
         vehicle_doc = frappe.new_doc("Garage Vehicle")
         vehicle_doc.update(vehicle_payload)
@@ -862,12 +902,38 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         if not vehicle_doc.license_plate:
             frappe.throw(_("Nomor polisi kendaraan wajib diisi."))
         _insert_doc(vehicle_doc)
+        vehicle_name = vehicle_doc.name
         created["vehicle"] = vehicle_doc.name
     elif data.get("vehicle_customer"):
         # Vehicle fields empty but explicit request to attach? ignore gracefully.
         created["vehicle"] = None
 
+    if not vehicle_name and data.get("license_plate"):
+        existing_vehicle = _find_vehicle_by_plate(data.get("license_plate"), fields=("name", "customer"))
+        if existing_vehicle:
+            vehicle_name = existing_vehicle.get("name")
+            if vehicle_name:
+                created["vehicle"] = vehicle_name
+            if not customer_name and existing_vehicle.get("customer"):
+                customer_name = existing_vehicle.get("customer")
+
     created["customer_name"] = customer_name
+
+    if customer_name and vehicle_name:
+        service_payload: Dict[str, Any] = {
+            "customer": customer_name,
+            "vehicle": vehicle_name,
+        }
+        if intake_notes:
+            service_payload["service_notes"] = intake_notes
+            service_payload["inspection_summary"] = intake_notes
+        if data.get("phone"):
+            service_payload["primary_contact"] = data.get("phone")
+
+        service_doc = _insert_document("Garage Service Order", service_payload)
+        created["service_order"] = service_doc.name
+        created["service_order_status"] = service_doc.status
+
     return created
 
 
