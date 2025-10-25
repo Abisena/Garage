@@ -12,9 +12,8 @@
             this.vehicleByName = new Map();
             this.serviceOrderIndex = new Map();
             this.lastPrefilledPlate = null;
-            this.customerSearchIndex = new Map();
-            this.customerNameMap = new Map();
-            this.pendingCustomerLookups = new Set();
+            this.serviceActionDrafts = new Map();
+            this.boundDetailKeydown = this.handleDetailModalKeydown.bind(this);
         }
 
         init() {
@@ -326,6 +325,20 @@
                         'notes',
                     ]);
                     this.submitForm(this.forms.receipt, 'garage.api.portal.create_receipt_document', { receipt: payload }, 'Receipt berhasil dibuat.');
+                });
+            }
+
+            if (this.tables.openService) {
+                this.tables.openService.addEventListener('click', (event) => {
+                    const trigger = event.target.closest('[data-action="open-service-detail"]');
+                    if (!trigger) {
+                        return;
+                    }
+                    event.preventDefault();
+                    const orderName = trigger.getAttribute('data-order-name');
+                    if (orderName) {
+                        this.openServiceDetail(orderName);
+                    }
                 });
             }
 
@@ -1138,8 +1151,9 @@
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'table-action';
-            button.textContent = 'Detail';
-            button.addEventListener('click', () => this.openServiceDetail(orderName));
+            button.setAttribute('data-action', 'open-service-detail');
+            button.setAttribute('data-order-name', orderName || '');
+            button.textContent = __('Detail & Aksi');
             return button;
         }
 
