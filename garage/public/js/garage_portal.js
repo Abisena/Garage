@@ -10,6 +10,8 @@
             this.customerIndex = new Map();
             this.vehicleIndex = new Map();
             this.lastPrefilledPlate = null;
+            this.customerSearchIndex = new Map();
+            this.customerNameMap = new Map();
         }
 
         init() {
@@ -34,6 +36,11 @@
 
             this.inputs = {
                 licensePlate: document.getElementById('license_plate'),
+                existingCustomerSearch: document.getElementById('existing_customer_search'),
+            };
+
+            this.datalists = {
+                existingCustomer: document.getElementById('existing_customer_options'),
             };
 
             this.selects = {
@@ -277,6 +284,18 @@
                 });
             }
 
+            if (this.inputs.existingCustomerSearch) {
+                this.inputs.existingCustomerSearch.addEventListener('change', () => {
+                    this.handleExistingCustomerSearch();
+                });
+                this.inputs.existingCustomerSearch.addEventListener('input', (event) => {
+                    if (!event.target.value && this.selects.existingCustomer) {
+                        this.setSelectValue(this.selects.existingCustomer, '');
+                        this.applyExistingCustomerSelection();
+                    }
+                });
+            }
+
             if (this.inputs.licensePlate) {
                 this.inputs.licensePlate.addEventListener('change', () => {
                     this.handleLicensePlateChange();
@@ -315,6 +334,7 @@
             }
             const value = select.value;
             if (!value) {
+                this.updateCustomerSearchInput(null);
                 if (this.selects.vehicleCustomer) {
                     this.setSelectValue(this.selects.vehicleCustomer, '');
                 }
@@ -323,6 +343,9 @@
             const customer = this.customerIndex.get(value);
             if (customer) {
                 this.prefillCustomerFields(customer);
+                this.updateCustomerSearchInput(customer);
+            } else {
+                this.updateCustomerSearchInput(null);
             }
             if (this.selects.vehicleCustomer) {
                 this.setSelectValue(this.selects.vehicleCustomer, value);
@@ -397,21 +420,23 @@
                         return;
                     }
                     const previousPrefilled = this.lastPrefilledPlate;
-                    this.vehicleIndex.set(normalized, vehicle);
+                    this.registerVehicleData(vehicle);
                     this.lastPrefilledPlate = normalized;
                     this.prefillVehicleFields(vehicle);
                     const customerName = vehicle.customer;
                     const customer = data.customer || (customerName ? this.customerIndex.get(customerName) : null);
                     if (customerName) {
                         if (customer) {
-                            this.customerIndex.set(customerName, customer);
-                            this.ensureCustomerOptions(customerName, customer.customer_name || customerName);
+                            this.registerCustomerData(customer);
                             this.prefillCustomerFields(customer);
                         } else {
                             this.ensureCustomerOptions(customerName, customerName);
                         }
                         if (this.selects.existingCustomer) {
-                            this.setSelectValue(this.selects.existingCustomer, customerName);
+                            const didSet = this.setSelectValue(this.selects.existingCustomer, customerName);
+                            if (didSet) {
+                                this.applyExistingCustomerSelection();
+                            }
                         }
                         if (this.selects.vehicleCustomer) {
                             this.setSelectValue(this.selects.vehicleCustomer, customerName);
@@ -510,6 +535,185 @@
             }
         }
 
+        registerVehicleData(vehicle) {
+            if (!vehicle) {
+                return;
+            }
+            const normalized = this.normalizeLicensePlate(vehicle.license_plate);
+            if (normalized) {
+                this.vehicleIndex.set(normalized, vehicle);
+            }
+        }
+
+        registerCustomerData(customer, { updateSelect = true } = {}) {
+            if (!customer || !customer.name) {
+                return;
+            }
+            this.customerIndex.set(customer.name, customer);
+            const nameKey = (customer.customer_name || '').trim().toLowerCase();
+            if (nameKey) {
+                this.customerNameMap.set(nameKey, customer.name);
+            }
+            const label = this.formatCustomerSearchLabel(customer);
+            if (label) {
+                this.customerSearchIndex.set(label, customer.name);
+                const datalist = this.datalists?.existingCustomer;
+                if (datalist) {
+                    const hasOption = Array.from(datalist.querySelectorAll('option')).some(
+                        (option) => option.value === label
+                    );
+                    if (!hasOption) {
+                        const option = document.createElement('option');
+                        option.value = label;
+                        datalist.appendChild(option);
+                    }
+                }
+            }
+            if (updateSelect) {
+                this.ensureCustomerOptions(customer.name, customer.customer_name || customer.name);
+            }
+        }
+
+        rebuildCustomerSearch(customers) {
+            this.customerNameMap = new Map();
+            this.customerSearchIndex = new Map();
+            const datalist = this.datalists?.existingCustomer;
+            if (datalist) {
+                datalist.innerHTML = '';
+            }
+            (customers || []).forEach((customer) => {
+                if (!customer) {
+                    return;
+                }
+                const nameKey = (customer.customer_name || '').trim().toLowerCase();
+                if (nameKey) {
+                    this.customerNameMap.set(nameKey, customer.name);
+                }
+                const label = this.formatCustomerSearchLabel(customer);
+                if (label) {
+                    this.customerSearchIndex.set(label, customer.name);
+                    if (datalist) {
+                        const option = document.createElement('option');
+                        option.value = label;
+                        datalist.appendChild(option);
+                    }
+                }
+            });
+        }
+
+        formatCustomerSearchLabel(customer) {
+            if (!customer) {
+                return '';
+            }
+            const name = customer.customer_name || customer.name || '';
+            const contact = [customer.phone, customer.email].filter(Boolean).join(' / ');
+            return contact ? `${name} · ${contact}` : name;
+        }
+
+        updateCustomerSearchInput(customer) {
+            if (!this.inputs.existingCustomerSearch) {
+                return;
+            }
+            if (customer) {
+                this.inputs.existingCustomerSearch.value = this.formatCustomerSearchLabel(customer);
+            } else {
+                this.inputs.existingCustomerSearch.value = '';
+            }
+        }
+
+        handleExistingCustomerSearch() {
+            const input = this.inputs.existingCustomerSearch;
+            if (!input) {
+                return;
+            }
+            const raw = input.value || '';
+            const query = raw.trim();
+            if (!query) {
+                if (this.selects.existingCustomer) {
+                    this.setSelectValue(this.selects.existingCustomer, '');
+                    this.applyExistingCustomerSelection();
+                }
+                return;
+            }
+            const exactMatch = this.customerSearchIndex.get(raw);
+            const normalizedMatch = this.customerNameMap.get(query.toLowerCase());
+            const docname = exactMatch || normalizedMatch;
+            if (docname) {
+                if (this.selects.existingCustomer) {
+                    const set = this.setSelectValue(this.selects.existingCustomer, docname);
+                    if (!set) {
+                        const customer = this.customerIndex.get(docname);
+                        const label = customer ? customer.customer_name || customer.name : query;
+                        this.ensureCustomerOptions(docname, label);
+                        this.setSelectValue(this.selects.existingCustomer, docname);
+                    }
+                    this.applyExistingCustomerSelection();
+                }
+                if (this.selects.vehicleCustomer) {
+                    this.setSelectValue(this.selects.vehicleCustomer, docname);
+                }
+                return;
+            }
+            this.lookupCustomerByName(query);
+        }
+
+        lookupCustomerByName(query) {
+            if (!query) {
+                return;
+            }
+            if (!window.frappe || !frappe.call) {
+                this.notifyCustomerNotFound();
+                return;
+            }
+            frappe.call({
+                method: 'garage.api.portal.lookup_customer',
+                args: { query },
+                callback: (response) => {
+                    const data = response?.message || {};
+                    const customer = data.customer;
+                    if (!customer) {
+                        this.notifyCustomerNotFound();
+                        return;
+                    }
+                    this.registerCustomerData(customer);
+                    if (Array.isArray(data.vehicles)) {
+                        data.vehicles.forEach((vehicle) => this.registerVehicleData(vehicle));
+                    }
+                    if (this.selects.existingCustomer) {
+                        const set = this.setSelectValue(this.selects.existingCustomer, customer.name);
+                        if (!set) {
+                            this.ensureCustomerOptions(customer.name, customer.customer_name || customer.name);
+                            this.setSelectValue(this.selects.existingCustomer, customer.name);
+                        }
+                        this.applyExistingCustomerSelection();
+                    } else {
+                        this.updateCustomerSearchInput(customer);
+                    }
+                    if (this.selects.vehicleCustomer) {
+                        this.setSelectValue(this.selects.vehicleCustomer, customer.name);
+                    }
+                    if (window.frappe && frappe.show_alert) {
+                        frappe.show_alert({
+                            message: __('Data customer ditemukan dan terisi otomatis.'),
+                            indicator: 'green',
+                        });
+                    }
+                },
+                error: () => {
+                    this.notifyCustomerNotFound();
+                },
+            });
+        }
+
+        notifyCustomerNotFound() {
+            if (window.frappe && frappe.show_alert) {
+                frappe.show_alert({
+                    message: __('Customer tidak ditemukan. Periksa kembali nama yang dimasukkan.'),
+                    indicator: 'yellow',
+                });
+            }
+        }
+
         normalizeLicensePlate(value) {
             return (value || '')
                 .toString()
@@ -525,6 +729,7 @@
             }
             const value = select.value;
             if (!value) {
+                this.updateCustomerSearchInput(null);
                 if (this.selects.vehicleCustomer) {
                     this.setSelectValue(this.selects.vehicleCustomer, '');
                 }
@@ -533,6 +738,9 @@
             const customer = this.customerIndex.get(value);
             if (customer) {
                 this.prefillCustomerFields(customer);
+                this.updateCustomerSearchInput(customer);
+            } else {
+                this.updateCustomerSearchInput(null);
             }
             if (this.selects.vehicleCustomer) {
                 this.setSelectValue(this.selects.vehicleCustomer, value);
@@ -607,21 +815,23 @@
                         return;
                     }
                     const previousPrefilled = this.lastPrefilledPlate;
-                    this.vehicleIndex.set(normalized, vehicle);
+                    this.registerVehicleData(vehicle);
                     this.lastPrefilledPlate = normalized;
                     this.prefillVehicleFields(vehicle);
                     const customerName = vehicle.customer;
                     const customer = data.customer || (customerName ? this.customerIndex.get(customerName) : null);
                     if (customerName) {
                         if (customer) {
-                            this.customerIndex.set(customerName, customer);
-                            this.ensureCustomerOptions(customerName, customer.customer_name || customerName);
+                            this.registerCustomerData(customer);
                             this.prefillCustomerFields(customer);
                         } else {
                             this.ensureCustomerOptions(customerName, customerName);
                         }
                         if (this.selects.existingCustomer) {
-                            this.setSelectValue(this.selects.existingCustomer, customerName);
+                            const didSet = this.setSelectValue(this.selects.existingCustomer, customerName);
+                            if (didSet) {
+                                this.applyExistingCustomerSelection();
+                            }
                         }
                         if (this.selects.vehicleCustomer) {
                             this.setSelectValue(this.selects.vehicleCustomer, customerName);
@@ -796,12 +1006,10 @@
             const vehicles = this.asArray(this.state.vehicles);
 
             this.customerIndex = new Map(customers.map((customer) => [customer.name, customer]));
+            this.rebuildCustomerSearch(customers);
             this.vehicleIndex = new Map();
             vehicles.forEach((vehicle) => {
-                const normalized = this.normalizeLicensePlate(vehicle.license_plate);
-                if (normalized) {
-                    this.vehicleIndex.set(normalized, vehicle);
-                }
+                this.registerVehicleData(vehicle);
             });
 
             this.populateSelect(this.selects.existingCustomer, customers, {
@@ -835,6 +1043,18 @@
                 labelKey: 'customer_name',
                 blankLabel: '— Pilih customer —',
             });
+
+            if (this.selects.existingCustomer) {
+                const selected = this.selects.existingCustomer.value;
+                if (selected) {
+                    const selectedCustomer = this.customerIndex.get(selected);
+                    this.updateCustomerSearchInput(selectedCustomer || null);
+                } else {
+                    this.updateCustomerSearchInput(null);
+                }
+            } else {
+                this.updateCustomerSearchInput(null);
+            }
 
             this.updateServiceVehicleOptions();
 
@@ -1336,6 +1556,9 @@
                     rowsContainer.innerHTML = '';
                 }
             });
+            if (form === this.forms.intake) {
+                this.updateCustomerSearchInput(null);
+            }
         }
 
         updateServiceVehicleOptions() {
