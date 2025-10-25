@@ -914,7 +914,7 @@
             if (value === undefined || value === null) {
                 return '';
             }
-            return String(value);
+            return String(value).trim();
         }
 
         getCustomerByName(value) {
@@ -1053,10 +1053,8 @@
 
             this.updateServiceVehicleOptions();
 
-            const customerMap = this.customerIndex;
             const combinedRows = vehicles.slice(0, 8).map((vehicle) => {
-                const customer = customerMap.get(this.normalizeDocname(vehicle.customer));
-                const customerDocname = this.normalizeDocname(customer?.name ?? vehicle.customer);
+                const { record: customer, docname: customerDocname } = this.resolveCustomerRecord(vehicle);
                 const customerLabel = this.getCustomerDisplayName(customer, vehicle);
                 const customerCell = customerDocname
                     ? this.renderLink('Garage Customer', customerDocname, customerLabel)
@@ -1065,9 +1063,9 @@
                 const serviceTimestamp = vehicle.last_service_logged_at || vehicle.last_service_date || vehicle.creation;
                 return [
                     customerCell,
-                    this.getVipTypeLabel(customer),
-                    this.createContactCell(customer),
-                    this.getVipStatusLabel(customer),
+                    this.getVipTypeLabel(customer, vehicle),
+                    this.createContactCell(customer, vehicle),
+                    this.getVipStatusLabel(customer, vehicle),
                     this.renderLink('Garage Vehicle', vehicle.name, vehicle.license_plate || vehicle.name),
                     model,
                     this.formatTimestamp(serviceTimestamp),
@@ -1100,6 +1098,28 @@
             );
         }
 
+        resolveCustomerRecord(vehicle) {
+            const docname = this.normalizeDocname(vehicle?.customer);
+            if (docname && this.customerIndex.has(docname)) {
+                return { docname, record: this.customerIndex.get(docname) };
+            }
+            return {
+                docname,
+                record: {
+                    customer_name:
+                        vehicle?.customer_name ||
+                        vehicle?.customer_display_name ||
+                        vehicle?.customer_title ||
+                        vehicle?.customer ||
+                        '',
+                    customer_type: vehicle?.customer_type,
+                    phone: vehicle?.phone || vehicle?.customer_phone || vehicle?.contact_phone,
+                    email: vehicle?.email || vehicle?.customer_email || vehicle?.contact_email,
+                    is_vip: vehicle?.is_vip,
+                },
+            };
+        }
+
         getCustomerDisplayName(customer, vehicle) {
             if (customer?.customer_name) {
                 return customer.customer_name;
@@ -1128,25 +1148,31 @@
             return vehicle?.customer || customer?.name || '-';
         }
 
-        getVipTypeLabel(customer) {
-            if (!customer) {
-                return '-';
+        getVipTypeLabel(customer, vehicle) {
+            if (customer?.customer_type) {
+                return customer.customer_type;
             }
-            return customer.customer_type || '-';
+            if (vehicle?.customer_type) {
+                return vehicle.customer_type;
+            }
+            return '-';
         }
 
-        getVipStatusLabel(customer) {
-            if (!customer) {
-                return '-';
+        getVipStatusLabel(customer, vehicle) {
+            if (typeof customer?.is_vip === 'boolean') {
+                return customer.is_vip ? 'Iya' : 'Tidak';
             }
-            return customer.is_vip ? 'Iya' : 'Tidak';
+            if (typeof vehicle?.is_vip === 'boolean') {
+                return vehicle.is_vip ? 'Iya' : 'Tidak';
+            }
+            return '-';
         }
 
-        createContactCell(customer) {
+        createContactCell(customer, fallback) {
             const container = document.createElement('div');
             container.className = 'table-contact';
-            const phone = (customer?.phone || '').trim();
-            const email = (customer?.email || '').trim();
+            const phone = (customer?.phone || fallback?.phone || fallback?.customer_phone || fallback?.contact_phone || '').trim();
+            const email = (customer?.email || fallback?.email || fallback?.customer_email || fallback?.contact_email || '').trim();
             if (phone) {
                 const phoneLine = document.createElement('div');
                 phoneLine.textContent = phone;
@@ -1187,36 +1213,21 @@
             const tableSource = serviceRegistrations.length ? serviceRegistrations : serviceOrders;
             this.renderTable(
                 this.tables.openService,
-                tableSource,
-                (entry) => {
-                    const orderName = entry.order_name || entry.name;
-                    const status = entry.status || entry.order_status;
-                    const priority = entry.priority;
-                    const customerName = entry.customer_display
-                        || this.getCustomerDisplay(entry.customer)
-                        || entry.customer_name
-                        || entry.customer
-                        || '-';
-                    const vehicleLabel = entry.vehicle_label || this.getVehicleLabel(entry.vehicle);
-                    const statusPill = this.createStatusPill(status);
-                    const priorityPill = this.createPriorityPill(priority);
-                    const actionButton = this.createDetailButton(orderName);
-                    const targetDate = entry.target_date || entry.estimated_delivery_date;
-                    return {
-                        rowAttributes: {
-                            'data-role': 'service-row',
-                            'data-order-name': orderName || '',
-                        },
-                        cells: [
-                            this.renderLink('Garage Service Order', orderName),
-                            customerName,
-                            vehicleLabel,
-                            statusPill,
-                            priorityPill,
-                            this.formatTimestamp(targetDate),
-                            actionButton,
-                        ],
-                    };
+                serviceOrders,
+                (order) => {
+                    const customer = this.getCustomerByName(order.customer) || {};
+                    const statusPill = this.createStatusPill(order.status);
+                    const priorityPill = this.createPriorityPill(order.priority);
+                    const actionButton = this.createDetailButton(order.name);
+                    return [
+                        this.renderLink('Garage Service Order', order.name),
+                        customer.customer_name || order.customer || '-',
+                        this.getVehicleLabel(order.vehicle),
+                        statusPill,
+                        priorityPill,
+                        this.formatTimestamp(order.estimated_delivery_date),
+                        actionButton,
+                    ];
                 },
                 this.emptyStates.openService,
             );
@@ -1263,6 +1274,7 @@
 
                 const meta = document.createElement('div');
                 meta.className = 'note-list__meta';
+                const customer = this.getCustomerByName(order.customer);
                 const customerSpan = document.createElement('span');
                 customerSpan.textContent =
                     entry.customer_display
@@ -1717,43 +1729,12 @@
 
         populateServiceDetail(order) {
             const fields = this.serviceDetailModal?.fields || {};
-            const join = (values, separator = ' • ') =>
-                values
-                    .map((value) => (value == null ? '' : String(value).trim()))
-                    .filter(Boolean)
-                    .join(separator);
+            const customer = this.getCustomerByName(order.customer) || {};
+            const vehicle = this.getVehicleByName(order.vehicle);
+            const customerName = customer.customer_name || order.customer || '-';
+            const vehicleLabel = this.getVehicleLabel(order.vehicle);
 
-            const orderName = order.order_name || order.name || '-';
-            const customerCode = order.customer;
-            const customer = customerCode ? this.customerIndex.get(customerCode) || {} : {};
-            const vehicleDoc = this.getVehicleByName(order.vehicle);
-            const vehicleLabel = order.vehicle_label || this.getVehicleLabel(order.vehicle);
-            const customerName =
-                order.customer_name
-                || order.customer_display
-                || customer.customer_name
-                || order.customer
-                || '-';
-            const customerType = order.customer_type || customer.customer_type || '-';
-            const contactInfo =
-                order.customer_contact
-                || join([order.customer_phone, order.customer_email])
-                || join([customer.phone, customer.email])
-                || '-';
-            const vehiclePlate = order.vehicle_plate || vehicleDoc?.license_plate || vehicleLabel || '-';
-            const modelInfo =
-                join([order.vehicle_brand, order.vehicle_model, order.vehicle_year], ' ')
-                || join([vehicleDoc?.brand, vehicleDoc?.model, vehicleDoc?.vehicle_year], ' ')
-                || vehicleLabel
-                || '-';
-            const vehicleColor = order.vehicle_color || vehicleDoc?.color || '-';
-            const vehicleTransmission = order.vehicle_transmission || vehicleDoc?.transmission || '-';
-            const vehicleFuel = order.vehicle_fuel || vehicleDoc?.fuel_type || '-';
-            const mileageValue = order.vehicle_mileage ?? vehicleDoc?.mileage;
-            const mileage = mileageValue ? `${mileageValue} km` : '-';
-            const status = order.status || order.order_status;
-
-            this.setPillState(fields.status, status || '-', this.getStatusVariant(status));
+            this.setPillState(fields.status, order.status || '-', this.getStatusVariant(order.status));
             this.setPillState(fields.priority, order.priority || '-', this.getPriorityVariant(order.priority));
             this.setFieldValue(fields.orderName, orderName);
             this.setFieldValue(fields.bookingDate, this.formatTimestamp(order.booking_date || order.service_booking_date));
