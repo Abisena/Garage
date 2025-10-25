@@ -928,6 +928,80 @@ def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, An
 
 
 @frappe.whitelist()
+def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> Dict[str, Any]:
+    """Fetch a customer (and their vehicles) by identifier or partial name."""
+
+    _require_login()
+    identifier = (name or query or "").strip()
+    if not identifier:
+        return {}
+
+    customer_fields = [
+        "name",
+        "customer_name",
+        "customer_type",
+        "phone",
+        "email",
+        "preferred_contact_method",
+        "marketing_source",
+        "is_vip",
+    ]
+
+    with _ignoring_permissions():
+        customer_doc = frappe.db.get_value(
+            "Garage Customer",
+            identifier,
+            customer_fields,
+            as_dict=True,
+        )
+
+        if not customer_doc:
+            customer_doc = frappe.db.get_value(
+                "Garage Customer",
+                {"customer_name": identifier},
+                customer_fields,
+                as_dict=True,
+            )
+
+        if not customer_doc:
+            like_pattern = f"%{identifier}%"
+            matches = frappe.get_all(
+                "Garage Customer",
+                filters={"customer_name": ["like", like_pattern]},
+                fields=customer_fields,
+                order_by="modified desc",
+                limit=1,
+            )
+            if matches:
+                customer_doc = matches[0]
+
+    if not customer_doc:
+        return {}
+
+    vehicles = frappe.get_all(
+        "Garage Vehicle",
+        filters={"customer": customer_doc["name"]},
+        fields=[
+            "name",
+            "customer",
+            "license_plate",
+            "brand",
+            "model",
+            "vehicle_year",
+            "color",
+            "transmission",
+            "fuel_type",
+            "mileage",
+            "last_service_date",
+        ],
+        order_by="modified desc",
+        limit=20,
+    )
+
+    return {"customer": customer_doc, "vehicles": vehicles}
+
+
+@frappe.whitelist()
 def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
     """Create master data from the intake form and enqueue a service order."""
 
