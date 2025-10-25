@@ -449,6 +449,12 @@ def _normalized_plate_expression(column: str) -> str:
     return expr
 
 
+def _safe_text(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
 def _find_vehicle_by_plate(license_plate: str, *, fields: Sequence[str] = ("name",)) -> Optional[Dict[str, Any]]:
     normalized = _normalize_license_plate(license_plate or "")
     if not normalized:
@@ -772,10 +778,68 @@ def portal_bootstrap() -> Dict[str, Any]:
 
     desk_routes = {doctype: _desk_route(doctype) for doctype in DOC_TYPES}
 
+    customer_map = {row.get("name"): row for row in customers}
+    vehicle_map = {row.get("name"): row for row in vehicles}
+
+    service_registrations: List[Dict[str, Any]] = []
+    for order in service_orders:
+        customer = customer_map.get(order.get("customer")) if order.get("customer") else None
+        vehicle = vehicle_map.get(order.get("vehicle")) if order.get("vehicle") else None
+
+        vehicle_label_parts = [
+            (vehicle or {}).get("license_plate"),
+            (vehicle or {}).get("brand"),
+            (vehicle or {}).get("model"),
+            _safe_text((vehicle or {}).get("vehicle_year")),
+        ]
+        vehicle_label = " – ".join(part for part in vehicle_label_parts if part)
+
+        contact_parts = [
+            _safe_text((customer or {}).get("phone")),
+            _safe_text((customer or {}).get("email")),
+        ]
+        contact_display = " • ".join(part for part in contact_parts if part)
+
+        service_registrations.append(
+            {
+                "order_name": order.get("name"),
+                "status": order.get("status"),
+                "priority": order.get("priority"),
+                "booking_date": order.get("service_booking_date"),
+                "target_date": order.get("estimated_delivery_date"),
+                "completion_date": order.get("actual_delivery_date"),
+                "total_estimated_amount": order.get("total_estimated_amount"),
+                "total_approved_amount": order.get("total_approved_amount"),
+                "job_card_status": order.get("job_card_status"),
+                "work_order_status": order.get("work_order_status"),
+                "qc_status": order.get("qc_status"),
+                "notes": order.get("service_notes"),
+                "customer": order.get("customer"),
+                "customer_name": (customer or {}).get("customer_name"),
+                "customer_type": (customer or {}).get("customer_type"),
+                "customer_phone": (customer or {}).get("phone"),
+                "customer_email": (customer or {}).get("email"),
+                "customer_display": (customer or {}).get("customer_name")
+                or order.get("customer"),
+                "customer_contact": contact_display,
+                "vehicle": order.get("vehicle"),
+                "vehicle_plate": (vehicle or {}).get("license_plate"),
+                "vehicle_brand": (vehicle or {}).get("brand"),
+                "vehicle_model": (vehicle or {}).get("model"),
+                "vehicle_year": (vehicle or {}).get("vehicle_year"),
+                "vehicle_color": (vehicle or {}).get("color"),
+                "vehicle_transmission": (vehicle or {}).get("transmission"),
+                "vehicle_fuel": (vehicle or {}).get("fuel_type"),
+                "vehicle_mileage": (vehicle or {}).get("mileage"),
+                "vehicle_label": vehicle_label or order.get("vehicle"),
+            }
+        )
+
     return {
         "customers": customers,
         "vehicles": vehicles,
         "service_orders": service_orders,
+        "service_registrations": service_registrations,
         "open_service_orders": open_service_orders,
         "spare_orders": spare_orders,
         "open_spare_orders": open_spare_orders,

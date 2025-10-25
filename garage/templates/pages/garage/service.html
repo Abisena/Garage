@@ -942,6 +942,166 @@ button:disabled {
     display: block;
 }
 
+.detail-overview {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+}
+
+.detail-overview__label {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+.detail-overview__value {
+    margin: 0;
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+.detail-overview__status {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+.detail-summary {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--space-5);
+}
+
+.detail-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+    background: var(--bg-elevated);
+    box-shadow: var(--shadow-xs);
+}
+
+.detail-section h4 {
+    margin: 0;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+.detail-section__hint {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+}
+
+.detail-section--full {
+    grid-column: 1 / -1;
+}
+
+.detail-list {
+    margin: 0;
+    display: grid;
+    gap: var(--space-3);
+}
+
+.detail-list__item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.detail-list__item dt {
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+.detail-list__item dd {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.detail-note {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    line-height: var(--line-height-relaxed);
+    white-space: pre-wrap;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--space-3);
+    min-height: 28px;
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--gray-100);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-light);
+}
+
+.status-pill--success {
+    background: rgba(0, 200, 83, 0.12);
+    color: #008f3a;
+    border-color: rgba(0, 200, 83, 0.2);
+}
+
+.status-pill--warning {
+    background: rgba(255, 179, 0, 0.12);
+    color: #b27300;
+    border-color: rgba(255, 179, 0, 0.2);
+}
+
+.status-pill--danger {
+    background: rgba(255, 61, 0, 0.12);
+    color: #c62800;
+    border-color: rgba(255, 61, 0, 0.2);
+}
+
+.status-pill--info {
+    background: rgba(0, 184, 212, 0.12);
+    color: #006a80;
+    border-color: rgba(0, 184, 212, 0.2);
+}
+
+.status-pill--neutral {
+    background: var(--gray-100);
+    color: var(--text-secondary);
+}
+
+.form-field--full {
+    grid-column: 1 / -1;
+}
+
+.detail-action-form .form-actions {
+    justify-content: flex-end;
+    margin: 0;
+}
+
+.detail-action-form .form-actions .primary {
+    min-width: 160px;
+}
+
 .modal-table {
     width: 100%;
     border-collapse: separate;
@@ -977,6 +1137,23 @@ button:disabled {
     .portal-modal__body {
         padding: var(--space-4);
     }
+}
+
+/* === SERVICE OVERVIEW === */
+.service-intro {
+    margin-top: var(--space-4);
+    padding: var(--space-4);
+    background: var(--primary-subtle);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-relaxed);
+    box-shadow: var(--shadow-xs);
+}
+
+.service-intro strong {
+    color: var(--primary-dark);
 }
 
 /* === TABLES === */
@@ -1035,6 +1212,60 @@ button:disabled {
     border-bottom: none !important;
 }
 
+.simple-table__wrapper {
+    width: 100%;
+    margin-top: var(--space-4);
+    border-radius: var(--radius-lg);
+    overflow-x: auto;
+    box-shadow: var(--shadow-xs);
+    background: var(--bg-surface);
+}
+
+.simple-table--interactive tbody tr {
+    cursor: default;
+}
+
+.simple-table--interactive tbody tr[data-role="service-row"] {
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.simple-table--interactive tbody tr[data-role="service-row"]:hover {
+    background: var(--primary-subtle);
+}
+
+.simple-table--interactive td:last-child {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.table-action {
+    appearance: none;
+    border: none;
+    border-radius: var(--radius-full);
+    background: var(--primary-lightest);
+    color: var(--primary-dark);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    padding: var(--space-2) var(--space-4);
+    cursor: pointer;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+
+.table-action:hover,
+.table-action:focus-visible {
+    background: var(--primary);
+    color: var(--text-inverse);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.table-action:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
 /* === TABLE LINKS === */
 .table-links {
     display: flex;
@@ -1091,6 +1322,98 @@ button:disabled {
     background: var(--gray-50);
     border-radius: var(--radius-md);
     margin-bottom: var(--space-4);
+}
+
+.note-list {
+    list-style: none;
+    margin: var(--space-4) 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.note-list__item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-xs);
+}
+
+.note-list__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.note-list__order {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+.note-list__timestamp {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+}
+
+.note-list__body {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    line-height: var(--line-height-relaxed);
+}
+
+.note-list__meta {
+    display: flex;
+    gap: var(--space-3);
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+}
+
+.callout {
+    margin-top: var(--space-4);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-relaxed);
+}
+
+.callout--info {
+    background: var(--primary-lightest);
+    border-color: var(--primary-light);
+    color: var(--primary-dark);
+}
+
+.callout--neutral {
+    background: var(--gray-50);
+    border-color: var(--border-light);
+    color: var(--text-secondary);
+}
+
+.callout strong {
+    font-weight: var(--font-weight-semibold);
+}
+
+.action-steps {
+    margin: var(--space-4) 0;
+    padding-left: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    line-height: var(--line-height-relaxed);
+}
+
+.action-steps li strong {
+    color: var(--text-primary);
 }
 
 /* === SCROLLBAR === */
@@ -1281,210 +1604,13 @@ button:disabled {
     <div class="container">
         <div class="portal-grid portal-grid--service">
             <article class="portal-card portal-card--primary">
-                <h2>Buat Service Order</h2>
+                <h2>Daftar Registrasi Servis</h2>
                 <p class="lead">
-                    Isi detail pekerjaan bengkel, estimasi biaya, dan kebutuhan task untuk membuat service order baru.
+                    Semua data di bawah berasal dari formulir registrasi dan siap dijadikan dasar tindak lanjut tim servis.
                 </p>
-                <form id="service-order-form" class="form-grid">
-                    <div class="form-grid two-column">
-                        <div class="form-field">
-                            <label for="service_order_type">Jenis Servis</label>
-                            <select id="service_order_type" name="service_order_type">
-                                <option value="Service/Repair">Service/Repair</option>
-                                <option value="Inspection">Inspection</option>
-                                <option value="Warranty">Warranty</option>
-                                <option value="Insurance Claim">Insurance Claim</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label for="order_category">Kategori</label>
-                            <select id="order_category" name="order_category">
-                                <option value="Workshop Service">Workshop Service</option>
-                                <option value="Body Repair">Body Repair</option>
-                                <option value="Quick Service">Quick Service</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label for="priority">Prioritas</label>
-                            <select id="priority" name="priority">
-                                <option value="Normal">Normal</option>
-                                <option value="High">High</option>
-                                <option value="Critical">Critical</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label for="service_customer">Customer</label>
-                            <select id="service_customer" name="customer">
-                                <option value="">— Pilih customer —</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label for="service_vehicle">Kendaraan</label>
-                            <select id="service_vehicle" name="vehicle">
-                                <option value="">— Pilih kendaraan —</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label for="service_advisor">Service Advisor</label>
-                            <input id="service_advisor" name="service_advisor" placeholder="User ID atau email" />
-                        </div>
-                        <div class="form-field">
-                            <label for="estimated_delivery_date">Estimasi Selesai</label>
-                            <input id="estimated_delivery_date" name="estimated_delivery_date" type="date" />
-                        </div>
-                        <div class="form-field">
-                            <label for="total_estimated_amount">Estimasi Biaya</label>
-                            <input id="total_estimated_amount" name="total_estimated_amount" type="number" min="0" step="0.01" data-cast="float" />
-                        </div>
-                    </div>
-                    <div class="form-field">
-                        <label for="inspection_summary">Ringkasan Inspeksi</label>
-                        <textarea id="inspection_summary" name="inspection_summary" placeholder="Temuan utama dari inspeksi awal"></textarea>
-                    </div>
-                    <div class="form-field">
-                        <label for="service_notes">Catatan Servis</label>
-                        <textarea id="service_notes" name="service_notes" placeholder="Catatan tambahan untuk teknisi"></textarea>
-                    </div>
-                    <div class="repeat-group" data-repeat="service_tasks">
-                        <header>
-                            <h3>Daftar Pekerjaan</h3>
-                            <button class="secondary" type="button" data-action="add-row">Tambah Task</button>
-                        </header>
-                        <div class="repeat-rows" data-role="rows"></div>
-                        <template data-role="row-template">
-                            <div class="repeat-row columns-4">
-                                <div class="form-field">
-                                    <label>Task</label>
-                                    <input data-field="task" placeholder="Nama tugas" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Teknisi</label>
-                                    <input data-field="technician" placeholder="User teknisi" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Estimasi Jam</label>
-                                    <input data-field="estimated_hours" type="number" step="0.1" min="0" data-cast="float" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Status</label>
-                                    <select data-field="status">
-                                        <option value="Pending">Pending</option>
-                                        <option value="In Progress">In Progress</option>
-                                        <option value="Completed">Completed</option>
-                                        <option value="Deferred">Deferred</option>
-                                    </select>
-                                </div>
-                                <div class="form-field">
-                                    <label>Deskripsi</label>
-                                    <textarea data-field="description" placeholder="Detail tugas"></textarea>
-                                </div>
-                                <div class="form-field">
-                                    <label>Jam Aktual</label>
-                                    <input data-field="actual_hours" type="number" step="0.1" min="0" data-cast="float" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Tgl Selesai</label>
-                                    <input data-field="completion_date" type="date" />
-                                </div>
-                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
-                            </div>
-                        </template>
-                    </div>
-                    <div class="repeat-group" data-repeat="required_parts">
-                        <header>
-                            <h3>Kebutuhan Sparepart</h3>
-                            <button class="secondary" type="button" data-action="add-row">Tambah Part</button>
-                        </header>
-                        <div class="repeat-rows" data-role="rows"></div>
-                        <template data-role="row-template">
-                            <div class="repeat-row columns-4">
-                                <div class="form-field">
-                                    <label>Kode Barang</label>
-                                    <input data-field="item_code" placeholder="Kode" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Nama Barang</label>
-                                    <input data-field="item_name" placeholder="Nama part" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Qty</label>
-                                    <input data-field="qty" type="number" min="0" step="0.01" data-cast="float" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Status Stok</label>
-                                    <select data-field="stock_status">
-                                        <option value="Pending Check">Pending Check</option>
-                                        <option value="Available">Available</option>
-                                        <option value="To Order">To Order</option>
-                                        <option value="Ordered">Ordered</option>
-                                        <option value="Received">Received</option>
-                                        <option value="Issued">Issued</option>
-                                    </select>
-                                </div>
-                                <div class="form-field">
-                                    <label>Uraian</label>
-                                    <textarea data-field="description" placeholder="Detail kebutuhan"></textarea>
-                                </div>
-                                <div class="form-field">
-                                    <label>Gudang</label>
-                                    <input data-field="warehouse" placeholder="Gudang" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Harga</label>
-                                    <input data-field="rate" type="number" min="0" step="0.01" data-cast="float" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Total</label>
-                                    <input data-field="amount" type="number" min="0" step="0.01" data-cast="float" />
-                                </div>
-                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
-                            </div>
-                        </template>
-                    </div>
-                    <div class="repeat-group" data-repeat="payment_schedule">
-                        <header>
-                            <h3>Jadwal Pembayaran</h3>
-                            <button class="secondary" type="button" data-action="add-row">Tambah Jadwal</button>
-                        </header>
-                        <div class="repeat-rows" data-role="rows"></div>
-                        <template data-role="row-template">
-                            <div class="repeat-row columns-3">
-                                <div class="form-field">
-                                    <label>Jatuh Tempo</label>
-                                    <input data-field="due_date" type="date" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Persentase</label>
-                                    <input data-field="percentage" type="number" min="0" max="100" step="0.01" data-cast="float" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Nilai</label>
-                                    <input data-field="amount" type="number" min="0" step="0.01" data-cast="float" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Status</label>
-                                    <select data-field="status">
-                                        <option value="Pending">Pending</option>
-                                        <option value="Paid">Paid</option>
-                                        <option value="Overdue">Overdue</option>
-                                    </select>
-                                </div>
-                                <div class="form-field">
-                                    <label>Deskripsi</label>
-                                    <input data-field="description" placeholder="Termin" />
-                                </div>
-                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
-                            </div>
-                        </template>
-                    </div>
-                    <div class="form-actions">
-                        <button class="primary" type="submit">Simpan Service Order</button>
-                    </div>
-                </form>
-            </article>
-            <article class="portal-card">
-                <h2>Status Servis</h2>
-                <p class="lead">Ikhtisar service order yang sedang berjalan dan kemajuan pengerjaan.</p>
+                <div class="service-intro">
+                    Klik baris registrasi atau tombol <strong>Detail</strong> untuk membuka informasi lengkap dan menjalankan aksi lanjutan tanpa perlu mengisi formulir terpisah.
+                </div>
                 <div class="metric-grid metric-grid--spaced">
                     <div class="metric-card">
                         <h3>Nilai Estimasi</h3>
@@ -1504,72 +1630,223 @@ button:disabled {
                 </div>
                 <h3 class="section-subtitle">Ringkasan Status</h3>
                 <ul class="status-list" data-status="service-orders"></ul>
-                <h3 class="section-subtitle">Service Order Aktif</h3>
-                <table class="simple-table">
-                    <thead>
-                        <tr>
-                            <th>Nomor</th>
-                            <th>Customer</th>
-                            <th>Catatan Intake</th>
-                            <th>Status</th>
-                            <th>Target Selesai</th>
-                        </tr>
-                    </thead>
-                    <tbody data-role="open-service-table"></tbody>
-                </table>
-                <div class="list-empty" data-empty="open-service">Belum ada order aktif.</div>
+                <h3 class="section-subtitle">Registrasi Servis</h3>
+                <div class="simple-table__wrapper">
+                    <table class="simple-table simple-table--interactive">
+                        <thead>
+                            <tr>
+                                <th>Nomor</th>
+                                <th>Customer</th>
+                                <th>Kendaraan</th>
+                                <th>Status</th>
+                                <th>Prioritas</th>
+                                <th>Target Selesai</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody data-role="open-service-table"></tbody>
+                    </table>
+                </div>
+                <div class="list-empty" data-empty="open-service">Belum ada registrasi servis.</div>
                 <div class="table-links table-links--trailing">
                     <a data-desk-link="Garage Service Order" target="_blank">Buka di Desk</a>
                 </div>
             </article>
             <article class="portal-card">
-                <h2>Catat Progres Servis</h2>
-                <p class="lead">Tambahkan log progres untuk mengisi tabel progress_logs pada service order yang aktif.</p>
-                <form id="progress-form" class="form-grid">
-                    <div class="form-field">
-                        <label for="progress_service_order">Service Order</label>
-                        <select id="progress_service_order" name="name">
-                            <option value="">— Pilih service order —</option>
-                        </select>
-                    </div>
-                    <div class="form-grid two-column">
-                        <div class="form-field">
-                            <label for="progress_log_date">Tanggal</label>
-                            <input id="progress_log_date" name="log_date" type="date" />
-                        </div>
-                        <div class="form-field">
-                            <label for="progress_status">Status</label>
-                            <select id="progress_status" name="status">
-                                <option value="Started">Started</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Awaiting Parts">Awaiting Parts</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Paused">Paused</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-grid two-column">
-                        <div class="form-field">
-                            <label for="progress_technician">Teknisi</label>
-                            <input id="progress_technician" name="technician" placeholder="User teknisi" />
-                        </div>
-                        <div class="form-field">
-                            <label for="progress_percent">Persentase (%)</label>
-                            <input id="progress_percent" name="percent_complete" type="number" min="0" max="100" step="1" data-cast="float" />
-                        </div>
-                    </div>
-                    <div class="form-field">
-                        <label for="progress_notes">Catatan</label>
-                        <textarea id="progress_notes" name="progress_notes" placeholder="Detail progres"></textarea>
-                    </div>
-                    <div class="form-actions">
-                        <button class="primary" type="submit">Tambahkan Progres</button>
-                    </div>
-                </form>
+                <h2>Catatan Registrasi Terbaru</h2>
+                <p class="lead">Cuplikan catatan intake untuk membantu tim memahami keluhan pelanggan dengan cepat.</p>
+                <ul class="note-list" data-role="service-note-list"></ul>
+                <div class="list-empty" data-empty="service-notes">Belum ada catatan registrasi.</div>
+                <div class="callout callout--info">
+                    <strong>Tip:</strong> Gunakan baris registrasi atau tombol <em>Detail</em> pada daftar untuk mengelompokkan jenis pekerjaan, sumber pembelian, dan rencana pembayaran langsung dari modal aksi.
+                </div>
+            </article>
+            <article class="portal-card">
+                <h2>Panduan Tindak Lanjut</h2>
+                <p class="lead">Pastikan setiap registrasi terselesaikan dengan mengikuti langkah singkat berikut.</p>
+                <ol class="action-steps">
+                    <li><strong>Pilih registrasi.</strong> Klik baris atau tombol <em>Detail</em> untuk membuka modal dan meninjau catatan lengkap pelanggan serta kendaraan.</li>
+                    <li><strong>Kategorikan pekerjaan.</strong> Gunakan panel aksi pada modal untuk menetapkan jenis servis, kategori masalah, serta metode pembayaran yang disepakati.</li>
+                    <li><strong>Simpan catatan tindak lanjut.</strong> Draft aksi tersimpan pada sesi Anda sehingga tim bengkel dapat segera mengeksekusi tanpa menulis ulang.</li>
+                </ol>
+                <div class="callout callout--neutral">
+                    <strong>Catatan:</strong> Data pada halaman ini selalu mengikuti hasil registrasi sehingga tim servis tidak perlu input ulang.
+                </div>
             </article>
         </div>
     </div>
 </section>
+
+<div class="portal-modal" id="service-detail-modal" aria-hidden="true">
+    <div class="portal-modal__backdrop" data-role="service-detail-close"></div>
+    <div class="portal-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="service-detail-modal-title">
+        <header class="portal-modal__header">
+            <h3 class="portal-modal__title" id="service-detail-modal-title">Detail Registrasi Servis</h3>
+            <button class="portal-modal__close" type="button" aria-label="Tutup" data-role="service-detail-close">&times;</button>
+        </header>
+        <div class="portal-modal__body">
+            <div class="detail-overview">
+                <div>
+                    <p class="detail-overview__label">Nomor Order</p>
+                    <p class="detail-overview__value" data-detail="order-name">-</p>
+                </div>
+                <div class="detail-overview__status">
+                    <span class="status-pill" data-detail="status">-</span>
+                    <span class="status-pill status-pill--neutral" data-detail="priority">-</span>
+                </div>
+            </div>
+            <p class="detail-summary" data-role="service-detail-summary">Pilih registrasi untuk melihat detail lengkap.</p>
+            <div class="detail-grid">
+                <section class="detail-section">
+                    <h4>Jadwal &amp; Status</h4>
+                    <dl class="detail-list">
+                        <div class="detail-list__item">
+                            <dt>Booking</dt>
+                            <dd data-detail="booking-date">-</dd>
+                        </div>
+                        <div class="detail-list__item">
+                            <dt>Target Selesai</dt>
+                            <dd data-detail="target-date">-</dd>
+                        </div>
+                        <div class="detail-list__item">
+                            <dt>Selesai Aktual</dt>
+                            <dd data-detail="completion-date">-</dd>
+                        </div>
+                        <div class="detail-list__item">
+                            <dt>Job Card</dt>
+                            <dd data-detail="job-card-status">-</dd>
+                        </div>
+                        <div class="detail-list__item">
+                            <dt>Work Order</dt>
+                            <dd data-detail="work-order-status">-</dd>
+                        </div>
+                        <div class="detail-list__item">
+                            <dt>QC</dt>
+                            <dd data-detail="qc-status">-</dd>
+                        </div>
+                    </dl>
+                </section>
+                <section class="detail-section">
+                    <h4>Estimasi Biaya</h4>
+                    <dl class="detail-list">
+                        <div class="detail-list__item">
+                            <dt>Total Estimasi</dt>
+                            <dd data-detail="total-estimate">Rp0</dd>
+                        </div>
+                        <div class="detail-list__item">
+                            <dt>Total Disetujui</dt>
+                            <dd data-detail="total-approved">Rp0</dd>
+                        </div>
+                    </dl>
+                </section>
+                <section class="detail-section">
+                    <h4>Informasi Customer</h4>
+                    <dl class="detail-list">
+                        <div class="detail-list__item">
+                            <dt>Nama</dt>
+                            <dd data-detail="customer-name">-</dd>
+                        </div>
+                        <div class="detail-list__item">
+                            <dt>Tipe</dt>
+                            <dd data-detail="customer-type">-</dd>
+                        </div>
+                        <div class="detail-list__item">
+                            <dt>Kontak</dt>
+                            <dd data-detail="customer-contact">-</dd>
+                        </div>
+                    </dl>
+                </section>
+                <section class="detail-section">
+                    <h4>Informasi Kendaraan</h4>
+                    <dl class="detail-list">
+                        <div class="detail-list__item">
+                            <dt>Nomor Polisi</dt>
+                            <dd data-detail="vehicle-plate">-</dd>
+                        </div>
+                        <div class="detail-list__item">
+                            <dt>Model</dt>
+                            <dd data-detail="vehicle-model">-</dd>
+                        </div>
+                        <div class="detail-list__item">
+                            <dt>Warna</dt>
+                            <dd data-detail="vehicle-color">-</dd>
+                        </div>
+                        <div class="detail-list__item">
+                            <dt>Transmisi</dt>
+                            <dd data-detail="vehicle-transmission">-</dd>
+                        </div>
+                        <div class="detail-list__item">
+                            <dt>Bahan Bakar</dt>
+                            <dd data-detail="vehicle-fuel">-</dd>
+                        </div>
+                        <div class="detail-list__item">
+                            <dt>Kilometer</dt>
+                            <dd data-detail="vehicle-mileage">-</dd>
+                        </div>
+                    </dl>
+                </section>
+                <section class="detail-section detail-section--full">
+                    <h4>Catatan Registrasi</h4>
+                    <p class="detail-note" data-detail="notes">Tidak ada catatan registrasi.</p>
+                </section>
+                <section class="detail-section detail-section--full">
+                    <h4>Tindakan Servis</h4>
+                    <p class="detail-section__hint">Tetapkan kategori pekerjaan dan catatan tindak lanjut langsung dari modal ini.</p>
+                    <form class="form-grid two-column detail-action-form" data-role="service-action-form">
+                        <div class="form-field">
+                            <label for="detail_service_type">Jenis Servis</label>
+                            <select id="detail_service_type" name="service_type">
+                                <option value="">— Pilih jenis servis —</option>
+                                <option value="Service/Repair">Service/Repair</option>
+                                <option value="Inspection">Inspection</option>
+                                <option value="Warranty">Warranty</option>
+                                <option value="Insurance Claim">Insurance Claim</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="detail_problem_category">Kategori Masalah</label>
+                            <select id="detail_problem_category" name="problem_category">
+                                <option value="">— Pilih kategori —</option>
+                                <option value="Mesin">Mesin</option>
+                                <option value="Kelistrikan">Kelistrikan</option>
+                                <option value="Body &amp; Cat">Body &amp; Cat</option>
+                                <option value="Interior">Interior</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="detail_purchase_type">Jenis Pembelian</label>
+                            <select id="detail_purchase_type" name="purchase_type">
+                                <option value="">— Pilih jenis pembelian —</option>
+                                <option value="Retail">Retail</option>
+                                <option value="Corporate">Corporate</option>
+                                <option value="Asuransi">Asuransi</option>
+                                <option value="Garansi">Garansi</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="detail_payment_method">Metode Pembayaran</label>
+                            <select id="detail_payment_method" name="payment_method">
+                                <option value="">— Pilih metode pembayaran —</option>
+                                <option value="Tunai">Tunai</option>
+                                <option value="Transfer">Transfer</option>
+                                <option value="Kartu Kredit">Kartu Kredit</option>
+                                <option value="Termin">Termin</option>
+                            </select>
+                        </div>
+                        <div class="form-field form-field--full">
+                            <label for="detail_action_notes">Catatan Tindak Lanjut</label>
+                            <textarea id="detail_action_notes" name="action_notes" placeholder="Rincian keputusan, kebutuhan part, atau tindak lanjut lainnya."></textarea>
+                        </div>
+                        <div class="form-actions form-field--full">
+                            <button class="primary" type="submit" data-role="service-action-submit">Simpan Aksi</button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="portal-modal" id="service-status-modal" aria-hidden="true">
     <div class="portal-modal__backdrop" data-role="status-modal-close"></div>
