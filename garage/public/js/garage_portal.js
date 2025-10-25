@@ -1216,8 +1216,10 @@
             container.className = 'table-contact';
             const phone = (
                 customer?.phone ||
+                customer?.phone_number ||
                 customer?.mobile_no ||
                 fallback?.phone ||
+                fallback?.phone_number ||
                 fallback?.mobile_no ||
                 fallback?.customer_phone ||
                 fallback?.contact_phone ||
@@ -1227,6 +1229,7 @@
                 customer?.email ||
                 customer?.email_id ||
                 fallback?.email ||
+                fallback?.email_id ||
                 fallback?.customer_email ||
                 fallback?.contact_email ||
                 ''

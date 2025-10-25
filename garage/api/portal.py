@@ -645,6 +645,8 @@ def portal_bootstrap() -> Dict[str, Any]:
             "customer_name",
             "customer_type",
             "phone",
+            "phone_number",
+            "mobile_no",
             "email",
             "preferred_contact_method",
             "marketing_source",
@@ -673,6 +675,24 @@ def portal_bootstrap() -> Dict[str, Any]:
         vehicle_fields,
         limit=100,
     )
+
+    customer_index = {customer.get("name"): customer for customer in customers if customer.get("name")}
+    for vehicle in vehicles:
+        customer = customer_index.get(vehicle.get("customer"))
+        if not customer:
+            continue
+
+        phone_candidates = [
+            customer.get("phone"),
+            customer.get("phone_number"),
+            customer.get("mobile_no"),
+        ]
+        email_candidates = [customer.get("email")]
+
+        vehicle["customer_name"] = customer.get("customer_name") or customer.get("name")
+        vehicle["customer_type"] = customer.get("customer_type")
+        vehicle["customer_phone"] = next((p for p in phone_candidates if p), None)
+        vehicle["customer_email"] = next((e for e in email_candidates if e), None)
     service_orders = _list_dicts(
         "Garage Service Order",
         [
