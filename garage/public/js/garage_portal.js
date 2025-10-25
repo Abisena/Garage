@@ -1003,18 +1003,18 @@
             const customerMap = this.customerIndex;
             const combinedRows = vehicles.slice(0, 8).map((vehicle) => {
                 const customer = customerMap.get(vehicle.customer);
-                const contact = customer ? [customer.phone, customer.email].filter(Boolean).join(' / ') : '';
+                const customerLink = this.renderLink(
+                    'Garage Customer',
+                    customer?.name || vehicle.customer,
+                    this.getCustomerDisplayName(customer, vehicle)
+                );
                 const model = [vehicle.brand, vehicle.model].filter(Boolean).join(' ') || '-';
                 const serviceTimestamp = vehicle.last_service_logged_at || vehicle.last_service_date || vehicle.creation;
                 return [
-                    this.renderLink(
-                        'Garage Customer',
-                        customer?.name || vehicle.customer,
-                        customer?.customer_name || vehicle.customer || '-'
-                    ),
-                    customer?.customer_type || '-',
-                    contact || '-',
-                    customer?.is_vip ? 'Ya' : 'Tidak',
+                    customerLink,
+                    this.getVipTypeLabel(customer),
+                    this.createContactCell(customer),
+                    this.getVipStatusLabel(customer),
                     this.renderLink('Garage Vehicle', vehicle.name, vehicle.license_plate || vehicle.name),
                     model,
                     this.formatTimestamp(serviceTimestamp),
@@ -1023,12 +1023,15 @@
 
             if (!combinedRows.length) {
                 customers.slice(0, 8).forEach((customer) => {
-                    const contact = [customer.phone, customer.email].filter(Boolean).join(' / ');
                     combinedRows.push([
-                        this.renderLink('Garage Customer', customer.name, customer.customer_name || customer.name),
-                        customer.customer_type || '-',
-                        contact || '-',
-                        customer.is_vip ? 'Ya' : 'Tidak',
+                        this.renderLink(
+                            'Garage Customer',
+                            customer.name,
+                            this.getCustomerDisplayName(customer)
+                        ),
+                        this.getVipTypeLabel(customer),
+                        this.createContactCell(customer),
+                        this.getVipStatusLabel(customer),
                         '—',
                         '—',
                         '—',
@@ -1042,6 +1045,69 @@
                 (row) => row,
                 this.emptyStates.customerVehicles
             );
+        }
+
+        getCustomerDisplayName(customer, vehicle) {
+            if (customer?.customer_name) {
+                return customer.customer_name;
+            }
+            if (customer?.customer_full_name) {
+                return customer.customer_full_name;
+            }
+            if (customer?.full_name) {
+                return customer.full_name;
+            }
+            if (customer?.display_name) {
+                return customer.display_name;
+            }
+            if (vehicle?.customer_name) {
+                return vehicle.customer_name;
+            }
+            if (vehicle?.customer_display_name) {
+                return vehicle.customer_display_name;
+            }
+            if (vehicle?.customer_title) {
+                return vehicle.customer_title;
+            }
+            if (customer?.name && customer?.name !== vehicle?.customer) {
+                return customer.name;
+            }
+            return vehicle?.customer || customer?.name || '-';
+        }
+
+        getVipTypeLabel(customer) {
+            if (!customer) {
+                return '-';
+            }
+            return customer.is_vip ? 'VIP' : 'Reguler';
+        }
+
+        getVipStatusLabel(customer) {
+            if (!customer) {
+                return '-';
+            }
+            return customer.is_vip ? 'Iya' : 'Tidak';
+        }
+
+        createContactCell(customer) {
+            const container = document.createElement('div');
+            container.className = 'table-contact';
+            const phone = (customer?.phone || '').trim();
+            const email = (customer?.email || '').trim();
+            if (phone) {
+                const phoneLine = document.createElement('div');
+                phoneLine.textContent = phone;
+                container.appendChild(phoneLine);
+            }
+            if (email) {
+                const emailLine = document.createElement('div');
+                emailLine.textContent = email;
+                container.appendChild(emailLine);
+            }
+            if (!container.childNodes.length) {
+                container.textContent = '-';
+            }
+            return container;
         }
 
         renderServiceSection() {
