@@ -87,6 +87,20 @@
             this.refreshButtons = document.querySelectorAll('[data-action="refresh-portal"]');
             this.refreshedAtLabel = document.querySelector('[data-role="refreshed-at"]');
             this.deskLinks = document.querySelectorAll('[data-desk-link]');
+
+            this.modals = {
+                status: document.getElementById('service-status-modal'),
+            };
+
+            this.statusModal = {
+                container: document.getElementById('service-status-modal'),
+                title: document.querySelector('[data-role="status-modal-title"]'),
+                summary: document.querySelector('[data-role="status-modal-summary"]'),
+                tableBody: document.querySelector('[data-role="status-modal-table"]'),
+                tableWrapper: document.querySelector('[data-role="status-modal-table-wrapper"]'),
+                emptyState: document.querySelector('[data-role="status-modal-empty"]'),
+                closeButtons: document.querySelectorAll('[data-role="status-modal-close"]'),
+            };
         }
 
         bindEvents() {
@@ -278,6 +292,230 @@
             this.refreshButtons.forEach((button) => {
                 button.addEventListener('click', () => this.fetchBootstrap());
             });
+
+            if (this.statusModal?.closeButtons) {
+                this.statusModal.closeButtons.forEach((button) => {
+                    button.addEventListener('click', () => this.closeStatusModal());
+                });
+            }
+
+            if (this.statusModal?.container) {
+                this.statusModal.container.addEventListener('click', (event) => {
+                    if (event.target === this.statusModal.container) {
+                        this.closeStatusModal();
+                    }
+                });
+            }
+        }
+
+        applyExistingCustomerSelection() {
+            const select = this.selects.existingCustomer;
+            if (!select) {
+                return;
+            }
+            const value = select.value;
+            if (!value) {
+                if (this.selects.vehicleCustomer) {
+                    this.setSelectValue(this.selects.vehicleCustomer, '');
+                }
+                return;
+            }
+            const customer = this.customerIndex.get(value);
+            if (customer) {
+                this.prefillCustomerFields(customer);
+            }
+            if (this.selects.vehicleCustomer) {
+                this.setSelectValue(this.selects.vehicleCustomer, value);
+            }
+        }
+
+        handleLicensePlateChange() {
+            if (!this.inputs.licensePlate) {
+                return;
+            }
+            const rawValue = this.inputs.licensePlate.value || '';
+            const normalized = this.normalizeLicensePlate(rawValue);
+            if (!normalized) {
+                this.lastPrefilledPlate = null;
+                this.clearVehicleCustomerSelection();
+                return;
+            }
+            const vehicle = this.vehicleIndex.get(normalized);
+            if (!vehicle) {
+                this.fetchVehicleByPlate(normalized, rawValue);
+                return;
+            }
+            const previousPrefilled = this.lastPrefilledPlate;
+            this.lastPrefilledPlate = normalized;
+            this.prefillVehicleFields(vehicle);
+            if (vehicle.customer && this.selects.existingCustomer) {
+                const set = this.setSelectValue(this.selects.existingCustomer, vehicle.customer);
+                if (set) {
+                    this.applyExistingCustomerSelection();
+                } else {
+                    const existing = this.customerIndex.get(vehicle.customer);
+                    if (existing) {
+                        this.ensureCustomerOptions(vehicle.customer, existing.customer_name || vehicle.customer);
+                        this.setSelectValue(this.selects.existingCustomer, vehicle.customer);
+                        this.prefillCustomerFields(existing);
+                    }
+                }
+            } else if (this.selects.existingCustomer) {
+                this.setSelectValue(this.selects.existingCustomer, '');
+            }
+            if (this.selects.vehicleCustomer) {
+                this.setSelectValue(this.selects.vehicleCustomer, vehicle.customer || '');
+            }
+            if (window.frappe && frappe.show_alert && previousPrefilled !== normalized) {
+                frappe.show_alert({
+                    message: __('Data kendaraan ditemukan dan terisi otomatis.'),
+                    indicator: 'green',
+                });
+            }
+        }
+
+        fetchVehicleByPlate(normalized, rawValue) {
+            if (!normalized) {
+                return;
+            }
+            if (!window.frappe || !frappe.call) {
+                this.lastPrefilledPlate = null;
+                this.clearVehicleCustomerSelection();
+                this.notifyPlateNotFound();
+                return;
+            }
+            frappe.call({
+                method: 'garage.api.portal.lookup_vehicle_by_plate',
+                args: { license_plate: rawValue },
+                callback: (response) => {
+                    const data = response?.message || {};
+                    const vehicle = data.vehicle;
+                    if (!vehicle) {
+                        this.lastPrefilledPlate = null;
+                        this.clearVehicleCustomerSelection();
+                        this.notifyPlateNotFound();
+                        return;
+                    }
+                    const previousPrefilled = this.lastPrefilledPlate;
+                    this.vehicleIndex.set(normalized, vehicle);
+                    this.lastPrefilledPlate = normalized;
+                    this.prefillVehicleFields(vehicle);
+                    const customerName = vehicle.customer;
+                    const customer = data.customer || (customerName ? this.customerIndex.get(customerName) : null);
+                    if (customerName) {
+                        if (customer) {
+                            this.customerIndex.set(customerName, customer);
+                            this.ensureCustomerOptions(customerName, customer.customer_name || customerName);
+                            this.prefillCustomerFields(customer);
+                        } else {
+                            this.ensureCustomerOptions(customerName, customerName);
+                        }
+                        if (this.selects.existingCustomer) {
+                            this.setSelectValue(this.selects.existingCustomer, customerName);
+                        }
+                        if (this.selects.vehicleCustomer) {
+                            this.setSelectValue(this.selects.vehicleCustomer, customerName);
+                        }
+                    } else {
+                        if (this.selects.existingCustomer) {
+                            this.setSelectValue(this.selects.existingCustomer, '');
+                        }
+                        this.clearVehicleCustomerSelection();
+                    }
+                    if (window.frappe && frappe.show_alert && previousPrefilled !== normalized) {
+                        frappe.show_alert({
+                            message: __('Data kendaraan ditemukan dan terisi otomatis.'),
+                            indicator: 'green',
+                        });
+                    }
+                },
+                error: () => {
+                    this.lastPrefilledPlate = null;
+                    this.clearVehicleCustomerSelection();
+                    this.notifyPlateNotFound();
+                },
+            });
+        }
+
+        clearVehicleCustomerSelection() {
+            if (this.selects.vehicleCustomer) {
+                this.setSelectValue(this.selects.vehicleCustomer, '');
+            }
+        }
+
+        prefillVehicleFields(vehicle) {
+            const form = this.forms.intake;
+            if (!form) {
+                return;
+            }
+            if (this.inputs.licensePlate && vehicle.license_plate) {
+                this.inputs.licensePlate.value = vehicle.license_plate;
+            }
+            const mapping = {
+                brand: 'brand',
+                model: 'model',
+                vehicle_year: 'vehicle_year',
+                color: 'color',
+                transmission: 'transmission',
+                fuel_type: 'fuel_type',
+                mileage: 'mileage',
+            };
+            Object.entries(mapping).forEach(([fieldName, sourceKey]) => {
+                const field = form.querySelector(`[name="${fieldName}"]`);
+                if (!field) {
+                    return;
+                }
+                const value = vehicle[sourceKey];
+                if (field.tagName === 'SELECT') {
+                    this.setSelectValue(field, value);
+                } else {
+                    field.value = value !== undefined && value !== null ? value : '';
+                }
+            });
+        }
+
+        prefillCustomerFields(customer) {
+            const form = this.forms.intake;
+            if (!form) {
+                return;
+            }
+            const mapping = {
+                customer_name: 'customer_name',
+                customer_type: 'customer_type',
+                phone: 'phone',
+                email: 'email',
+                preferred_contact_method: 'preferred_contact_method',
+                marketing_source: 'marketing_source',
+            };
+            Object.entries(mapping).forEach(([fieldName, sourceKey]) => {
+                const field = form.querySelector(`[name="${fieldName}"]`);
+                if (!field) {
+                    return;
+                }
+                const value = customer[sourceKey];
+                if (field.tagName === 'SELECT') {
+                    if (!this.setSelectValue(field, value)) {
+                        if (field.options && field.options.length) {
+                            field.value = field.options[0].value;
+                        }
+                    }
+                } else {
+                    field.value = value ?? '';
+                }
+            });
+            const vipField = form.querySelector('[name="is_vip"]');
+            if (vipField) {
+                const vipValue = customer.is_vip ? '1' : '0';
+                this.setSelectValue(vipField, vipValue);
+            }
+        }
+
+        normalizeLicensePlate(value) {
+            return (value || '')
+                .toString()
+                .trim()
+                .replace(/[^0-9A-Za-z]/g, '')
+                .toUpperCase();
         }
 
         applyExistingCustomerSelection() {
@@ -647,6 +885,7 @@
         renderServiceSection() {
             const serviceOrders = this.asArray(this.state.service_orders);
             const openService = this.asArray(this.state.open_service_orders);
+            this.cachedServiceOrders = serviceOrders;
 
             const totalEstimate = serviceOrders.reduce((acc, row) => acc + (parseFloat(row.total_estimated_amount) || 0), 0);
             const qcPending = serviceOrders.filter((row) => (row.qc_status || '').toLowerCase() === 'pending').length;
@@ -754,6 +993,19 @@
                     value.textContent = total;
                     item.appendChild(label);
                     item.appendChild(value);
+                    if (key === 'service-orders') {
+                        item.classList.add('status-list__item--interactive');
+                        item.setAttribute('role', 'button');
+                        item.setAttribute('tabindex', '0');
+                        const openModal = () => this.openServiceStatusModal(status);
+                        item.addEventListener('click', openModal);
+                        item.addEventListener('keydown', (event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                openModal();
+                            }
+                        });
+                    }
                     list.appendChild(item);
                 });
             });
@@ -853,6 +1105,107 @@
                 return Object.values(value);
             }
             return [];
+        }
+
+        openServiceStatusModal(status) {
+            if (!this.statusModal?.container) {
+                return;
+            }
+
+            const safeStatus = status || __('Tidak diketahui');
+            const normalizedStatus = (status || '').toLowerCase();
+            const matching = this.cachedServiceOrders.filter(
+                (order) => (order.status || '').toLowerCase() === normalizedStatus
+            );
+
+            if (this.statusModal.title) {
+                this.statusModal.title.textContent = `Detail Status Servis – ${safeStatus}`;
+            }
+
+            if (this.statusModal.summary) {
+                if (matching.length) {
+                    const totalEstimate = matching.reduce(
+                        (sum, order) => sum + (parseFloat(order.total_estimated_amount) || 0),
+                        0
+                    );
+                    this.statusModal.summary.textContent = `${matching.length} service order dengan status ${safeStatus}. Total estimasi pekerjaan ${this.currencyFormatter.format(totalEstimate)}.`;
+                } else {
+                    this.statusModal.summary.textContent = `Tidak ada service order dengan status ${safeStatus}.`;
+                }
+            }
+
+            if (this.statusModal.tableBody) {
+                this.statusModal.tableBody.innerHTML = '';
+            }
+
+            if (matching.length && this.statusModal.tableBody) {
+                matching.forEach((order) => {
+                    const row = document.createElement('tr');
+                    const cells = [
+                        this.renderLink('Garage Service Order', order.name),
+                        order.customer || '-',
+                        order.vehicle || '-',
+                        order.priority || '-',
+                        order.status || '-',
+                        this.formatTimestamp(order.service_booking_date),
+                        this.formatTimestamp(order.estimated_delivery_date),
+                        this.formatTimestamp(order.actual_delivery_date),
+                        order.qc_status || '-',
+                    ];
+                    cells.forEach((cellValue) => {
+                        const cell = document.createElement('td');
+                        if (cellValue instanceof HTMLElement) {
+                            cell.appendChild(cellValue);
+                        } else {
+                            cell.textContent = cellValue;
+                        }
+                        row.appendChild(cell);
+                    });
+                    this.statusModal.tableBody.appendChild(row);
+                });
+            }
+
+            if (this.statusModal.tableWrapper) {
+                this.statusModal.tableWrapper.style.display = matching.length ? 'block' : 'none';
+            }
+            if (this.statusModal.emptyState) {
+                this.statusModal.emptyState.classList.toggle('is-visible', !matching.length);
+            }
+
+            this.previousFocus = document.activeElement;
+            this.statusModal.container.classList.add('is-open');
+            this.statusModal.container.setAttribute('aria-hidden', 'false');
+            this.bodyOverflowCache = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            document.addEventListener('keydown', this.handleStatusModalKeydown);
+
+            const closeButton = this.statusModal.container.querySelector('.portal-modal__close');
+            if (closeButton) {
+                closeButton.focus();
+            }
+        }
+
+        closeStatusModal() {
+            if (!this.statusModal?.container) {
+                return;
+            }
+            this.statusModal.container.classList.remove('is-open');
+            this.statusModal.container.setAttribute('aria-hidden', 'true');
+            document.removeEventListener('keydown', this.handleStatusModalKeydown);
+            if (typeof this.bodyOverflowCache === 'string') {
+                document.body.style.overflow = this.bodyOverflowCache;
+            } else {
+                document.body.style.removeProperty('overflow');
+            }
+            if (this.previousFocus && typeof this.previousFocus.focus === 'function') {
+                this.previousFocus.focus();
+            }
+        }
+
+        handleStatusModalKeydown(event) {
+            if (event.key === 'Escape') {
+                this.closeStatusModal();
+            }
         }
 
         renderLink(doctype, name, label) {

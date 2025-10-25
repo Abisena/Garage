@@ -159,6 +159,32 @@ body {
     gap: 2rem;
 }
 
+.portal-grid--service {
+    grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+    grid-auto-rows: minmax(0, auto);
+}
+
+.portal-grid--service > .portal-card {
+    height: auto;
+}
+
+.portal-grid--service > .portal-card--primary {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+}
+
+.portal-grid--service > .portal-card:nth-of-type(2) {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.portal-grid--service > .portal-card:nth-of-type(3) {
+    grid-column: 2;
+    grid-row: 2;
+}
+
 /* CARDS - Major improvements */
 .portal-card {
     background: var(--portal-surface);
@@ -718,6 +744,17 @@ button.secondary:hover:not(:disabled) {
 @media (max-width: 768px) {
     .container {
         padding: 0 1.25rem;
+    }
+
+    .portal-grid--service {
+        grid-template-columns: 1fr;
+    }
+
+    .portal-grid--service > .portal-card--primary,
+    .portal-grid--service > .portal-card:nth-of-type(2),
+    .portal-grid--service > .portal-card:nth-of-type(3) {
+        grid-column: 1;
+        grid-row: auto;
     }
 
     .portal-hero {
