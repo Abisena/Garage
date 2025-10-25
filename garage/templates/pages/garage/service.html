@@ -166,33 +166,27 @@ body {
     }
 }
 
-/* === HERO SECTION (SUB) === */
+/* === HEADER SECTION === */
 .portal-hero--sub {
     position: relative;
-    padding: var(--space-12) 0 var(--space-10) !important;
     background: linear-gradient(160deg, 
         var(--primary-darker) 0%, 
         var(--primary-dark) 40%, 
-        var(--primary) 100%) !important;
+        var(--primary) 100%);
+    padding: var(--space-6) 0 var(--space-4) 0;
+    margin-top: var(--space-6);
     overflow: hidden;
-    margin-bottom: var(--space-12) !important;
 }
 
+/* Animated Background Pattern */
 .portal-hero--sub::before {
     content: '';
     position: absolute;
     inset: 0;
     background-image: 
-        radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
-        radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
-    background-size: 100% 100%;
-    animation: subtleFloat 20s ease-in-out infinite;
+        radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
     z-index: 0;
-}
-
-@keyframes subtleFloat {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 0.5; }
 }
 
 .portal-hero--sub .container {
@@ -237,28 +231,26 @@ body {
 }
 
 .portal-hero--sub h1 {
-    font-size: var(--font-size-4xl) !important;
+    font-size: var(--font-size-2xl) !important;
     font-weight: var(--font-weight-bold) !important;
     line-height: var(--line-height-tight) !important;
     color: var(--text-inverse) !important;
-    margin-bottom: var(--space-4) !important;
+    margin: 0 !important;
     letter-spacing: -0.02em;
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
 
 .portal-hero--sub p {
-    font-size: var(--font-size-base) !important;
+    font-size: var(--font-size-sm) !important;
     line-height: var(--line-height-relaxed) !important;
-    color: rgba(255, 255, 255, 0.95) !important;
-    max-width: 800px;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    color: rgba(255, 255, 255, 0.85) !important;
+    margin: 0 !important;
 }
 
 /* === NAVIGATION WRAPPER === */
 .portal-nav-wrapper {
-    background: linear-gradient(160deg,
-        var(--primary-darker) 0%,
-        var(--primary-dark) 40%,
+    background: linear-gradient(160deg, 
+        var(--primary-darker) 0%, 
+        var(--primary-dark) 40%, 
         var(--primary) 100%);
     padding: 0 0 var(--space-6) 0;
     box-shadow: var(--shadow-lg);
@@ -343,16 +335,20 @@ body {
     display: none;
 }
 
-/* === SECTIONS === */
+/* === SECTION SPACING === */
 .portal-section {
     padding: var(--space-12) 0 var(--space-16) !important;
+}
+
+.portal-section:first-of-type {
+    padding-top: var(--space-8) !important;
 }
 
 /* === GRID SYSTEM === */
 .portal-grid {
     display: grid !important;
     gap: var(--space-8) !important;
-    margin-bottom: var(--space-8) !important;
+    
 }
 
 .portal-grid.two-column {
@@ -361,7 +357,7 @@ body {
 
 @media (min-width: 1024px) {
     .portal-grid.two-column {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
         gap: var(--space-10) !important;
     }
 }
