@@ -1103,6 +1103,24 @@
             if (docname && this.customerIndex.has(docname)) {
                 return { docname, record: this.customerIndex.get(docname) };
             }
+
+            const nameCandidates = [
+                vehicle?.customer_name,
+                vehicle?.customer_display_name,
+                vehicle?.customer_title,
+                vehicle?.customer,
+            ]
+                .map((value) => (value || '').trim().toLowerCase())
+                .filter(Boolean);
+            for (const key of nameCandidates) {
+                if (this.customerNameMap.has(key)) {
+                    const resolvedDocname = this.customerNameMap.get(key);
+                    if (resolvedDocname && this.customerIndex.has(resolvedDocname)) {
+                        return { docname: resolvedDocname, record: this.customerIndex.get(resolvedDocname) };
+                    }
+                }
+            }
+
             return {
                 docname,
                 record: {
@@ -1113,8 +1131,16 @@
                         vehicle?.customer ||
                         '',
                     customer_type: vehicle?.customer_type,
-                    phone: vehicle?.phone || vehicle?.customer_phone || vehicle?.contact_phone,
-                    email: vehicle?.email || vehicle?.customer_email || vehicle?.contact_email,
+                    phone:
+                        vehicle?.phone ||
+                        vehicle?.customer_phone ||
+                        vehicle?.contact_phone ||
+                        vehicle?.mobile_no,
+                    email:
+                        vehicle?.email ||
+                        vehicle?.customer_email ||
+                        vehicle?.contact_email ||
+                        vehicle?.email_id,
                     is_vip: vehicle?.is_vip,
                 },
             };
@@ -1133,6 +1159,9 @@
             if (customer?.display_name) {
                 return customer.display_name;
             }
+            if (customer?.name && customer?.customer_name && customer.name !== customer.customer_name) {
+                return customer.customer_name;
+            }
             if (vehicle?.customer_name) {
                 return vehicle.customer_name;
             }
@@ -1141,9 +1170,6 @@
             }
             if (vehicle?.customer_title) {
                 return vehicle.customer_title;
-            }
-            if (customer?.name && customer?.name !== vehicle?.customer) {
-                return customer.name;
             }
             return vehicle?.customer || customer?.name || '-';
         }
@@ -1159,20 +1185,52 @@
         }
 
         getVipStatusLabel(customer, vehicle) {
-            if (typeof customer?.is_vip === 'boolean') {
-                return customer.is_vip ? 'Iya' : 'Tidak';
-            }
-            if (typeof vehicle?.is_vip === 'boolean') {
-                return vehicle.is_vip ? 'Iya' : 'Tidak';
-            }
-            return '-';
+            const mapStatus = (value) => {
+                if (typeof value === 'boolean') {
+                    return value ? 'Iya' : 'Tidak';
+                }
+                if (typeof value === 'string') {
+                    const normalized = value.trim().toLowerCase();
+                    if (!normalized) {
+                        return null;
+                    }
+                    if (['yes', 'iya', 'true', '1'].includes(normalized)) {
+                        return 'Iya';
+                    }
+                    if (['no', 'tidak', 'false', '0'].includes(normalized)) {
+                        return 'Tidak';
+                    }
+                }
+                return null;
+            };
+            const status =
+                mapStatus(customer?.is_vip) ??
+                mapStatus(vehicle?.is_vip) ??
+                mapStatus(customer?.vip_status) ??
+                mapStatus(vehicle?.vip_status);
+            return status || '-';
         }
 
         createContactCell(customer, fallback) {
             const container = document.createElement('div');
             container.className = 'table-contact';
-            const phone = (customer?.phone || fallback?.phone || fallback?.customer_phone || fallback?.contact_phone || '').trim();
-            const email = (customer?.email || fallback?.email || fallback?.customer_email || fallback?.contact_email || '').trim();
+            const phone = (
+                customer?.phone ||
+                customer?.mobile_no ||
+                fallback?.phone ||
+                fallback?.mobile_no ||
+                fallback?.customer_phone ||
+                fallback?.contact_phone ||
+                ''
+            ).trim();
+            const email = (
+                customer?.email ||
+                customer?.email_id ||
+                fallback?.email ||
+                fallback?.customer_email ||
+                fallback?.contact_email ||
+                ''
+            ).trim();
             if (phone) {
                 const phoneLine = document.createElement('div');
                 phoneLine.textContent = phone;
