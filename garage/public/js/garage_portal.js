@@ -8,6 +8,7 @@
                 minimumFractionDigits: 0,
             });
             this.customerIndex = new Map();
+            this.customerIndexInsensitive = new Map();
             this.vehicleIndex = new Map();
             this.vehicleByName = new Map();
             this.serviceOrderIndex = new Map();
@@ -414,7 +415,7 @@
             if (!select) {
                 return;
             }
-            const value = select.value;
+            const value = this.normalizeDocname(select.value);
             if (!value) {
                 this.updateCustomerSearchInput(null);
                 if (this.selects.vehicleCustomer) {
@@ -423,7 +424,7 @@
                 this.clearCustomerFields();
                 return;
             }
-            const customer = this.customerIndex.get(value);
+            const customer = this.getCustomerByName(value);
             if (customer) {
                 this.prefillCustomerFields(customer);
                 this.updateCustomerSearchInput(customer);
@@ -465,10 +466,11 @@
                 if (set) {
                     this.applyExistingCustomerSelection();
                 } else {
-                    const existing = this.customerIndex.get(vehicle.customer);
+                    const existing = this.getCustomerByName(vehicle.customer);
                     if (existing) {
-                        this.ensureCustomerOptions(vehicle.customer, existing.customer_name || vehicle.customer);
-                        this.setSelectValue(this.selects.existingCustomer, vehicle.customer);
+                        const docname = this.normalizeDocname(vehicle.customer);
+                        this.ensureCustomerOptions(docname, existing.customer_name || docname);
+                        this.setSelectValue(this.selects.existingCustomer, docname);
                         this.prefillCustomerFields(existing);
                     }
                 }
@@ -476,7 +478,7 @@
                 this.setSelectValue(this.selects.existingCustomer, '');
             }
             if (this.selects.vehicleCustomer) {
-                this.setSelectValue(this.selects.vehicleCustomer, vehicle.customer || '');
+                this.setSelectValue(this.selects.vehicleCustomer, this.normalizeDocname(vehicle.customer));
             }
             if (window.frappe && frappe.show_alert && previousPrefilled !== normalized) {
                 frappe.show_alert({
@@ -512,23 +514,25 @@
                     this.registerVehicleData(vehicle);
                     this.lastPrefilledPlate = normalized;
                     this.prefillVehicleFields(vehicle);
-                    const customerName = vehicle.customer;
-                    const customer = data.customer || (customerName ? this.customerIndex.get(customerName) : null);
-                    if (customerName) {
+                    const rawCustomerName = vehicle.customer;
+                    const customerDocname = this.normalizeDocname(rawCustomerName);
+                    const customer =
+                        data.customer || (rawCustomerName ? this.getCustomerByName(rawCustomerName) : null);
+                    if (customerDocname) {
                         if (customer) {
                             this.registerCustomerData(customer);
                             this.prefillCustomerFields(customer);
                         } else {
-                            this.ensureCustomerOptions(customerName, customerName);
+                            this.ensureCustomerOptions(customerDocname, customerDocname);
                         }
                         if (this.selects.existingCustomer) {
-                            const didSet = this.setSelectValue(this.selects.existingCustomer, customerName);
+                            const didSet = this.setSelectValue(this.selects.existingCustomer, customerDocname);
                             if (didSet) {
                                 this.applyExistingCustomerSelection();
                             }
                         }
                         if (this.selects.vehicleCustomer) {
-                            this.setSelectValue(this.selects.vehicleCustomer, customerName);
+                            this.setSelectValue(this.selects.vehicleCustomer, customerDocname);
                         }
                     } else {
                         if (this.selects.existingCustomer) {
@@ -670,14 +674,19 @@
             if (!customer || !customer.name) {
                 return;
             }
-            this.customerIndex.set(customer.name, customer);
+            const docname = this.normalizeDocname(customer.name);
+            if (!docname) {
+                return;
+            }
+            this.customerIndex.set(docname, customer);
+            this.customerIndexInsensitive.set(docname.toLowerCase(), customer);
             const nameKey = (customer.customer_name || '').trim().toLowerCase();
             if (nameKey) {
-                this.customerNameMap.set(nameKey, customer.name);
+                this.customerNameMap.set(nameKey, docname);
             }
             const label = this.formatCustomerSearchLabel(customer);
             if (label) {
-                this.customerSearchIndex.set(label, customer.name);
+                this.customerSearchIndex.set(label, docname);
                 const datalist = this.datalists?.existingCustomer;
                 if (datalist) {
                     const hasOption = Array.from(datalist.querySelectorAll('option')).some(
@@ -691,11 +700,13 @@
                 }
             }
             if (updateSelect) {
-                this.ensureCustomerOptions(customer.name, customer.customer_name || customer.name);
+                this.ensureCustomerOptions(docname, customer.customer_name || customer.name);
             }
         }
 
         rebuildCustomerSearch(customers) {
+            this.customerIndex = new Map();
+            this.customerIndexInsensitive = new Map();
             this.customerNameMap = new Map();
             this.customerSearchIndex = new Map();
             const datalist = this.datalists?.existingCustomer;
@@ -706,13 +717,19 @@
                 if (!customer) {
                     return;
                 }
+                const docname = this.normalizeDocname(customer.name);
+                if (!docname) {
+                    return;
+                }
+                this.customerIndex.set(docname, customer);
+                this.customerIndexInsensitive.set(docname.toLowerCase(), customer);
                 const nameKey = (customer.customer_name || '').trim().toLowerCase();
                 if (nameKey) {
-                    this.customerNameMap.set(nameKey, customer.name);
+                    this.customerNameMap.set(nameKey, docname);
                 }
                 const label = this.formatCustomerSearchLabel(customer);
                 if (label) {
-                    this.customerSearchIndex.set(label, customer.name);
+                    this.customerSearchIndex.set(label, docname);
                     if (datalist) {
                         const option = document.createElement('option');
                         option.value = label;
@@ -763,7 +780,7 @@
                 if (this.selects.existingCustomer) {
                     const set = this.setSelectValue(this.selects.existingCustomer, docname);
                     if (!set) {
-                        const customer = this.customerIndex.get(docname);
+                        const customer = this.getCustomerByName(docname);
                         const label = customer ? customer.customer_name || customer.name : query;
                         this.ensureCustomerOptions(docname, label);
                         this.setSelectValue(this.selects.existingCustomer, docname);
@@ -805,7 +822,7 @@
         }
 
         lookupCustomerByDocname(name) {
-            const identifier = (name || '').trim();
+            const identifier = this.normalizeDocname(name).trim();
             if (!identifier || this.pendingCustomerLookups.has(identifier)) {
                 return;
             }
@@ -844,13 +861,14 @@
             if (Array.isArray(vehicles)) {
                 vehicles.forEach((vehicle) => this.registerVehicleData(vehicle));
             }
-            const label = customer.customer_name || customer.name;
+            const docname = this.normalizeDocname(customer.name);
+            const label = customer.customer_name || docname;
             if (this.selects.existingCustomer) {
-                this.ensureCustomerOptions(customer.name, label);
-                this.setSelectValue(this.selects.existingCustomer, customer.name);
+                this.ensureCustomerOptions(docname, label);
+                this.setSelectValue(this.selects.existingCustomer, docname);
             }
             if (this.selects.vehicleCustomer) {
-                this.setSelectValue(this.selects.vehicleCustomer, customer.name);
+                this.setSelectValue(this.selects.vehicleCustomer, docname);
             }
             this.prefillCustomerFields(customer);
             this.updateCustomerSearchInput(customer);
@@ -877,6 +895,28 @@
                 .trim()
                 .replace(/[^0-9A-Za-z]/g, '')
                 .toUpperCase();
+        }
+
+        normalizeDocname(value) {
+            if (value === undefined || value === null) {
+                return '';
+            }
+            return String(value).trim();
+        }
+
+        getCustomerByName(value) {
+            const key = this.normalizeDocname(value);
+            if (!key) {
+                return null;
+            }
+            if (this.customerIndex.has(key)) {
+                return this.customerIndex.get(key);
+            }
+            const lowercaseKey = key.toLowerCase();
+            if (this.customerIndexInsensitive.has(lowercaseKey)) {
+                return this.customerIndexInsensitive.get(lowercaseKey);
+            }
+            return null;
         }
 
         initRepeaters() {
@@ -946,7 +986,6 @@
             const customers = this.asArray(this.state.customers);
             const vehicles = this.asArray(this.state.vehicles);
 
-            this.customerIndex = new Map(customers.map((customer) => [customer.name, customer]));
             this.rebuildCustomerSearch(customers);
             this.vehicleIndex = new Map();
             this.vehicleByName = new Map(vehicles.map((vehicle) => [vehicle.name, vehicle]));
@@ -989,7 +1028,7 @@
             if (this.selects.existingCustomer) {
                 const selected = this.selects.existingCustomer.value;
                 if (selected) {
-                    const selectedCustomer = this.customerIndex.get(selected);
+                    const selectedCustomer = this.getCustomerByName(selected);
                     this.updateCustomerSearchInput(selectedCustomer || null);
                 } else {
                     this.updateCustomerSearchInput(null);
@@ -1000,21 +1039,19 @@
 
             this.updateServiceVehicleOptions();
 
-            const customerMap = this.customerIndex;
             const combinedRows = vehicles.slice(0, 8).map((vehicle) => {
-                const customer = customerMap.get(vehicle.customer);
-                const contact = customer ? [customer.phone, customer.email].filter(Boolean).join(' / ') : '';
+                const { record: customer, docname: customerDocname } = this.resolveCustomerRecord(vehicle);
+                const customerLabel = this.getCustomerDisplayName(customer, vehicle);
+                const customerCell = customerDocname
+                    ? this.renderLink('Garage Customer', customerDocname, customerLabel)
+                    : customerLabel;
                 const model = [vehicle.brand, vehicle.model].filter(Boolean).join(' ') || '-';
                 const serviceTimestamp = vehicle.last_service_logged_at || vehicle.last_service_date || vehicle.creation;
                 return [
-                    this.renderLink(
-                        'Garage Customer',
-                        customer?.name || vehicle.customer,
-                        customer?.customer_name || vehicle.customer || '-'
-                    ),
-                    customer?.customer_type || '-',
-                    contact || '-',
-                    customer?.is_vip ? 'Ya' : 'Tidak',
+                    customerCell,
+                    this.getVipTypeLabel(customer, vehicle),
+                    this.createContactCell(customer, vehicle),
+                    this.getVipStatusLabel(customer, vehicle),
                     this.renderLink('Garage Vehicle', vehicle.name, vehicle.license_plate || vehicle.name),
                     model,
                     this.formatTimestamp(serviceTimestamp),
@@ -1023,12 +1060,15 @@
 
             if (!combinedRows.length) {
                 customers.slice(0, 8).forEach((customer) => {
-                    const contact = [customer.phone, customer.email].filter(Boolean).join(' / ');
+                    const customerDocname = this.normalizeDocname(customer?.name);
+                    const customerLabel = this.getCustomerDisplayName(customer);
                     combinedRows.push([
-                        this.renderLink('Garage Customer', customer.name, customer.customer_name || customer.name),
-                        customer.customer_type || '-',
-                        contact || '-',
-                        customer.is_vip ? 'Ya' : 'Tidak',
+                        customerDocname
+                            ? this.renderLink('Garage Customer', customerDocname, customerLabel)
+                            : customerLabel,
+                        this.getVipTypeLabel(customer),
+                        this.createContactCell(customer),
+                        this.getVipStatusLabel(customer),
                         '—',
                         '—',
                         '—',
@@ -1042,6 +1082,165 @@
                 (row) => row,
                 this.emptyStates.customerVehicles
             );
+        }
+
+        resolveCustomerRecord(vehicle) {
+            const docname = this.normalizeDocname(vehicle?.customer);
+            const fromIndex = docname ? this.getCustomerByName(docname) : null;
+            if (fromIndex) {
+                return { docname: fromIndex.name || docname, record: fromIndex };
+            }
+
+            const nameCandidates = [
+                vehicle?.customer_name,
+                vehicle?.customer_display_name,
+                vehicle?.customer_title,
+                vehicle?.customer,
+            ]
+                .map((value) => (value || '').trim().toLowerCase())
+                .filter(Boolean);
+            for (const key of nameCandidates) {
+                if (this.customerNameMap.has(key)) {
+                    const resolvedDocname = this.customerNameMap.get(key);
+                    const resolvedRecord = this.getCustomerByName(resolvedDocname);
+                    if (resolvedDocname && resolvedRecord) {
+                        return { docname: resolvedRecord.name || resolvedDocname, record: resolvedRecord };
+                    }
+                }
+            }
+
+            return {
+                docname,
+                record: {
+                    customer_name:
+                        vehicle?.customer_name ||
+                        vehicle?.customer_display_name ||
+                        vehicle?.customer_title ||
+                        vehicle?.customer ||
+                        '',
+                    customer_type: vehicle?.customer_type,
+                    phone:
+                        vehicle?.phone ||
+                        vehicle?.customer_phone ||
+                        vehicle?.contact_phone ||
+                        vehicle?.mobile_no,
+                    email:
+                        vehicle?.email ||
+                        vehicle?.customer_email ||
+                        vehicle?.contact_email ||
+                        vehicle?.email_id,
+                    is_vip: vehicle?.is_vip,
+                },
+            };
+        }
+
+        getCustomerDisplayName(customer, vehicle) {
+            if (customer?.customer_name) {
+                return customer.customer_name;
+            }
+            if (customer?.customer_full_name) {
+                return customer.customer_full_name;
+            }
+            if (customer?.full_name) {
+                return customer.full_name;
+            }
+            if (customer?.display_name) {
+                return customer.display_name;
+            }
+            if (customer?.name && customer?.customer_name && customer.name !== customer.customer_name) {
+                return customer.customer_name;
+            }
+            if (vehicle?.customer_name) {
+                return vehicle.customer_name;
+            }
+            if (vehicle?.customer_display_name) {
+                return vehicle.customer_display_name;
+            }
+            if (vehicle?.customer_title) {
+                return vehicle.customer_title;
+            }
+            return vehicle?.customer || customer?.name || '-';
+        }
+
+        getVipTypeLabel(customer, vehicle) {
+            if (customer?.customer_type) {
+                return customer.customer_type;
+            }
+            if (vehicle?.customer_type) {
+                return vehicle.customer_type;
+            }
+            return '-';
+        }
+
+        getVipStatusLabel(customer, vehicle) {
+            const mapStatus = (value) => {
+                if (typeof value === 'boolean') {
+                    return value ? 'Iya' : 'Tidak';
+                }
+                if (typeof value === 'string') {
+                    const normalized = value.trim().toLowerCase();
+                    if (!normalized) {
+                        return null;
+                    }
+                    if (['yes', 'iya', 'true', '1'].includes(normalized)) {
+                        return 'Iya';
+                    }
+                    if (['no', 'tidak', 'false', '0'].includes(normalized)) {
+                        return 'Tidak';
+                    }
+                }
+                return null;
+            };
+            const status =
+                mapStatus(customer?.is_vip) ??
+                mapStatus(vehicle?.is_vip) ??
+                mapStatus(customer?.vip_status) ??
+                mapStatus(vehicle?.vip_status);
+            return status || '-';
+        }
+
+        createContactCell(customer, fallback) {
+            const container = document.createElement('div');
+            container.className = 'table-contact';
+            const phone = (
+                customer?.phone ||
+                customer?.mobile_no ||
+                customer?.primary_contact_no ||
+                customer?.contact_phone ||
+                customer?.customer_phone ||
+                fallback?.phone ||
+                fallback?.customer_phone ||
+                fallback?.contact_phone ||
+                fallback?.mobile_no ||
+                fallback?.primary_contact_no ||
+                ''
+            ).trim();
+            const email = (
+                customer?.email ||
+                customer?.email_id ||
+                customer?.primary_email ||
+                customer?.primary_email_id ||
+                fallback?.email ||
+                fallback?.customer_email ||
+                fallback?.contact_email ||
+                fallback?.email_id ||
+                fallback?.primary_email ||
+                ''
+            ).trim();
+            if (phone) {
+                const phoneLine = document.createElement('div');
+                phoneLine.textContent = phone;
+                container.appendChild(phoneLine);
+            }
+            if (email) {
+                const emailLine = document.createElement('div');
+                emailLine.textContent = email;
+                container.appendChild(emailLine);
+            }
+            if (!container.childNodes.length) {
+                container.textContent = '-';
+            }
+            return container;
         }
 
         renderServiceSection() {
@@ -1065,7 +1264,7 @@
                 this.tables.openService,
                 serviceOrders,
                 (order) => {
-                    const customer = this.customerIndex.get(order.customer) || {};
+                    const customer = this.getCustomerByName(order.customer) || {};
                     const statusPill = this.createStatusPill(order.status);
                     const priorityPill = this.createPriorityPill(order.priority);
                     const actionButton = this.createDetailButton(order.name);
@@ -1122,7 +1321,7 @@
 
                 const meta = document.createElement('div');
                 meta.className = 'note-list__meta';
-                const customer = this.customerIndex.get(order.customer);
+                const customer = this.getCustomerByName(order.customer);
                 const customerSpan = document.createElement('span');
                 customerSpan.textContent = customer?.customer_name || order.customer || '-';
                 const vehicleSpan = document.createElement('span');
@@ -1550,7 +1749,7 @@
 
         populateServiceDetail(order) {
             const fields = this.serviceDetailModal?.fields || {};
-            const customer = this.customerIndex.get(order.customer) || {};
+            const customer = this.getCustomerByName(order.customer) || {};
             const vehicle = this.getVehicleByName(order.vehicle);
             const customerName = customer.customer_name || order.customer || '-';
             const vehicleLabel = this.getVehicleLabel(order.vehicle);
@@ -1848,10 +2047,10 @@
         }
 
         ensureCustomerOptions(value, label) {
-            if (!value) {
+            const normalizedValue = this.normalizeDocname(value);
+            if (!normalizedValue) {
                 return;
             }
-            const normalizedValue = String(value);
             const displayLabel = label || normalizedValue;
             this.addOptionIfMissing(this.selects.existingCustomer, normalizedValue, displayLabel);
             this.addOptionIfMissing(this.selects.vehicleCustomer, normalizedValue, displayLabel);
@@ -1870,7 +2069,7 @@
             if (!select) {
                 return;
             }
-            const previous = select.value;
+            const previous = this.normalizeDocname(select.value);
             select.innerHTML = '';
             const blank = document.createElement('option');
             blank.value = '';
@@ -1879,12 +2078,20 @@
             (rows || []).forEach((row) => {
                 const option = document.createElement('option');
                 const value = row[valueKey];
-                option.value = value;
-                option.textContent = row[labelKey] || value;
+                const normalizedValue = this.normalizeDocname(value);
+                if (!normalizedValue) {
+                    return;
+                }
+                option.value = normalizedValue;
+                const label = row[labelKey];
+                option.textContent = label || normalizedValue;
                 select.appendChild(option);
             });
-            if (previous && select.querySelector(`option[value="${previous}"]`)) {
-                select.value = previous;
+            if (previous) {
+                if (!this.setSelectValue(select, previous)) {
+                    this.addOptionIfMissing(select, previous, previous);
+                    this.setSelectValue(select, previous);
+                }
             }
         }
 
