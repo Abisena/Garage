@@ -12,10 +12,10 @@
             this.vehicleIndex = new Map();
             this.vehicleByName = new Map();
             this.serviceOrderIndex = new Map();
+            this.serviceRegistrationIndex = new Map();
             this.lastPrefilledPlate = null;
-            this.customerSearchIndex = new Map();
-            this.customerNameMap = new Map();
-            this.pendingCustomerLookups = new Set();
+            this.serviceActionDrafts = new Map();
+            this.boundDetailKeydown = this.handleDetailModalKeydown.bind(this);
         }
 
         init() {
@@ -327,6 +327,25 @@
                         'notes',
                     ]);
                     this.submitForm(this.forms.receipt, 'garage.api.portal.create_receipt_document', { receipt: payload }, 'Receipt berhasil dibuat.');
+                });
+            }
+
+            if (this.tables.openService) {
+                this.tables.openService.addEventListener('click', (event) => {
+                    const buttonTrigger = event.target.closest('[data-action="open-service-detail"]');
+                    const rowTrigger = event.target.closest('[data-role="service-row"]');
+                    const interactiveTarget = buttonTrigger ||
+                        (rowTrigger && !event.target.closest('button, a, [data-action]') ? rowTrigger : null);
+
+                    if (!interactiveTarget) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    const orderName = interactiveTarget.getAttribute('data-order-name');
+                    if (orderName) {
+                        this.openServiceDetail(orderName);
+                    }
                 });
             }
 
@@ -1246,8 +1265,12 @@
         renderServiceSection() {
             const serviceOrders = this.asArray(this.state.service_orders);
             const openService = this.asArray(this.state.open_service_orders);
+            const serviceRegistrations = this.asArray(this.state.service_registrations);
             this.cachedServiceOrders = serviceOrders;
             this.serviceOrderIndex = new Map(serviceOrders.map((order) => [order.name, order]));
+            this.serviceRegistrationIndex = new Map(
+                serviceRegistrations.map((registration) => [registration.order_name, registration])
+            );
 
             const totalEstimate = serviceOrders.reduce((acc, row) => acc + (parseFloat(row.total_estimated_amount) || 0), 0);
             const qcPending = serviceOrders.filter((row) => (row.qc_status || '').toLowerCase() === 'pending').length;
@@ -1260,6 +1283,7 @@
                 this.metrics.qcPending.textContent = qcPending.toString();
             }
 
+            const tableSource = serviceRegistrations.length ? serviceRegistrations : serviceOrders;
             this.renderTable(
                 this.tables.openService,
                 serviceOrders,
@@ -1281,15 +1305,17 @@
                 this.emptyStates.openService,
             );
 
-            this.renderServiceNotes(serviceOrders);
+            this.renderServiceNotes(tableSource);
         }
 
-        renderServiceNotes(serviceOrders) {
+        renderServiceNotes(entries) {
             const list = this.lists?.serviceNotes;
             if (!list) {
                 return;
             }
-            const notes = serviceOrders.filter((order) => order.service_notes).slice(0, 5);
+            const notes = entries
+                .filter((entry) => (entry.notes || entry.service_notes || '').trim())
+                .slice(0, 5);
             list.innerHTML = '';
             list.style.display = notes.length ? 'flex' : 'none';
             if (!notes.length) {
@@ -1301,7 +1327,7 @@
             if (this.emptyStates?.serviceNotes) {
                 this.emptyStates.serviceNotes.style.display = 'none';
             }
-            notes.forEach((order) => {
+            notes.forEach((entry) => {
                 const item = document.createElement('li');
                 item.className = 'note-list__item';
 
@@ -1309,23 +1335,28 @@
                 header.className = 'note-list__header';
                 const orderLabel = document.createElement('span');
                 orderLabel.className = 'note-list__order';
-                orderLabel.textContent = order.name;
+                orderLabel.textContent = entry.order_name || entry.name;
                 const timestamp = document.createElement('span');
                 timestamp.className = 'note-list__timestamp';
-                timestamp.textContent = this.formatTimestamp(order.service_booking_date);
+                timestamp.textContent = this.formatTimestamp(entry.booking_date || entry.service_booking_date);
                 header.append(orderLabel, timestamp);
 
                 const body = document.createElement('p');
                 body.className = 'note-list__body';
-                body.textContent = order.service_notes;
+                body.textContent = entry.notes || entry.service_notes;
 
                 const meta = document.createElement('div');
                 meta.className = 'note-list__meta';
                 const customer = this.getCustomerByName(order.customer);
                 const customerSpan = document.createElement('span');
-                customerSpan.textContent = customer?.customer_name || order.customer || '-';
+                customerSpan.textContent =
+                    entry.customer_display
+                    || this.getCustomerDisplay(entry.customer)
+                    || entry.customer_name
+                    || entry.customer
+                    || '-';
                 const vehicleSpan = document.createElement('span');
-                vehicleSpan.textContent = this.getVehicleLabel(order.vehicle);
+                vehicleSpan.textContent = entry.vehicle_label || this.getVehicleLabel(entry.vehicle);
                 meta.append(customerSpan, vehicleSpan);
 
                 item.append(header, body, meta);
@@ -1337,8 +1368,9 @@
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'table-action';
-            button.textContent = 'Detail';
-            button.addEventListener('click', () => this.openServiceDetail(orderName));
+            button.setAttribute('data-action', 'open-service-detail');
+            button.setAttribute('data-order-name', orderName || '');
+            button.textContent = __('Lihat Detail');
             return button;
         }
 
@@ -1510,8 +1542,25 @@
                 emptyState.style.display = 'none';
             }
             rows.forEach((row) => {
+                const rendered = rowRenderer(row) || {};
+                const cells = Array.isArray(rendered) ? rendered : rendered.cells || [];
                 const tr = document.createElement('tr');
-                rowRenderer(row).forEach((cellValue) => {
+
+                if (!Array.isArray(rendered)) {
+                    if (rendered.rowClass) {
+                        tr.className = rendered.rowClass;
+                    }
+                    if (rendered.rowAttributes && typeof rendered.rowAttributes === 'object') {
+                        Object.entries(rendered.rowAttributes).forEach(([key, value]) => {
+                            if (value == null) {
+                                return;
+                            }
+                            tr.setAttribute(key, String(value));
+                        });
+                    }
+                }
+
+                cells.forEach((cellValue) => {
                     const td = document.createElement('td');
                     if (cellValue instanceof HTMLElement) {
                         td.appendChild(cellValue);
@@ -1696,17 +1745,21 @@
             if (!this.serviceDetailModal?.container) {
                 return;
             }
+            const registration = this.serviceRegistrationIndex.get(orderName);
             const order = this.serviceOrderIndex.get(orderName);
-            if (!order) {
+            if (!registration && !order) {
                 if (window.frappe && frappe.msgprint) {
                     frappe.msgprint(__('Data service order tidak ditemukan.'));
                 }
                 return;
             }
-            this.populateServiceDetail(order);
-            this.serviceDetailModal.currentOrder = order.name;
+            const detail = Object.assign({}, order || {}, registration || {});
+            detail.order_name = orderName;
+            detail.name = orderName;
+            this.populateServiceDetail(detail);
+            this.serviceDetailModal.currentOrder = orderName;
             if (this.serviceDetailModal.actionForm) {
-                this.serviceDetailModal.actionForm.dataset.order = order.name;
+                this.serviceDetailModal.actionForm.dataset.order = orderName;
             }
             this.previousFocus = document.activeElement;
             this.bodyOverflowCache = document.body.style.overflow;
@@ -1756,34 +1809,37 @@
 
             this.setPillState(fields.status, order.status || '-', this.getStatusVariant(order.status));
             this.setPillState(fields.priority, order.priority || '-', this.getPriorityVariant(order.priority));
-            this.setFieldValue(fields.orderName, order.name);
-            this.setFieldValue(fields.bookingDate, this.formatTimestamp(order.service_booking_date));
-            this.setFieldValue(fields.targetDate, this.formatTimestamp(order.estimated_delivery_date));
-            this.setFieldValue(fields.completionDate, this.formatTimestamp(order.actual_delivery_date));
+            this.setFieldValue(fields.orderName, orderName);
+            this.setFieldValue(fields.bookingDate, this.formatTimestamp(order.booking_date || order.service_booking_date));
+            this.setFieldValue(fields.targetDate, this.formatTimestamp(order.target_date || order.estimated_delivery_date));
+            this.setFieldValue(fields.completionDate, this.formatTimestamp(order.completion_date || order.actual_delivery_date));
             this.setFieldValue(fields.jobCardStatus, order.job_card_status || '-');
             this.setFieldValue(fields.workOrderStatus, order.work_order_status || '-');
             this.setFieldValue(fields.qcStatus, order.qc_status || '-');
-            this.setFieldValue(fields.totalEstimate, this.currencyFormatter.format(parseFloat(order.total_estimated_amount) || 0));
-            this.setFieldValue(fields.totalApproved, this.currencyFormatter.format(parseFloat(order.total_approved_amount) || 0));
+            this.setFieldValue(
+                fields.totalEstimate,
+                this.currencyFormatter.format(parseFloat(order.total_estimated_amount) || 0)
+            );
+            this.setFieldValue(
+                fields.totalApproved,
+                this.currencyFormatter.format(parseFloat(order.total_approved_amount) || 0)
+            );
             this.setFieldValue(fields.customerName, customerName);
-            this.setFieldValue(fields.customerType, customer.customer_type || '-');
-            const contactInfo = [customer.phone, customer.email].filter(Boolean).join(' • ');
-            this.setFieldValue(fields.customerContact, contactInfo || '-');
-            this.setFieldValue(fields.vehiclePlate, vehicle?.license_plate || vehicleLabel || '-');
-            const modelInfo = [vehicle?.brand, vehicle?.model, vehicle?.vehicle_year].filter(Boolean).join(' ');
-            this.setFieldValue(fields.vehicleModel, modelInfo || vehicleLabel || '-');
-            this.setFieldValue(fields.vehicleColor, vehicle?.color || '-');
-            this.setFieldValue(fields.vehicleTransmission, vehicle?.transmission || '-');
-            this.setFieldValue(fields.vehicleFuel, vehicle?.fuel_type || '-');
-            const mileage = vehicle?.mileage ? `${vehicle.mileage} km` : '-';
+            this.setFieldValue(fields.customerType, customerType);
+            this.setFieldValue(fields.customerContact, contactInfo);
+            this.setFieldValue(fields.vehiclePlate, vehiclePlate);
+            this.setFieldValue(fields.vehicleModel, modelInfo);
+            this.setFieldValue(fields.vehicleColor, vehicleColor);
+            this.setFieldValue(fields.vehicleTransmission, vehicleTransmission);
+            this.setFieldValue(fields.vehicleFuel, vehicleFuel);
             this.setFieldValue(fields.vehicleMileage, mileage);
-            this.setFieldValue(fields.notes, order.service_notes || 'Tidak ada catatan registrasi.');
+            this.setFieldValue(fields.notes, order.notes || order.service_notes || 'Tidak ada catatan registrasi.');
 
             if (this.serviceDetailModal?.summary) {
-                this.serviceDetailModal.summary.textContent = `Service order ${order.name} milik ${customerName} – ${vehicleLabel}`;
+                this.serviceDetailModal.summary.textContent = `Service order ${orderName} milik ${customerName} – ${vehicleLabel}`;
             }
 
-            this.prefillServiceActionForm(order.name);
+            this.prefillServiceActionForm(orderName);
         }
 
         setPillState(element, label, variant = 'neutral') {
@@ -1812,6 +1868,14 @@
                 .filter(Boolean)
                 .map((part) => String(part).trim());
             return parts.length ? parts.join(' – ') : vehicleName || '-';
+        }
+
+        getCustomerDisplay(customerName) {
+            if (!customerName) {
+                return '';
+            }
+            const customer = this.customerIndex.get(customerName);
+            return customer?.customer_name || customerName;
         }
 
         getVehicleByName(vehicleName) {
