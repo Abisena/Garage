@@ -9,7 +9,12 @@
             });
             this.customerIndex = new Map();
             this.vehicleIndex = new Map();
+            this.vehicleByName = new Map();
+            this.serviceOrderIndex = new Map();
+            this.serviceRegistrationIndex = new Map();
             this.lastPrefilledPlate = null;
+            this.serviceActionDrafts = new Map();
+            this.boundDetailKeydown = this.handleDetailModalKeydown.bind(this);
         }
 
         init() {
@@ -57,6 +62,10 @@
                 payments: document.querySelector('[data-role="payment-table"]'),
             };
 
+            this.lists = {
+                serviceNotes: document.querySelector('[data-role="service-note-list"]'),
+            };
+
             this.emptyStates = {
                 customerVehicles: document.querySelector('[data-empty="customer-vehicle"]'),
                 openService: document.querySelector('[data-empty="open-service"]'),
@@ -64,6 +73,7 @@
                 pendingProcurement: document.querySelector('[data-empty="pending-procurement"]'),
                 openInvoice: document.querySelector('[data-empty="open-invoice"]'),
                 payment: document.querySelector('[data-empty="payment"]'),
+                serviceNotes: document.querySelector('[data-empty="service-notes"]'),
             };
 
             this.metrics = {
@@ -100,6 +110,49 @@
                 tableWrapper: document.querySelector('[data-role="status-modal-table-wrapper"]'),
                 emptyState: document.querySelector('[data-role="status-modal-empty"]'),
                 closeButtons: document.querySelectorAll('[data-role="status-modal-close"]'),
+            };
+
+            const detailModalContainer = document.getElementById('service-detail-modal');
+            this.modals.detail = detailModalContainer;
+            this.serviceDetailModal = {
+                container: detailModalContainer,
+                closeButtons: detailModalContainer
+                    ? detailModalContainer.querySelectorAll('[data-role="service-detail-close"]')
+                    : [],
+                summary: detailModalContainer
+                    ? detailModalContainer.querySelector('[data-role="service-detail-summary"]')
+                    : null,
+                fields: detailModalContainer
+                    ? {
+                          orderName: detailModalContainer.querySelector('[data-detail="order-name"]'),
+                          status: detailModalContainer.querySelector('[data-detail="status"]'),
+                          priority: detailModalContainer.querySelector('[data-detail="priority"]'),
+                          bookingDate: detailModalContainer.querySelector('[data-detail="booking-date"]'),
+                          targetDate: detailModalContainer.querySelector('[data-detail="target-date"]'),
+                          completionDate: detailModalContainer.querySelector('[data-detail="completion-date"]'),
+                          jobCardStatus: detailModalContainer.querySelector('[data-detail="job-card-status"]'),
+                          workOrderStatus: detailModalContainer.querySelector('[data-detail="work-order-status"]'),
+                          qcStatus: detailModalContainer.querySelector('[data-detail="qc-status"]'),
+                          totalEstimate: detailModalContainer.querySelector('[data-detail="total-estimate"]'),
+                          totalApproved: detailModalContainer.querySelector('[data-detail="total-approved"]'),
+                          customerName: detailModalContainer.querySelector('[data-detail="customer-name"]'),
+                          customerType: detailModalContainer.querySelector('[data-detail="customer-type"]'),
+                          customerContact: detailModalContainer.querySelector('[data-detail="customer-contact"]'),
+                          vehiclePlate: detailModalContainer.querySelector('[data-detail="vehicle-plate"]'),
+                          vehicleModel: detailModalContainer.querySelector('[data-detail="vehicle-model"]'),
+                          vehicleColor: detailModalContainer.querySelector('[data-detail="vehicle-color"]'),
+                          vehicleTransmission: detailModalContainer.querySelector('[data-detail="vehicle-transmission"]'),
+                          vehicleFuel: detailModalContainer.querySelector('[data-detail="vehicle-fuel"]'),
+                          vehicleMileage: detailModalContainer.querySelector('[data-detail="vehicle-mileage"]'),
+                          notes: detailModalContainer.querySelector('[data-detail="notes"]'),
+                      }
+                    : {},
+                actionForm: detailModalContainer
+                    ? detailModalContainer.querySelector('[data-role="service-action-form"]')
+                    : null,
+                actionButton: detailModalContainer
+                    ? detailModalContainer.querySelector('[data-role="service-action-submit"]')
+                    : null,
             };
         }
 
@@ -271,6 +324,25 @@
                 });
             }
 
+            if (this.tables.openService) {
+                this.tables.openService.addEventListener('click', (event) => {
+                    const buttonTrigger = event.target.closest('[data-action="open-service-detail"]');
+                    const rowTrigger = event.target.closest('[data-role="service-row"]');
+                    const interactiveTarget = buttonTrigger ||
+                        (rowTrigger && !event.target.closest('button, a, [data-action]') ? rowTrigger : null);
+
+                    if (!interactiveTarget) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    const orderName = interactiveTarget.getAttribute('data-order-name');
+                    if (orderName) {
+                        this.openServiceDetail(orderName);
+                    }
+                });
+            }
+
             if (this.selects.existingCustomer) {
                 this.selects.existingCustomer.addEventListener('change', () => {
                     this.applyExistingCustomerSelection();
@@ -304,6 +376,27 @@
                     if (event.target === this.statusModal.container) {
                         this.closeStatusModal();
                     }
+                });
+            }
+
+            if (this.serviceDetailModal?.closeButtons) {
+                this.serviceDetailModal.closeButtons.forEach((button) => {
+                    button.addEventListener('click', () => this.closeServiceDetail());
+                });
+            }
+
+            if (this.serviceDetailModal?.container) {
+                this.serviceDetailModal.container.addEventListener('click', (event) => {
+                    if (event.target === this.serviceDetailModal.container) {
+                        this.closeServiceDetail();
+                    }
+                });
+            }
+
+            if (this.serviceDetailModal?.actionForm) {
+                this.serviceDetailModal.actionForm.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    this.handleServiceAction();
                 });
             }
         }
@@ -797,6 +890,7 @@
 
             this.customerIndex = new Map(customers.map((customer) => [customer.name, customer]));
             this.vehicleIndex = new Map();
+            this.vehicleByName = new Map(vehicles.map((vehicle) => [vehicle.name, vehicle]));
             vehicles.forEach((vehicle) => {
                 const normalized = this.normalizeLicensePlate(vehicle.license_plate);
                 if (normalized) {
@@ -885,7 +979,12 @@
         renderServiceSection() {
             const serviceOrders = this.asArray(this.state.service_orders);
             const openService = this.asArray(this.state.open_service_orders);
+            const serviceRegistrations = this.asArray(this.state.service_registrations);
             this.cachedServiceOrders = serviceOrders;
+            this.serviceOrderIndex = new Map(serviceOrders.map((order) => [order.name, order]));
+            this.serviceRegistrationIndex = new Map(
+                serviceRegistrations.map((registration) => [registration.order_name, registration])
+            );
 
             const totalEstimate = serviceOrders.reduce((acc, row) => acc + (parseFloat(row.total_estimated_amount) || 0), 0);
             const qcPending = serviceOrders.filter((row) => (row.qc_status || '').toLowerCase() === 'pending').length;
@@ -898,33 +997,173 @@
                 this.metrics.qcPending.textContent = qcPending.toString();
             }
 
+            const tableSource = serviceRegistrations.length ? serviceRegistrations : serviceOrders;
             this.renderTable(
                 this.tables.openService,
-                openService,
-                (row) => {
-                    const noteCell = document.createElement('div');
-                    noteCell.className = 'table-note';
-                    if (row.service_notes) {
-                        noteCell.textContent = row.service_notes;
-                        noteCell.title = row.service_notes;
-                    } else {
-                        noteCell.textContent = '-';
-                    }
-                    return [
-                        this.renderLink('Garage Service Order', row.name),
-                        row.customer || '-',
-                        noteCell,
-                        row.status || '-',
-                        row.estimated_delivery_date || '-',
-                    ];
+                tableSource,
+                (entry) => {
+                    const orderName = entry.order_name || entry.name;
+                    const status = entry.status || entry.order_status;
+                    const priority = entry.priority;
+                    const customerName = entry.customer_display
+                        || this.getCustomerDisplay(entry.customer)
+                        || entry.customer_name
+                        || entry.customer
+                        || '-';
+                    const vehicleLabel = entry.vehicle_label || this.getVehicleLabel(entry.vehicle);
+                    const statusPill = this.createStatusPill(status);
+                    const priorityPill = this.createPriorityPill(priority);
+                    const actionButton = this.createDetailButton(orderName);
+                    const targetDate = entry.target_date || entry.estimated_delivery_date;
+                    return {
+                        rowAttributes: {
+                            'data-role': 'service-row',
+                            'data-order-name': orderName || '',
+                        },
+                        cells: [
+                            this.renderLink('Garage Service Order', orderName),
+                            customerName,
+                            vehicleLabel,
+                            statusPill,
+                            priorityPill,
+                            this.formatTimestamp(targetDate),
+                            actionButton,
+                        ],
+                    };
                 },
                 this.emptyStates.openService,
             );
 
-            const progressOptions = serviceOrders.map((row) => ({ value: row.name, label: `${row.name} – ${row.customer || '-'}` }));
-            this.populateSelect(this.selects.progressServiceOrder, progressOptions, {
-                blankLabel: '— Pilih service order —',
+            this.renderServiceNotes(tableSource);
+        }
+
+        renderServiceNotes(entries) {
+            const list = this.lists?.serviceNotes;
+            if (!list) {
+                return;
+            }
+            const notes = entries
+                .filter((entry) => (entry.notes || entry.service_notes || '').trim())
+                .slice(0, 5);
+            list.innerHTML = '';
+            list.style.display = notes.length ? 'flex' : 'none';
+            if (!notes.length) {
+                if (this.emptyStates?.serviceNotes) {
+                    this.emptyStates.serviceNotes.style.display = 'block';
+                }
+                return;
+            }
+            if (this.emptyStates?.serviceNotes) {
+                this.emptyStates.serviceNotes.style.display = 'none';
+            }
+            notes.forEach((entry) => {
+                const item = document.createElement('li');
+                item.className = 'note-list__item';
+
+                const header = document.createElement('div');
+                header.className = 'note-list__header';
+                const orderLabel = document.createElement('span');
+                orderLabel.className = 'note-list__order';
+                orderLabel.textContent = entry.order_name || entry.name;
+                const timestamp = document.createElement('span');
+                timestamp.className = 'note-list__timestamp';
+                timestamp.textContent = this.formatTimestamp(entry.booking_date || entry.service_booking_date);
+                header.append(orderLabel, timestamp);
+
+                const body = document.createElement('p');
+                body.className = 'note-list__body';
+                body.textContent = entry.notes || entry.service_notes;
+
+                const meta = document.createElement('div');
+                meta.className = 'note-list__meta';
+                const customerSpan = document.createElement('span');
+                customerSpan.textContent =
+                    entry.customer_display
+                    || this.getCustomerDisplay(entry.customer)
+                    || entry.customer_name
+                    || entry.customer
+                    || '-';
+                const vehicleSpan = document.createElement('span');
+                vehicleSpan.textContent = entry.vehicle_label || this.getVehicleLabel(entry.vehicle);
+                meta.append(customerSpan, vehicleSpan);
+
+                item.append(header, body, meta);
+                list.appendChild(item);
             });
+        }
+
+        createDetailButton(orderName) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'table-action';
+            button.setAttribute('data-action', 'open-service-detail');
+            button.setAttribute('data-order-name', orderName || '');
+            button.setAttribute('aria-label', __('Buka detail dan aksi servis'));
+
+            const icon = document.createElement('span');
+            icon.className = 'table-action__icon';
+            icon.setAttribute('aria-hidden', 'true');
+            icon.textContent = '🔍';
+
+            const label = document.createElement('span');
+            label.className = 'table-action__label';
+            label.textContent = __('Detail & Aksi');
+
+            button.append(icon, label);
+            return button;
+        }
+
+        createStatusPill(status) {
+            const variant = this.getStatusVariant(status);
+            return this.buildPill(status || '-', variant);
+        }
+
+        createPriorityPill(priority) {
+            const variant = this.getPriorityVariant(priority);
+            return this.buildPill(priority || '-', variant);
+        }
+
+        buildPill(label, variant = 'neutral') {
+            const pill = document.createElement('span');
+            const normalized = variant || 'neutral';
+            pill.className = 'status-pill';
+            pill.textContent = label || '-';
+            pill.classList.add(normalized && normalized !== 'neutral' ? `status-pill--${normalized}` : 'status-pill--neutral');
+            return pill;
+        }
+
+        getStatusVariant(status) {
+            const normalized = (status || '').toLowerCase();
+            if (!normalized) {
+                return 'neutral';
+            }
+            if (normalized.includes('complete') || normalized.includes('done') || normalized.includes('finish')) {
+                return 'success';
+            }
+            if (normalized.includes('cancel') || normalized.includes('reject')) {
+                return 'danger';
+            }
+            if (normalized.includes('pending') || normalized.includes('await') || normalized.includes('hold')) {
+                return 'warning';
+            }
+            if (normalized.includes('progress') || normalized.includes('active') || normalized.includes('open')) {
+                return 'info';
+            }
+            return 'neutral';
+        }
+
+        getPriorityVariant(priority) {
+            const normalized = (priority || '').toLowerCase();
+            if (normalized === 'critical') {
+                return 'danger';
+            }
+            if (normalized === 'high') {
+                return 'warning';
+            }
+            if (normalized === 'low') {
+                return 'info';
+            }
+            return 'neutral';
         }
 
         renderSpareOrders() {
@@ -1042,8 +1281,25 @@
                 emptyState.style.display = 'none';
             }
             rows.forEach((row) => {
+                const rendered = rowRenderer(row) || {};
+                const cells = Array.isArray(rendered) ? rendered : rendered.cells || [];
                 const tr = document.createElement('tr');
-                rowRenderer(row).forEach((cellValue) => {
+
+                if (!Array.isArray(rendered)) {
+                    if (rendered.rowClass) {
+                        tr.className = rendered.rowClass;
+                    }
+                    if (rendered.rowAttributes && typeof rendered.rowAttributes === 'object') {
+                        Object.entries(rendered.rowAttributes).forEach(([key, value]) => {
+                            if (value == null) {
+                                return;
+                            }
+                            tr.setAttribute(key, String(value));
+                        });
+                    }
+                }
+
+                cells.forEach((cellValue) => {
                     const td = document.createElement('td');
                     if (cellValue instanceof HTMLElement) {
                         td.appendChild(cellValue);
@@ -1221,6 +1477,237 @@
         handleStatusModalKeydown(event) {
             if (event.key === 'Escape') {
                 this.closeStatusModal();
+            }
+        }
+
+        openServiceDetail(orderName) {
+            if (!this.serviceDetailModal?.container) {
+                return;
+            }
+            const registration = this.serviceRegistrationIndex.get(orderName);
+            const order = this.serviceOrderIndex.get(orderName);
+            if (!registration && !order) {
+                if (window.frappe && frappe.msgprint) {
+                    frappe.msgprint(__('Data service order tidak ditemukan.'));
+                }
+                return;
+            }
+            const detail = Object.assign({}, order || {}, registration || {});
+            detail.order_name = orderName;
+            detail.name = orderName;
+            this.populateServiceDetail(detail);
+            this.serviceDetailModal.currentOrder = orderName;
+            if (this.serviceDetailModal.actionForm) {
+                this.serviceDetailModal.actionForm.dataset.order = orderName;
+            }
+            this.previousFocus = document.activeElement;
+            this.bodyOverflowCache = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            document.addEventListener('keydown', this.boundDetailKeydown);
+            this.serviceDetailModal.container.classList.add('is-open');
+            this.serviceDetailModal.container.setAttribute('aria-hidden', 'false');
+            const focusTarget = this.serviceDetailModal.actionButton || this.serviceDetailModal.container.querySelector('.portal-modal__close');
+            if (focusTarget) {
+                focusTarget.focus();
+            }
+        }
+
+        closeServiceDetail() {
+            if (!this.serviceDetailModal?.container) {
+                return;
+            }
+            this.serviceDetailModal.container.classList.remove('is-open');
+            this.serviceDetailModal.container.setAttribute('aria-hidden', 'true');
+            document.removeEventListener('keydown', this.boundDetailKeydown);
+            if (typeof this.bodyOverflowCache === 'string') {
+                document.body.style.overflow = this.bodyOverflowCache;
+            } else {
+                document.body.style.removeProperty('overflow');
+            }
+            if (this.serviceDetailModal.actionForm) {
+                this.serviceDetailModal.actionForm.dataset.order = '';
+            }
+            this.serviceDetailModal.currentOrder = null;
+            if (this.previousFocus && typeof this.previousFocus.focus === 'function') {
+                this.previousFocus.focus();
+            }
+        }
+
+        handleDetailModalKeydown(event) {
+            if (event.key === 'Escape') {
+                this.closeServiceDetail();
+            }
+        }
+
+        populateServiceDetail(order) {
+            const fields = this.serviceDetailModal?.fields || {};
+            const join = (values, separator = ' • ') =>
+                values
+                    .map((value) => (value == null ? '' : String(value).trim()))
+                    .filter(Boolean)
+                    .join(separator);
+
+            const orderName = order.order_name || order.name || '-';
+            const customerCode = order.customer;
+            const customer = customerCode ? this.customerIndex.get(customerCode) || {} : {};
+            const vehicleDoc = this.getVehicleByName(order.vehicle);
+            const vehicleLabel = order.vehicle_label || this.getVehicleLabel(order.vehicle);
+            const customerName =
+                order.customer_name
+                || order.customer_display
+                || customer.customer_name
+                || order.customer
+                || '-';
+            const customerType = order.customer_type || customer.customer_type || '-';
+            const contactInfo =
+                order.customer_contact
+                || join([order.customer_phone, order.customer_email])
+                || join([customer.phone, customer.email])
+                || '-';
+            const vehiclePlate = order.vehicle_plate || vehicleDoc?.license_plate || vehicleLabel || '-';
+            const modelInfo =
+                join([order.vehicle_brand, order.vehicle_model, order.vehicle_year], ' ')
+                || join([vehicleDoc?.brand, vehicleDoc?.model, vehicleDoc?.vehicle_year], ' ')
+                || vehicleLabel
+                || '-';
+            const vehicleColor = order.vehicle_color || vehicleDoc?.color || '-';
+            const vehicleTransmission = order.vehicle_transmission || vehicleDoc?.transmission || '-';
+            const vehicleFuel = order.vehicle_fuel || vehicleDoc?.fuel_type || '-';
+            const mileageValue = order.vehicle_mileage ?? vehicleDoc?.mileage;
+            const mileage = mileageValue ? `${mileageValue} km` : '-';
+            const status = order.status || order.order_status;
+
+            this.setPillState(fields.status, status || '-', this.getStatusVariant(status));
+            this.setPillState(fields.priority, order.priority || '-', this.getPriorityVariant(order.priority));
+            this.setFieldValue(fields.orderName, orderName);
+            this.setFieldValue(fields.bookingDate, this.formatTimestamp(order.booking_date || order.service_booking_date));
+            this.setFieldValue(fields.targetDate, this.formatTimestamp(order.target_date || order.estimated_delivery_date));
+            this.setFieldValue(fields.completionDate, this.formatTimestamp(order.completion_date || order.actual_delivery_date));
+            this.setFieldValue(fields.jobCardStatus, order.job_card_status || '-');
+            this.setFieldValue(fields.workOrderStatus, order.work_order_status || '-');
+            this.setFieldValue(fields.qcStatus, order.qc_status || '-');
+            this.setFieldValue(
+                fields.totalEstimate,
+                this.currencyFormatter.format(parseFloat(order.total_estimated_amount) || 0)
+            );
+            this.setFieldValue(
+                fields.totalApproved,
+                this.currencyFormatter.format(parseFloat(order.total_approved_amount) || 0)
+            );
+            this.setFieldValue(fields.customerName, customerName);
+            this.setFieldValue(fields.customerType, customerType);
+            this.setFieldValue(fields.customerContact, contactInfo);
+            this.setFieldValue(fields.vehiclePlate, vehiclePlate);
+            this.setFieldValue(fields.vehicleModel, modelInfo);
+            this.setFieldValue(fields.vehicleColor, vehicleColor);
+            this.setFieldValue(fields.vehicleTransmission, vehicleTransmission);
+            this.setFieldValue(fields.vehicleFuel, vehicleFuel);
+            this.setFieldValue(fields.vehicleMileage, mileage);
+            this.setFieldValue(fields.notes, order.notes || order.service_notes || 'Tidak ada catatan registrasi.');
+
+            if (this.serviceDetailModal?.summary) {
+                this.serviceDetailModal.summary.textContent = `Service order ${orderName} milik ${customerName} – ${vehicleLabel}`;
+            }
+
+            this.prefillServiceActionForm(orderName);
+        }
+
+        setPillState(element, label, variant = 'neutral') {
+            if (!element) {
+                return;
+            }
+            element.textContent = label || '-';
+            element.className = 'status-pill';
+            const normalized = variant || 'neutral';
+            element.classList.add(normalized !== 'neutral' ? `status-pill--${normalized}` : 'status-pill--neutral');
+        }
+
+        setFieldValue(element, value) {
+            if (!element) {
+                return;
+            }
+            element.textContent = value ?? '-';
+        }
+
+        getVehicleLabel(vehicleName) {
+            const vehicle = this.getVehicleByName(vehicleName);
+            if (!vehicle) {
+                return vehicleName || '-';
+            }
+            const parts = [vehicle.license_plate, vehicle.brand, vehicle.model, vehicle.vehicle_year]
+                .filter(Boolean)
+                .map((part) => String(part).trim());
+            return parts.length ? parts.join(' – ') : vehicleName || '-';
+        }
+
+        getCustomerDisplay(customerName) {
+            if (!customerName) {
+                return '';
+            }
+            const customer = this.customerIndex.get(customerName);
+            return customer?.customer_name || customerName;
+        }
+
+        getVehicleByName(vehicleName) {
+            if (!vehicleName) {
+                return null;
+            }
+            const byName = this.vehicleByName?.get(vehicleName);
+            if (byName) {
+                return byName;
+            }
+            const vehicles = this.asArray(this.state.vehicles);
+            return vehicles.find((vehicle) => vehicle.name === vehicleName) || null;
+        }
+
+        prefillServiceActionForm(orderName) {
+            const form = this.serviceDetailModal?.actionForm;
+            if (!form) {
+                return;
+            }
+            const draft = this.serviceActionDrafts.get(orderName) || {};
+            const fields = ['service_type', 'problem_category', 'purchase_type', 'payment_method', 'action_notes'];
+            fields.forEach((fieldname) => {
+                const input = form.querySelector(`[name="${fieldname}"]`);
+                if (!input) {
+                    return;
+                }
+                const value = draft[fieldname] ?? '';
+                if (input.tagName === 'SELECT') {
+                    this.setSelectValue(input, value);
+                } else {
+                    input.value = value;
+                }
+            });
+        }
+
+        handleServiceAction() {
+            const form = this.serviceDetailModal?.actionForm;
+            if (!form) {
+                return;
+            }
+            const orderName = this.serviceDetailModal?.currentOrder;
+            if (!orderName) {
+                if (window.frappe && frappe.msgprint) {
+                    frappe.msgprint(__('Pilih registrasi servis terlebih dahulu.'));
+                }
+                return;
+            }
+            const payload = {};
+            ['service_type', 'problem_category', 'purchase_type', 'payment_method', 'action_notes'].forEach((fieldname) => {
+                const input = form.querySelector(`[name="${fieldname}"]`);
+                if (!input) {
+                    return;
+                }
+                if (input.tagName === 'SELECT') {
+                    payload[fieldname] = input.value || '';
+                } else {
+                    payload[fieldname] = input.value || '';
+                }
+            });
+            this.serviceActionDrafts.set(orderName, payload);
+            if (window.frappe && frappe.show_alert) {
+                frappe.show_alert({ message: __('Draft aksi servis tersimpan.'), indicator: 'green' });
             }
         }
 
