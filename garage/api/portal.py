@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+import re
 from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional
 
 import frappe
@@ -437,6 +438,17 @@ def _filter_fields(data: Mapping[str, Any], allowed: Iterable[str]) -> Dict[str,
     return result
 
 
+def _normalize_license_plate(value: str) -> str:
+    return re.sub(r"[^0-9A-Za-z]", "", (value or "").upper())
+
+
+def _normalized_plate_expression(column: str) -> str:
+    expr = f"upper(coalesce({column}, ''))"
+    for char in (' ', '-', '.', '/', '_'):
+        expr = f"replace({expr}, '{char}', '')"
+    return expr
+
+
 def _sanitize_child_rows(table_field: str, rows: Any, config: Mapping[str, Any]) -> List[Dict[str, Any]]:
     if not rows:
         return []
@@ -594,7 +606,16 @@ def portal_bootstrap() -> Dict[str, Any]:
 
     customers = _list_dicts(
         "Garage Customer",
-        ["name", "customer_name", "customer_type", "phone", "email", "is_vip"],
+        [
+            "name",
+            "customer_name",
+            "customer_type",
+            "phone",
+            "email",
+            "preferred_contact_method",
+            "marketing_source",
+            "is_vip",
+        ],
         limit=100,
     )
     vehicle_fields = [
@@ -603,7 +624,11 @@ def portal_bootstrap() -> Dict[str, Any]:
         "license_plate",
         "brand",
         "model",
+        "vehicle_year",
         "color",
+        "transmission",
+        "fuel_type",
+        "mileage",
         "last_service_date",
         "creation",
     ]
@@ -729,6 +754,76 @@ def portal_bootstrap() -> Dict[str, Any]:
         "desk_routes": desk_routes,
         "refreshed_at": now_datetime(),
     }
+
+
+@frappe.whitelist()
+def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, Any]:
+    """Look up a single vehicle (and its customer) by license plate."""
+
+    _require_login()
+    normalized = _normalize_license_plate(license_plate or "")
+    if not normalized:
+        return {}
+
+    vehicle_fields = [
+        "name",
+        "customer",
+        "license_plate",
+        "brand",
+        "model",
+        "vehicle_year",
+        "color",
+        "transmission",
+        "fuel_type",
+        "mileage",
+        "last_service_date",
+    ]
+    if frappe.db.has_column("Garage Vehicle", "last_service_logged_at"):
+        vehicle_fields.append("last_service_logged_at")
+
+    columns = ", ".join(f"`tabGarage Vehicle`.{field}" for field in vehicle_fields)
+    normalized_expr = _normalized_plate_expression("`tabGarage Vehicle`.license_plate")
+
+    with _ignoring_permissions():
+        rows = frappe.db.sql(
+            f"""
+            select {columns}
+            from `tabGarage Vehicle`
+            where {normalized_expr} = %s
+            order by modified desc
+            limit 1
+            """,
+            normalized,
+            as_dict=True,
+        )
+
+    if not rows:
+        return {}
+
+    vehicle = rows[0]
+    customer_doc: Optional[Dict[str, Any]] = None
+    customer_name = vehicle.get("customer")
+
+    if customer_name:
+        customer_fields = [
+            "name",
+            "customer_name",
+            "customer_type",
+            "phone",
+            "email",
+            "preferred_contact_method",
+            "marketing_source",
+            "is_vip",
+        ]
+        with _ignoring_permissions():
+            customer_doc = frappe.db.get_value(
+                "Garage Customer",
+                customer_name,
+                customer_fields,
+                as_dict=True,
+            )
+
+    return {"vehicle": vehicle, "customer": customer_doc}
 
 
 @frappe.whitelist()
