@@ -9,523 +9,1106 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
-.garage-intake {
-    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: #f4f7fb;
-    color: #0f172a;
+/* ============================================================================
+   GARAGE INTAKE PAGE - PREMIUM ELEGANT DESIGN
+   Modern Form Layout with Perfect Visual Hierarchy
+   ============================================================================ */
+
+/* === DESIGN TOKENS === */
+:root {
+    /* Brand Colors - Refined Blue Palette */
+    --primary: #0066FF;
+    --primary-dark: #0052CC;
+    --primary-darker: #003D99;
+    --primary-light: #4D94FF;
+    --primary-lightest: #E6F2FF;
+    --primary-subtle: #F0F7FF;
+    
+    /* Accent Colors */
+    --accent-success: #00C853;
+    --accent-warning: #FFB300;
+    --accent-danger: #FF3D00;
+    --accent-info: #00B8D4;
+    
+    /* Neutral Palette - Sophisticated Grays */
+    --gray-50: #FAFBFC;
+    --gray-100: #F5F7FA;
+    --gray-200: #E9ECF1;
+    --gray-300: #D4DAE4;
+    --gray-400: #B8C1D3;
+    --gray-500: #8896AB;
+    --gray-600: #5E6C84;
+    --gray-700: #3E4C5E;
+    --gray-800: #2A3647;
+    --gray-900: #1A2332;
+    
+    /* Semantic Colors */
+    --text-primary: #1A2332;
+    --text-secondary: #5E6C84;
+    --text-muted: #8896AB;
+    --text-inverse: #FFFFFF;
+    
+    --bg-body: #F5F7FA;
+    --bg-surface: #FFFFFF;
+    --bg-elevated: #FAFBFC;
+    --bg-overlay: rgba(26, 35, 50, 0.8);
+    
+    --border-light: #E9ECF1;
+    --border-base: #D4DAE4;
+    --border-strong: #B8C1D3;
+    
+    /* Shadows - Layered Depth */
+    --shadow-xs: 0 1px 2px rgba(26, 35, 50, 0.04);
+    --shadow-sm: 0 2px 4px rgba(26, 35, 50, 0.06), 0 1px 2px rgba(26, 35, 50, 0.04);
+    --shadow-md: 0 4px 8px rgba(26, 35, 50, 0.08), 0 2px 4px rgba(26, 35, 50, 0.04);
+    --shadow-lg: 0 8px 16px rgba(26, 35, 50, 0.12), 0 4px 8px rgba(26, 35, 50, 0.06);
+    --shadow-xl: 0 16px 32px rgba(26, 35, 50, 0.16), 0 8px 16px rgba(26, 35, 50, 0.08);
+    --shadow-2xl: 0 24px 48px rgba(26, 35, 50, 0.2), 0 12px 24px rgba(26, 35, 50, 0.1);
+    
+    /* Border Radius */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-2xl: 20px;
+    --radius-full: 9999px;
+    
+    /* Spacing Scale */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-20: 80px;
+    --space-24: 96px;
+    
+    /* Typography */
+    --font-sans: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    
+    --font-size-xs: 0.75rem;      /* 12px */
+    --font-size-sm: 0.875rem;     /* 14px */
+    --font-size-base: 0.9375rem;  /* 15px */
+    --font-size-lg: 1.0625rem;    /* 17px */
+    --font-size-xl: 1.25rem;      /* 20px */
+    --font-size-2xl: 1.5rem;      /* 24px */
+    --font-size-3xl: 1.875rem;    /* 30px */
+    --font-size-4xl: 2.25rem;     /* 36px */
+    --font-size-5xl: 3rem;        /* 48px */
+    
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    
+    --line-height-tight: 1.25;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.625;
+    --line-height-loose: 1.75;
+    
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    
+    /* Z-index Scale */
+    --z-base: 0;
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-popover: 1060;
+    --z-tooltip: 1070;
 }
 
-.garage-intake .portal-hero--sub {
-    background: linear-gradient(160deg, #0f62ff 0%, #2563eb 55%, #1d4ed8 100%);
-    color: #fff;
-    padding: 3.25rem 0 4rem;
+/* === BASE RESETS === */
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-sans) !important;
+    font-size: var(--font-size-base) !important;
+    line-height: var(--line-height-normal) !important;
+    color: var(--text-primary) !important;
+    background: var(--bg-body) !important;
+    overflow-x: hidden;
+}
+
+/* Hide default Frappe navbar styling */
+.navbar {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.navbar-default {
+    background-color: transparent !important;
+    border-color: transparent !important;
+}
+
+/* Remove blue background from hamburger menu */
+.navbar-toggle {
+    background-color: transparent !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+.navbar-toggle:hover,
+.navbar-toggle:focus {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Remove blue background from active/selected navbar items */
+.navbar-nav > li > a {
+    background-color: transparent !important;
+}
+
+.navbar-nav > li.active > a,
+.navbar-nav > li.active > a:hover,
+.navbar-nav > li.active > a:focus {
+    background-color: transparent !important;
+    color: inherit !important;
+}
+
+/* Remove any default blue backgrounds */
+.navbar-default .navbar-nav > .active > a,
+.navbar-default .navbar-nav > .active > a:hover,
+.navbar-default .navbar-nav > .active > a:focus {
+    background-color: transparent !important;
+}
+
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+    background-color: transparent !important;
+    border-color: transparent !important;
+}
+
+/* Target any blue background in navbar area */
+header .navbar-nav li a,
+header .navbar-nav li button {
+    background-color: transparent !important;
+}
+
+/* === CONTAINER === */
+.container {
+    max-width: 1440px !important;
+    margin: 0 auto !important;
+    padding-left: var(--space-6) !important;
+    padding-right: var(--space-6) !important;
+}
+
+@media (min-width: 1200px) {
+    .container {
+        padding-left: var(--space-12) !important;
+        padding-right: var(--space-12) !important;
+    }
+}
+
+/* === HEADER SECTION === */
+.portal-hero--sub {
     position: relative;
+    background: linear-gradient(160deg, 
+        var(--primary-darker) 0%, 
+        var(--primary-dark) 40%, 
+        var(--primary) 100%);
+    padding: var(--space-6) 0 var(--space-4) 0;
+    margin-top: var(--space-6);
     overflow: hidden;
 }
 
-.garage-intake .portal-hero--sub::after {
+/* Animated Background Pattern */
+.portal-hero--sub::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
-        radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.18) 0%, transparent 55%);
-    opacity: 0.9;
+    background-image: 
+        radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+    z-index: 0;
 }
 
-.garage-intake .portal-hero--sub .container {
+.portal-hero--sub .container {
     position: relative;
     z-index: 1;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 2rem;
-    color: white;
 }
 
-.garage-intake .portal-hero__brand {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1.25rem;
-    text-align: left;
-    flex-wrap: wrap;
-}
-
-.garage-intake .portal-hero__icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 18px;
+.portal-hero__brand {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 28px;
-    background: rgba(255, 255, 255, 0.18);
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
+    gap: var(--space-3);
 }
 
-.garage-intake .portal-hero__text {
-    max-width: 520px;
+.portal-hero__icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.garage-intake .portal-eyebrow {
+.portal-eyebrow {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.25rem 0.85rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
+    gap: var(--space-2);
+    font-size: var(--font-size-xs) !important;
+    font-weight: var(--font-weight-semibold) !important;
     text-transform: uppercase;
-    background: rgba(255, 255, 255, 0.16);
-    color: rgba(255, 255, 255, 0.85);
-    font-weight: 600;
-    margin-bottom: 0.75rem;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.8) !important;
+    margin-bottom: var(--space-3) !important;
+    background: rgba(255, 255, 255, 0.1);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    backdrop-filter: blur(10px);
 }
 
-.garage-intake .portal-hero__text h1 {
-    font-size: 2rem;
-    font-weight: 600;
-    margin-bottom: 0.35rem;
+.portal-hero--sub h1 {
+    font-size: var(--font-size-2xl) !important;
+    font-weight: var(--font-weight-bold) !important;
+    line-height: var(--line-height-tight) !important;
+    color: var(--text-inverse) !important;
+    margin: 0 !important;
+    letter-spacing: -0.02em;
+}
+
+.portal-hero--sub p {
+    font-size: var(--font-size-sm) !important;
+    line-height: var(--line-height-relaxed) !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    margin: 0 !important;
+}
+
+/* === NAVIGATION WRAPPER === */
+.portal-nav-wrapper {
+    background: linear-gradient(160deg, 
+        var(--primary-darker) 0%, 
+        var(--primary-dark) 40%, 
+        var(--primary) 100%);
+    padding: 0 0 var(--space-6) 0;
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 0;
+}
+
+/* === NAVIGATION === */
+.portal-nav {
+    display: flex !important;
+    justify-content: center !important;
+    gap: var(--space-2) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(20px) !important;
+    padding: var(--space-2) !important;
+    border-radius: var(--radius-lg) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    overflow-x: auto !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    max-width: fit-content;
+    margin: 0 auto;
+}
+
+.portal-nav::-webkit-scrollbar {
+    height: 6px;
+}
+
+.portal-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.portal-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-full);
+}
+
+.portal-nav a {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: var(--space-2) !important;
+    padding: var(--space-3) var(--space-5) !important;
+    border-radius: var(--radius-md) !important;
+    font-size: var(--font-size-sm) !important;
+    font-weight: var(--font-weight-medium) !important;
+    text-decoration: none !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    transition: all var(--transition-base) !important;
+    white-space: nowrap !important;
+    position: relative;
+}
+
+.portal-nav a::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+
+.portal-nav a:hover::before {
+    opacity: 1;
+}
+
+.portal-nav a:hover {
+    color: var(--text-inverse) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    transform: translateY(-1px);
+}
+
+.portal-nav a.active {
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: var(--primary) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.portal-nav a.active::before {
+    display: none;
+}
+
+/* === SECTION SPACING === */
+.portal-section {
+    padding: var(--space-12) 0 var(--space-16) !important;
+}
+
+.portal-section:first-of-type {
+    padding-top: var(--space-8) !important;
+}
+
+/* === GRID SYSTEM === */
+.portal-grid {
+    display: grid !important;
+    gap: var(--space-8) !important;
+    
+}
+
+.portal-grid.two-column {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+    .portal-grid.two-column {
+        grid-template-columns: 1fr;
+        gap: var(--space-10) !important;
+    }
+}
+
+/* === CARDS === */
+.portal-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border-light) !important;
+    border-radius: var(--radius-xl) !important;
+    padding: var(--space-8) !important;
+    box-shadow: var(--shadow-sm) !important;
+    transition: all var(--transition-slow) !important;
+    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(32px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.portal-card__header {
+    margin-bottom: var(--space-6) !important;
+}
+
+.portal-card__header h2 {
+    font-size: var(--font-size-2xl) !important;
+    font-weight: var(--font-weight-bold) !important;
+    line-height: var(--line-height-tight) !important;
+    color: var(--text-primary) !important;
+    margin-bottom: var(--space-3) !important;
     letter-spacing: -0.01em;
 }
 
-.garage-intake .portal-hero__text p {
+.portal-card__header .lead,
+.lead {
+    font-size: var(--font-size-base) !important;
+    line-height: var(--line-height-relaxed) !important;
+    color: var(--text-secondary) !important;
     margin: 0;
-    font-size: 1rem;
-    line-height: 1.6;
-    color: rgba(255, 255, 255, 0.88);
 }
 
-.garage-intake__nav {
-    margin-top: -32px;
+/* === FORM BANNER === */
+.form-banner {
+    background: linear-gradient(135deg, var(--primary-darker), var(--primary-dark)) !important;
+    color: var(--text-inverse) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: var(--space-6) !important;
+    margin-bottom: var(--space-8) !important;
+    box-shadow: var(--shadow-md);
 }
 
-.garage-intake__nav .portal-nav-wrapper {
-    background: transparent;
-    padding-bottom: 0;
+.form-banner strong {
+    display: block;
+    font-size: var(--font-size-lg) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    margin-bottom: var(--space-4) !important;
 }
 
-.garage-intake__nav .portal-nav-wrapper .container {
-    display: flex;
-    justify-content: center;
-}
-
-.garage-intake__nav .portal-nav {
+.form-banner__steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.75rem;
-    background: #ffffff;
-    padding: 0.85rem 1.1rem;
-    border-radius: 999px;
-    box-shadow: 0 22px 55px rgba(15, 23, 42, 0.18);
-    border: 1px solid rgba(148, 163, 184, 0.25);
+    gap: var(--space-2) var(--space-6);
 }
 
-.garage-intake__nav .portal-nav a {
+.form-banner__steps li {
     position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.65rem 1.25rem;
-    border-radius: 999px;
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: #1f2937;
-    text-decoration: none;
-    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    font-size: var(--font-size-xs) !important;
+    font-weight: var(--font-weight-medium) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.8);
+    padding-left: var(--space-5);
 }
 
-.garage-intake__nav .portal-nav a:hover {
-    background: #eef2ff;
-    color: #1d4ed8;
+.form-banner__steps li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.5);
 }
 
-.garage-intake__nav .portal-nav a.active {
-    background: #1d4ed8;
-    color: #ffffff;
-    box-shadow: 0 12px 30px rgba(29, 78, 216, 0.28);
+/* === FORM GRID LAYOUT === */
+.form-grid {
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: var(--space-6) !important;
 }
 
-.garage-intake .portal-section {
-    padding: 3.5rem 0 1.5rem;
+.form-grid .form-section {
+    margin-bottom: 0 !important;
 }
 
-.garage-intake .portal-grid {
-    display: grid;
-    gap: 2.25rem;
-}
-
-@media (min-width: 992px) {
-    .garage-intake .portal-grid.two-column {
-        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+@media (min-width: 1024px) {
+    .form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-8) !important;
         align-items: start;
     }
-}
 
-.garage-intake .portal-card {
-    background: #ffffff;
-    border-radius: 22px;
-    padding: 2.5rem;
-    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
-    border: 1px solid rgba(148, 163, 184, 0.2);
-}
-
-@media (max-width: 767px) {
-    .garage-intake .portal-card {
-        padding: 1.9rem;
+    .form-grid .form-section:last-child {
+        grid-column: 1 / -1;
     }
 }
 
-.garage-intake .portal-card__header h2 {
-    font-size: 1.6rem;
-    font-weight: 600;
-    margin-bottom: 0.85rem;
+/* === FORM SECTIONS === */
+.form-section {
+    background: var(--gray-50) !important;
+    border: 1px solid var(--border-light) !important;
+    border-radius: var(--radius-xl) !important;
+    padding: var(--space-8) !important;
+    margin-bottom: var(--space-6) !important;
+    transition: all var(--transition-base);
 }
 
-.garage-intake .portal-card__header .lead {
-    color: #475569;
-    margin-bottom: 0;
-    line-height: 1.7;
+.form-section:hover {
+    box-shadow: var(--shadow-sm);
+    border-color: var(--border-base);
 }
 
-.garage-intake .form-banner {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    color: #ffffff;
-    border-radius: 18px;
-    padding: 1.9rem;
-    margin-bottom: 2.2rem;
-    box-shadow: 0 20px 45px rgba(37, 99, 235, 0.38);
+.form-section__header {
+    margin-bottom: var(--space-6) !important;
+    padding-bottom: var(--space-5);
+    border-bottom: 2px solid var(--border-light);
 }
 
-.garage-intake .form-banner strong {
-    display: block;
-    font-size: 1.05rem;
-    margin-bottom: 0.6rem;
-}
-
-.garage-intake .form-banner p {
-    margin-bottom: 0.85rem;
-    line-height: 1.6;
-    opacity: 0.92;
-}
-
-.garage-intake .form-banner__steps {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-}
-
-.garage-intake .form-banner__steps li {
-    padding: 0.45rem 1rem;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.16);
-    font-size: 0.85rem;
-    font-weight: 500;
-}
-
-.garage-intake .form-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-}
-
-.garage-intake .form-section {
-    background: #f8fafc;
-    border-radius: 18px;
-    border: 1px solid #e2e8f0;
-    padding: 1.9rem;
-}
-
-.garage-intake .form-section__header {
-    margin-bottom: 1.6rem;
-}
-
-.garage-intake .form-section__tag {
+.form-section__tag {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.35rem 0.85rem;
-    border-radius: 999px;
-    background: rgba(29, 78, 216, 0.12);
-    color: #1d4ed8;
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
-    font-weight: 600;
+    font-size: var(--font-size-xs) !important;
+    font-weight: var(--font-weight-bold) !important;
     text-transform: uppercase;
-    margin-bottom: 0.8rem;
+    letter-spacing: 0.1em;
+    color: var(--primary) !important;
+    background: var(--primary-lightest);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    margin-bottom: var(--space-3) !important;
 }
 
-.garage-intake .form-section__title {
-    font-size: 1.4rem;
-    font-weight: 600;
-    margin-bottom: 0.4rem;
+.form-section__title {
+    font-size: var(--font-size-2xl) !important;
+    font-weight: var(--font-weight-bold) !important;
+    line-height: var(--line-height-tight) !important;
+    color: var(--text-primary) !important;
+    margin-bottom: var(--space-2) !important;
+    letter-spacing: -0.01em;
 }
 
-.garage-intake .form-section__subtitle {
+.form-section__subtitle {
+    font-size: var(--font-size-base) !important;
+    line-height: var(--line-height-relaxed) !important;
+    color: var(--text-secondary) !important;
     margin: 0;
-    color: #475569;
-    font-size: 0.95rem;
-    line-height: 1.65;
 }
 
-.garage-intake .form-section__grid {
-    display: grid;
-    gap: 1.35rem;
+.form-section__grid {
+    display: grid !important;
+    gap: var(--space-6) !important;
+}
+
+.form-section__grid.two-column {
+    grid-template-columns: 1fr;
 }
 
 @media (min-width: 768px) {
-    .garage-intake .form-section__grid.two-column {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 1.35rem 1.65rem;
+    .form-section__grid.two-column {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-5) var(--space-6) !important;
     }
 }
 
-@media (max-width: 767px) {
-    .garage-intake .form-section__grid.two-column {
-        grid-template-columns: 1fr;
-    }
+/* === FORM FIELDS === */
+.form-field {
+    display: flex;
+    flex-direction: column;
 }
 
-.garage-intake .form-field label {
+.form-field label {
     display: block;
-    font-size: 0.92rem;
-    font-weight: 500;
-    color: #0f172a;
-    margin-bottom: 0.45rem;
+    font-size: var(--font-size-sm) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    color: var(--text-primary) !important;
+    margin-bottom: var(--space-2) !important;
+    letter-spacing: -0.01em;
 }
 
-.garage-intake .form-field input,
-.garage-intake .form-field select,
-.garage-intake .form-field textarea {
+.form-field input,
+.form-field select,
+.form-field textarea {
     width: 100%;
-    border-radius: 12px;
-    border: 1px solid #cbd5f5;
-    background: #ffffff;
-    padding: 0.7rem 0.95rem;
-    font-size: 0.95rem;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    color: #0f172a;
-}
-
-.garage-intake .form-field input:focus,
-.garage-intake .form-field select:focus,
-.garage-intake .form-field textarea:focus {
-    outline: none;
-    border-color: #1d4ed8;
-    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.2);
-}
-
-.garage-intake .form-field select {
+    font-family: var(--font-sans);
+    font-size: var(--font-size-base) !important;
+    color: var(--text-primary) !important;
+    background: var(--bg-surface) !important;
+    border: 1.5px solid var(--border-base) !important;
+    border-radius: var(--radius-md) !important;
+    padding: var(--space-3) var(--space-4) !important;
+    transition: all var(--transition-base) !important;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23475569' d='M10.59.59 6 5.17 1.41.59 0 2l6 6 6-6z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.9rem center;
-    background-size: 12px 8px;
-    padding-right: 2.4rem;
 }
 
-.garage-intake .form-field textarea {
+.form-field input::placeholder,
+.form-field textarea::placeholder {
+    color: var(--text-muted);
+}
+
+.form-field input:hover,
+.form-field select:hover,
+.form-field textarea:hover {
+    border-color: var(--border-strong) !important;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+    outline: none !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 4px var(--primary-subtle) !important;
+    background: var(--bg-surface) !important;
+}
+
+.form-field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235E6C84' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--space-4) center;
+    padding-right: var(--space-10) !important;
+    cursor: pointer;
+}
+
+.form-field textarea {
     min-height: 120px;
     resize: vertical;
-    line-height: 1.6;
+    line-height: var(--line-height-relaxed) !important;
 }
 
-.garage-intake .form-static-value {
-    padding: 0.75rem 0.95rem;
-    border-radius: 12px;
-    background: #e2e8f0;
-    border: 1px dashed #cbd5f5;
-    font-size: 0.9rem;
-    color: #1e293b;
+.form-static-value {
+    display: block;
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    border: 1.5px dashed var(--border-base);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-relaxed);
 }
 
-.garage-intake .form-hint {
-    margin: 0.45rem 0 0;
-    font-size: 0.78rem;
-    color: #64748b;
+.form-hint {
+    font-size: var(--font-size-xs) !important;
+    line-height: var(--line-height-relaxed) !important;
+    color: var(--text-muted) !important;
+    margin-top: var(--space-2) !important;
 }
 
-.garage-intake .form-actions {
+/* === FORM ACTIONS === */
+.form-actions {
     display: flex;
-    gap: 0.85rem;
-    margin-top: 1.8rem;
-    flex-wrap: wrap;
+    gap: var(--space-3) !important;
+    margin-top: var(--space-8) !important;
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--border-light);
 }
 
-.garage-intake .form-actions button {
-    border: none;
-    border-radius: 12px;
-    padding: 0.8rem 1.55rem;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.garage-intake .form-actions .primary {
-    background: linear-gradient(135deg, #1d4ed8, #2563eb);
-    color: #ffffff;
-    box-shadow: 0 16px 35px rgba(37, 99, 235, 0.35);
-}
-
-.garage-intake .form-actions .primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 18px 40px rgba(37, 99, 235, 0.4);
-}
-
-.garage-intake .form-actions .secondary {
-    background: #e2e8f0;
-    color: #1f2937;
-}
-
-.garage-intake .form-actions .secondary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 25px rgba(148, 163, 184, 0.35);
-}
-
-@media (max-width: 575px) {
-    .garage-intake .form-actions {
-        flex-direction: column;
-    }
-
-    .garage-intake .form-actions button {
-        width: 100%;
-    }
-}
-
-.garage-intake .table-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-bottom: 1.4rem;
-}
-
-.garage-intake .table-links a {
+/* === BUTTONS === */
+button {
+    position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
-    padding: 0.55rem 1.1rem;
-    border-radius: 999px;
-    text-decoration: none;
-    font-weight: 500;
-    color: #1d4ed8;
-    background: #eef2ff;
-    transition: background 0.2s ease, box-shadow 0.2s ease;
-}
-
-.garage-intake .table-links a:hover {
-    background: #e0e7ff;
-    box-shadow: 0 12px 25px rgba(59, 130, 246, 0.25);
-}
-
-.garage-intake .portal-card h3 {
-    font-size: 1.2rem;
-    font-weight: 600;
-    margin-bottom: 0.85rem;
-    color: #0f172a;
-}
-
-.garage-intake .simple-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-    background: #ffffff;
-    border-radius: 14px;
+    justify-content: center;
+    gap: var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--font-size-sm) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    line-height: 1;
+    padding: var(--space-4) var(--space-6) !important;
+    border: none;
+    border-radius: var(--radius-lg) !important;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--transition-base) !important;
     overflow: hidden;
 }
 
-.garage-intake .simple-table thead {
-    background: #f1f5f9;
-    color: #0f172a;
+button::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent);
+    opacity: 0;
+    transition: opacity var(--transition-fast);
 }
 
-.garage-intake .simple-table th,
-.garage-intake .simple-table td {
-    padding: 0.85rem 0.9rem;
-    border-bottom: 1px solid #e2e8f0;
+button:hover::before {
+    opacity: 1;
+}
+
+button.primary,
+button[type="submit"] {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+    color: var(--text-inverse) !important;
+    box-shadow: var(--shadow-md), 0 0 0 0 rgba(0, 102, 255, 0.4) !important;
+}
+
+button.primary:hover,
+button[type="submit"]:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg), 0 0 0 4px rgba(0, 102, 255, 0.15) !important;
+}
+
+button.primary:active,
+button[type="submit"]:active {
+    transform: translateY(0);
+}
+
+button.secondary {
+    background: var(--bg-surface) !important;
+    color: var(--text-primary) !important;
+    border: 1.5px solid var(--border-base) !important;
+    box-shadow: var(--shadow-xs) !important;
+}
+
+button.secondary:hover {
+    background: var(--gray-50) !important;
+    border-color: var(--border-strong) !important;
+    box-shadow: var(--shadow-sm) !important;
+    transform: translateY(-1px);
+}
+
+button:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* === SECTION SUBTITLE === */
+.section-subtitle {
+    font-size: var(--font-size-lg) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    color: var(--text-primary) !important;
+    margin: var(--space-8) 0 var(--space-4) 0 !important;
+    letter-spacing: -0.01em;
+}
+
+/* === TABLES === */
+.simple-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: var(--font-size-sm) !important;
+    border: 1px solid var(--border-light) !important;
+    border-radius: var(--radius-lg) !important;
+    overflow: hidden;
+    box-shadow: var(--shadow-xs);
+    margin-top: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.simple-table thead {
+    background: var(--gray-50) !important;
+}
+
+.simple-table th {
+    padding: var(--space-4) var(--space-5) !important;
     text-align: left;
+    font-size: var(--font-size-xs) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted) !important;
+    border-bottom: 1px solid var(--border-light) !important;
 }
 
-.garage-intake .simple-table tbody tr:hover {
-    background: #f8fafc;
+.simple-table td {
+    padding: var(--space-4) var(--space-5) !important;
+    border-bottom: 1px solid var(--border-light) !important;
+    color: var(--text-primary) !important;
+    transition: background var(--transition-fast);
 }
 
-.garage-intake .list-empty {
+.simple-table tbody tr {
+    transition: all var(--transition-fast);
+    cursor: pointer;
+}
+
+.simple-table tbody tr:hover {
+    background: var(--gray-50) !important;
+}
+
+.simple-table tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+/* === TABLE LINKS === */
+.table-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3) !important;
+    margin-bottom: var(--space-6) !important;
+}
+
+.table-links--flush {
+    margin-top: 0 !important;
+    margin-bottom: var(--space-6) !important;
+}
+
+.table-links a {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-sm) !important;
+    font-weight: var(--font-weight-medium) !important;
+    color: var(--primary) !important;
+    text-decoration: none !important;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--primary-subtle);
+    transition: all var(--transition-base);
+}
+
+.table-links a::after {
+    content: '↗';
+    font-size: 0.875em;
+    opacity: 0.7;
+    transition: transform var(--transition-fast);
+}
+
+.table-links a:hover {
+    background: var(--primary-lightest);
+    color: var(--primary-dark) !important;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.table-links a:hover::after {
+    transform: translate(2px, -2px);
+    opacity: 1;
+}
+
+/* === LIST EMPTY === */
+.list-empty {
     display: none;
-    margin-top: 1rem;
+    padding: var(--space-6) !important;
     text-align: center;
-    font-size: 0.85rem;
-    color: #64748b;
+    color: var(--text-muted) !important;
+    font-style: italic;
+    font-size: var(--font-size-sm) !important;
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-4);
 }
 
-@media (max-width: 991px) {
-    .garage-intake__nav {
-        margin-top: -26px;
-    }
+/* === SCROLLBAR === */
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
 
-    .garage-intake .portal-card__header h2 {
-        font-size: 1.45rem;
+::-webkit-scrollbar-track {
+    background: var(--gray-100);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--gray-100);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+}
+
+/* === RESPONSIVE BREAKPOINTS === */
+@media (max-width: 1023px) {
+    .portal-hero--sub h1 {
+        font-size: var(--font-size-3xl) !important;
     }
 }
 
 @media (max-width: 767px) {
-    .garage-intake .portal-hero__brand {
-        text-align: center;
+    .container {
+        padding-left: var(--space-4) !important;
+        padding-right: var(--space-4) !important;
     }
-
-    .garage-intake .portal-hero__text h1 {
-        font-size: 1.7rem;
+    
+    .portal-hero--sub {
+        padding: var(--space-5) 0 var(--space-3) 0;
     }
-
-    .garage-intake .portal-hero__text p {
-        font-size: 0.95rem;
+    
+    .portal-hero--sub h1 {
+        font-size: var(--font-size-2xl) !important;
     }
-
-    .garage-intake__nav .portal-nav {
-        border-radius: 22px;
+    
+    .portal-hero--sub p {
+        font-size: var(--font-size-sm) !important;
+    }
+    
+    .portal-nav {
+        
+        padding: var(--space-2) !important;
+        gap: var(--space-1) !important;
+    }
+    
+    .portal-nav a {
+        padding: var(--space-2) var(--space-4) !important;
+        font-size: var(--font-size-xs) !important;
+    }
+    
+    .portal-section {
+        padding: var(--space-8) 0 var(--space-12) !important;
+    }
+    
+    .portal-card {
+        padding: var(--space-6) !important;
+    }
+    
+    .portal-card__header h2 {
+        font-size: var(--font-size-xl) !important;
+    }
+    
+    .form-banner {
+        padding: var(--space-5) !important;
+    }
+    
+    .form-section {
+        padding: var(--space-6) !important;
+    }
+    
+    .form-section__title {
+        font-size: var(--font-size-xl) !important;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .form-actions button {
+        width: 100%;
+    }
+    
+    .table-links {
+        flex-direction: column;
+    }
+    
+    .table-links a {
+        width: 100%;
+        justify-content: center;
     }
 }
+
+@media (max-width: 479px) {
+    .portal-hero--sub h1 {
+        font-size: var(--font-size-xl) !important;
+    }
+    
+    .portal-nav {
+        width: 100%;
+    }
+    
+    .portal-card {
+        padding: var(--space-5) !important;
+    }
+    
+    .form-section {
+        padding: var(--space-5) !important;
+    }
+    
+    .simple-table {
+        font-size: var(--font-size-xs) !important;
+    }
+    
+    .simple-table th,
+    .simple-table td {
+        padding: var(--space-3) !important;
+    }
+}
+
+/* === PRINT STYLES === */
+@media print {
+    .portal-hero--sub,
+    .portal-nav-wrapper,
+    .portal-nav,
+    button,
+    .table-links {
+        display: none !important;
+    }
+    
+    .portal-card,
+    .form-section {
+        box-shadow: none !important;
+        border: 1px solid var(--border-base) !important;
+        page-break-inside: avoid;
+    }
+}
+
+/* === ACCESSIBILITY === */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* === UTILITY CLASSES === */
+.text-center {
+    text-align: center !important;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+.mt-0 { margin-top: 0 !important; }
+.mt-2 { margin-top: var(--space-2) !important; }
+.mt-4 { margin-top: var(--space-4) !important; }
+.mt-6 { margin-top: var(--space-6) !important; }
+.mt-8 { margin-top: var(--space-8) !important; }
+
+.mb-0 { margin-bottom: 0 !important; }
+.mb-2 { margin-bottom: var(--space-2) !important; }
+.mb-4 { margin-bottom: var(--space-4) !important; }
+.mb-6 { margin-bottom: var(--space-6) !important; }
+.mb-8 { margin-bottom: var(--space-8) !important; }
 </style>
 {% endblock %}
 
 {% block page_content %}
-<div class="garage-intake">
-    <header class="portal-hero--sub">
-        <div class="container">
-            <div class="portal-hero__brand">
-                <div class="portal-hero__icon">📋</div>
-                <div class="portal-hero__text">
-                    <span class="portal-eyebrow">Proses Intake</span>
-                    <h1>Registrasi Customer & Kendaraan</h1>
-                    <p>Registrasi customer baru dan catat detail kendaraan untuk service.</p>
-                </div>
+<!-- Header Section -->
+<header class="portal-hero--sub">
+    <div class="container">
+        <div class="portal-hero__brand">
+            <div class="portal-hero__icon">📋</div>
+            <div>
+                <h1>Registrasi Customer & Kendaraan</h1>
+                <p>Registrasi customer baru dan catat detail kendaraan untuk service</p>
             </div>
         </div>
-    </header>
-
-    <div class="garage-intake__nav">
-        {% set active_page = 'intake' %}
-        {% include "garage/templates/includes/portal_nav.html" %}
     </div>
+</header>
 
-    <section class="portal-section">
+<!-- Navigation Wrapper -->
+<div class="portal-nav-wrapper">
+    <div class="container">
+        <nav class="portal-nav">
+            <a href="/garage">🏠 Overview</a>
+            <a href="/garage/intake" class="active">📋 Registrasi</a>
+            <a href="/garage/service">🔧 Servis</a>
+            <a href="/garage/sparepart">📦 Sparepart</a>
+            <a href="/garage/procurement">🛒 Pengadaan</a>
+            <a href="/garage/finance">💰 Keuangan</a>
+            <a href="/garage/insight">📊 Insight</a>
+        </nav>
+    </div>
+</div>
+
+<section class="portal-section">
         <div class="container">
             <div class="portal-grid two-column">
                 <article class="portal-card">
                     <div class="portal-card__header">
-                        <h2>Form Registrasi Intake</h2>
+                        <h2>Registrasi Customer & Kendaraan</h2>
                         <p class="lead">
-                            Lengkapi detail kendaraan terlebih dahulu untuk mengecek riwayat secara otomatis lalu hubungkan dengan data customer.
+                            Gunakan form berikut untuk membuat customer baru atau memilih data yang sudah ada,
+                            lalu kaitkan kendaraan yang akan diservis.
                         </p>
                     </div>
                     <div class="form-banner">
                         <strong>Alur singkat proses intake</strong>
                         <p>
-                            Detail kendaraan diisi pertama kali untuk mengecek apakah unit sudah pernah didaftarkan. Setelah itu tentukan customer yang sesuai dan tambahkan catatan penting sebelum disimpan.
+                            Detail kendaraan diisi pertama kali untuk mengecek apakah unit sudah pernah daftarkan. Setelah itu tentukan customer yang sesuai dan tambahkan catatan penting sebelum disimpan.
                         </p>
                         <ul class="form-banner__steps">
                             <li>Langkah 1 · Detail Kendaraan</li>
@@ -539,21 +1122,20 @@
                                 <span class="form-section__tag">Langkah 1</span>
                                 <h3 class="form-section__title">Detail Kendaraan</h3>
                                 <p class="form-section__subtitle">
-                                    Mulai dengan data unit. Isi nomor polisi untuk mencari riwayat kendaraan &amp; customer secara otomatis.
+                                    Mulai dengan data unit. Isi nomor polisi untuk mencari riwayat kendaraan & customer secara otomatis.
                                 </p>
                             </header>
                             <div class="form-section__grid two-column">
                                 <div class="form-field">
                                     <label for="vehicle_customer">Customer untuk Kendaraan</label>
                                     <select id="vehicle_customer" name="vehicle_customer">
-                                        <option value="">Otomatis sesuai customer di atas</option>
+                                        <option value="">Otomatis sesuai customer di bawah</option>
                                     </select>
                                     <p class="form-hint">Biarkan default untuk mengikuti pilihan customer pada langkah berikutnya.</p>
                                 </div>
                                 <div class="form-field">
                                     <label for="license_plate">No. Polisi</label>
                                     <input id="license_plate" name="license_plate" placeholder="B 1234 CD" />
-                                    <p class="form-hint">Jika kendaraan sudah pernah terdaftar, data lain akan terisi otomatis.</p>
                                 </div>
                                 <div class="form-field">
                                     <label for="brand">Merek</label>
@@ -608,7 +1190,7 @@
                                 <span class="form-section__tag">Langkah 2</span>
                                 <h3 class="form-section__title">Data Customer</h3>
                                 <p class="form-section__subtitle">
-                                    Catat identitas customer dan informasi kontak utama untuk kebutuhan follow-up.
+                                    Pastikan customer yang tepat sudah dipilih atau buat data baru, lalu lengkapi informasi kontak.
                                 </p>
                             </header>
                             <div class="form-section__grid two-column">
@@ -669,21 +1251,18 @@
                         <div class="form-section">
                             <header class="form-section__header">
                                 <span class="form-section__tag">Langkah 3</span>
-                                <h3 class="form-section__title">Catatan & Konfirmasi</h3>
+                                <h3 class="form-section__title">Catatan &amp; Konfirmasi</h3>
                                 <p class="form-section__subtitle">
                                     Tambahkan catatan penting sebelum menyimpan intake untuk memastikan tim service siap menangani unit.
                                 </p>
                             </header>
-                            
                             <div class="form-section__grid">
                                 <div class="form-field">
                                     <label for="notes">Catatan Tambahan</label>
-                                    <textarea id="notes" name="notes" 
-                                        placeholder="Informasi penting mengenai customer atau kendaraan (contoh: riwayat servis, keluhan khusus, permintaan customer)"></textarea>
+                                    <textarea id="notes" name="notes" placeholder="Informasi penting mengenai customer atau kendaraan (contoh: riwayat servis, keluhan khusus, permintaan customer)"></textarea>
                                     <p class="form-hint">Gunakan catatan untuk riwayat servis, permintaan khusus, atau peringatan teknis.</p>
                                 </div>
                             </div>
-                            
                             <div class="form-actions">
                                 <button class="primary" type="submit">💾 Simpan Data Intake</button>
                                 <button class="secondary" type="reset">🔄 Reset Form</button>
@@ -691,8 +1270,6 @@
                         </div>
                     </form>
                 </article>
-                
-                <!-- Recent Data Table Card -->
                 <article class="portal-card">
                     <div class="portal-card__header">
                         <h2>Master Data Aktif</h2>
@@ -700,7 +1277,6 @@
                             Ringkasan customer dan kendaraan terbaru. Klik nama dokumen untuk membuka detailnya di Desk.
                         </p>
                     </div>
-                    
                     <div class="table-links table-links--flush">
                         <a href="#" data-desk-link="Garage Customer" target="_blank">📁 Buka List Customer</a>
                         <a href="#" data-desk-link="Garage Vehicle" target="_blank">🚗 Buka List Kendaraan</a>
@@ -720,8 +1296,8 @@
                         </thead>
                         <tbody data-role="customer-vehicle-table">
                             <tr>
-                                <td colspan="7" style="text-align: center; padding: 2rem; color: #64748b;">
-                                    ⏳ Loading data customer &amp; kendaraan...
+                                <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                    ⏳ Loading data customer & kendaraan...
                                 </td>
                             </tr>
                         </tbody>
@@ -731,7 +1307,6 @@
             </div>
         </div>
     </section>
-</div>
 {% endblock %}
 
 {% block script %}
