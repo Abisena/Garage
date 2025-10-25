@@ -166,806 +166,491 @@ body {
     border-color: transparent !important;
 }
 
-/* Remove blue background from hamburger menu */
-.navbar-toggle {
-    background-color: transparent !important;
-    border-color: rgba(0, 0, 0, 0.1) !important;
-}
-
-.navbar-toggle:hover,
-.navbar-toggle:focus {
-    background-color: rgba(0, 0, 0, 0.05) !important;
-}
-
-/* Remove blue background from active/selected navbar items */
-.navbar-nav > li > a {
-    background-color: transparent !important;
-}
-
-.navbar-nav > li.active > a,
-.navbar-nav > li.active > a:hover,
-.navbar-nav > li.active > a:focus {
-    background-color: transparent !important;
-    color: inherit !important;
-}
-
-/* Remove any default blue backgrounds */
-.navbar-default .navbar-nav > .active > a,
-.navbar-default .navbar-nav > .active > a:hover,
-.navbar-default .navbar-nav > .active > a:focus {
-    background-color: transparent !important;
-}
-
-.btn-primary,
-.btn-primary:hover,
-.btn-primary:focus,
-.btn-primary:active {
-    background-color: transparent !important;
-    border-color: transparent !important;
-}
-
-/* Target any blue background in navbar area */
-header .navbar-nav li a,
-header .navbar-nav li button {
-    background-color: transparent !important;
-}
-
-/* === CONTAINER === */
-.container {
-    max-width: 1440px !important;
-    margin: 0 auto !important;
-    padding-left: var(--space-6) !important;
-    padding-right: var(--space-6) !important;
-}
-
-@media (min-width: 1200px) {
-    .container {
-        padding-left: var(--space-12) !important;
-        padding-right: var(--space-12) !important;
-    }
-}
-
-/* === HEADER SECTION === */
-.portal-hero--sub {
+/* === HERO BANNER - CONSISTENT WITH OVERVIEW === */
+.hero-banner {
+    background: linear-gradient(135deg, #2563EB 0%, #1E40AF 100%);
+    padding: 3rem 0;
+    margin-top: -60px;
+    padding-top: 90px;
     position: relative;
-    background: linear-gradient(160deg, 
-        var(--primary-darker) 0%, 
-        var(--primary-dark) 40%, 
-        var(--primary) 100%);
-    padding: var(--space-6) 0 var(--space-4) 0;
-    margin-top: var(--space-6);
     overflow: hidden;
 }
 
-/* Animated Background Pattern */
-.portal-hero--sub::before {
+.hero-banner::before {
     content: '';
     position: absolute;
-    inset: 0;
-    background-image: 
-        radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
-    z-index: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.5) 0%, transparent 50%),
+        radial-gradient(circle at 80% 50%, rgba(147, 51, 234, 0.3) 0%, transparent 50%);
+    opacity: 0.5;
 }
 
-.portal-hero--sub .container {
+.hero-banner::after {
+    content: '🔧';
+    position: absolute;
+    top: 50%;
+    left: 5%;
+    transform: translateY(-50%);
+    font-size: 5rem;
+    opacity: 0.1;
+}
+
+.hero-content {
     position: relative;
     z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    color: white;
 }
 
-.portal-hero__brand {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-3);
+.hero-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.portal-hero__icon {
-    width: 48px;
-    height: 48px;
+.hero-subtitle {
+    font-size: 1rem;
+    opacity: 0.9;
+    font-weight: 400;
+    max-width: 600px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* === NAVIGATION TABS - CONSISTENT WITH OVERVIEW === */
+.portal-nav {
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(10px);
-    border-radius: var(--radius-lg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 0.5rem;
+    display: inline-flex;
+    gap: 0.5rem;
+    margin-top: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.portal-eyebrow {
+.portal-nav__link {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-2);
-    font-size: var(--font-size-xs) !important;
-    font-weight: var(--font-weight-semibold) !important;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: rgba(255, 255, 255, 0.8) !important;
-    margin-bottom: var(--space-3) !important;
-    background: rgba(255, 255, 255, 0.1);
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-full);
-    backdrop-filter: blur(10px);
-}
-
-.portal-hero--sub h1 {
-    font-size: var(--font-size-2xl) !important;
-    font-weight: var(--font-weight-bold) !important;
-    line-height: var(--line-height-tight) !important;
-    color: var(--text-inverse) !important;
-    margin: 0 !important;
-    letter-spacing: -0.02em;
-}
-
-.portal-hero--sub p {
-    font-size: var(--font-size-sm) !important;
-    line-height: var(--line-height-relaxed) !important;
-    color: rgba(255, 255, 255, 0.85) !important;
-    margin: 0 !important;
-}
-
-/* === NAVIGATION WRAPPER === */
-.portal-nav-wrapper {
-    background: linear-gradient(160deg, 
-        var(--primary-darker) 0%, 
-        var(--primary-dark) 40%, 
-        var(--primary) 100%);
-    padding: 0 0 var(--space-6) 0;
-    box-shadow: var(--shadow-lg);
-    margin-bottom: 0;
-}
-
-/* === NAVIGATION === */
-.portal-nav {
-    display: flex !important;
-    justify-content: center !important;
-    gap: var(--space-2) !important;
-    background: rgba(255, 255, 255, 0.1) !important;
-    backdrop-filter: blur(20px) !important;
-    padding: var(--space-2) !important;
-    border-radius: var(--radius-lg) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    overflow-x: auto !important;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-    max-width: fit-content;
-    margin: 0 auto;
-}
-
-.portal-nav::-webkit-scrollbar {
-    height: 6px;
-}
-
-.portal-nav::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.portal-nav::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: var(--radius-full);
-}
-
-.portal-nav a {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: var(--space-2) !important;
-    padding: var(--space-3) var(--space-5) !important;
-    border-radius: var(--radius-md) !important;
-    font-size: var(--font-size-sm) !important;
-    font-weight: var(--font-weight-medium) !important;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    color: white !important;
     text-decoration: none !important;
-    color: rgba(255, 255, 255, 0.9) !important;
-    background: transparent !important;
-    border: 1px solid transparent !important;
-    transition: all var(--transition-base) !important;
-    white-space: nowrap !important;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 12px;
+    transition: all 0.2s ease;
     position: relative;
+    background: transparent;
+    opacity: 0.85;
 }
 
-.portal-nav a::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-md);
-    opacity: 0;
-    transition: opacity var(--transition-base);
-}
-
-.portal-nav a:hover::before {
+.portal-nav__link:hover {
+    background: rgba(255, 255, 255, 0.15);
     opacity: 1;
-}
-
-.portal-nav a:hover {
-    color: var(--text-inverse) !important;
-    border-color: rgba(255, 255, 255, 0.25) !important;
     transform: translateY(-1px);
 }
 
-.portal-nav a.active {
-    background: rgba(255, 255, 255, 0.95) !important;
-    color: var(--primary) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+.portal-nav__link--active {
+    background: white !important;
+    color: #2563EB !important;
+    font-weight: 600;
+    opacity: 1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.portal-nav a.active::before {
-    display: none;
+.portal-nav__link--active:hover {
+    transform: none;
 }
 
-/* === SECTION SPACING === */
-.portal-section {
-    padding: var(--space-12) 0 var(--space-16) !important;
+/* Icon styling in nav */
+.portal-nav__link span:first-child {
+    font-size: 1.1rem;
+    filter: grayscale(0);
 }
 
-.portal-section:first-of-type {
-    padding-top: var(--space-8) !important;
+.portal-nav__link--active span:first-child {
+    filter: none;
 }
 
-/* === GRID SYSTEM === */
-.portal-grid {
-    display: grid !important;
-    gap: var(--space-8) !important;
-    
-}
-
-.portal-grid.two-column {
-    grid-template-columns: 1fr;
-}
-
-@media (min-width: 1024px) {
-    .portal-grid.two-column {
-        grid-template-columns: 1fr;
-        gap: var(--space-10) !important;
-    }
-}
-
-/* === CARDS === */
-.portal-card {
+/* === MAIN CONTENT === */
+.portal-main {
+    max-width: 1200px;
+    margin: -2rem auto 0;
+    padding: 0 2rem 4rem;
     position: relative;
+    z-index: 10;
+}
+
+.portal-container {
     display: flex;
     flex-direction: column;
-    background: var(--bg-surface) !important;
-    border: 1px solid var(--border-light) !important;
-    border-radius: var(--radius-xl) !important;
-    padding: var(--space-8) !important;
-    box-shadow: var(--shadow-sm) !important;
-    transition: all var(--transition-slow) !important;
-    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    gap: 2rem;
+    margin-top: 2rem;
 }
 
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(32px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+/* === PORTAL CARDS === */
+.portal-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.portal-card:hover {
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
 }
 
 .portal-card__header {
-    margin-bottom: var(--space-6) !important;
+    padding: 2rem;
+    background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+    border-bottom: 1px solid #E2E8F0;
 }
 
 .portal-card__header h2 {
-    font-size: var(--font-size-2xl) !important;
-    font-weight: var(--font-weight-bold) !important;
-    line-height: var(--line-height-tight) !important;
-    color: var(--text-primary) !important;
-    margin-bottom: var(--space-3) !important;
-    letter-spacing: -0.01em;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1E293B;
+    margin: 0 0 0.5rem 0;
 }
 
-.portal-card__header .lead,
-.lead {
-    font-size: var(--font-size-base) !important;
-    line-height: var(--line-height-relaxed) !important;
-    color: var(--text-secondary) !important;
+.portal-card__header .lead {
+    color: #64748B;
+    font-size: 0.95rem;
+    line-height: 1.6;
     margin: 0;
 }
 
-/* === FORM BANNER === */
-.form-banner {
-    background: linear-gradient(135deg, var(--primary-darker), var(--primary-dark)) !important;
-    color: var(--text-inverse) !important;
-    border-radius: var(--radius-lg) !important;
-    padding: var(--space-6) !important;
-    margin-bottom: var(--space-8) !important;
-    box-shadow: var(--shadow-md);
+/* === FORM STYLING === */
+.form-stack {
+    padding: 2rem;
 }
 
-.form-banner strong {
-    display: block;
-    font-size: var(--font-size-lg) !important;
-    font-weight: var(--font-weight-semibold) !important;
-    margin-bottom: var(--space-4) !important;
-}
-
-.form-banner__steps {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2) var(--space-6);
-}
-
-.form-banner__steps li {
-    position: relative;
-    font-size: var(--font-size-xs) !important;
-    font-weight: var(--font-weight-medium) !important;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: rgba(255, 255, 255, 0.8);
-    padding-left: var(--space-5);
-}
-
-.form-banner__steps li::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 12px;
-    height: 12px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.5);
-}
-
-/* === FORM GRID LAYOUT === */
-.form-grid {
-    display: grid !important;
-    grid-template-columns: 1fr;
-    gap: var(--space-6) !important;
-}
-
-.form-grid .form-section {
-    margin-bottom: 0 !important;
-}
-
-@media (min-width: 1024px) {
-    .form-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: var(--space-8) !important;
-        align-items: start;
-    }
-
-    .form-grid .form-section:last-child {
-        grid-column: 1 / -1;
-    }
-}
-
-/* === FORM SECTIONS === */
 .form-section {
-    background: var(--gray-50) !important;
-    border: 1px solid var(--border-light) !important;
-    border-radius: var(--radius-xl) !important;
-    padding: var(--space-8) !important;
-    margin-bottom: var(--space-6) !important;
-    transition: all var(--transition-base);
+    margin-bottom: 2.5rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 1px solid #E2E8F0;
 }
 
-.form-section:hover {
-    box-shadow: var(--shadow-sm);
-    border-color: var(--border-base);
+.form-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
 }
 
 .form-section__header {
-    margin-bottom: var(--space-6) !important;
-    padding-bottom: var(--space-5);
-    border-bottom: 2px solid var(--border-light);
+    margin-bottom: 2rem;
 }
 
 .form-section__tag {
-    display: inline-flex;
-    align-items: center;
-    font-size: var(--font-size-xs) !important;
-    font-weight: var(--font-weight-bold) !important;
+    display: inline-block;
+    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--primary) !important;
-    background: var(--primary-lightest);
-    padding: var(--space-1) var(--space-3);
-    border-radius: var(--radius-full);
-    margin-bottom: var(--space-3) !important;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.75rem;
 }
 
 .form-section__title {
-    font-size: var(--font-size-2xl) !important;
-    font-weight: var(--font-weight-bold) !important;
-    line-height: var(--line-height-tight) !important;
-    color: var(--text-primary) !important;
-    margin-bottom: var(--space-2) !important;
-    letter-spacing: -0.01em;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1E293B;
+    margin: 0 0 0.5rem 0;
 }
 
 .form-section__subtitle {
-    font-size: var(--font-size-base) !important;
-    line-height: var(--line-height-relaxed) !important;
-    color: var(--text-secondary) !important;
+    color: #64748B;
+    font-size: 0.9rem;
+    line-height: 1.6;
     margin: 0;
 }
 
+/* Form Grid Layouts */
 .form-section__grid {
-    display: grid !important;
-    gap: var(--space-6) !important;
+    display: grid;
+    gap: 1.5rem;
 }
 
 .form-section__grid.two-column {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
-@media (min-width: 768px) {
-    .form-section__grid.two-column {
-        grid-template-columns: repeat(2, 1fr);
-        gap: var(--space-5) var(--space-6) !important;
-    }
-}
-
-/* === FORM FIELDS === */
+/* Form Fields */
 .form-field {
     display: flex;
     flex-direction: column;
+    gap: 0.5rem;
 }
 
 .form-field label {
-    display: block;
-    font-size: var(--font-size-sm) !important;
-    font-weight: var(--font-weight-semibold) !important;
-    color: var(--text-primary) !important;
-    margin-bottom: var(--space-2) !important;
-    letter-spacing: -0.01em;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-field label .required {
+    color: #EF4444;
 }
 
 .form-field input,
 .form-field select,
 .form-field textarea {
-    width: 100%;
-    font-family: var(--font-sans);
-    font-size: var(--font-size-base) !important;
-    color: var(--text-primary) !important;
-    background: var(--bg-surface) !important;
-    border: 1.5px solid var(--border-base) !important;
-    border-radius: var(--radius-md) !important;
-    padding: var(--space-3) var(--space-4) !important;
-    transition: all var(--transition-base) !important;
-    appearance: none;
-}
-
-.form-field input::placeholder,
-.form-field textarea::placeholder {
-    color: var(--text-muted);
-}
-
-.form-field input:hover,
-.form-field select:hover,
-.form-field textarea:hover {
-    border-color: var(--border-strong) !important;
+    padding: 0.75rem 1rem;
+    border: 2px solid #E2E8F0;
+    border-radius: 10px;
+    font-size: 0.925rem;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    background: white;
+    color: #1E293B;
 }
 
 .form-field input:focus,
 .form-field select:focus,
 .form-field textarea:focus {
-    outline: none !important;
-    border-color: var(--primary) !important;
-    box-shadow: 0 0 0 4px var(--primary-subtle) !important;
-    background: var(--bg-surface) !important;
+    outline: none;
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.form-field select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235E6C84' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right var(--space-4) center;
-    padding-right: var(--space-10) !important;
-    cursor: pointer;
+.form-field input::placeholder,
+.form-field textarea::placeholder {
+    color: #94A3B8;
 }
 
 .form-field textarea {
     min-height: 120px;
     resize: vertical;
-    line-height: var(--line-height-relaxed) !important;
-}
-
-.form-static-value {
-    display: block;
-    width: 100%;
-    padding: var(--space-3) var(--space-4);
-    border: 1.5px dashed var(--border-base);
-    border-radius: var(--radius-md);
-    background: var(--bg-elevated);
-    color: var(--text-secondary);
-    font-size: var(--font-size-sm);
-    line-height: var(--line-height-relaxed);
 }
 
 .form-hint {
-    font-size: var(--font-size-xs) !important;
-    line-height: var(--line-height-relaxed) !important;
-    color: var(--text-muted) !important;
-    margin-top: var(--space-2) !important;
+    font-size: 0.825rem;
+    color: #64748B;
+    margin-top: 0.25rem;
+    line-height: 1.5;
 }
 
-/* === FORM ACTIONS === */
+.form-static-value {
+    padding: 0.75rem 1rem;
+    background: #F8FAFC;
+    border: 2px dashed #CBD5E1;
+    border-radius: 10px;
+    color: #64748B;
+    font-size: 0.9rem;
+}
+
+/* Form Actions */
 .form-actions {
     display: flex;
-    gap: var(--space-3) !important;
-    margin-top: var(--space-8) !important;
-    padding-top: var(--space-6);
-    border-top: 1px solid var(--border-light);
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #E2E8F0;
 }
 
-/* === BUTTONS === */
-button {
-    position: relative;
+.form-actions button {
+    padding: 0.875rem 2rem;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: var(--space-2);
-    font-family: var(--font-sans);
-    font-size: var(--font-size-sm) !important;
-    font-weight: var(--font-weight-semibold) !important;
-    line-height: 1;
-    padding: var(--space-4) var(--space-6) !important;
-    border: none;
-    border-radius: var(--radius-lg) !important;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all var(--transition-base) !important;
-    overflow: hidden;
+    gap: 0.5rem;
 }
 
-button::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent);
-    opacity: 0;
-    transition: opacity var(--transition-fast);
+.form-actions button.primary {
+    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+    color: white;
+    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.25);
 }
 
-button:hover::before {
-    opacity: 1;
-}
-
-button.primary,
-button[type="submit"] {
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
-    color: var(--text-inverse) !important;
-    box-shadow: var(--shadow-md), 0 0 0 0 rgba(0, 102, 255, 0.4) !important;
-}
-
-button.primary:hover,
-button[type="submit"]:hover {
+.form-actions button.primary:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-lg), 0 0 0 4px rgba(0, 102, 255, 0.15) !important;
+    box-shadow: 0 6px 12px rgba(59, 130, 246, 0.35);
 }
 
-button.primary:active,
-button[type="submit"]:active {
-    transform: translateY(0);
+.form-actions button.secondary {
+    background: white;
+    color: #64748B;
+    border: 2px solid #E2E8F0;
 }
 
-button.secondary {
-    background: var(--bg-surface) !important;
-    color: var(--text-primary) !important;
-    border: 1.5px solid var(--border-base) !important;
-    box-shadow: var(--shadow-xs) !important;
+.form-actions button.secondary:hover {
+    background: #F8FAFC;
+    border-color: #CBD5E1;
 }
 
-button.secondary:hover {
-    background: var(--gray-50) !important;
-    border-color: var(--border-strong) !important;
-    box-shadow: var(--shadow-sm) !important;
-    transform: translateY(-1px);
-}
-
-button:disabled {
-    opacity: 0.5 !important;
-    cursor: not-allowed !important;
-    transform: none !important;
-    box-shadow: none !important;
-}
-
-/* === SECTION SUBTITLE === */
-.section-subtitle {
-    font-size: var(--font-size-lg) !important;
-    font-weight: var(--font-weight-semibold) !important;
-    color: var(--text-primary) !important;
-    margin: var(--space-8) 0 var(--space-4) 0 !important;
-    letter-spacing: -0.01em;
-}
-
-/* === TABLES === */
+/* === TABLE STYLING === */
 .simple-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    font-size: var(--font-size-sm) !important;
-    border: 1px solid var(--border-light) !important;
-    border-radius: var(--radius-lg) !important;
-    overflow: hidden;
-    box-shadow: var(--shadow-xs);
-    margin-top: var(--space-4);
-    margin-bottom: var(--space-6);
+    font-size: 0.9rem;
 }
 
 .simple-table thead {
-    background: var(--gray-50) !important;
+    background: #F8FAFC;
 }
 
 .simple-table th {
-    padding: var(--space-4) var(--space-5) !important;
+    padding: 1rem;
     text-align: left;
-    font-size: var(--font-size-xs) !important;
-    font-weight: var(--font-weight-semibold) !important;
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.825rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted) !important;
-    border-bottom: 1px solid var(--border-light) !important;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #E2E8F0;
 }
 
 .simple-table td {
-    padding: var(--space-4) var(--space-5) !important;
-    border-bottom: 1px solid var(--border-light) !important;
-    color: var(--text-primary) !important;
-    transition: background var(--transition-fast);
-}
-
-.simple-table tbody tr {
-    transition: all var(--transition-fast);
-    cursor: pointer;
+    padding: 1rem;
+    color: #334155;
+    border-bottom: 1px solid #F1F5F9;
 }
 
 .simple-table tbody tr:hover {
-    background: var(--gray-50) !important;
+    background: #F8FAFC;
 }
 
 .simple-table tbody tr:last-child td {
-    border-bottom: none !important;
+    border-bottom: none;
 }
 
-/* === TABLE LINKS === */
+/* Table Links */
 .table-links {
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3) !important;
-    margin-bottom: var(--space-6) !important;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    background: #F8FAFC;
+    border-top: 1px solid #E2E8F0;
+    border-bottom: 1px solid #E2E8F0;
+    margin: 0 -2rem;
 }
 
 .table-links--flush {
-    margin-top: 0 !important;
-    margin-bottom: var(--space-6) !important;
+    margin: 0;
+    border-radius: 0;
 }
 
 .table-links a {
-    position: relative;
+    color: #3B82F6;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
     display: inline-flex;
     align-items: center;
-    gap: var(--space-2);
-    font-size: var(--font-size-sm) !important;
-    font-weight: var(--font-weight-medium) !important;
-    color: var(--primary) !important;
-    text-decoration: none !important;
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-md);
-    background: var(--primary-subtle);
-    transition: all var(--transition-base);
-}
-
-.table-links a::after {
-    content: '↗';
-    font-size: 0.875em;
-    opacity: 0.7;
-    transition: transform var(--transition-fast);
+    gap: 0.5rem;
+    transition: all 0.2s ease;
 }
 
 .table-links a:hover {
-    background: var(--primary-lightest);
-    color: var(--primary-dark) !important;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
+    color: #2563EB;
+    transform: translateX(2px);
 }
 
-.table-links a:hover::after {
-    transform: translate(2px, -2px);
-    opacity: 1;
-}
-
-/* === LIST EMPTY === */
+/* Empty State */
 .list-empty {
     display: none;
-    padding: var(--space-6) !important;
+    padding: 3rem;
     text-align: center;
-    color: var(--text-muted) !important;
-    font-style: italic;
-    font-size: var(--font-size-sm) !important;
-    background: var(--gray-50);
-    border-radius: var(--radius-md);
-    margin-bottom: var(--space-4);
+    color: #94A3B8;
+    font-size: 0.95rem;
+    background: #F8FAFC;
+    border-radius: 12px;
+    margin: 1rem 2rem 2rem;
 }
 
-/* === SCROLLBAR === */
-::-webkit-scrollbar {
-    width: 12px;
-    height: 12px;
+.list-empty.active {
+    display: block;
 }
 
-::-webkit-scrollbar-track {
-    background: var(--gray-100);
+/* === BADGES === */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-::-webkit-scrollbar-thumb {
-    background: var(--gray-300);
-    border-radius: var(--radius-sm);
-    border: 2px solid var(--gray-100);
+.badge--vip {
+    background: linear-gradient(135deg, #F59E0B 0%, #F97316 100%);
+    color: white;
 }
 
-::-webkit-scrollbar-thumb:hover {
-    background: var(--gray-400);
+.badge--regular {
+    background: #E2E8F0;
+    color: #64748B;
 }
 
-/* === RESPONSIVE BREAKPOINTS === */
-@media (max-width: 1023px) {
-    .portal-hero--sub h1 {
-        font-size: var(--font-size-3xl) !important;
-    }
+.badge--success {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    color: white;
 }
 
-@media (max-width: 767px) {
-    .container {
-        padding-left: var(--space-4) !important;
-        padding-right: var(--space-4) !important;
-    }
-    
-    .portal-hero--sub {
-        padding: var(--space-5) 0 var(--space-3) 0;
-    }
-    
-    .portal-hero--sub h1 {
-        font-size: var(--font-size-2xl) !important;
+/* === RESPONSIVE DESIGN === */
+@media (max-width: 768px) {
+    .hero-banner {
+        padding: 2rem 0;
+        padding-top: 80px;
     }
     
-    .portal-hero--sub p {
-        font-size: var(--font-size-sm) !important;
+    .hero-title {
+        font-size: 1.5rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 0.9rem;
     }
     
     .portal-nav {
-        
-        padding: var(--space-2) !important;
-        gap: var(--space-1) !important;
+        width: 100%;
+        overflow-x: auto;
+        border-radius: 12px;
     }
     
-    .portal-nav a {
-        padding: var(--space-2) var(--space-4) !important;
-        font-size: var(--font-size-xs) !important;
+    .portal-nav__link {
+        padding: 0.625rem 1rem;
+        font-size: 0.85rem;
+        white-space: nowrap;
     }
     
-    .portal-section {
-        padding: var(--space-8) 0 var(--space-12) !important;
+    .portal-main {
+        padding: 0 1rem 3rem;
     }
     
-    .portal-card {
-        padding: var(--space-6) !important;
+    .portal-card__header {
+        padding: 1.5rem;
     }
     
-    .portal-card__header h2 {
-        font-size: var(--font-size-xl) !important;
+    .form-stack {
+        padding: 1.5rem;
     }
     
-    .form-banner {
-        padding: var(--space-5) !important;
-    }
-    
-    .form-section {
-        padding: var(--space-6) !important;
-    }
-    
-    .form-section__title {
-        font-size: var(--font-size-xl) !important;
+    .form-section__grid.two-column {
+        grid-template-columns: 1fr;
     }
     
     .form-actions {
@@ -974,185 +659,280 @@ button:disabled {
     
     .form-actions button {
         width: 100%;
+        justify-content: center;
     }
     
     .table-links {
         flex-direction: column;
-    }
-    
-    .table-links a {
-        width: 100%;
-        justify-content: center;
-    }
-}
-
-@media (max-width: 479px) {
-    .portal-hero--sub h1 {
-        font-size: var(--font-size-xl) !important;
-    }
-    
-    .portal-nav {
-        width: 100%;
-    }
-    
-    .portal-card {
-        padding: var(--space-5) !important;
-    }
-    
-    .form-section {
-        padding: var(--space-5) !important;
+        padding: 1rem 1.5rem;
     }
     
     .simple-table {
-        font-size: var(--font-size-xs) !important;
+        font-size: 0.825rem;
     }
     
     .simple-table th,
     .simple-table td {
-        padding: var(--space-3) !important;
+        padding: 0.75rem 0.5rem;
     }
+    
+    /* Hide some columns on mobile */
+    .simple-table th:nth-child(2),
+    .simple-table td:nth-child(2),
+    .simple-table th:nth-child(4),
+    .simple-table td:nth-child(4) {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-banner::after {
+        display: none;
+    }
+    
+    .portal-card {
+        border-radius: 12px;
+    }
+    
+    .form-field input,
+    .form-field select,
+    .form-field textarea {
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+}
+
+/* === ANIMATIONS === */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.portal-card {
+    animation: slideInUp 0.5s ease-out;
+}
+
+.portal-nav__link {
+    animation: fadeIn 0.3s ease-out;
 }
 
 /* === PRINT STYLES === */
 @media print {
-    .portal-hero--sub,
-    .portal-nav-wrapper,
+    .hero-banner,
     .portal-nav,
-    button,
+    .form-actions,
     .table-links {
-        display: none !important;
+        display: none;
     }
     
-    .portal-card,
-    .form-section {
-        box-shadow: none !important;
-        border: 1px solid var(--border-base) !important;
-        page-break-inside: avoid;
+    .portal-main {
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
     }
-}
-
-/* === ACCESSIBILITY === */
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+    
+    .portal-card {
+        box-shadow: none;
+        border: 1px solid #E2E8F0;
+        break-inside: avoid;
     }
 }
 
 /* === UTILITY CLASSES === */
 .text-center {
-    text-align: center !important;
+    text-align: center;
 }
 
-.text-right {
-    text-align: right !important;
+.text-muted {
+    color: var(--text-muted);
 }
 
-.mt-0 { margin-top: 0 !important; }
-.mt-2 { margin-top: var(--space-2) !important; }
-.mt-4 { margin-top: var(--space-4) !important; }
-.mt-6 { margin-top: var(--space-6) !important; }
-.mt-8 { margin-top: var(--space-8) !important; }
+.mt-1 { margin-top: var(--space-1); }
+.mt-2 { margin-top: var(--space-2); }
+.mt-3 { margin-top: var(--space-3); }
+.mt-4 { margin-top: var(--space-4); }
 
-.mb-0 { margin-bottom: 0 !important; }
-.mb-2 { margin-bottom: var(--space-2) !important; }
-.mb-4 { margin-bottom: var(--space-4) !important; }
-.mb-6 { margin-bottom: var(--space-6) !important; }
-.mb-8 { margin-bottom: var(--space-8) !important; }
+.mb-1 { margin-bottom: var(--space-1); }
+.mb-2 { margin-bottom: var(--space-2); }
+.mb-3 { margin-bottom: var(--space-3); }
+.mb-4 { margin-bottom: var(--space-4); }
+
+.p-1 { padding: var(--space-1); }
+.p-2 { padding: var(--space-2); }
+.p-3 { padding: var(--space-3); }
+.p-4 { padding: var(--space-4); }
+
+.flex {
+    display: flex;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.gap-1 { gap: var(--space-1); }
+.gap-2 { gap: var(--space-2); }
+.gap-3 { gap: var(--space-3); }
+.gap-4 { gap: var(--space-4); }
+
+/* === LOADING STATES === */
+.skeleton {
+    background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 4px;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Success/Error States */
+.form-field.error input,
+.form-field.error select,
+.form-field.error textarea {
+    border-color: #EF4444;
+}
+
+.form-field.error .form-hint {
+    color: #EF4444;
+}
+
+.form-field.success input,
+.form-field.success select,
+.form-field.success textarea {
+    border-color: #10B981;
+}
+
+/* Focus Visible for Accessibility */
+*:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+button:focus-visible {
+    outline-offset: 4px;
+}
 </style>
 {% endblock %}
 
 {% block page_content %}
-<!-- Header Section -->
-<header class="portal-hero--sub">
-    <div class="container">
-        <div class="portal-hero__brand">
-            <div class="portal-hero__icon">📋</div>
-            <div>
-                <h1>Registrasi Customer & Kendaraan</h1>
-                <p>Registrasi customer baru dan catat detail kendaraan untuk service</p>
-            </div>
+    <!-- Hero Banner with Gradient Background - Consistent with Overview -->
+    <section class="hero-banner">
+        <div class="hero-content">
+            <h1 class="hero-title">
+                <span>📝</span> Registrasi Customer & Kendaraan
+            </h1>
+            <p class="hero-subtitle">
+                Registrasi customer baru dan catat detail kendaraan untuk service
+            </p>
+            
+            <!-- Navigation Tabs - Consistent Style -->
+            <nav class="portal-nav">
+                <a href="/garage" class="portal-nav__link">
+                    <span>👥</span> Overview
+                </a>
+                <a href="/garage/intake" class="portal-nav__link portal-nav__link--active">
+                    <span>📝</span> Registrasi
+                </a>
+                <a href="/garage/service" class="portal-nav__link">
+                    <span>🔧</span> Servis
+                </a>
+                <a href="/garage/spare-part" class="portal-nav__link">
+                    <span>🔩</span> Sparepart
+                </a>
+                <a href="/garage/invoice" class="portal-nav__link">
+                    <span>📋</span> Pengadaan
+                </a>
+                <a href="/garage/finance" class="portal-nav__link">
+                    <span>💰</span> Keuangan
+                </a>
+                <a href="/garage/insight" class="portal-nav__link">
+                    <span>📊</span> Insight
+                </a>
+            </nav>
         </div>
-    </div>
-</header>
+    </section>
 
-<!-- Navigation Wrapper -->
-<div class="portal-nav-wrapper">
-    <div class="container">
-        <nav class="portal-nav">
-            <a href="/garage">🏠 Overview</a>
-            <a href="/garage/intake" class="active">📋 Registrasi</a>
-            <a href="/garage/service">🔧 Servis</a>
-            <a href="/garage/sparepart">📦 Sparepart</a>
-            <a href="/garage/procurement">🛒 Pengadaan</a>
-            <a href="/garage/finance">💰 Keuangan</a>
-            <a href="/garage/insight">📊 Insight</a>
-        </nav>
-    </div>
-</div>
-
-<section class="portal-section">
-        <div class="container">
-            <div class="portal-grid two-column">
+    <!-- Main Content Section -->
+    <section class="portal-main">
+        <div class="portal-container">
+            <div class="portal-layout">
+                <!-- Registration Form Card -->
                 <article class="portal-card">
                     <div class="portal-card__header">
-                        <h2>Registrasi Customer & Kendaraan</h2>
+                        <h2>Form Registrasi Intake</h2>
                         <p class="lead">
-                            Gunakan form berikut untuk membuat customer baru atau memilih data yang sudah ada,
-                            lalu kaitkan kendaraan yang akan diservis.
+                            Lengkapi informasi customer dan kendaraan untuk memulai proses service. 
+                            Semua field yang ditandai dengan <span style="color: #EF4444;">*</span> wajib diisi.
                         </p>
                     </div>
-                    <div class="form-banner">
-                        <strong>Alur singkat proses intake</strong>
-                        <p>
-                            Mulai dengan mengecek apakah customer sudah ada, lalu lengkapi informasi kontak dan detail kendaraan.
-                            Akhiri dengan catatan penting agar tim service memiliki konteks lengkap.
-                        </p>
-                        <ul class="form-banner__steps">
-                            <li>Langkah 1 · Data Customer</li>
-                            <li>Langkah 2 · Detail Kendaraan</li>
-                            <li>Langkah 3 · Catatan &amp; Konfirmasi</li>
-                        </ul>
-                    </div>
-                    <form id="customer-vehicle-form" class="form-grid">
+                    
+                    <form class="form-stack" data-form="garage-intake">
+                        <!-- Customer Information Section -->
                         <div class="form-section">
                             <header class="form-section__header">
                                 <span class="form-section__tag">Langkah 1</span>
-                                <h3 class="form-section__title">Data Customer</h3>
+                                <h3 class="form-section__title">Informasi Customer</h3>
                                 <p class="form-section__subtitle">
-                                    Catat identitas customer dan informasi kontak utama untuk kebutuhan follow-up.
+                                    Data customer yang akan digunakan untuk service order dan komunikasi selanjutnya.
                                 </p>
                             </header>
+                            
                             <div class="form-section__grid two-column">
                                 <div class="form-field">
-                                    <label for="existing_customer">Gunakan Customer Eksisting</label>
-                                    <select id="existing_customer" name="existing_customer">
-                                        <option value="">— Customer Baru —</option>
-                                    </select>
-                                    <p class="form-hint">Pilih customer lama agar detail terisi otomatis.</p>
-                                </div>
-                                <div class="form-field">
-                                    <label for="customer_type">Tipe Customer</label>
-                                    <select id="customer_type" name="customer_type">
+                                    <label for="customer_type">
+                                        Tipe Customer <span class="required">*</span>
+                                    </label>
+                                    <select id="customer_type" name="customer_type" required>
+                                        <option value="">Pilih tipe customer</option>
                                         <option value="Individual">Individual</option>
-                                        <option value="Corporate">Corporate</option>
+                                        <option value="Company">Company</option>
                                     </select>
                                 </div>
+                                
                                 <div class="form-field">
-                                    <label for="customer_name">Nama Customer</label>
-                                    <input id="customer_name" name="customer_name" placeholder="Nama lengkap" />
+                                    <label for="customer_name">
+                                        Nama Customer <span class="required">*</span>
+                                    </label>
+                                    <input id="customer_name" name="customer_name" placeholder="John Doe / PT Example" required />
                                 </div>
+                                
                                 <div class="form-field">
-                                    <label for="phone">No. Telepon</label>
-                                    <input id="phone" name="phone" placeholder="08xxxxxxxxxx" />
+                                    <label for="phone">
+                                        No. Telepon <span class="required">*</span>
+                                    </label>
+                                    <input id="phone" name="phone" placeholder="08xxxxxxxxxx" required />
                                 </div>
+                                
                                 <div class="form-field">
                                     <label for="email">Email</label>
                                     <input id="email" name="email" type="email" placeholder="email@example.com" />
                                 </div>
+                                
                                 <div class="form-field">
                                     <label for="preferred_contact_method">Preferensi Kontak</label>
                                     <select id="preferred_contact_method" name="preferred_contact_method">
@@ -1161,6 +941,7 @@ button:disabled {
                                         <option value="WhatsApp">WhatsApp</option>
                                     </select>
                                 </div>
+                                
                                 <div class="form-field">
                                     <label for="is_vip">Customer VIP</label>
                                     <select id="is_vip" name="is_vip" data-cast="int">
@@ -1168,6 +949,7 @@ button:disabled {
                                         <option value="1">Ya</option>
                                     </select>
                                 </div>
+                                
                                 <div class="form-field">
                                     <label for="marketing_source">Sumber Marketing</label>
                                     <select id="marketing_source" name="marketing_source">
@@ -1181,6 +963,8 @@ button:disabled {
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- Vehicle Information Section -->
                         <div class="form-section">
                             <header class="form-section__header">
                                 <span class="form-section__tag">Langkah 2</span>
@@ -1189,6 +973,7 @@ button:disabled {
                                     Pastikan kendaraan terkait sudah dikaitkan dengan customer yang tepat dan isi data unit lengkap.
                                 </p>
                             </header>
+                            
                             <div class="form-section__grid two-column">
                                 <div class="form-field">
                                     <label for="vehicle_customer">Customer untuk Kendaraan</label>
@@ -1197,26 +982,38 @@ button:disabled {
                                     </select>
                                     <p class="form-hint">Biarkan default untuk mengikuti pilihan customer pada langkah sebelumnya.</p>
                                 </div>
+                                
                                 <div class="form-field">
-                                    <label for="license_plate">No. Polisi</label>
-                                    <input id="license_plate" name="license_plate" placeholder="B 1234 CD" />
+                                    <label for="license_plate">
+                                        No. Polisi <span class="required">*</span>
+                                    </label>
+                                    <input id="license_plate" name="license_plate" placeholder="B 1234 CD" required />
                                 </div>
+                                
                                 <div class="form-field">
-                                    <label for="brand">Merek</label>
-                                    <input id="brand" name="brand" placeholder="Toyota, Honda, ..." />
+                                    <label for="brand">
+                                        Merek <span class="required">*</span>
+                                    </label>
+                                    <input id="brand" name="brand" placeholder="Toyota, Honda, ..." required />
                                 </div>
+                                
                                 <div class="form-field">
-                                    <label for="model">Model</label>
-                                    <input id="model" name="model" placeholder="Avanza, Civic, ..." />
+                                    <label for="model">
+                                        Model <span class="required">*</span>
+                                    </label>
+                                    <input id="model" name="model" placeholder="Avanza, Civic, ..." required />
                                 </div>
+                                
                                 <div class="form-field">
                                     <label for="vehicle_year">Tahun</label>
                                     <input id="vehicle_year" name="vehicle_year" type="number" min="1980" max="2100" placeholder="2020" />
                                 </div>
+                                
                                 <div class="form-field">
                                     <label for="color">Warna</label>
                                     <input id="color" name="color" placeholder="Hitam, Putih, ..." />
                                 </div>
+                                
                                 <div class="form-field">
                                     <label for="transmission">Transmisi</label>
                                     <select id="transmission" name="transmission">
@@ -1227,6 +1024,7 @@ button:disabled {
                                         <option value="Other">Other</option>
                                     </select>
                                 </div>
+                                
                                 <div class="form-field">
                                     <label for="fuel_type">Jenis BBM</label>
                                     <select id="fuel_type" name="fuel_type">
@@ -1238,32 +1036,39 @@ button:disabled {
                                         <option value="Other">Other</option>
                                     </select>
                                 </div>
+                                
                                 <div class="form-field">
                                     <label for="mileage">Odometer (km)</label>
                                     <input id="mileage" name="mileage" type="number" min="0" step="100" placeholder="50000" />
                                 </div>
+                                
                                 <div class="form-field">
                                     <label>Terakhir Servis</label>
                                     <div class="form-static-value">Terisi otomatis saat registrasi disimpan.</div>
-                                    <p class="form-hint">Sistem mencatat tanggal &amp; jam registrasi sebagai riwayat servis terakhir.</p>
+                                    <p class="form-hint">Sistem mencatat tanggal & jam registrasi sebagai riwayat servis terakhir.</p>
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- Notes & Confirmation Section -->
                         <div class="form-section">
                             <header class="form-section__header">
                                 <span class="form-section__tag">Langkah 3</span>
-                                <h3 class="form-section__title">Catatan &amp; Konfirmasi</h3>
+                                <h3 class="form-section__title">Catatan & Konfirmasi</h3>
                                 <p class="form-section__subtitle">
                                     Tambahkan catatan penting sebelum menyimpan intake untuk memastikan tim service siap menangani unit.
                                 </p>
                             </header>
+                            
                             <div class="form-section__grid">
                                 <div class="form-field">
                                     <label for="notes">Catatan Tambahan</label>
-                                    <textarea id="notes" name="notes" placeholder="Informasi penting mengenai customer atau kendaraan (contoh: riwayat servis, keluhan khusus, permintaan customer)"></textarea>
+                                    <textarea id="notes" name="notes" 
+                                        placeholder="Informasi penting mengenai customer atau kendaraan (contoh: riwayat servis, keluhan khusus, permintaan customer)"></textarea>
                                     <p class="form-hint">Gunakan catatan untuk riwayat servis, permintaan khusus, atau peringatan teknis.</p>
                                 </div>
                             </div>
+                            
                             <div class="form-actions">
                                 <button class="primary" type="submit">💾 Simpan Data Intake</button>
                                 <button class="secondary" type="reset">🔄 Reset Form</button>
@@ -1271,6 +1076,8 @@ button:disabled {
                         </div>
                     </form>
                 </article>
+                
+                <!-- Recent Data Table Card -->
                 <article class="portal-card">
                     <div class="portal-card__header">
                         <h2>Master Data Aktif</h2>
@@ -1278,32 +1085,42 @@ button:disabled {
                             Ringkasan customer dan kendaraan terbaru. Klik nama dokumen untuk membuka detailnya di Desk.
                         </p>
                     </div>
+                    
                     <div class="table-links table-links--flush">
                         <a href="#" data-desk-link="Garage Customer" target="_blank">📁 Buka List Customer</a>
                         <a href="#" data-desk-link="Garage Vehicle" target="_blank">🚗 Buka List Kendaraan</a>
                     </div>
-                    <h3>Customer & Kendaraan Terbaru</h3>
-                    <table class="simple-table">
-                        <thead>
-                            <tr>
-                                <th>Customer</th>
-                                <th>Tipe</th>
-                                <th>Kontak</th>
-                                <th>VIP</th>
-                                <th>No. Polisi</th>
-                                <th>Model</th>
-                                <th>Terakhir Servis</th>
-                            </tr>
-                        </thead>
-                        <tbody data-role="customer-vehicle-table">
-                            <tr>
-                                <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                                    ⏳ Loading data customer & kendaraan...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div class="list-empty" data-empty="customer-vehicle">Belum ada data customer atau kendaraan yang terdaftar.</div>
+                    
+                    <div style="padding: 2rem;">
+                        <h3 style="margin-bottom: 1.5rem; font-size: 1.1rem; font-weight: 600; color: #1E293B;">
+                            Customer & Kendaraan Terbaru
+                        </h3>
+                        
+                        <table class="simple-table">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Tipe</th>
+                                    <th>Kontak</th>
+                                    <th>VIP</th>
+                                    <th>No. Polisi</th>
+                                    <th>Model</th>
+                                    <th>Terakhir Servis</th>
+                                </tr>
+                            </thead>
+                            <tbody data-role="customer-vehicle-table">
+                                <tr>
+                                    <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                        ⏳ Loading data customer & kendaraan...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="list-empty" data-empty="customer-vehicle">
+                            Belum ada data customer atau kendaraan yang terdaftar.
+                        </div>
+                    </div>
                 </article>
             </div>
         </div>
