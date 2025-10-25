@@ -10,6 +10,9 @@
             this.customerIndex = new Map();
             this.vehicleIndex = new Map();
             this.lastPrefilledPlate = null;
+            this.customerSearchIndex = new Map();
+            this.customerNameMap = new Map();
+            this.pendingCustomerLookups = new Set();
         }
 
         init() {
@@ -34,6 +37,11 @@
 
             this.inputs = {
                 licensePlate: document.getElementById('license_plate'),
+                existingCustomerSearch: document.getElementById('existing_customer_search'),
+            };
+
+            this.datalists = {
+                existingCustomer: document.getElementById('existing_customer_options'),
             };
 
             this.selects = {
@@ -277,6 +285,28 @@
                 });
             }
 
+            if (this.inputs.existingCustomerSearch) {
+                this.inputs.existingCustomerSearch.addEventListener('change', () => {
+                    this.handleExistingCustomerSearch();
+                });
+                this.inputs.existingCustomerSearch.addEventListener('input', (event) => {
+                    const value = event.target.value || '';
+                    if (!value) {
+                        if (this.selects.existingCustomer) {
+                            this.setSelectValue(this.selects.existingCustomer, '');
+                            this.applyExistingCustomerSelection();
+                        }
+                        return;
+                    }
+                    const normalized = value.trim().toLowerCase();
+                    const hasExactMatch = this.customerSearchIndex.has(value);
+                    const hasNameMatch = this.customerNameMap.has(normalized);
+                    if (hasExactMatch || hasNameMatch) {
+                        this.handleExistingCustomerSearch();
+                    }
+                });
+            }
+
             if (this.inputs.licensePlate) {
                 this.inputs.licensePlate.addEventListener('change', () => {
                     this.handleLicensePlateChange();
@@ -315,14 +345,25 @@
             }
             const value = select.value;
             if (!value) {
+                this.updateCustomerSearchInput(null);
                 if (this.selects.vehicleCustomer) {
                     this.setSelectValue(this.selects.vehicleCustomer, '');
                 }
+                this.clearCustomerFields();
                 return;
             }
             const customer = this.customerIndex.get(value);
             if (customer) {
                 this.prefillCustomerFields(customer);
+                this.updateCustomerSearchInput(customer);
+            } else {
+                const option = select.options[select.selectedIndex];
+                if (option && this.inputs.existingCustomerSearch) {
+                    this.inputs.existingCustomerSearch.value = option.textContent || option.value;
+                } else {
+                    this.updateCustomerSearchInput(null);
+                }
+                this.lookupCustomerByDocname(value);
             }
             if (this.selects.vehicleCustomer) {
                 this.setSelectValue(this.selects.vehicleCustomer, value);
@@ -397,21 +438,23 @@
                         return;
                     }
                     const previousPrefilled = this.lastPrefilledPlate;
-                    this.vehicleIndex.set(normalized, vehicle);
+                    this.registerVehicleData(vehicle);
                     this.lastPrefilledPlate = normalized;
                     this.prefillVehicleFields(vehicle);
                     const customerName = vehicle.customer;
                     const customer = data.customer || (customerName ? this.customerIndex.get(customerName) : null);
                     if (customerName) {
                         if (customer) {
-                            this.customerIndex.set(customerName, customer);
-                            this.ensureCustomerOptions(customerName, customer.customer_name || customerName);
+                            this.registerCustomerData(customer);
                             this.prefillCustomerFields(customer);
                         } else {
                             this.ensureCustomerOptions(customerName, customerName);
                         }
                         if (this.selects.existingCustomer) {
-                            this.setSelectValue(this.selects.existingCustomer, customerName);
+                            const didSet = this.setSelectValue(this.selects.existingCustomer, customerName);
+                            if (didSet) {
+                                this.applyExistingCustomerSelection();
+                            }
                         }
                         if (this.selects.vehicleCustomer) {
                             this.setSelectValue(this.selects.vehicleCustomer, customerName);
@@ -510,213 +553,250 @@
             }
         }
 
-        normalizeLicensePlate(value) {
-            return (value || '')
-                .toString()
-                .trim()
-                .replace(/[^0-9A-Za-z]/g, '')
-                .toUpperCase();
-        }
-
-        applyExistingCustomerSelection() {
-            const select = this.selects.existingCustomer;
-            if (!select) {
+        clearCustomerFields() {
+            const form = this.forms.intake;
+            if (!form) {
                 return;
             }
-            const value = select.value;
-            if (!value) {
-                if (this.selects.vehicleCustomer) {
-                    this.setSelectValue(this.selects.vehicleCustomer, '');
+            const fieldNames = [
+                'customer_name',
+                'customer_type',
+                'phone',
+                'email',
+                'preferred_contact_method',
+                'marketing_source',
+            ];
+            fieldNames.forEach((fieldName) => {
+                const field = form.querySelector(`[name="${fieldName}"]`);
+                if (!field) {
+                    return;
                 }
-                return;
-            }
-            const customer = this.customerIndex.get(value);
-            if (customer) {
-                this.prefillCustomerFields(customer);
-            }
-            if (this.selects.vehicleCustomer) {
-                this.setSelectValue(this.selects.vehicleCustomer, value);
+                if (field.tagName === 'SELECT') {
+                    if (!this.setSelectValue(field, '')) {
+                        field.selectedIndex = 0;
+                    }
+                } else {
+                    field.value = '';
+                }
+            });
+            const vipField = form.querySelector('[name="is_vip"]');
+            if (vipField) {
+                this.setSelectValue(vipField, '0');
             }
         }
 
-        handleLicensePlateChange() {
-            if (!this.inputs.licensePlate) {
-                return;
-            }
-            const rawValue = this.inputs.licensePlate.value || '';
-            const normalized = this.normalizeLicensePlate(rawValue);
-            if (!normalized) {
-                this.lastPrefilledPlate = null;
-                this.clearVehicleCustomerSelection();
-                return;
-            }
-            const vehicle = this.vehicleIndex.get(normalized);
+        registerVehicleData(vehicle) {
             if (!vehicle) {
-                this.fetchVehicleByPlate(normalized, rawValue);
                 return;
             }
-            const previousPrefilled = this.lastPrefilledPlate;
-            this.lastPrefilledPlate = normalized;
-            this.prefillVehicleFields(vehicle);
-            if (vehicle.customer && this.selects.existingCustomer) {
-                const set = this.setSelectValue(this.selects.existingCustomer, vehicle.customer);
-                if (set) {
-                    this.applyExistingCustomerSelection();
-                } else {
-                    const existing = this.customerIndex.get(vehicle.customer);
-                    if (existing) {
-                        this.ensureCustomerOptions(vehicle.customer, existing.customer_name || vehicle.customer);
-                        this.setSelectValue(this.selects.existingCustomer, vehicle.customer);
-                        this.prefillCustomerFields(existing);
+            const normalized = this.normalizeLicensePlate(vehicle.license_plate);
+            if (normalized) {
+                this.vehicleIndex.set(normalized, vehicle);
+            }
+        }
+
+        registerCustomerData(customer, { updateSelect = true } = {}) {
+            if (!customer || !customer.name) {
+                return;
+            }
+            this.customerIndex.set(customer.name, customer);
+            const nameKey = (customer.customer_name || '').trim().toLowerCase();
+            if (nameKey) {
+                this.customerNameMap.set(nameKey, customer.name);
+            }
+            const label = this.formatCustomerSearchLabel(customer);
+            if (label) {
+                this.customerSearchIndex.set(label, customer.name);
+                const datalist = this.datalists?.existingCustomer;
+                if (datalist) {
+                    const hasOption = Array.from(datalist.querySelectorAll('option')).some(
+                        (option) => option.value === label
+                    );
+                    if (!hasOption) {
+                        const option = document.createElement('option');
+                        option.value = label;
+                        datalist.appendChild(option);
                     }
                 }
-            } else if (this.selects.existingCustomer) {
-                this.setSelectValue(this.selects.existingCustomer, '');
+            }
+            if (updateSelect) {
+                this.ensureCustomerOptions(customer.name, customer.customer_name || customer.name);
+            }
+        }
+
+        rebuildCustomerSearch(customers) {
+            this.customerNameMap = new Map();
+            this.customerSearchIndex = new Map();
+            const datalist = this.datalists?.existingCustomer;
+            if (datalist) {
+                datalist.innerHTML = '';
+            }
+            (customers || []).forEach((customer) => {
+                if (!customer) {
+                    return;
+                }
+                const nameKey = (customer.customer_name || '').trim().toLowerCase();
+                if (nameKey) {
+                    this.customerNameMap.set(nameKey, customer.name);
+                }
+                const label = this.formatCustomerSearchLabel(customer);
+                if (label) {
+                    this.customerSearchIndex.set(label, customer.name);
+                    if (datalist) {
+                        const option = document.createElement('option');
+                        option.value = label;
+                        datalist.appendChild(option);
+                    }
+                }
+            });
+        }
+
+        formatCustomerSearchLabel(customer) {
+            if (!customer) {
+                return '';
+            }
+            const name = customer.customer_name || customer.name || '';
+            const contact = [customer.phone, customer.email].filter(Boolean).join(' / ');
+            return contact ? `${name} · ${contact}` : name;
+        }
+
+        updateCustomerSearchInput(customer) {
+            if (!this.inputs.existingCustomerSearch) {
+                return;
+            }
+            if (customer) {
+                this.inputs.existingCustomerSearch.value = this.formatCustomerSearchLabel(customer);
+            } else {
+                this.inputs.existingCustomerSearch.value = '';
+            }
+        }
+
+        handleExistingCustomerSearch() {
+            const input = this.inputs.existingCustomerSearch;
+            if (!input) {
+                return;
+            }
+            const raw = input.value || '';
+            const query = raw.trim();
+            if (!query) {
+                if (this.selects.existingCustomer) {
+                    this.setSelectValue(this.selects.existingCustomer, '');
+                    this.applyExistingCustomerSelection();
+                }
+                return;
+            }
+            const exactMatch = this.customerSearchIndex.get(raw);
+            const normalizedMatch = this.customerNameMap.get(query.toLowerCase());
+            const docname = exactMatch || normalizedMatch;
+            if (docname) {
+                if (this.selects.existingCustomer) {
+                    const set = this.setSelectValue(this.selects.existingCustomer, docname);
+                    if (!set) {
+                        const customer = this.customerIndex.get(docname);
+                        const label = customer ? customer.customer_name || customer.name : query;
+                        this.ensureCustomerOptions(docname, label);
+                        this.setSelectValue(this.selects.existingCustomer, docname);
+                    }
+                    this.applyExistingCustomerSelection();
+                }
+                if (this.selects.vehicleCustomer) {
+                    this.setSelectValue(this.selects.vehicleCustomer, docname);
+                }
+                return;
+            }
+            this.lookupCustomerByName(query);
+        }
+
+        lookupCustomerByName(query) {
+            if (!query) {
+                return;
+            }
+            if (!window.frappe || !frappe.call) {
+                this.notifyCustomerNotFound();
+                return;
+            }
+            frappe.call({
+                method: 'garage.api.portal.lookup_customer',
+                args: { query },
+                callback: (response) => {
+                    const data = response?.message || {};
+                    const customer = data.customer;
+                    if (!customer) {
+                        this.notifyCustomerNotFound();
+                        return;
+                    }
+                    this.handleCustomerLookupResult(customer, data.vehicles, { alert: true });
+                },
+                error: () => {
+                    this.notifyCustomerNotFound();
+                },
+            });
+        }
+
+        lookupCustomerByDocname(name) {
+            const identifier = (name || '').trim();
+            if (!identifier || this.pendingCustomerLookups.has(identifier)) {
+                return;
+            }
+            if (!window.frappe || !frappe.call) {
+                return;
+            }
+            this.pendingCustomerLookups.add(identifier);
+            frappe.call({
+                method: 'garage.api.portal.lookup_customer',
+                args: { name: identifier },
+                callback: (response) => {
+                    this.pendingCustomerLookups.delete(identifier);
+                    const data = response?.message || {};
+                    const customer = data.customer;
+                    if (!customer) {
+                        this.notifyCustomerNotFound();
+                        this.clearCustomerFields();
+                        return;
+                    }
+                    this.handleCustomerLookupResult(customer, data.vehicles, { alert: false });
+                },
+                error: () => {
+                    this.pendingCustomerLookups.delete(identifier);
+                    this.notifyCustomerNotFound();
+                    this.clearCustomerFields();
+                },
+            });
+        }
+
+        handleCustomerLookupResult(customer, vehicles, { alert = false } = {}) {
+            if (!customer) {
+                this.notifyCustomerNotFound();
+                return;
+            }
+            this.registerCustomerData(customer);
+            if (Array.isArray(vehicles)) {
+                vehicles.forEach((vehicle) => this.registerVehicleData(vehicle));
+            }
+            const label = customer.customer_name || customer.name;
+            if (this.selects.existingCustomer) {
+                this.ensureCustomerOptions(customer.name, label);
+                this.setSelectValue(this.selects.existingCustomer, customer.name);
             }
             if (this.selects.vehicleCustomer) {
-                this.setSelectValue(this.selects.vehicleCustomer, vehicle.customer || '');
+                this.setSelectValue(this.selects.vehicleCustomer, customer.name);
             }
-            if (window.frappe && frappe.show_alert && previousPrefilled !== normalized) {
+            this.prefillCustomerFields(customer);
+            this.updateCustomerSearchInput(customer);
+            if (alert && window.frappe && frappe.show_alert) {
                 frappe.show_alert({
-                    message: __('Data kendaraan ditemukan dan terisi otomatis.'),
+                    message: __('Data customer ditemukan dan terisi otomatis.'),
                     indicator: 'green',
                 });
             }
         }
 
-        fetchVehicleByPlate(normalized, rawValue) {
-            if (!normalized) {
-                return;
-            }
-            if (!window.frappe || !frappe.call) {
-                this.lastPrefilledPlate = null;
-                this.clearVehicleCustomerSelection();
-                this.notifyPlateNotFound();
-                return;
-            }
-            frappe.call({
-                method: 'garage.api.portal.lookup_vehicle_by_plate',
-                args: { license_plate: rawValue },
-                callback: (response) => {
-                    const data = response?.message || {};
-                    const vehicle = data.vehicle;
-                    if (!vehicle) {
-                        this.lastPrefilledPlate = null;
-                        this.clearVehicleCustomerSelection();
-                        this.notifyPlateNotFound();
-                        return;
-                    }
-                    const previousPrefilled = this.lastPrefilledPlate;
-                    this.vehicleIndex.set(normalized, vehicle);
-                    this.lastPrefilledPlate = normalized;
-                    this.prefillVehicleFields(vehicle);
-                    const customerName = vehicle.customer;
-                    const customer = data.customer || (customerName ? this.customerIndex.get(customerName) : null);
-                    if (customerName) {
-                        if (customer) {
-                            this.customerIndex.set(customerName, customer);
-                            this.ensureCustomerOptions(customerName, customer.customer_name || customerName);
-                            this.prefillCustomerFields(customer);
-                        } else {
-                            this.ensureCustomerOptions(customerName, customerName);
-                        }
-                        if (this.selects.existingCustomer) {
-                            this.setSelectValue(this.selects.existingCustomer, customerName);
-                        }
-                        if (this.selects.vehicleCustomer) {
-                            this.setSelectValue(this.selects.vehicleCustomer, customerName);
-                        }
-                    } else {
-                        if (this.selects.existingCustomer) {
-                            this.setSelectValue(this.selects.existingCustomer, '');
-                        }
-                        this.clearVehicleCustomerSelection();
-                    }
-                    if (window.frappe && frappe.show_alert && previousPrefilled !== normalized) {
-                        frappe.show_alert({
-                            message: __('Data kendaraan ditemukan dan terisi otomatis.'),
-                            indicator: 'green',
-                        });
-                    }
-                },
-                error: () => {
-                    this.lastPrefilledPlate = null;
-                    this.clearVehicleCustomerSelection();
-                    this.notifyPlateNotFound();
-                },
-            });
-        }
-
-        clearVehicleCustomerSelection() {
-            if (this.selects.vehicleCustomer) {
-                this.setSelectValue(this.selects.vehicleCustomer, '');
-            }
-        }
-
-        prefillVehicleFields(vehicle) {
-            const form = this.forms.intake;
-            if (!form) {
-                return;
-            }
-            if (this.inputs.licensePlate && vehicle.license_plate) {
-                this.inputs.licensePlate.value = vehicle.license_plate;
-            }
-            const mapping = {
-                brand: 'brand',
-                model: 'model',
-                vehicle_year: 'vehicle_year',
-                color: 'color',
-                transmission: 'transmission',
-                fuel_type: 'fuel_type',
-                mileage: 'mileage',
-            };
-            Object.entries(mapping).forEach(([fieldName, sourceKey]) => {
-                const field = form.querySelector(`[name="${fieldName}"]`);
-                if (!field) {
-                    return;
-                }
-                const value = vehicle[sourceKey];
-                if (field.tagName === 'SELECT') {
-                    this.setSelectValue(field, value);
-                } else {
-                    field.value = value !== undefined && value !== null ? value : '';
-                }
-            });
-        }
-
-        prefillCustomerFields(customer) {
-            const form = this.forms.intake;
-            if (!form) {
-                return;
-            }
-            const mapping = {
-                customer_name: 'customer_name',
-                customer_type: 'customer_type',
-                phone: 'phone',
-                email: 'email',
-                preferred_contact_method: 'preferred_contact_method',
-                marketing_source: 'marketing_source',
-            };
-            Object.entries(mapping).forEach(([fieldName, sourceKey]) => {
-                const field = form.querySelector(`[name="${fieldName}"]`);
-                if (!field) {
-                    return;
-                }
-                const value = customer[sourceKey];
-                if (field.tagName === 'SELECT') {
-                    if (!this.setSelectValue(field, value)) {
-                        if (field.options && field.options.length) {
-                            field.value = field.options[0].value;
-                        }
-                    }
-                } else {
-                    field.value = value ?? '';
-                }
-            });
-            const vipField = form.querySelector('[name="is_vip"]');
-            if (vipField) {
-                const vipValue = customer.is_vip ? '1' : '0';
-                this.setSelectValue(vipField, vipValue);
+        notifyCustomerNotFound() {
+            if (window.frappe && frappe.show_alert) {
+                frappe.show_alert({
+                    message: __('Customer tidak ditemukan. Periksa kembali nama yang dimasukkan.'),
+                    indicator: 'yellow',
+                });
             }
         }
 
@@ -796,12 +876,10 @@
             const vehicles = this.asArray(this.state.vehicles);
 
             this.customerIndex = new Map(customers.map((customer) => [customer.name, customer]));
+            this.rebuildCustomerSearch(customers);
             this.vehicleIndex = new Map();
             vehicles.forEach((vehicle) => {
-                const normalized = this.normalizeLicensePlate(vehicle.license_plate);
-                if (normalized) {
-                    this.vehicleIndex.set(normalized, vehicle);
-                }
+                this.registerVehicleData(vehicle);
             });
 
             this.populateSelect(this.selects.existingCustomer, customers, {
@@ -835,6 +913,18 @@
                 labelKey: 'customer_name',
                 blankLabel: '— Pilih customer —',
             });
+
+            if (this.selects.existingCustomer) {
+                const selected = this.selects.existingCustomer.value;
+                if (selected) {
+                    const selectedCustomer = this.customerIndex.get(selected);
+                    this.updateCustomerSearchInput(selectedCustomer || null);
+                } else {
+                    this.updateCustomerSearchInput(null);
+                }
+            } else {
+                this.updateCustomerSearchInput(null);
+            }
 
             this.updateServiceVehicleOptions();
 
@@ -1336,6 +1426,9 @@
                     rowsContainer.innerHTML = '';
                 }
             });
+            if (form === this.forms.intake) {
+                this.updateCustomerSearchInput(null);
+            }
         }
 
         updateServiceVehicleOptions() {
