@@ -331,12 +331,17 @@
 
             if (this.tables.openService) {
                 this.tables.openService.addEventListener('click', (event) => {
-                    const trigger = event.target.closest('[data-action="open-service-detail"]');
-                    if (!trigger) {
+                    const buttonTrigger = event.target.closest('[data-action="open-service-detail"]');
+                    const rowTrigger = event.target.closest('[data-role="service-row"]');
+                    const interactiveTarget = buttonTrigger ||
+                        (rowTrigger && !event.target.closest('button, a, [data-action]') ? rowTrigger : null);
+
+                    if (!interactiveTarget) {
                         return;
                     }
+
                     event.preventDefault();
-                    const orderName = trigger.getAttribute('data-order-name');
+                    const orderName = interactiveTarget.getAttribute('data-order-name');
                     if (orderName) {
                         this.openServiceDetail(orderName);
                     }
@@ -1182,21 +1187,36 @@
             const tableSource = serviceRegistrations.length ? serviceRegistrations : serviceOrders;
             this.renderTable(
                 this.tables.openService,
-                serviceOrders,
-                (order) => {
-                    const customer = this.getCustomerByName(order.customer) || {};
-                    const statusPill = this.createStatusPill(order.status);
-                    const priorityPill = this.createPriorityPill(order.priority);
-                    const actionButton = this.createDetailButton(order.name);
-                    return [
-                        this.renderLink('Garage Service Order', orderName),
-                        customerName,
-                        vehicleLabel,
-                        statusPill,
-                        priorityPill,
-                        this.formatTimestamp(targetDate),
-                        actionButton,
-                    ];
+                tableSource,
+                (entry) => {
+                    const orderName = entry.order_name || entry.name;
+                    const status = entry.status || entry.order_status;
+                    const priority = entry.priority;
+                    const customerName = entry.customer_display
+                        || this.getCustomerDisplay(entry.customer)
+                        || entry.customer_name
+                        || entry.customer
+                        || '-';
+                    const vehicleLabel = entry.vehicle_label || this.getVehicleLabel(entry.vehicle);
+                    const statusPill = this.createStatusPill(status);
+                    const priorityPill = this.createPriorityPill(priority);
+                    const actionButton = this.createDetailButton(orderName);
+                    const targetDate = entry.target_date || entry.estimated_delivery_date;
+                    return {
+                        rowAttributes: {
+                            'data-role': 'service-row',
+                            'data-order-name': orderName || '',
+                        },
+                        cells: [
+                            this.renderLink('Garage Service Order', orderName),
+                            customerName,
+                            vehicleLabel,
+                            statusPill,
+                            priorityPill,
+                            this.formatTimestamp(targetDate),
+                            actionButton,
+                        ],
+                    };
                 },
                 this.emptyStates.openService,
             );
@@ -1243,7 +1263,6 @@
 
                 const meta = document.createElement('div');
                 meta.className = 'note-list__meta';
-                const customer = this.getCustomerByName(order.customer);
                 const customerSpan = document.createElement('span');
                 customerSpan.textContent =
                     entry.customer_display
@@ -1266,7 +1285,7 @@
             button.className = 'table-action';
             button.setAttribute('data-action', 'open-service-detail');
             button.setAttribute('data-order-name', orderName || '');
-            button.textContent = __('Detail & Aksi');
+            button.textContent = __('Lihat Detail');
             return button;
         }
 
@@ -1438,8 +1457,25 @@
                 emptyState.style.display = 'none';
             }
             rows.forEach((row) => {
+                const rendered = rowRenderer(row) || {};
+                const cells = Array.isArray(rendered) ? rendered : rendered.cells || [];
                 const tr = document.createElement('tr');
-                rowRenderer(row).forEach((cellValue) => {
+
+                if (!Array.isArray(rendered)) {
+                    if (rendered.rowClass) {
+                        tr.className = rendered.rowClass;
+                    }
+                    if (rendered.rowAttributes && typeof rendered.rowAttributes === 'object') {
+                        Object.entries(rendered.rowAttributes).forEach(([key, value]) => {
+                            if (value == null) {
+                                return;
+                            }
+                            tr.setAttribute(key, String(value));
+                        });
+                    }
+                }
+
+                cells.forEach((cellValue) => {
                     const td = document.createElement('td');
                     if (cellValue instanceof HTMLElement) {
                         td.appendChild(cellValue);
@@ -1681,12 +1717,43 @@
 
         populateServiceDetail(order) {
             const fields = this.serviceDetailModal?.fields || {};
-            const customer = this.getCustomerByName(order.customer) || {};
-            const vehicle = this.getVehicleByName(order.vehicle);
-            const customerName = customer.customer_name || order.customer || '-';
-            const vehicleLabel = this.getVehicleLabel(order.vehicle);
+            const join = (values, separator = ' • ') =>
+                values
+                    .map((value) => (value == null ? '' : String(value).trim()))
+                    .filter(Boolean)
+                    .join(separator);
 
-            this.setPillState(fields.status, order.status || '-', this.getStatusVariant(order.status));
+            const orderName = order.order_name || order.name || '-';
+            const customerCode = order.customer;
+            const customer = customerCode ? this.customerIndex.get(customerCode) || {} : {};
+            const vehicleDoc = this.getVehicleByName(order.vehicle);
+            const vehicleLabel = order.vehicle_label || this.getVehicleLabel(order.vehicle);
+            const customerName =
+                order.customer_name
+                || order.customer_display
+                || customer.customer_name
+                || order.customer
+                || '-';
+            const customerType = order.customer_type || customer.customer_type || '-';
+            const contactInfo =
+                order.customer_contact
+                || join([order.customer_phone, order.customer_email])
+                || join([customer.phone, customer.email])
+                || '-';
+            const vehiclePlate = order.vehicle_plate || vehicleDoc?.license_plate || vehicleLabel || '-';
+            const modelInfo =
+                join([order.vehicle_brand, order.vehicle_model, order.vehicle_year], ' ')
+                || join([vehicleDoc?.brand, vehicleDoc?.model, vehicleDoc?.vehicle_year], ' ')
+                || vehicleLabel
+                || '-';
+            const vehicleColor = order.vehicle_color || vehicleDoc?.color || '-';
+            const vehicleTransmission = order.vehicle_transmission || vehicleDoc?.transmission || '-';
+            const vehicleFuel = order.vehicle_fuel || vehicleDoc?.fuel_type || '-';
+            const mileageValue = order.vehicle_mileage ?? vehicleDoc?.mileage;
+            const mileage = mileageValue ? `${mileageValue} km` : '-';
+            const status = order.status || order.order_status;
+
+            this.setPillState(fields.status, status || '-', this.getStatusVariant(status));
             this.setPillState(fields.priority, order.priority || '-', this.getPriorityVariant(order.priority));
             this.setFieldValue(fields.orderName, orderName);
             this.setFieldValue(fields.bookingDate, this.formatTimestamp(order.booking_date || order.service_booking_date));
