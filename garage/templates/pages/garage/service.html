@@ -1225,6 +1225,15 @@ button:disabled {
     cursor: default;
 }
 
+.simple-table--interactive tbody tr[data-role="service-row"] {
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.simple-table--interactive tbody tr[data-role="service-row"]:hover {
+    background: var(--primary-subtle);
+}
+
 .simple-table--interactive td:last-child {
     text-align: right;
     white-space: nowrap;
@@ -1600,7 +1609,7 @@ button:disabled {
                     Semua data di bawah berasal dari formulir registrasi dan siap dijadikan dasar tindak lanjut tim servis.
                 </p>
                 <div class="service-intro">
-                    Klik tombol <strong>Detail</strong> untuk membuka informasi lengkap dan menjalankan aksi lanjutan tanpa perlu mengisi formulir terpisah.
+                    Klik baris registrasi atau tombol <strong>Detail</strong> untuk membuka informasi lengkap dan menjalankan aksi lanjutan tanpa perlu mengisi formulir terpisah.
                 </div>
                 <div class="metric-grid metric-grid--spaced">
                     <div class="metric-card">
@@ -1649,14 +1658,14 @@ button:disabled {
                 <ul class="note-list" data-role="service-note-list"></ul>
                 <div class="list-empty" data-empty="service-notes">Belum ada catatan registrasi.</div>
                 <div class="callout callout--info">
-                    <strong>Tip:</strong> Gunakan tombol <em>Detail</em> pada daftar registrasi untuk mengelompokkan jenis pekerjaan, sumber pembelian, dan rencana pembayaran langsung dari modal aksi.
+                    <strong>Tip:</strong> Gunakan baris registrasi atau tombol <em>Detail</em> pada daftar untuk mengelompokkan jenis pekerjaan, sumber pembelian, dan rencana pembayaran langsung dari modal aksi.
                 </div>
             </article>
             <article class="portal-card">
                 <h2>Panduan Tindak Lanjut</h2>
                 <p class="lead">Pastikan setiap registrasi terselesaikan dengan mengikuti langkah singkat berikut.</p>
                 <ol class="action-steps">
-                    <li><strong>Pilih registrasi.</strong> Tekan tombol <em>Detail</em> untuk membuka modal dan meninjau catatan lengkap pelanggan serta kendaraan.</li>
+                    <li><strong>Pilih registrasi.</strong> Klik baris atau tombol <em>Detail</em> untuk membuka modal dan meninjau catatan lengkap pelanggan serta kendaraan.</li>
                     <li><strong>Kategorikan pekerjaan.</strong> Gunakan panel aksi pada modal untuk menetapkan jenis servis, kategori masalah, serta metode pembayaran yang disepakati.</li>
                     <li><strong>Simpan catatan tindak lanjut.</strong> Draft aksi tersimpan pada sesi Anda sehingga tim bengkel dapat segera mengeksekusi tanpa menulis ulang.</li>
                 </ol>
