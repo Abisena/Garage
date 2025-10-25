@@ -35,6 +35,10 @@
 .garage-intake .portal-hero--sub .container {
     position: relative;
     z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    color: white;
 }
 
 .garage-intake .portal-hero__brand {
@@ -600,33 +604,38 @@
                                     Pilih atau lengkapi identitas customer yang terkait dengan kendaraan di atas.
                                 </p>
                             </header>
+                            
                             <div class="form-section__grid two-column">
                                 <div class="form-field">
-                                    <label for="existing_customer">Gunakan Customer Eksisting</label>
-                                    <select id="existing_customer" name="existing_customer">
-                                        <option value="">— Customer Baru —</option>
-                                    </select>
-                                    <p class="form-hint">Pilih customer lama agar detail terisi otomatis.</p>
-                                </div>
-                                <div class="form-field">
-                                    <label for="customer_type">Tipe Customer</label>
-                                    <select id="customer_type" name="customer_type">
+                                    <label for="customer_type">
+                                        Tipe Customer <span class="required">*</span>
+                                    </label>
+                                    <select id="customer_type" name="customer_type" required>
+                                        <option value="">Pilih tipe customer</option>
                                         <option value="Individual">Individual</option>
-                                        <option value="Corporate">Corporate</option>
+                                        <option value="Company">Company</option>
                                     </select>
                                 </div>
+                                
                                 <div class="form-field">
-                                    <label for="customer_name">Nama Customer</label>
-                                    <input id="customer_name" name="customer_name" placeholder="Nama lengkap" />
+                                    <label for="customer_name">
+                                        Nama Customer <span class="required">*</span>
+                                    </label>
+                                    <input id="customer_name" name="customer_name" placeholder="John Doe / PT Example" required />
                                 </div>
+                                
                                 <div class="form-field">
-                                    <label for="phone">No. Telepon</label>
-                                    <input id="phone" name="phone" placeholder="08xxxxxxxxxx" />
+                                    <label for="phone">
+                                        No. Telepon <span class="required">*</span>
+                                    </label>
+                                    <input id="phone" name="phone" placeholder="08xxxxxxxxxx" required />
                                 </div>
+                                
                                 <div class="form-field">
                                     <label for="email">Email</label>
                                     <input id="email" name="email" type="email" placeholder="email@example.com" />
                                 </div>
+                                
                                 <div class="form-field">
                                     <label for="preferred_contact_method">Preferensi Kontak</label>
                                     <select id="preferred_contact_method" name="preferred_contact_method">
@@ -635,6 +644,7 @@
                                         <option value="WhatsApp">WhatsApp</option>
                                     </select>
                                 </div>
+                                
                                 <div class="form-field">
                                     <label for="is_vip">Customer VIP</label>
                                     <select id="is_vip" name="is_vip" data-cast="int">
@@ -642,6 +652,7 @@
                                         <option value="1">Ya</option>
                                     </select>
                                 </div>
+                                
                                 <div class="form-field">
                                     <label for="marketing_source">Sumber Marketing</label>
                                     <select id="marketing_source" name="marketing_source">
@@ -662,21 +673,26 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- Notes & Confirmation Section -->
                         <div class="form-section">
                             <header class="form-section__header">
                                 <span class="form-section__tag">Langkah 3</span>
-                                <h3 class="form-section__title">Catatan &amp; Konfirmasi</h3>
+                                <h3 class="form-section__title">Catatan & Konfirmasi</h3>
                                 <p class="form-section__subtitle">
                                     Tambahkan catatan penting sebelum menyimpan intake untuk memastikan tim service siap menangani unit.
                                 </p>
                             </header>
+                            
                             <div class="form-section__grid">
                                 <div class="form-field">
                                     <label for="notes">Catatan Tambahan</label>
-                                    <textarea id="notes" name="notes" placeholder="Informasi penting mengenai customer atau kendaraan (contoh: riwayat servis, keluhan khusus, permintaan customer)"></textarea>
+                                    <textarea id="notes" name="notes" 
+                                        placeholder="Informasi penting mengenai customer atau kendaraan (contoh: riwayat servis, keluhan khusus, permintaan customer)"></textarea>
                                     <p class="form-hint">Gunakan catatan untuk riwayat servis, permintaan khusus, atau peringatan teknis.</p>
                                 </div>
                             </div>
+                            
                             <div class="form-actions">
                                 <button class="primary" type="submit">💾 Simpan Data Intake</button>
                                 <button class="secondary" type="reset">🔄 Reset Form</button>
@@ -684,6 +700,8 @@
                         </div>
                     </form>
                 </article>
+                
+                <!-- Recent Data Table Card -->
                 <article class="portal-card">
                     <div class="portal-card__header">
                         <h2>Master Data Aktif</h2>
@@ -691,6 +709,7 @@
                             Ringkasan customer dan kendaraan terbaru. Klik nama dokumen untuk membuka detailnya di Desk.
                         </p>
                     </div>
+                    
                     <div class="table-links table-links--flush">
                         <a href="#" data-desk-link="Garage Customer" target="_blank">📁 Buka List Customer</a>
                         <a href="#" data-desk-link="Garage Vehicle" target="_blank">🚗 Buka List Kendaraan</a>
