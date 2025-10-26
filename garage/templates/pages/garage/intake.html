@@ -1135,7 +1135,13 @@ button:disabled {
                                 </div>
                                 <div class="form-field">
                                     <label for="license_plate">No. Polisi</label>
-                                    <input id="license_plate" name="license_plate" placeholder="B 1234 CD" />
+                                    <input
+                                        id="license_plate"
+                                        name="license_plate"
+                                        placeholder="B 1234 CD"
+                                        list="license_plate_options"
+                                    />
+                                    <datalist id="license_plate_options"></datalist>
                                 </div>
                                 <div class="form-field">
                                     <label for="brand">Merek</label>
