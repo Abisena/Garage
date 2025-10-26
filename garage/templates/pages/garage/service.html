@@ -80,24 +80,27 @@ body {
 
 
 .inspection-modal {
-    display: none;
     position: fixed;
     inset: 0;
     z-index: 9999;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    padding: 40px 16px;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
 }
 
 .inspection-modal.active {
-    display: block;
+    display: flex;
 }
 
 .modal-backdrop {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
     animation: fadeIn 0.2s ease;
+    z-index: 1;
 }
 
 .modal-dialog {
@@ -109,7 +112,11 @@ body {
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     animation: slideUp 0.3s ease;
-    z-index: 1;
+    z-index: 2;
+    max-height: calc(100vh - 80px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 @keyframes fadeIn {
@@ -136,6 +143,7 @@ body {
     padding: 24px 32px;
     border-bottom: 2px solid #E9ECF1;
     background: linear-gradient(135deg, #F0F7FF 0%, white 100%);
+    flex-shrink: 0;
 }
 
 .modal-header h2 {
@@ -167,8 +175,9 @@ body {
 /* Modal Body */
 .modal-body {
     padding: 32px;
-    max-height: calc(100vh - 240px);
     overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 
 .modal-body::-webkit-scrollbar {
@@ -446,6 +455,7 @@ body {
     padding: 20px 32px;
     border-top: 2px solid #E9ECF1;
     background: #F5F7FA;
+    flex-shrink: 0;
 }
 
 .btn {
@@ -500,17 +510,22 @@ body {
 
 /* Responsive */
 @media (max-width: 768px) {
-    .modal-dialog {
-        width: 95%;
-        margin: 20px auto;
+    .inspection-modal {
+        padding: 24px 12px;
     }
-    
+
+    .modal-dialog {
+        width: 100%;
+        margin: 12px auto;
+        max-height: calc(100vh - 40px);
+    }
+
     .modal-header,
     .modal-body,
     .modal-footer {
         padding: 20px;
     }
-    
+
     .form-grid,
     .item-grid {
         grid-template-columns: 1fr;
@@ -1349,7 +1364,7 @@ body {
 
 
                 <div id="inspectionModal" class="inspection-modal">
-            <div class="modal-backdrop" onclick="closeInspectionModal()"></div>
+            <div class="modal-backdrop"></div>
             <div class="modal-dialog">
                 <div class="modal-header">
                     <h2>🔍 Inspeksi Service Order</h2>
@@ -2255,13 +2270,42 @@ body {
         }
     };
 
-    // Close modal when clicking outside
-    document.addEventListener('click', function(event) {
-        const modal = document.getElementById('inspectionModal');
-        if (modal && event.target === modal) {
-            closeInspectionModal();
+    // Close modal when clicking the backdrop
+    const inspectionModal = document.getElementById('inspectionModal');
+    if (inspectionModal) {
+        const modalDialog = inspectionModal.querySelector('.modal-dialog');
+        const modalBackdrop = inspectionModal.querySelector('.modal-backdrop');
+
+        const clickIsInsideDialog = (event) => {
+            if (!modalDialog) {
+                return false;
+            }
+
+            if (typeof event.composedPath === 'function') {
+                return event.composedPath().includes(modalDialog);
+            }
+
+            return modalDialog.contains(event.target);
+        };
+
+        inspectionModal.addEventListener('click', function(event) {
+            if (clickIsInsideDialog(event)) {
+                return;
+            }
+
+            if (event.target === inspectionModal || event.target === modalBackdrop) {
+                closeInspectionModal();
+            }
+        });
+
+        if (modalDialog) {
+            ['click', 'mousedown', 'touchstart'].forEach((evtName) => {
+                modalDialog.addEventListener(evtName, function(event) {
+                    event.stopPropagation();
+                });
+            });
         }
-    });
+    }
 
     // Close modal with Escape key
     document.addEventListener('keydown', function(event) {
