@@ -1422,10 +1422,12 @@ body {
     function getStatusBadge(status) {
         const statusMap = {
             'Draft': { class: 'new', label: 'New' },
-            'Pending Inspection': { class: 'inspection', label: 'Inspection' },
-            'Planning': { class: 'planning', label: 'Planning' },
-            'In Progress': { class: 'in-progress', label: 'In Progress' },
-            'Quality Check': { class: 'qc', label: 'QC' },
+            'Inspection': { class: 'inspection', label: 'Inspection' },
+            'Estimate': { class: 'planning', label: 'Estimate' },
+            'Awaiting Approval': { class: 'planning', label: 'Awaiting Approval' },
+            'Approved': { class: 'planning', label: 'Approved' },
+            'Work In Progress': { class: 'in-progress', label: 'Work In Progress' },
+            'Awaiting QC': { class: 'qc', label: 'Awaiting QC' },
             'Completed': { class: 'completed', label: 'Completed' },
             'Cancelled': { class: 'cancelled', label: 'Cancelled' }
         };
@@ -1644,12 +1646,12 @@ body {
             // Categorize orders based on status
             const allOrders = data.orders || [];
             
-            const inspection = allOrders.filter(o => 
-                ['Draft', 'Pending Inspection', 'Planning'].includes(o.status)
+            const inspection = allOrders.filter(o =>
+                ['Draft', 'Inspection', 'Estimate', 'Awaiting Approval', 'Approved'].includes(o.status)
             );
-            
-            const progress = allOrders.filter(o => 
-                ['In Progress', 'Quality Check'].includes(o.status)
+
+            const progress = allOrders.filter(o =>
+                ['Work In Progress', 'Awaiting QC'].includes(o.status)
             );
             
             const completed = allOrders.filter(o => 

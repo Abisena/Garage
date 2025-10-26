@@ -515,8 +515,11 @@ def _sanitize_child_rows(table_field: str, rows: Any, config: Mapping[str, Any])
 
 
 def _apply_defaults(doctype: str, doc: frappe.Document) -> None:
-    if doctype == "Garage Service Order" and not doc.service_booking_date:
-        doc.service_booking_date = now_datetime()
+    if doctype == "Garage Service Order":
+        if not doc.service_booking_date:
+            doc.service_booking_date = now_datetime()
+        if not doc.status or doc.status in {"", "Draft"}:
+            doc.status = "Inspection"
     elif doctype == "Garage Spare Part Order" and not doc.order_date:
         doc.order_date = nowdate()
     elif doctype == "Garage Procurement Order" and not doc.order_date:
@@ -1206,12 +1209,12 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
         if field in allowed_fields and value is not None:
             setattr(doc, field, value)
     
-    # Update status if inspection is complete
-    if data.get("status") == "Planning":
-        doc.status = "Planning"
-    elif data.get("status") == "In Progress":
-        doc.status = "In Progress"
-    
+    # Update status to reflect inspection completion and move into execution
+    if doc.status not in {"Work In Progress", "Awaiting QC", "Completed"}:
+        doc.status = "Work In Progress"
+        if hasattr(doc, "qc_status") and (not doc.qc_status or doc.qc_status in {"Not Required", ""}):
+            doc.qc_status = "Pending"
+
     # Handle child tables if provided - with error handling
     if "inspection_items" in data:
         try:
@@ -1265,7 +1268,7 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
 
 @frappe.whitelist()
 def move_to_in_progress(order_id: str) -> Dict[str, Any]:
-    """Move service order from Planning to In Progress."""
+    """Move service order from inspection planning stages into execution."""
     
     _require_login()
     
@@ -1275,14 +1278,15 @@ def move_to_in_progress(order_id: str) -> Dict[str, Any]:
     doc = _get_doc("Garage Service Order", order_id)
     
     # Validate current status
-    if doc.status not in ["Planning", "Pending Inspection", "Draft"]:
-        frappe.throw(_("Service order harus dalam status Planning untuk dipindah ke In Progress."))
-    
+    allowed_statuses = ["Inspection", "Estimate", "Awaiting Approval", "Approved"]
+    if doc.status not in allowed_statuses:
+        frappe.throw(_("Service order harus dalam status Inspection/Estimate sebelum masuk Work In Progress."))
+
     # Update status
-    doc.status = "In Progress"
+    doc.status = "Work In Progress"
     if hasattr(doc, "job_card_status"):
         doc.job_card_status = "In Progress"
-    
+
     _save_doc(doc)
     
     return {
@@ -1306,8 +1310,8 @@ def complete_service_order(order_id: str, completion_data: Optional[Any] = None)
     doc = _get_doc("Garage Service Order", order_id)
     
     # Validate current status
-    if doc.status not in ["In Progress", "Quality Check"]:
-        frappe.throw(_("Service order harus dalam status In Progress atau Quality Check untuk diselesaikan."))
+    if doc.status != "Awaiting QC":
+        frappe.throw(_("Service order harus dalam status Awaiting QC sebelum diselesaikan."))
     
     # Update status
     doc.status = "Completed"
@@ -1348,7 +1352,17 @@ def get_service_statistics() -> Dict[str, Any]:
     
     # Count by status
     status_counts = {}
-    statuses = ["Draft", "Pending Inspection", "Planning", "In Progress", "Quality Check", "Completed", "Cancelled"]
+    statuses = [
+        "Draft",
+        "Inspection",
+        "Estimate",
+        "Awaiting Approval",
+        "Approved",
+        "Work In Progress",
+        "Awaiting QC",
+        "Completed",
+        "Cancelled",
+    ]
     
     for status in statuses:
         try:
@@ -1358,16 +1372,12 @@ def get_service_statistics() -> Dict[str, Any]:
             status_counts[status] = 0
     
     # Aggregate counts for workflow stages
-    inspection_count = (
-        status_counts.get("Draft", 0) +
-        status_counts.get("Pending Inspection", 0) +
-        status_counts.get("Planning", 0)
-    )
-    
-    progress_count = (
-        status_counts.get("In Progress", 0) +
-        status_counts.get("Quality Check", 0)
-    )
+    inspection_statuses = ["Draft", "Inspection", "Estimate", "Awaiting Approval", "Approved"]
+    progress_statuses = ["Work In Progress", "Awaiting QC"]
+
+    inspection_count = sum(status_counts.get(status, 0) for status in inspection_statuses)
+
+    progress_count = sum(status_counts.get(status, 0) for status in progress_statuses)
     
     completed_count = status_counts.get("Completed", 0)
     
@@ -1385,7 +1395,7 @@ def get_service_statistics() -> Dict[str, Any]:
         overdue_orders = frappe.db.count(
             "Garage Service Order",
             {
-                "status": ["in", ["In Progress", "Planning"]],
+                "status": ["in", progress_statuses],
                 "estimated_delivery_date": ["<", nowdate()]
             }
         )
