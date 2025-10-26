@@ -8,18 +8,57 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
-/* ============================================================================
-   INSPECTION PAGE - CLEAN & SIMPLE
-   ============================================================================ */
-
 :root {
+    /* Brand */
     --primary: #0066FF;
     --primary-dark: #0052CC;
+    --primary-darker: #003D99;
+    --primary-subtle: #F0F7FF;
+    --primary-soft: #E3F2FD;
+
+    /* Status */
+    --status-pending: #FFB300;
+    --status-pending-light: #FFF8E1;
+    --status-progress: #0066FF;
+    --status-progress-light: #E3F2FD;
+    --status-completed: #00C853;
+    --status-completed-light: #E8F5E9;
+    --status-cancelled: #FF3D00;
+    --status-cancelled-light: #FFEBE6;
+
+    /* Neutral */
+    --gray-25: #F9FAFB;
     --gray-50: #FAFBFC;
     --gray-100: #F5F7FA;
     --gray-200: #E9ECF1;
+    --gray-300: #D4DAE4;
+    --gray-400: #B8C1D3;
+    --gray-500: #8896AB;
     --gray-600: #5E6C84;
+    --gray-700: #3E4C5E;
+    --gray-800: #2A3647;
     --gray-900: #1A2332;
+
+    --text-primary: #1A2332;
+    --text-secondary: #5E6C84;
+    --text-muted: #8896AB;
+    --text-inverse: #FFFFFF;
+
+    --bg-body: #F5F7FA;
+    --bg-surface: #FFFFFF;
+
+    --border-light: #E9ECF1;
+    --border-base: #D4DAE4;
+
+    --shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.08);
+    --shadow-md: 0 8px 24px rgba(16, 24, 40, 0.12);
+    --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.16);
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
@@ -30,148 +69,285 @@
 }
 
 body {
-    font-family: var(--font-sans);
-    background: var(--gray-50);
-    color: var(--gray-900);
+    font-family: var(--font-sans) !important;
+    background: var(--bg-body) !important;
+    color: var(--text-primary) !important;
     line-height: 1.6;
 }
 
-.inspection-container {
-    max-width: 1200px;
+a {
+    color: inherit;
+}
+
+a:hover {
+    color: var(--primary);
+}
+
+.page-scaffold {
+    max-width: 1240px;
     margin: 0 auto;
-    padding: 32px 16px;
+    padding: 32px 16px 120px;
+    position: relative;
 }
 
-/* Header */
-.page-header {
-    background: white;
-    padding: 24px;
-    border-radius: 12px;
-    margin-bottom: 24px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+.hero-section {
+    background: linear-gradient(135deg, rgba(0, 102, 255, 0.08) 0%, rgba(255, 255, 255, 0.9) 100%);
+    padding: 32px;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    margin-bottom: 28px;
 }
 
-.header-top {
+.hero-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 16px;
+    gap: 16px;
+    margin-bottom: 24px;
 }
 
 .back-link {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    font-weight: 600;
     color: var(--primary);
     text-decoration: none;
-    font-weight: 500;
-    padding: 8px 16px;
-    border-radius: 8px;
-    transition: all 0.2s;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 10px 18px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(0, 102, 255, 0.15);
+    transition: all 0.2s ease;
 }
 
 .back-link:hover {
-    background: var(--gray-100);
+    transform: translateX(-2px);
+    background: white;
+    box-shadow: 0 12px 24px rgba(0, 102, 255, 0.16);
 }
 
-.page-title {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--gray-900);
-    margin: 0;
-}
-
-/* Order Info Cards */
-.order-info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 16px;
-    margin-top: 16px;
-}
-
-.info-card {
-    background: var(--gray-50);
-    padding: 16px;
-    border-radius: 8px;
-    border: 1px solid var(--gray-200);
-}
-
-.info-label {
-    font-size: 12px;
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    font-size: 13px;
     font-weight: 600;
+    border-radius: 999px;
     text-transform: uppercase;
+    letter-spacing: 0.6px;
+    background: var(--gray-100);
     color: var(--gray-600);
+    border: 1px solid rgba(23, 50, 89, 0.08);
+    min-width: 120px;
+}
+
+.status-draft {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.status-in-progress {
+    background: var(--status-progress-light);
+    color: var(--status-progress);
+}
+
+.status-completed {
+    background: var(--status-completed-light);
+    color: var(--status-completed);
+}
+
+.status-cancelled {
+    background: var(--status-cancelled-light);
+    color: var(--status-cancelled);
+}
+
+.hero-body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 32px;
+}
+
+.hero-text h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--gray-900);
+}
+
+.hero-text p {
+    color: var(--text-secondary);
+    max-width: 480px;
+    font-size: 15px;
+}
+
+.hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.meta-item {
+    background: rgba(255, 255, 255, 0.8);
+    padding: 16px;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(0, 102, 255, 0.12);
+    min-width: 180px;
+}
+
+.meta-label {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.6px;
     margin-bottom: 4px;
 }
 
-.info-value {
+.meta-value {
     font-size: 16px;
     font-weight: 600;
-    color: var(--gray-900);
+    color: var(--text-primary);
 }
 
-/* Form Sections */
-.form-section {
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-top: 28px;
+}
+
+.summary-card {
     background: white;
-    padding: 24px;
-    border-radius: 12px;
-    margin-bottom: 24px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 20px 22px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.summary-card h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    letter-spacing: 0.6px;
+}
+
+.summary-card p {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.content-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+    gap: 28px;
+    align-items: start;
+}
+
+.main-column {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.section-card {
+    background: white;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    padding: 28px;
+    border: 1px solid var(--border-light);
 }
 
 .section-header {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid var(--gray-200);
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
 }
 
-.section-title {
-    font-size: 20px;
+.section-header h2 {
+    font-size: 22px;
     font-weight: 700;
     color: var(--gray-900);
-    margin: 0;
 }
 
-.section-badge {
-    padding: 4px 12px;
-    border-radius: 16px;
+.section-header p {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.section-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: 12px;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 6px 12px;
+    border-radius: 999px;
     background: var(--gray-100);
     color: var(--gray-600);
+    border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-/* Form Grid */
+.priority-badge {
+    background: var(--primary-subtle);
+    color: var(--primary-dark);
+}
+
+.priority-high {
+    background: #FFF1E6;
+    color: #D35400;
+}
+
+.priority-urgent {
+    background: #FFE8E8;
+    color: #C62828;
+}
+
 .form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 20px;
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
+    gap: 8px;
 }
 
 .form-group label {
     font-size: 14px;
     font-weight: 600;
-    color: var(--gray-900);
-    margin-bottom: 8px;
+    color: var(--text-secondary);
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
-    padding: 12px;
-    border: 1px solid var(--gray-200);
-    border-radius: 8px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
     font-size: 14px;
     font-family: var(--font-sans);
-    transition: all 0.2s;
+    background: var(--gray-50);
+    transition: all 0.2s ease;
 }
 
 .form-group input:focus,
@@ -179,526 +355,1163 @@ body {
 .form-group textarea:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+    box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.12);
+    background: white;
 }
 
 .form-group textarea {
     resize: vertical;
-    min-height: 100px;
+    min-height: 120px;
 }
 
-/* Buttons */
-.btn {
-    padding: 12px 24px;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.btn-primary {
-    background: var(--primary);
-    color: white;
-}
-
-.btn-primary:hover {
-    background: var(--primary-dark);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
-}
-
-.btn-secondary {
-    background: var(--gray-100);
-    color: var(--gray-900);
-}
-
-.btn-secondary:hover {
-    background: var(--gray-200);
-}
-
-.btn-add {
-    background: white;
-    color: var(--primary);
-    border: 2px dashed var(--primary);
-}
-
-.btn-add:hover {
-    background: var(--gray-50);
-}
-
-/* Action Bar */
-.action-bar {
-    position: sticky;
-    bottom: 0;
-    background: white;
-    padding: 16px 24px;
-    border-top: 2px solid var(--gray-200);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
-    z-index: 100;
-}
-
-/* Repeating Items */
 .repeating-list {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 18px;
 }
 
 .repeating-item {
-    background: var(--gray-50);
-    padding: 20px;
-    border-radius: 8px;
+    background: var(--gray-25);
     border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .item-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    gap: 12px;
+    margin-bottom: 18px;
 }
 
 .item-number {
     font-weight: 700;
-    color: var(--gray-900);
+    color: var(--gray-800);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    padding: 12px 22px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    box-shadow: 0 12px 30px rgba(0, 102, 255, 0.25);
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 32px rgba(0, 102, 255, 0.35);
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-light);
+}
+
+.btn-secondary:hover {
+    background: var(--gray-50);
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--border-light);
+    color: var(--text-secondary);
+}
+
+.btn-outline:hover {
+    background: var(--gray-50);
+}
+
+.btn-add {
+    background: rgba(0, 102, 255, 0.08);
+    color: var(--primary-dark);
+    border: 1px dashed rgba(0, 102, 255, 0.4);
+}
+
+.btn-add:hover {
+    background: rgba(0, 102, 255, 0.12);
 }
 
 .btn-remove {
-    padding: 8px 16px;
-    background: #FF3D00;
-    color: white;
+    background: rgba(255, 61, 0, 0.12);
+    color: #B71C1C;
+    border-radius: 999px;
     border: none;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
+    padding: 8px 16px;
+    font-size: 13px;
 }
 
 .btn-remove:hover {
-    background: #D32F2F;
-    transform: scale(1.05);
+    background: rgba(255, 61, 0, 0.18);
+    transform: translateY(-1px);
+}
+
+.calculated-value {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
 }
 
 .empty-state {
-    text-align: center;
-    padding: 40px;
-    color: var(--gray-600);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 36px 24px;
+    border-radius: var(--radius-lg);
+    border: 1px dashed var(--gray-300);
+    background: rgba(245, 247, 250, 0.6);
+    color: var(--text-secondary);
+}
+
+.empty-state strong {
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.side-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: sticky;
+    top: 24px;
+}
+
+.detail-card {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: 24px;
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-sm);
+}
+
+.detail-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--gray-900);
+}
+
+.detail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.detail-list dt {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.6px;
+}
+
+.detail-list dd {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-left: 0;
+    word-break: break-word;
+}
+
+.detail-link {
+    color: var(--primary-dark);
+    text-decoration: none;
+}
+
+.detail-link:hover {
+    text-decoration: underline;
+}
+
+.vip-pill {
+    display: none;
+    margin-top: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: #FFE8A3;
+    color: #7A4B00;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.action-bar {
+    position: sticky;
+    bottom: 0;
+    margin-top: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 24px;
+    border-radius: var(--radius-xl);
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.16);
+    backdrop-filter: blur(18px);
+    z-index: 20;
+}
+
+.action-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.action-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.action-amount {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+@media (max-width: 1024px) {
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .side-column {
+        position: static;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-scaffold {
+        padding: 24px 16px 100px;
+    }
+
+    .hero-section {
+        padding: 24px;
+    }
+
+    .hero-body {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .hero-meta {
+        width: 100%;
+    }
+
+    .meta-item {
+        flex: 1;
+    }
+
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .section-tags {
+        justify-content: flex-start;
+    }
+
+    .action-bar {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .action-buttons {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .action-buttons .btn {
+        width: 100%;
+    }
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="inspection-container">
-    <!-- Header -->
-    <div class="page-header">
-        <div class="header-top">
-            <a href="/garage/service" class="back-link">
-                ← Kembali ke Service Management
-            </a>
+<div class="page-scaffold">
+    <header class="hero-section">
+        <div class="hero-top">
+            <a href="/garage/service" class="back-link">← Kembali ke Service Management</a>
+            <span class="status-badge status-draft" id="display_status">Draft</span>
         </div>
-        
-        <h1 class="page-title">🔍 Inspeksi Service Order</h1>
-        
-        <div class="order-info-grid" id="orderInfoGrid">
-            <div class="info-card">
-                <div class="info-label">Order ID</div>
-                <div class="info-value" id="display_order_id">-</div>
+        <div class="hero-body">
+            <div class="hero-text">
+                <h1>🔍 Inspeksi Service Order</h1>
+                <p>Lengkapi hasil pemeriksaan kendaraan dan bagikan update terbaru untuk tim bengkel.</p>
             </div>
-            <div class="info-card">
-                <div class="info-label">Customer</div>
-                <div class="info-value" id="display_customer">-</div>
-            </div>
-            <div class="info-card">
-                <div class="info-label">Kendaraan</div>
-                <div class="info-value" id="display_vehicle">-</div>
-            </div>
-            <div class="info-card">
-                <div class="info-label">Catatan Intake</div>
-                <div class="info-value" id="display_intake_notes">-</div>
+            <div class="hero-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Tanggal Booking</span>
+                    <span class="meta-value" id="display_booking_date">-</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Estimasi Selesai</span>
+                    <span class="meta-value" id="display_estimated_delivery">-</span>
+                </div>
             </div>
         </div>
+        <div class="summary-cards">
+            <article class="summary-card">
+                <h3>Order ID</h3>
+                <p id="display_order_id">-</p>
+            </article>
+            <article class="summary-card">
+                <h3>Customer</h3>
+                <p id="display_customer">-</p>
+            </article>
+            <article class="summary-card">
+                <h3>Kendaraan</h3>
+                <p id="display_vehicle">-</p>
+            </article>
+            <article class="summary-card">
+                <h3>Total Estimasi</h3>
+                <p id="display_total_estimate">Rp 0</p>
+            </article>
+        </div>
+    </header>
+
+    <div class="content-grid">
+        <main class="main-column">
+            <form id="inspectionForm" class="inspection-form">
+                <section class="section-card">
+                    <div class="section-header">
+                        <div>
+                            <h2>📋 Detail Service</h2>
+                            <p>Lengkapi informasi utama untuk service order ini.</p>
+                        </div>
+                        <div class="section-tags">
+                            <span class="tag" id="display_service_type">-</span>
+                            <span class="tag" id="display_order_category">-</span>
+                            <span class="tag priority-badge" id="display_priority">-</span>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Jenis Service *</label>
+                            <select id="service_order_type" required>
+                                <option value="">-- Pilih --</option>
+                                <option value="Service/Repair">Service/Repair</option>
+                                <option value="Body Repair">Body Repair</option>
+                                <option value="Warranty">Warranty</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Kategori *</label>
+                            <select id="order_category" required>
+                                <option value="">-- Pilih --</option>
+                                <option value="Normal">Normal</option>
+                                <option value="Express">Express</option>
+                                <option value="Emergency">Emergency</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Prioritas *</label>
+                            <select id="priority" required>
+                                <option value="">-- Pilih --</option>
+                                <option value="Normal">Normal</option>
+                                <option value="High">High</option>
+                                <option value="Urgent">Urgent</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Estimasi Selesai *</label>
+                            <input type="date" id="estimated_delivery_date" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Total Estimasi (Rp) *</label>
+                            <input type="number" id="total_estimated_amount" min="0" step="1000" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label>Ringkasan Inspeksi *</label>
+                        <textarea id="inspection_summary" rows="3" required placeholder="Tulis hasil inspeksi singkat..."></textarea>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label>Catatan Service</label>
+                        <textarea id="service_notes" rows="3" placeholder="Catatan tambahan (opsional)"></textarea>
+                    </div>
+                </section>
+
+                <section class="section-card">
+                    <div class="section-header">
+                        <div>
+                            <h2>🔧 Pekerjaan Service</h2>
+                            <p>Daftar pekerjaan yang perlu dilakukan oleh tim bengkel.</p>
+                        </div>
+                        <button type="button" class="btn btn-add" onclick="addServiceTask()">+ Tambah Pekerjaan</button>
+                    </div>
+
+                    <div class="repeating-list" id="serviceTasksList">
+                        <div class="empty-state">
+                            <strong>Belum ada pekerjaan.</strong>
+                            <span>Mulai dengan menambahkan pekerjaan service pertama.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="section-card">
+                    <div class="section-header">
+                        <div>
+                            <h2>🔩 Sparepart Diperlukan</h2>
+                            <p>Catat kebutuhan part agar tim procurement siap menyediakan.</p>
+                        </div>
+                        <button type="button" class="btn btn-add" onclick="addRequiredPart()">+ Tambah Part</button>
+                    </div>
+
+                    <div class="repeating-list" id="requiredPartsList">
+                        <div class="empty-state">
+                            <strong>Belum ada sparepart.</strong>
+                            <span>Tambahkan part yang dibutuhkan untuk perbaikan.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="section-card">
+                    <div class="section-header">
+                        <div>
+                            <h2>💰 Jadwal Pembayaran</h2>
+                            <p>Atur jadwal pembayaran agar pelanggan tetap terinformasi.</p>
+                        </div>
+                        <button type="button" class="btn btn-add" onclick="addPaymentSchedule()">+ Tambah Pembayaran</button>
+                    </div>
+
+                    <div class="repeating-list" id="paymentScheduleList">
+                        <div class="empty-state">
+                            <strong>Belum ada jadwal pembayaran.</strong>
+                            <span>Atur termin pembayaran sesuai kesepakatan.</span>
+                        </div>
+                    </div>
+                </section>
+            </form>
+        </main>
+
+        <aside class="side-column">
+            <section class="detail-card">
+                <h3>👤 Informasi Customer</h3>
+                <dl class="detail-list">
+                    <div>
+                        <dt>Nama Customer</dt>
+                        <dd id="display_customer_name">-</dd>
+                    </div>
+                    <div>
+                        <dt>Tipe</dt>
+                        <dd id="display_customer_type">-</dd>
+                    </div>
+                    <div>
+                        <dt>No. Telepon</dt>
+                        <dd><a id="display_customer_phone" class="detail-link" href="#">-</a></dd>
+                    </div>
+                    <div>
+                        <dt>Email</dt>
+                        <dd><a id="display_customer_email" class="detail-link" href="#">-</a></dd>
+                    </div>
+                </dl>
+                <div class="vip-pill" id="display_customer_vip">VIP Customer</div>
+            </section>
+
+            <section class="detail-card">
+                <h3>🚗 Detail Kendaraan</h3>
+                <dl class="detail-list">
+                    <div>
+                        <dt>Nomor Polisi</dt>
+                        <dd id="display_vehicle_plate">-</dd>
+                    </div>
+                    <div>
+                        <dt>Brand &amp; Model</dt>
+                        <dd id="display_vehicle_brand_model">-</dd>
+                    </div>
+                    <div>
+                        <dt>Tahun</dt>
+                        <dd id="display_vehicle_year">-</dd>
+                    </div>
+                    <div>
+                        <dt>Warna</dt>
+                        <dd id="display_vehicle_color">-</dd>
+                    </div>
+                    <div>
+                        <dt>Transmisi</dt>
+                        <dd id="display_vehicle_transmission">-</dd>
+                    </div>
+                    <div>
+                        <dt>Jenis BBM</dt>
+                        <dd id="display_vehicle_fuel">-</dd>
+                    </div>
+                    <div>
+                        <dt>Kilometer</dt>
+                        <dd id="display_vehicle_mileage">-</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section class="detail-card">
+                <h3>📝 Catatan Intake</h3>
+                <p id="display_intake_notes" style="color: var(--text-secondary); line-height: 1.6;">-</p>
+            </section>
+
+            <section class="detail-card">
+                <h3>📞 Kontak Utama</h3>
+                <dl class="detail-list">
+                    <div>
+                        <dt>Nama PIC</dt>
+                        <dd id="display_primary_contact">-</dd>
+                    </div>
+                    <div>
+                        <dt>Prioritas</dt>
+                        <dd><span class="tag priority-badge" id="display_priority_secondary">-</span></dd>
+                    </div>
+                </dl>
+            </section>
+        </aside>
     </div>
 
-    <form id="inspectionForm">
-        <!-- Detail Service -->
-        <div class="form-section">
-            <div class="section-header">
-                <h2 class="section-title">📋 Detail Service</h2>
-            </div>
-            
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>Jenis Service *</label>
-                    <select id="service_order_type" required>
-                        <option value="">-- Pilih --</option>
-                        <option value="Service/Repair">Service/Repair</option>
-                        <option value="Body Repair">Body Repair</option>
-                        <option value="Warranty">Warranty</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Kategori *</label>
-                    <select id="order_category" required>
-                        <option value="">-- Pilih --</option>
-                        <option value="Normal">Normal</option>
-                        <option value="Express">Express</option>
-                        <option value="Emergency">Emergency</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Prioritas *</label>
-                    <select id="priority" required>
-                        <option value="">-- Pilih --</option>
-                        <option value="Normal">Normal</option>
-                        <option value="High">High</option>
-                        <option value="Urgent">Urgent</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Estimasi Selesai *</label>
-                    <input type="date" id="estimated_delivery_date" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>Total Estimasi (Rp) *</label>
-                    <input type="number" id="total_estimated_amount" min="0" step="1000" required>
-                </div>
-            </div>
-            
-            <div class="form-group" style="margin-top: 20px;">
-                <label>Ringkasan Inspeksi *</label>
-                <textarea id="inspection_summary" rows="3" required placeholder="Tulis hasil inspeksi singkat..."></textarea>
-            </div>
-            
-            <div class="form-group" style="margin-top: 20px;">
-                <label>Catatan Service</label>
-                <textarea id="service_notes" rows="3" placeholder="Catatan tambahan (opsional)"></textarea>
-            </div>
-        </div>
-
-        <!-- Service Tasks -->
-        <div class="form-section">
-            <div class="section-header">
-                <h2 class="section-title">🔧 Pekerjaan Service</h2>
-                <button type="button" class="btn btn-add" onclick="addServiceTask()">
-                    + Tambah Pekerjaan
-                </button>
-            </div>
-            
-            <div class="repeating-list" id="serviceTasksList">
-                <div class="empty-state">
-                    <p>Belum ada pekerjaan. Klik "Tambah" untuk menambah.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Required Parts -->
-        <div class="form-section">
-            <div class="section-header">
-                <h2 class="section-title">🔩 Sparepart Diperlukan</h2>
-                <button type="button" class="btn btn-add" onclick="addRequiredPart()">
-                    + Tambah Part
-                </button>
-            </div>
-            
-            <div class="repeating-list" id="requiredPartsList">
-                <div class="empty-state">
-                    <p>Belum ada sparepart. Klik "Tambah" untuk menambah.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Payment Schedule -->
-        <div class="form-section">
-            <div class="section-header">
-                <h2 class="section-title">💰 Jadwal Pembayaran</h2>
-                <button type="button" class="btn btn-add" onclick="addPaymentSchedule()">
-                    + Tambah Pembayaran
-                </button>
-            </div>
-            
-            <div class="repeating-list" id="paymentScheduleList">
-                <div class="empty-state">
-                    <p>Belum ada jadwal pembayaran. Klik "Tambah" untuk menambah.</p>
-                </div>
-            </div>
-        </div>
-    </form>
-
-    <!-- Action Bar -->
     <div class="action-bar">
-        <button type="button" class="btn btn-secondary" onclick="window.location.href='/garage/service'">
-            ❌ Batal
-        </button>
-        <button type="button" class="btn btn-primary" onclick="submitInspection()">
-            ✅ Simpan & Pindah ke In Progress
-        </button>
+        <div class="action-info">
+            <span class="action-label">Total Estimasi</span>
+            <span class="action-amount" id="action_total_estimate">Rp 0</span>
+        </div>
+        <div class="action-buttons">
+            <a href="/garage/service" class="btn btn-secondary">Batal</a>
+            <button type="button" class="btn btn-primary" onclick="submitInspection()">Simpan Inspeksi</button>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block script %}
 <script>
-(function() {
-    'use strict';
+(() => {
+    const currencyFormatter = new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0
+    });
 
-    // Get order ID from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const orderId = urlParams.get('order_id');
-
-    if (!orderId) {
-        frappe.show_alert({
-            message: '❌ Order ID tidak ditemukan!',
-            indicator: 'red'
-        }, 5);
-        setTimeout(() => window.location.href = '/garage/service', 2000);
-        return;
+    function formatCurrency(value) {
+        if (value === undefined || value === null || value === '') {
+            return 'Rp 0';
+        }
+        const number = Number(value);
+        if (Number.isNaN(number)) {
+            return 'Rp 0';
+        }
+        return currencyFormatter.format(number);
     }
 
-    
-
-    let serviceTasks = [];
-    let requiredParts = [];
-    let paymentSchedule = [];
-
-    // Load order data
-    async function loadOrderData() {
-        try {
-            const response = await frappe.call({
-                method: 'garage.api.portal.get_service_order_details',
-                args: { order_id: orderId },
-                type: 'POST',
-                headers: {
-                    'X-Frappe-CSRF-Token': frappe.csrf_token
-                }
-            });
-
-            if (response.message) {
-                populateOrderInfo(response.message);
+    function safeDateParse(value) {
+        if (!value) {
+            return null;
+        }
+        if (value instanceof Date) {
+            return Number.isNaN(value.getTime()) ? null : value;
+        }
+        if (typeof value === 'string') {
+            const normalized = value.replace(' ', 'T');
+            const parsed = new Date(normalized);
+            if (!Number.isNaN(parsed.getTime())) {
+                return parsed;
             }
-        } catch (error) {
-            console.error('Error:', error);
+            const fallback = new Date(value.split(' ')[0]);
+            if (!Number.isNaN(fallback.getTime())) {
+                return fallback;
+            }
+        }
+        return null;
+    }
+
+    function formatDisplayDate(value) {
+        const parsed = safeDateParse(value);
+        if (!parsed) {
+            return '-';
+        }
+        return parsed.toLocaleString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function formatMileage(value) {
+        if (value === undefined || value === null || value === '') {
+            return '-';
+        }
+        const number = Number(value);
+        if (Number.isNaN(number)) {
+            return '-';
+        }
+        return `${new Intl.NumberFormat('id-ID').format(number)} km`;
+    }
+
+    function normaliseDateInput(value) {
+        const parsed = safeDateParse(value);
+        if (!parsed) {
+            return '';
+        }
+        return parsed.toISOString().split('T')[0];
+    }
+
+    function applyStatusBadge(status) {
+        const element = document.getElementById('display_status');
+        if (!element) {
+            return;
+        }
+        const value = status || 'Draft';
+        const slug = value.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        element.textContent = value;
+        element.className = `status-badge ${slug ? `status-${slug}` : 'status-draft'}`;
+    }
+
+    function applyPriorityBadge(priority) {
+        const primary = document.getElementById('display_priority');
+        const secondary = document.getElementById('display_priority_secondary');
+        const value = priority || '-';
+        const slug = (priority || '').toLowerCase();
+        const className = slug ? `tag priority-badge priority-${slug}` : 'tag priority-badge';
+
+        if (primary) {
+            primary.textContent = value;
+            primary.className = className;
+        }
+        if (secondary) {
+            secondary.textContent = value;
+            secondary.className = className;
+        }
+    }
+
+    function updateTotalEstimateDisplay(value) {
+        const displayValue = formatCurrency(value);
+        const summary = document.getElementById('display_total_estimate');
+        const action = document.getElementById('action_total_estimate');
+        if (summary) {
+            summary.textContent = displayValue;
+        }
+        if (action) {
+            action.textContent = displayValue;
+        }
+    }
+
+    function updateEstimatedDeliveryDisplay(sourceValue) {
+        const display = document.getElementById('display_estimated_delivery');
+        const dateValue = sourceValue ?? document.getElementById('estimated_delivery_date')?.value;
+        if (display) {
+            display.textContent = dateValue ? formatDisplayDate(dateValue) : '-';
+        }
+    }
+
+    function resolveCSRFToken() {
+        if (window.frappe) {
+            if (window.frappe.csrf_token) {
+                return window.frappe.csrf_token;
+            }
+            if (window.csrf_token) {
+                return window.csrf_token;
+            }
+            if (window.frappe.boot && window.frappe.boot.csrf_token) {
+                window.frappe.csrf_token = window.frappe.boot.csrf_token;
+                return window.frappe.csrf_token;
+            }
+        }
+
+        const meta = document.querySelector('meta[name="csrf-token"], meta[name="csrf_token"]');
+        if (meta && meta.content) {
+            return meta.content;
+        }
+
+        const cookieMatch = document.cookie.match(/csrftoken=([^;]+)/);
+        if (cookieMatch) {
+            return decodeURIComponent(cookieMatch[1]);
+        }
+
+        return null;
+    }
+
+    function withCSRF(options = {}) {
+        const token = resolveCSRFToken();
+
+        if (!token) {
+            return options;
+        }
+
+        return Object.assign({}, options, {
+            args: Object.assign({}, options.args, { csrf_token: token }),
+            headers: Object.assign({}, options.headers, {
+                'X-Frappe-CSRF-Token': token
+            })
+        });
+    }
+
+    function boot() {
+        'use strict';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('order_id');
+
+        if (!orderId) {
             frappe.show_alert({
-                message: '❌ Gagal load data order',
+                message: '❌ Order ID tidak ditemukan!',
                 indicator: 'red'
             }, 5);
-        }
-    }
-
-    function populateOrderInfo(order) {
-        document.getElementById('display_order_id').textContent = order.name || '-';
-        document.getElementById('display_customer').textContent = order.customer_name || '-';
-        document.getElementById('display_vehicle').textContent = 
-            (order.vehicle_brand || '') + ' ' + (order.vehicle_model || '') + ' - ' + (order.vehicle_plate || '');
-        document.getElementById('display_intake_notes').textContent = order.service_notes || '-';
-
-        if (order.service_order_type) document.getElementById('service_order_type').value = order.service_order_type;
-        if (order.order_category) document.getElementById('order_category').value = order.order_category;
-        if (order.priority) document.getElementById('priority').value = order.priority;
-        if (order.estimated_delivery_date) document.getElementById('estimated_delivery_date').value = order.estimated_delivery_date;
-        if (order.total_estimated_amount) document.getElementById('total_estimated_amount').value = order.total_estimated_amount;
-        if (order.inspection_summary) document.getElementById('inspection_summary').value = order.inspection_summary;
-    }
-
-    // Service Tasks
-    window.addServiceTask = function() {
-        serviceTasks.push({ task: '', description: '', estimated_hours: 1, technician: '' });
-        renderServiceTasks();
-    };
-
-    window.removeServiceTask = function(index) {
-        serviceTasks.splice(index, 1);
-        renderServiceTasks();
-    };
-
-    function renderServiceTasks() {
-        const container = document.getElementById('serviceTasksList');
-        if (serviceTasks.length === 0) {
-            container.innerHTML = '<div class="empty-state"><p>Belum ada pekerjaan</p></div>';
-            return;
-        }
-        container.innerHTML = serviceTasks.map((task, i) => `
-            <div class="repeating-item">
-                <div class="item-header">
-                    <span class="item-number">Pekerjaan #${i + 1}</span>
-                    <button type="button" class="btn-remove" onclick="removeServiceTask(${i})">🗑️ Hapus</button>
-                </div>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Nama Pekerjaan *</label>
-                        <input type="text" value="${task.task}" onchange="serviceTasks[${i}].task = this.value" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Teknisi</label>
-                        <input type="text" value="${task.technician}" onchange="serviceTasks[${i}].technician = this.value">
-                    </div>
-                    <div class="form-group">
-                        <label>Estimasi Jam</label>
-                        <input type="number" value="${task.estimated_hours}" onchange="serviceTasks[${i}].estimated_hours = parseFloat(this.value)" step="0.5">
-                    </div>
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <label>Deskripsi</label>
-                        <textarea onchange="serviceTasks[${i}].description = this.value" rows="2">${task.description}</textarea>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    // Required Parts (similar pattern)
-    window.addRequiredPart = function() {
-        requiredParts.push({ item_name: '', description: '', qty: 1, rate: 0 });
-        renderRequiredParts();
-    };
-
-    window.removeRequiredPart = function(index) {
-        requiredParts.splice(index, 1);
-        renderRequiredParts();
-    };
-
-    function renderRequiredParts() {
-        const container = document.getElementById('requiredPartsList');
-        if (requiredParts.length === 0) {
-            container.innerHTML = '<div class="empty-state"><p>Belum ada sparepart</p></div>';
-            return;
-        }
-        container.innerHTML = requiredParts.map((part, i) => `
-            <div class="repeating-item">
-                <div class="item-header">
-                    <span class="item-number">Part #${i + 1}</span>
-                    <button type="button" class="btn-remove" onclick="removeRequiredPart(${i})">🗑️ Hapus</button>
-                </div>
-                <div class="form-grid">
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <label>Nama Part *</label>
-                        <input type="text" value="${part.item_name}" onchange="requiredParts[${i}].item_name = this.value" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Qty *</label>
-                        <input type="number" value="${part.qty}" onchange="requiredParts[${i}].qty = parseInt(this.value); renderRequiredParts()" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Harga Satuan *</label>
-                        <input type="number" value="${part.rate}" onchange="requiredParts[${i}].rate = parseFloat(this.value); renderRequiredParts()" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Total</label>
-                        <input type="number" value="${part.qty * part.rate}" readonly style="background: var(--gray-100);">
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    // Payment Schedule (similar pattern)
-    window.addPaymentSchedule = function() {
-        paymentSchedule.push({ description: '', percentage: 0, amount: 0 });
-        renderPaymentSchedule();
-    };
-
-    window.removePaymentSchedule = function(index) {
-        paymentSchedule.splice(index, 1);
-        renderPaymentSchedule();
-    };
-
-    function renderPaymentSchedule() {
-        const container = document.getElementById('paymentScheduleList');
-        if (paymentSchedule.length === 0) {
-            container.innerHTML = '<div class="empty-state"><p>Belum ada jadwal pembayaran</p></div>';
-            return;
-        }
-        container.innerHTML = paymentSchedule.map((payment, i) => `
-            <div class="repeating-item">
-                <div class="item-header">
-                    <span class="item-number">Pembayaran #${i + 1}</span>
-                    <button type="button" class="btn-remove" onclick="removePaymentSchedule(${i})">🗑️ Hapus</button>
-                </div>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Deskripsi *</label>
-                        <input type="text" value="${payment.description}" onchange="paymentSchedule[${i}].description = this.value" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Persentase (%)</label>
-                        <input type="number" value="${payment.percentage}" onchange="paymentSchedule[${i}].percentage = parseFloat(this.value)">
-                    </div>
-                    <div class="form-group">
-                        <label>Jumlah (Rp) *</label>
-                        <input type="number" value="${payment.amount}" onchange="paymentSchedule[${i}].amount = parseFloat(this.value)" required>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    // Submit
-    window.submitInspection = async function() {
-        const form = document.getElementById('inspectionForm');
-        if (!form.checkValidity()) {
-            form.reportValidity();
+            setTimeout(() => window.location.href = '/garage/service', 2000);
             return;
         }
 
-        if (serviceTasks.length === 0) {
-            frappe.show_alert({ message: '⚠️ Minimal harus ada 1 pekerjaan!', indicator: 'orange' }, 5);
-            return;
-        }
+        let serviceTasks = [];
+        let requiredParts = [];
+        let paymentSchedule = [];
 
-        const data = {
-            order_id: orderId,
-            service_order_type: document.getElementById('service_order_type').value,
-            order_category: document.getElementById('order_category').value,
-            priority: document.getElementById('priority').value,
-            estimated_delivery_date: document.getElementById('estimated_delivery_date').value,
-            total_estimated_amount: parseFloat(document.getElementById('total_estimated_amount').value),
-            inspection_summary: document.getElementById('inspection_summary').value,
-            service_notes: document.getElementById('service_notes').value,
-            service_tasks: serviceTasks,
-            required_parts: requiredParts,
-            payment_schedule: paymentSchedule,
-            status: 'In Progress'
-        };
+        const totalEstimateInput = document.getElementById('total_estimated_amount');
+        const estimatedDateInput = document.getElementById('estimated_delivery_date');
 
-        try {
-            await frappe.call({
-                method: 'garage.api.portal.update_service_order_inspection',
-                args: { order_id: orderId, inspection_data: data },
-                type: 'POST',
-                headers: {
-                    'X-Frappe-CSRF-Token': frappe.csrf_token
+        function wireFormMirrors() {
+            const serviceTypeInput = document.getElementById('service_order_type');
+            const orderCategoryInput = document.getElementById('order_category');
+            const priorityInput = document.getElementById('priority');
+
+            serviceTypeInput?.addEventListener('change', () => {
+                const display = document.getElementById('display_service_type');
+                if (display) {
+                    display.textContent = serviceTypeInput.value || '-';
                 }
             });
 
-            frappe.show_alert({ message: '✅ Inspeksi berhasil!', indicator: 'green' }, 3);
-            setTimeout(() => window.location.href = '/garage/service', 1000);
-        } catch (error) {
-            console.error('Error:', error);
-            frappe.show_alert({ message: '❌ Error: ' + (error.message || 'Gagal menyimpan'), indicator: 'red' }, 5);
+            orderCategoryInput?.addEventListener('change', () => {
+                const display = document.getElementById('display_order_category');
+                if (display) {
+                    display.textContent = orderCategoryInput.value || '-';
+                }
+            });
+
+            priorityInput?.addEventListener('change', () => {
+                applyPriorityBadge(priorityInput.value);
+            });
+
+            totalEstimateInput?.addEventListener('input', (event) => {
+                updateTotalEstimateDisplay(event.target.value);
+            });
+
+            estimatedDateInput?.addEventListener('input', () => {
+                updateEstimatedDeliveryDisplay();
+            });
+            estimatedDateInput?.addEventListener('change', () => {
+                updateEstimatedDeliveryDisplay();
+            });
         }
-    };
 
-    // Initialize
-    loadOrderData();
+        wireFormMirrors();
 
-    // Set default date (+3 days)
-    const defaultDate = new Date();
-    defaultDate.setDate(defaultDate.getDate() + 3);
-    document.getElementById('estimated_delivery_date').value = defaultDate.toISOString().split('T')[0];
+        async function loadOrderData() {
+            try {
+                const response = await frappe.call(withCSRF({
+                    method: 'garage.api.portal.get_service_order_details',
+                    args: { order_id: orderId },
+                    type: 'POST'
+                }));
 
-    console.log('✅ Inspection page loaded!');
+                if (response.message) {
+                    populateOrderInfo(response.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                frappe.show_alert({
+                    message: '❌ Gagal load data order',
+                    indicator: 'red'
+                }, 5);
+            }
+        }
+
+        function populateOrderInfo(order) {
+            const customerDetails = order.customer_details || {};
+            const vehicleDetails = order.vehicle_details || {};
+
+            document.getElementById('display_order_id').textContent = order.name || order.order_id || '-';
+
+            const statusValue = order.status || order.workflow_state || order.job_card_status || 'Draft';
+            applyStatusBadge(statusValue);
+
+            document.getElementById('display_booking_date').textContent = formatDisplayDate(order.service_booking_date);
+
+            const customerName = order.customer_name
+                || customerDetails.customer_name
+                || customerDetails.name
+                || order.customer
+                || '-';
+            document.getElementById('display_customer').textContent = customerName;
+            document.getElementById('display_customer_name').textContent = customerName;
+
+            document.getElementById('display_customer_type').textContent = customerDetails.customer_type || '-';
+
+            const vipPill = document.getElementById('display_customer_vip');
+            if (vipPill) {
+                vipPill.style.display = customerDetails.is_vip ? 'inline-flex' : 'none';
+            }
+
+            const phone = customerDetails.phone || order.primary_contact || order.customer_phone || '';
+            const phoneLink = document.getElementById('display_customer_phone');
+            if (phoneLink) {
+                if (phone) {
+                    phoneLink.textContent = phone;
+                    phoneLink.href = `tel:${phone}`;
+                } else {
+                    phoneLink.textContent = '-';
+                    phoneLink.removeAttribute('href');
+                }
+            }
+
+            const email = customerDetails.email || order.customer_email || '';
+            const emailLink = document.getElementById('display_customer_email');
+            if (emailLink) {
+                if (email) {
+                    emailLink.textContent = email;
+                    emailLink.href = `mailto:${email}`;
+                } else {
+                    emailLink.textContent = '-';
+                    emailLink.removeAttribute('href');
+                }
+            }
+
+            document.getElementById('display_primary_contact').textContent = order.primary_contact || '-';
+
+            const licensePlate = order.vehicle_plate || vehicleDetails.license_plate || '';
+            const brandModel = [order.vehicle_brand || vehicleDetails.brand, order.vehicle_model || vehicleDetails.model]
+                .filter(Boolean)
+                .join(' ')
+                .trim();
+
+            const vehicleParts = [];
+            if (licensePlate) vehicleParts.push(licensePlate);
+            if (brandModel) vehicleParts.push(brandModel);
+            const vehicleDisplay = vehicleParts.join(' • ');
+
+            document.getElementById('display_vehicle').textContent = vehicleDisplay || '-';
+            document.getElementById('display_vehicle_plate').textContent = licensePlate || '-';
+            document.getElementById('display_vehicle_brand_model').textContent = brandModel || '-';
+            document.getElementById('display_vehicle_year').textContent = vehicleDetails.vehicle_year || order.vehicle_year || '-';
+            document.getElementById('display_vehicle_color').textContent = vehicleDetails.color || order.vehicle_color || '-';
+            document.getElementById('display_vehicle_transmission').textContent = vehicleDetails.transmission || order.vehicle_transmission || '-';
+            document.getElementById('display_vehicle_fuel').textContent = vehicleDetails.fuel_type || order.vehicle_fuel_type || '-';
+            document.getElementById('display_vehicle_mileage').textContent = formatMileage(vehicleDetails.mileage || order.vehicle_mileage);
+
+            const intakeNotes = order.intake_notes || order.inspection_summary || order.service_notes;
+            document.getElementById('display_intake_notes').textContent = intakeNotes || 'Belum ada catatan tambahan dari intake.';
+
+            if (order.service_order_type) {
+                document.getElementById('service_order_type').value = order.service_order_type;
+                document.getElementById('display_service_type').textContent = order.service_order_type;
+            }
+            if (order.order_category) {
+                document.getElementById('order_category').value = order.order_category;
+                document.getElementById('display_order_category').textContent = order.order_category;
+            }
+            if (order.priority) {
+                document.getElementById('priority').value = order.priority;
+                applyPriorityBadge(order.priority);
+            }
+
+            if (order.estimated_delivery_date) {
+                const formattedDate = normaliseDateInput(order.estimated_delivery_date);
+                if (formattedDate) {
+                    estimatedDateInput.value = formattedDate;
+                    updateEstimatedDeliveryDisplay(formattedDate);
+                }
+            } else if (estimatedDateInput.value) {
+                updateEstimatedDeliveryDisplay(estimatedDateInput.value);
+            }
+
+            if (order.total_estimated_amount !== undefined && order.total_estimated_amount !== null) {
+                totalEstimateInput.value = order.total_estimated_amount;
+            }
+            updateTotalEstimateDisplay(totalEstimateInput.value);
+
+            document.getElementById('inspection_summary').value = order.inspection_summary || '';
+            document.getElementById('service_notes').value = order.service_notes || '';
+
+            if (Array.isArray(order.service_tasks)) {
+                serviceTasks = order.service_tasks.map((task) => ({
+                    task: task.task || task.name || '',
+                    description: task.description || '',
+                    estimated_hours: task.estimated_hours ?? task.estimated_time ?? 1,
+                    technician: task.technician || task.assigned_to || ''
+                }));
+            } else {
+                serviceTasks = [];
+            }
+            renderServiceTasks();
+
+            if (Array.isArray(order.required_parts)) {
+                requiredParts = order.required_parts.map((part) => ({
+                    item_name: part.item_name || part.part_name || '',
+                    description: part.description || '',
+                    qty: part.qty ?? part.quantity ?? 1,
+                    rate: part.rate ?? part.price ?? 0
+                }));
+            } else {
+                requiredParts = [];
+            }
+            renderRequiredParts();
+
+            if (Array.isArray(order.payment_schedule)) {
+                paymentSchedule = order.payment_schedule.map((schedule) => ({
+                    description: schedule.description || '',
+                    percentage: schedule.percentage ?? 0,
+                    amount: schedule.amount ?? 0
+                }));
+            } else {
+                paymentSchedule = [];
+            }
+            renderPaymentSchedule();
+        }
+
+        window.addServiceTask = function() {
+            serviceTasks.push({ task: '', description: '', estimated_hours: 1, technician: '' });
+            renderServiceTasks();
+        };
+
+        window.removeServiceTask = function(index) {
+            serviceTasks.splice(index, 1);
+            renderServiceTasks();
+        };
+
+        function renderServiceTasks() {
+            const container = document.getElementById('serviceTasksList');
+            if (!container) {
+                return;
+            }
+            if (serviceTasks.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <strong>Belum ada pekerjaan.</strong>
+                        <span>Mulai dengan menambahkan pekerjaan service pertama.</span>
+                    </div>
+                `;
+                return;
+            }
+            container.innerHTML = serviceTasks.map((task, i) => `
+                <div class="repeating-item">
+                    <div class="item-header">
+                        <span class="item-number">Pekerjaan #${i + 1}</span>
+                        <button type="button" class="btn-remove" onclick="removeServiceTask(${i})">🗑️ Hapus</button>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Nama Pekerjaan *</label>
+                            <input type="text" value="${task.task}" onchange="serviceTasks[${i}].task = this.value" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Teknisi</label>
+                            <input type="text" value="${task.technician}" onchange="serviceTasks[${i}].technician = this.value">
+                        </div>
+                        <div class="form-group">
+                            <label>Estimasi Jam</label>
+                            <input type="number" value="${task.estimated_hours}" onchange="serviceTasks[${i}].estimated_hours = parseFloat(this.value)" step="0.5">
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Deskripsi</label>
+                            <textarea onchange="serviceTasks[${i}].description = this.value" rows="2">${task.description}</textarea>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.addRequiredPart = function() {
+            requiredParts.push({ item_name: '', description: '', qty: 1, rate: 0 });
+            renderRequiredParts();
+        };
+
+        window.removeRequiredPart = function(index) {
+            requiredParts.splice(index, 1);
+            renderRequiredParts();
+        };
+
+        function renderRequiredParts() {
+            const container = document.getElementById('requiredPartsList');
+            if (!container) {
+                return;
+            }
+            if (requiredParts.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <strong>Belum ada sparepart.</strong>
+                        <span>Tambahkan part yang dibutuhkan untuk perbaikan.</span>
+                    </div>
+                `;
+                return;
+            }
+            container.innerHTML = requiredParts.map((part, i) => `
+                <div class="repeating-item">
+                    <div class="item-header">
+                        <span class="item-number">Part #${i + 1}</span>
+                        <button type="button" class="btn-remove" onclick="removeRequiredPart(${i})">🗑️ Hapus</button>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Nama Part *</label>
+                            <input type="text" value="${part.item_name}" onchange="requiredParts[${i}].item_name = this.value" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Qty *</label>
+                            <input type="number" value="${part.qty}" onchange="requiredParts[${i}].qty = parseInt(this.value, 10) || 0; renderRequiredParts();" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Harga Satuan *</label>
+                            <input type="number" value="${part.rate}" onchange="requiredParts[${i}].rate = parseFloat(this.value) || 0; renderRequiredParts();" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Total</label>
+                            <div class="calculated-value">${formatCurrency((part.qty || 0) * (part.rate || 0))}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.addPaymentSchedule = function() {
+            paymentSchedule.push({ description: '', percentage: 0, amount: 0 });
+            renderPaymentSchedule();
+        };
+
+        window.removePaymentSchedule = function(index) {
+            paymentSchedule.splice(index, 1);
+            renderPaymentSchedule();
+        };
+
+        function renderPaymentSchedule() {
+            const container = document.getElementById('paymentScheduleList');
+            if (!container) {
+                return;
+            }
+            if (paymentSchedule.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <strong>Belum ada jadwal pembayaran.</strong>
+                        <span>Atur termin pembayaran sesuai kesepakatan.</span>
+                    </div>
+                `;
+                return;
+            }
+            container.innerHTML = paymentSchedule.map((payment, i) => `
+                <div class="repeating-item">
+                    <div class="item-header">
+                        <span class="item-number">Pembayaran #${i + 1}</span>
+                        <button type="button" class="btn-remove" onclick="removePaymentSchedule(${i})">🗑️ Hapus</button>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Deskripsi *</label>
+                            <input type="text" value="${payment.description}" onchange="paymentSchedule[${i}].description = this.value" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Persentase (%)</label>
+                            <input type="number" value="${payment.percentage}" onchange="paymentSchedule[${i}].percentage = parseFloat(this.value) || 0">
+                        </div>
+                        <div class="form-group">
+                            <label>Jumlah (Rp) *</label>
+                            <input type="number" value="${payment.amount}" onchange="paymentSchedule[${i}].amount = parseFloat(this.value) || 0" required>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.submitInspection = async function() {
+            const form = document.getElementById('inspectionForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            if (serviceTasks.length === 0) {
+                frappe.show_alert({ message: '⚠️ Minimal harus ada 1 pekerjaan!', indicator: 'orange' }, 5);
+                return;
+            }
+
+            const data = {
+                order_id: orderId,
+                service_order_type: document.getElementById('service_order_type').value,
+                order_category: document.getElementById('order_category').value,
+                priority: document.getElementById('priority').value,
+                estimated_delivery_date: document.getElementById('estimated_delivery_date').value,
+                total_estimated_amount: parseFloat(document.getElementById('total_estimated_amount').value),
+                inspection_summary: document.getElementById('inspection_summary').value,
+                service_notes: document.getElementById('service_notes').value,
+                service_tasks: serviceTasks,
+                required_parts: requiredParts,
+                payment_schedule: paymentSchedule,
+                status: 'In Progress'
+            };
+
+            try {
+                await frappe.call(withCSRF({
+                    method: 'garage.api.portal.update_service_order_inspection',
+                    args: { order_id: orderId, inspection_data: data },
+                    type: 'POST'
+                }));
+
+                frappe.show_alert({ message: '✅ Inspeksi berhasil!', indicator: 'green' }, 3);
+                setTimeout(() => window.location.href = '/garage/service', 1000);
+            } catch (error) {
+                console.error('Error:', error);
+                frappe.show_alert({ message: '❌ Error: ' + (error.message || 'Gagal menyimpan'), indicator: 'red' }, 5);
+            }
+        };
+
+        loadOrderData();
+
+        const defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 3);
+        const defaultValue = defaultDate.toISOString().split('T')[0];
+        if (estimatedDateInput && !estimatedDateInput.value) {
+            estimatedDateInput.value = defaultValue;
+            updateEstimatedDeliveryDisplay(defaultValue);
+        }
+
+        if (totalEstimateInput && !totalEstimateInput.value) {
+            totalEstimateInput.value = 0;
+        }
+        updateTotalEstimateDisplay(totalEstimateInput?.value ?? 0);
+
+        console.log('✅ Inspection page loaded!');
+    }
+
+    if (typeof frappe !== 'undefined' && typeof frappe.ready === 'function') {
+        frappe.ready(boot);
+    } else {
+        document.addEventListener('DOMContentLoaded', boot);
+    }
 })();
 </script>
 {% endblock %}
