@@ -1352,7 +1352,7 @@ body {
 
 
                 <div id="inspectionModal" class="inspection-modal">
-            <div class="modal-backdrop" onclick="closeInspectionModal()"></div>
+            <div class="modal-backdrop"></div>
             <div class="modal-dialog">
                 <div class="modal-header">
                     <h2>🔍 Inspeksi Service Order</h2>
@@ -2261,13 +2261,18 @@ body {
     // Close modal when clicking the backdrop
     const inspectionModal = document.getElementById('inspectionModal');
     if (inspectionModal) {
+        const modalDialog = inspectionModal.querySelector('.modal-dialog');
+
         inspectionModal.addEventListener('click', function(event) {
-            if (event.target === inspectionModal || event.target.classList.contains('modal-backdrop')) {
+            if (!modalDialog) {
+                return;
+            }
+
+            if (!modalDialog.contains(event.target)) {
                 closeInspectionModal();
             }
         });
 
-        const modalDialog = inspectionModal.querySelector('.modal-dialog');
         if (modalDialog) {
             modalDialog.addEventListener('click', function(event) {
                 event.stopPropagation();
