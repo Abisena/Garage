@@ -125,7 +125,8 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
                     "actual_hours",
                     "status",
                     "completion_date",
-                }
+                },
+                "required_fields": {"task"},
             },
             "required_parts": {
                 "fields": {
@@ -140,7 +141,8 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
                     "warehouse",
                     "rate",
                     "amount",
-                }
+                },
+                "required_fields": {"item_code"},
             },
             "progress_logs": {
                 "fields": {
@@ -477,22 +479,47 @@ def _find_vehicle_by_plate(license_plate: str, *, fields: Sequence[str] = ("name
     return rows[0]
 
 
+def _is_blank(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return not value.strip()
+    if isinstance(value, (list, tuple, set, dict)):
+        return len(value) == 0
+    return False
+
+
 def _sanitize_child_rows(table_field: str, rows: Any, config: Mapping[str, Any]) -> List[Dict[str, Any]]:
     if not rows:
         return []
     allowed_fields = config.get("fields", set())
+    required_fields = config.get("required_fields", set())
     sanitized: List[Dict[str, Any]] = []
     for row in rows:
         row_data = _ensure_dict(row)
         payload = _filter_fields(row_data, allowed_fields)
-        if payload:
-            sanitized.append(payload)
+        if not payload:
+            continue
+
+        if required_fields:
+            missing_required = False
+            for field in required_fields:
+                if _is_blank(row_data.get(field)):
+                    missing_required = True
+                    break
+            if missing_required:
+                continue
+
+        sanitized.append(payload)
     return sanitized
 
 
 def _apply_defaults(doctype: str, doc: frappe.Document) -> None:
-    if doctype == "Garage Service Order" and not doc.service_booking_date:
-        doc.service_booking_date = now_datetime()
+    if doctype == "Garage Service Order":
+        if not doc.service_booking_date:
+            doc.service_booking_date = now_datetime()
+        if not doc.status or doc.status in {"", "Draft"}:
+            doc.status = "Inspection"
     elif doctype == "Garage Spare Part Order" and not doc.order_date:
         doc.order_date = nowdate()
     elif doctype == "Garage Procurement Order" and not doc.order_date:
@@ -1220,16 +1247,20 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
         try:
             if hasattr(doc, "service_tasks"):
                 doc.service_tasks = []
-                for task in data["service_tasks"]:
+                child_config = ALLOWED_DOCS["Garage Service Order"]["children"]["service_tasks"]
+                tasks = _sanitize_child_rows("service_tasks", data["service_tasks"], child_config)
+                for task in tasks:
                     doc.append("service_tasks", task)
         except Exception as e:
             frappe.log_error(f"Error updating service_tasks: {str(e)}")
-    
+
     if "required_parts" in data:
         try:
             if hasattr(doc, "required_parts"):
                 doc.required_parts = []
-                for part in data["required_parts"]:
+                child_config = ALLOWED_DOCS["Garage Service Order"]["children"]["required_parts"]
+                parts = _sanitize_child_rows("required_parts", data["required_parts"], child_config)
+                for part in parts:
                     doc.append("required_parts", part)
         except Exception as e:
             frappe.log_error(f"Error updating required_parts: {str(e)}")
@@ -1255,7 +1286,7 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
 
 @frappe.whitelist()
 def move_to_in_progress(order_id: str) -> Dict[str, Any]:
-    """Move service order from Planning to In Progress."""
+    """Move service order from inspection planning stages into execution."""
     
     _require_login()
     
