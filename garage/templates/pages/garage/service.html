@@ -1,32 +1,36 @@
 {% extends "templates/web.html" %}
 
-{% block title %}Orkestrasi Servis Bengkel{% endblock %}
-
+{% block title %}Service Management - Garage{% endblock %}
 
 {% block head_include %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
 /* ============================================================================
-   GARAGE SERVICE PAGE - PREMIUM ELEGANT DESIGN
-   Complex Forms with Repeating Groups & Metrics
+   SERVICE MANAGEMENT PAGE - WORKFLOW BASED DESIGN
+   Three-Stage Pipeline: Inspection Entry → In Progress → Completed
    ============================================================================ */
 
-/* === DESIGN TOKENS === */
 :root {
-    /* Brand Colors - Refined Blue Palette */
+    /* Brand Colors */
     --primary: #0066FF;
     --primary-dark: #0052CC;
     --primary-darker: #003D99;
     --primary-light: #4D94FF;
-    --primary-lightest: #E6F2FF;
     --primary-subtle: #F0F7FF;
     
-    /* Accent Colors */
-    --accent-success: #00C853;
-    --accent-warning: #FFB300;
-    --accent-danger: #FF3D00;
-    --accent-info: #00B8D4;
+    /* Status Colors */
+    --status-pending: #FFB300;
+    --status-pending-light: #FFF8E1;
+    --status-progress: #0066FF;
+    --status-progress-light: #E3F2FD;
+    --status-completed: #00C853;
+    --status-completed-light: #E8F5E9;
+    --status-cancelled: #FF3D00;
     
-    /* Neutral Palette - Sophisticated Grays */
+    /* Neutral Colors */
     --gray-50: #FAFBFC;
     --gray-100: #F5F7FA;
     --gray-200: #E9ECF1;
@@ -38,7 +42,6 @@
     --gray-800: #2A3647;
     --gray-900: #1A2332;
     
-    /* Semantic Colors */
     --text-primary: #1A2332;
     --text-secondary: #5E6C84;
     --text-muted: #8896AB;
@@ -46,204 +49,523 @@
     
     --bg-body: #F5F7FA;
     --bg-surface: #FFFFFF;
-    --bg-elevated: #FAFBFC;
-    --bg-overlay: rgba(26, 35, 50, 0.8);
     
     --border-light: #E9ECF1;
     --border-base: #D4DAE4;
-    --border-strong: #B8C1D3;
-    --border-accent: #B3D9FF;
     
-    /* Shadows - Layered Depth */
-    --shadow-xs: 0 1px 2px rgba(26, 35, 50, 0.04);
-    --shadow-sm: 0 2px 4px rgba(26, 35, 50, 0.06), 0 1px 2px rgba(26, 35, 50, 0.04);
-    --shadow-md: 0 4px 8px rgba(26, 35, 50, 0.08), 0 2px 4px rgba(26, 35, 50, 0.04);
-    --shadow-lg: 0 8px 16px rgba(26, 35, 50, 0.12), 0 4px 8px rgba(26, 35, 50, 0.06);
-    --shadow-xl: 0 16px 32px rgba(26, 35, 50, 0.16), 0 8px 16px rgba(26, 35, 50, 0.08);
-    --shadow-2xl: 0 24px 48px rgba(26, 35, 50, 0.2), 0 12px 24px rgba(26, 35, 50, 0.1);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
     
-    /* Border Radius */
-    --radius-xs: 4px;
     --radius-sm: 6px;
     --radius-md: 8px;
     --radius-lg: 12px;
     --radius-xl: 16px;
-    --radius-2xl: 20px;
-    --radius-full: 9999px;
     
-    /* Spacing Scale */
-    --space-1: 4px;
-    --space-2: 8px;
-    --space-3: 12px;
-    --space-4: 16px;
-    --space-5: 20px;
-    --space-6: 24px;
-    --space-8: 32px;
-    --space-10: 40px;
-    --space-12: 48px;
-    --space-16: 64px;
-    --space-20: 80px;
-    --space-24: 96px;
-    
-    /* Typography */
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-    
-    --font-size-xs: 0.75rem;      /* 12px */
-    --font-size-sm: 0.875rem;     /* 14px */
-    --font-size-base: 0.9375rem;  /* 15px */
-    --font-size-lg: 1.0625rem;    /* 17px */
-    --font-size-xl: 1.25rem;      /* 20px */
-    --font-size-2xl: 1.5rem;      /* 24px */
-    --font-size-3xl: 1.875rem;    /* 30px */
-    --font-size-4xl: 2.25rem;     /* 36px */
-    --font-size-5xl: 3rem;        /* 48px */
-    
-    --font-weight-normal: 400;
-    --font-weight-medium: 500;
-    --font-weight-semibold: 600;
-    --font-weight-bold: 700;
-    
-    --line-height-tight: 1.25;
-    --line-height-normal: 1.5;
-    --line-height-relaxed: 1.625;
-    --line-height-loose: 1.75;
-    
-    /* Transitions */
-    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
-    
-    /* Z-index Scale */
-    --z-base: 0;
-    --z-dropdown: 1000;
-    --z-sticky: 1020;
-    --z-fixed: 1030;
-    --z-modal-backdrop: 1040;
-    --z-modal: 1050;
-    --z-popover: 1060;
-    --z-tooltip: 1070;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-/* === BASE RESETS === */
-*,
-*::before,
-*::after {
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-html {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-    scroll-behavior: smooth;
-}
-
 body {
     font-family: var(--font-sans) !important;
-    font-size: var(--font-size-base) !important;
-    line-height: var(--line-height-normal) !important;
-    color: var(--text-primary) !important;
     background: var(--bg-body) !important;
-    overflow-x: hidden;
+    color: var(--text-primary) !important;
+    line-height: 1.6;
 }
 
-/* === CONTAINER === */
-.container {
-    max-width: 1440px !important;
-    margin: 0 auto !important;
-    padding-left: var(--space-6) !important;
-    padding-right: var(--space-6) !important;
+
+.inspection-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
-@media (min-width: 1200px) {
-    .container {
-        padding-left: var(--space-12) !important;
-        padding-right: var(--space-12) !important;
+.inspection-modal.active {
+    display: block;
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.2s ease;
+}
+
+.modal-dialog {
+    position: relative;
+    width: 90%;
+    max-width: 1000px;
+    margin: 40px auto;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+    z-index: 1;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
-/* === HEADER SECTION === */
+/* Modal Header */
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 32px;
+    border-bottom: 2px solid #E9ECF1;
+    background: linear-gradient(135deg, #F0F7FF 0%, white 100%);
+}
+
+.modal-header h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1A2332;
+    margin: 0;
+}
+
+.modal-close {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    font-size: 28px;
+    line-height: 1;
+    color: #5E6C84;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background: #FF3D00;
+    color: white;
+    transform: rotate(90deg);
+}
+
+/* Modal Body */
+.modal-body {
+    padding: 32px;
+    max-height: calc(100vh - 240px);
+    overflow-y: auto;
+}
+
+.modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: #F5F7FA;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: #D4DAE4;
+    border-radius: 4px;
+}
+
+/* Form Sections */
+.form-section {
+    margin-bottom: 32px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid #E9ECF1;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.section-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 20px;
+}
+
+.section-badge.info {
+    background: #E3F2FD;
+    color: #1565C0;
+}
+
+.section-badge.primary {
+    background: #F0F7FF;
+    color: #0066FF;
+}
+
+.section-badge.warning {
+    background: #FFF8E1;
+    color: #F57C00;
+}
+
+.section-badge.success {
+    background: #E8F5E9;
+    color: #2E7D32;
+}
+
+.section-badge.danger {
+    background: #FFEBEE;
+    color: #C62828;
+}
+
+/* Order Info Display */
+.order-info-display {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    padding: 20px;
+    background: #F5F7FA;
+    border-radius: 12px;
+    border: 1px solid #E9ECF1;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.info-item .label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #5E6C84;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.info-item .value {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1A2332;
+}
+
+/* Form Grid */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1A2332;
+}
+
+.required {
+    color: #FF3D00;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 12px 16px;
+    border: 1px solid #D4DAE4;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #1A2332;
+    transition: all 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #0066FF;
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-hint {
+    font-size: 12px;
+    color: #8896AB;
+    font-style: italic;
+}
+
+/* Repeating Sections */
+.repeating-section {
+    border: 2px dashed #D4DAE4;
+    border-radius: 12px;
+    padding: 20px;
+    background: #FAFBFC;
+}
+
+.repeating-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.repeating-count {
+    font-size: 14px;
+    font-weight: 600;
+    color: #5E6C84;
+}
+
+.btn-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #0066FF;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-add:hover {
+    background: #0052CC;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
+}
+
+.repeating-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.repeating-item {
+    background: white;
+    border: 1px solid #E9ECF1;
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+    animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #E9ECF1;
+}
+
+.item-number {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0066FF;
+}
+
+.btn-remove {
+    padding: 6px 12px;
+    background: #FFEBEE;
+    color: #C62828;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-remove:hover {
+    background: #C62828;
+    color: white;
+}
+
+.item-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.item-grid.cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.item-grid.cols-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+/* Modal Footer */
+.modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px 32px;
+    border-top: 2px solid #E9ECF1;
+    background: #F5F7FA;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary {
+    background: white;
+    color: #5E6C84;
+    border: 1px solid #D4DAE4;
+}
+
+.btn-secondary:hover {
+    background: #F5F7FA;
+    border-color: #B8C1D3;
+}
+
+.btn-primary {
+    background: #0066FF;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0052CC;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Empty State */
+.empty-repeating {
+    text-align: center;
+    padding: 32px;
+    color: #8896AB;
+}
+
+.empty-repeating p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .modal-dialog {
+        width: 95%;
+        margin: 20px auto;
+    }
+    
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding: 20px;
+    }
+    
+    .form-grid,
+    .item-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .item-grid.cols-3,
+    .item-grid.cols-4 {
+        grid-template-columns: 1fr;
+    }
+    
+    .order-info-display {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* === HEADER === */
 .portal-hero--sub {
-    position: relative;
-    background: linear-gradient(160deg, 
-        var(--primary-darker) 0%, 
-        var(--primary-dark) 40%, 
-        var(--primary) 100%);
-    padding: var(--space-6) 0 var(--space-4) 0;
-    margin-top: var(--space-6);
-    overflow: hidden;
-}
-
-/* Animated Background Pattern */
-.portal-hero--sub::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: 
-        radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
-    z-index: 0;
-}
-
-.portal-hero--sub .container {
-    position: relative;
-    z-index: 1;
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+    padding: 32px 0;
+    box-shadow: var(--shadow-lg);
 }
 
 .portal-hero__brand {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-3);
+    gap: 16px;
 }
 
 .portal-hero__icon {
-    width: 48px;
-    height: 48px;
+    width: 56px;
+    height: 56px;
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(10px);
-    border-radius: var(--radius-lg);
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 28px;
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.portal-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: var(--font-size-xs) !important;
-    font-weight: var(--font-weight-semibold) !important;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: rgba(255, 255, 255, 0.8) !important;
-    margin-bottom: var(--space-3) !important;
-    background: rgba(255, 255, 255, 0.1);
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-full);
-    backdrop-filter: blur(10px);
-}
-
-.portal-hero--sub h1 {
-    font-size: var(--font-size-2xl) !important;
-    font-weight: var(--font-weight-bold) !important;
-    line-height: var(--line-height-tight) !important;
-    color: var(--text-inverse) !important;
-    margin: 0 !important;
+.portal-hero__brand h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: white;
+    margin: 0 0 4px 0;
     letter-spacing: -0.02em;
 }
 
-.portal-hero--sub p {
-    font-size: var(--font-size-sm) !important;
-    line-height: var(--line-height-relaxed) !important;
-    color: rgba(255, 255, 255, 0.85) !important;
-    margin: 0 !important;
+.portal-hero__brand p {
+    font-size: 16px;
+    color: rgba(255,255,255,0.9);
+    font-weight: 400;
+    margin: 0;
 }
 
 /* === NAVIGATION WRAPPER === */
@@ -252,7 +574,7 @@ body {
         var(--primary-darker) 0%, 
         var(--primary-dark) 40%, 
         var(--primary) 100%);
-    padding: 0 0 var(--space-6) 0;
+    padding: 0 0 24px 0;
     box-shadow: var(--shadow-lg);
     margin-bottom: 0;
 }
@@ -261,11 +583,11 @@ body {
 .portal-nav {
     display: flex !important;
     justify-content: center !important;
-    gap: var(--space-2) !important;
+    gap: 8px !important;
     background: rgba(255, 255, 255, 0.1) !important;
     backdrop-filter: blur(20px) !important;
-    padding: var(--space-2) !important;
-    border-radius: var(--radius-lg) !important;
+    padding: 8px !important;
+    border-radius: 12px !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     overflow-x: auto !important;
     scrollbar-width: thin;
@@ -284,22 +606,22 @@ body {
 
 .portal-nav::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.3);
-    border-radius: var(--radius-full);
+    border-radius: 999px;
 }
 
 .portal-nav a {
     display: inline-flex !important;
     align-items: center !important;
-    gap: var(--space-2) !important;
-    padding: var(--space-3) var(--space-5) !important;
-    border-radius: var(--radius-md) !important;
-    font-size: var(--font-size-sm) !important;
-    font-weight: var(--font-weight-medium) !important;
+    gap: 8px !important;
+    padding: 12px 20px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
     text-decoration: none !important;
     color: rgba(255, 255, 255, 0.9) !important;
     background: transparent !important;
     border: 1px solid transparent !important;
-    transition: all var(--transition-base) !important;
+    transition: all 0.2s ease !important;
     white-space: nowrap !important;
     position: relative;
 }
@@ -309,9 +631,9 @@ body {
     position: absolute;
     inset: 0;
     background: rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-md);
+    border-radius: 8px;
     opacity: 0;
-    transition: opacity var(--transition-base);
+    transition: opacity 0.2s ease;
 }
 
 .portal-nav a:hover::before {
@@ -335,914 +657,519 @@ body {
     display: none;
 }
 
-/* === SECTION SPACING === */
-.portal-section {
-    padding: var(--space-12) 0 var(--space-16) !important;
+/* === CONTAINER === */
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px 48px;
 }
 
-.portal-section:first-of-type {
-    padding-top: var(--space-8) !important;
+/* === STATS CARDS === */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
 }
 
-/* === GRID SYSTEM === */
-.portal-grid {
-    display: grid !important;
-    gap: var(--space-8) !important;
-    
+.stat-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
 }
 
-.portal-grid.two-column {
-    grid-template-columns: 1fr;
+.stat-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 }
 
-@media (min-width: 1024px) {
-    .portal-grid.two-column {
-        grid-template-columns: 1fr;
-        gap: var(--space-10) !important;
-    }
-}
-
-/* === CARDS === */
-.portal-card {
-    position: relative;
+.stat-card__header {
     display: flex;
-    flex-direction: column;
-    background: var(--bg-surface) !important;
-    border: 1px solid var(--border-light) !important;
-    border-radius: var(--radius-xl) !important;
-    padding: var(--space-8) !important;
-    box-shadow: var(--shadow-sm) !important;
-    transition: all var(--transition-slow) !important;
-    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
 }
 
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(32px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.portal-card h2 {
-    font-size: var(--font-size-2xl) !important;
-    font-weight: var(--font-weight-bold) !important;
-    line-height: var(--line-height-tight) !important;
-    color: var(--text-primary) !important;
-    margin-bottom: var(--space-3) !important;
-    letter-spacing: -0.01em;
-}
-
-.portal-card .lead {
-    font-size: var(--font-size-base) !important;
-    line-height: var(--line-height-relaxed) !important;
-    color: var(--text-secondary) !important;
-    margin: 0 0 var(--space-6) 0;
-}
-
-/* === FORM GRID === */
-.form-grid {
+.stat-card__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
     display: flex;
-    flex-direction: column;
-    gap: var(--space-6) !important;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
 }
 
-.form-grid.two-column {
-    display: grid !important;
-    grid-template-columns: 1fr;
-    gap: var(--space-5) !important;
+.stat-card__icon.pending {
+    background: var(--status-pending-light);
 }
 
-@media (min-width: 768px) {
-    .form-grid.two-column {
-        grid-template-columns: repeat(2, 1fr);
-        gap: var(--space-5) var(--space-6) !important;
-    }
+.stat-card__icon.progress {
+    background: var(--status-progress-light);
 }
 
-/* === FORM FIELDS === */
-.form-field {
-    display: flex;
-    flex-direction: column;
+.stat-card__icon.completed {
+    background: var(--status-completed-light);
 }
 
-.form-field label {
-    display: block;
-    font-size: var(--font-size-sm) !important;
-    font-weight: var(--font-weight-semibold) !important;
-    color: var(--text-primary) !important;
-    margin-bottom: var(--space-2) !important;
-    letter-spacing: -0.01em;
+.stat-card__label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
-.form-field input,
-.form-field select,
-.form-field textarea {
-    width: 100%;
-    font-family: var(--font-sans);
-    font-size: var(--font-size-base) !important;
-    color: var(--text-primary) !important;
-    background: var(--bg-surface) !important;
-    border: 1.5px solid var(--border-base) !important;
-    border-radius: var(--radius-md) !important;
-    padding: var(--space-3) var(--space-4) !important;
-    transition: all var(--transition-base) !important;
-    appearance: none;
+.stat-card__value {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
 }
 
-.form-field input::placeholder,
-.form-field textarea::placeholder {
+.stat-card__subtitle {
+    font-size: 13px;
     color: var(--text-muted);
+    margin-top: 8px;
 }
 
-.form-field input:hover,
-.form-field select:hover,
-.form-field textarea:hover {
-    border-color: var(--border-strong) !important;
+/* === WORKFLOW SECTION === */
+.workflow-section {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xl);
+    padding: 32px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-sm);
 }
 
-.form-field input:focus,
-.form-field select:focus,
-.form-field textarea:focus {
-    outline: none !important;
-    border-color: var(--primary) !important;
-    box-shadow: 0 0 0 4px var(--primary-subtle) !important;
-    background: var(--bg-surface) !important;
-}
-
-.form-field select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235E6C84' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right var(--space-4) center;
-    padding-right: var(--space-10) !important;
-    cursor: pointer;
-}
-
-.form-field textarea {
-    min-height: 100px;
-    resize: vertical;
-    line-height: var(--line-height-relaxed) !important;
-}
-
-/* === REPEATING GROUPS - Premium Design === */
-.repeat-group {
-    background: var(--gray-50) !important;
-    border: 2px dashed var(--border-base) !important;
-    border-radius: var(--radius-xl) !important;
-    padding: var(--space-6) !important;
-    margin: var(--space-6) 0 !important;
-    transition: all var(--transition-base);
-}
-
-.repeat-group:hover {
-    border-color: var(--border-accent);
-    background: var(--primary-subtle);
-}
-
-.repeat-group header {
+.section-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
-    gap: var(--space-4);
-    margin-bottom: var(--space-6) !important;
-    padding-bottom: var(--space-4);
+    margin-bottom: 24px;
+    padding-bottom: 16px;
     border-bottom: 2px solid var(--border-light);
 }
 
-.repeat-group header h3 {
-    font-size: var(--font-size-lg) !important;
-    font-weight: var(--font-weight-bold) !important;
-    color: var(--text-primary) !important;
-    margin: 0;
-    letter-spacing: -0.01em;
-}
-
-.repeat-rows {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-5) !important;
-}
-
-/* === REPEAT ROW === */
-.repeat-row {
-    position: relative;
-    display: grid;
-    gap: var(--space-4) !important;
-    background: var(--bg-surface) !important;
-    border: 1px solid var(--border-light) !important;
-    border-radius: var(--radius-lg) !important;
-    padding: var(--space-5) !important;
-    box-shadow: var(--shadow-xs);
-    transition: all var(--transition-base);
-    animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(16px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.repeat-row:hover {
-    box-shadow: var(--shadow-sm);
-    border-color: var(--border-base);
-}
-
-.repeat-row::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background: linear-gradient(180deg, var(--primary), var(--primary-light));
-    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
-    opacity: 0;
-    transition: opacity var(--transition-base);
-}
-
-.repeat-row:hover::before {
-    opacity: 1;
-}
-
-/* Responsive Columns for Repeat Rows */
-.repeat-row.columns-2 {
-    grid-template-columns: 1fr;
-}
-
-.repeat-row.columns-3 {
-    grid-template-columns: 1fr;
-}
-
-.repeat-row.columns-4 {
-    grid-template-columns: 1fr;
-}
-
-@media (min-width: 640px) {
-    .repeat-row.columns-2 {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .repeat-row.columns-3 {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .repeat-row.columns-4 {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (min-width: 1024px) {
-    .repeat-row.columns-3 {
-        grid-template-columns: repeat(3, 1fr);
-    }
-    
-    .repeat-row.columns-4 {
-        grid-template-columns: repeat(4, 1fr);
-    }
-}
-
-/* Remove Row Button */
-.repeat-row .remove-row {
-    grid-column: 1 / -1;
-    justify-self: flex-start;
-    background: var(--accent-danger) !important;
-    color: var(--text-inverse) !important;
-    border: none !important;
-    padding: var(--space-2) var(--space-4) !important;
-    font-size: var(--font-size-xs) !important;
-}
-
-.repeat-row .remove-row:hover {
-    background: #D32F2F !important;
-    transform: translateY(-1px);
-}
-
-/* === FORM ACTIONS === */
-.form-actions {
-    display: flex;
-    gap: var(--space-3) !important;
-    margin-top: var(--space-6) !important;
-    padding-top: var(--space-6);
-    border-top: 1px solid var(--border-light);
-}
-
-/* === BUTTONS === */
-button {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-2);
-    font-family: var(--font-sans);
-    font-size: var(--font-size-sm) !important;
-    font-weight: var(--font-weight-semibold) !important;
-    line-height: 1;
-    padding: var(--space-3) var(--space-5) !important;
-    border: none;
-    border-radius: var(--radius-lg) !important;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all var(--transition-base) !important;
-    overflow: hidden;
-}
-
-button::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent);
-    opacity: 0;
-    transition: opacity var(--transition-fast);
-}
-
-button:hover::before {
-    opacity: 1;
-}
-
-button.primary,
-button[type="submit"] {
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
-    color: var(--text-inverse) !important;
-    box-shadow: var(--shadow-md), 0 0 0 0 rgba(0, 102, 255, 0.4) !important;
-    padding: var(--space-4) var(--space-6) !important;
-}
-
-button.primary:hover,
-button[type="submit"]:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg), 0 0 0 4px rgba(0, 102, 255, 0.15) !important;
-}
-
-button.primary:active,
-button[type="submit"]:active {
-    transform: translateY(0);
-}
-
-button.secondary {
-    background: var(--bg-surface) !important;
-    color: var(--text-primary) !important;
-    border: 1.5px solid var(--border-base) !important;
-    box-shadow: var(--shadow-xs) !important;
-}
-
-button.secondary:hover {
-    background: var(--gray-50) !important;
-    border-color: var(--border-strong) !important;
-    box-shadow: var(--shadow-sm) !important;
-    transform: translateY(-1px);
-}
-
-button:disabled {
-    opacity: 0.5 !important;
-    cursor: not-allowed !important;
-    transform: none !important;
-    box-shadow: none !important;
-}
-
-/* === METRICS === */
-.metric-grid {
-    display: grid !important;
-    gap: var(--space-5) !important;
-    grid-template-columns: 1fr;
-}
-
-.metric-grid--spaced {
-    margin-bottom: var(--space-8) !important;
-}
-
-@media (min-width: 640px) {
-    .metric-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (min-width: 1024px) {
-    .metric-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-
-.metric-card {
-    background: linear-gradient(135deg, var(--primary-subtle), var(--bg-surface)) !important;
-    border: 1px solid var(--border-light) !important;
-    border-radius: var(--radius-lg) !important;
-    padding: var(--space-5) !important;
-    box-shadow: var(--shadow-sm) !important;
-    transition: all var(--transition-base);
-}
-
-.metric-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md) !important;
-    border-color: var(--primary-lightest) !important;
-}
-
-.metric-card h3 {
-    font-size: var(--font-size-xs) !important;
-    font-weight: var(--font-weight-semibold) !important;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted) !important;
-    margin-bottom: var(--space-3) !important;
-}
-
-.metric-value {
-    font-size: var(--font-size-4xl) !important;
-    font-weight: var(--font-weight-bold) !important;
-    line-height: 1 !important;
-    color: var(--primary) !important;
-    margin-bottom: var(--space-2);
-}
-
-.metric-caption {
-    font-size: var(--font-size-sm) !important;
-    line-height: var(--line-height-relaxed) !important;
-    color: var(--text-muted) !important;
-    margin: 0;
-}
-
-/* === SECTION SUBTITLE === */
-.section-subtitle {
-    font-size: var(--font-size-lg) !important;
-    font-weight: var(--font-weight-semibold) !important;
-    color: var(--text-primary) !important;
-    margin: var(--space-8) 0 var(--space-4) 0 !important;
-    letter-spacing: -0.01em;
-}
-
-/* === STATUS LIST === */
-.status-list {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3) !important;
-    margin: 0 0 var(--space-6) 0;
-    padding: 0;
-}
-
-.status-list li {
+.section-title {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: var(--space-4) var(--space-5) !important;
-    background: var(--gray-50) !important;
-    border-radius: var(--radius-md) !important;
-    font-size: var(--font-size-sm) !important;
-    font-weight: var(--font-weight-medium) !important;
-    color: var(--text-primary) !important;
-    transition: all var(--transition-fast);
-    border: 1px solid transparent;
+    gap: 12px;
 }
 
-.status-list li:hover {
-    background: var(--primary-subtle) !important;
-    border-color: var(--primary-lightest);
-    transform: translateX(4px);
-}
-
-.status-list__item--interactive {
-    cursor: pointer;
-    outline: none;
-}
-
-.status-list__item--interactive:focus-visible {
-    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.35);
-    border-color: var(--primary-lightest);
-}
-
-.status-list__item--interactive .badge {
-    pointer-events: none;
-}
-
-/* === STATUS MODAL === */
-.portal-modal {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--space-6);
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity var(--transition-base), visibility var(--transition-base);
-    z-index: var(--z-modal);
-}
-
-.portal-modal.is-open {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-}
-
-.portal-modal__backdrop {
-    position: absolute;
-    inset: 0;
-    background: var(--bg-overlay);
-    opacity: 0.95;
-}
-
-.portal-modal__dialog {
-    position: relative;
-    z-index: 1;
-    width: min(960px, 100%);
-    max-height: 85vh;
-    background: var(--bg-surface);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-2xl);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.portal-modal__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-    padding: var(--space-5) var(--space-6);
-    border-bottom: 1px solid var(--border-light);
-}
-
-.portal-modal__title {
-    font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-semibold);
+.section-title h2 {
+    font-size: 24px;
+    font-weight: 700;
     color: var(--text-primary);
     margin: 0;
 }
 
-.portal-modal__close {
-    appearance: none;
-    border: none;
-    background: none;
-    color: var(--text-muted);
-    font-size: var(--font-size-2xl);
-    line-height: 1;
-    cursor: pointer;
-    padding: var(--space-1);
-    transition: color var(--transition-fast);
+.section-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 600;
 }
 
-.portal-modal__close:hover {
-    color: var(--primary);
+.section-badge.pending {
+    background: var(--status-pending);
+    color: white;
 }
 
-.portal-modal__body {
-    padding: var(--space-5) var(--space-6) var(--space-6);
+.section-badge.progress {
+    background: var(--status-progress);
+    color: white;
+}
+
+.section-badge.completed {
+    background: var(--status-completed);
+    color: white;
+}
+
+.section-actions {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-    overflow: hidden;
+    gap: 12px;
 }
 
-.portal-modal__summary {
-    font-size: var(--font-size-sm);
-    color: var(--text-secondary);
-    margin: 0;
-}
-
-.portal-modal__table-wrapper {
-    border: 1px solid var(--border-light);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    box-shadow: var(--shadow-xs);
-    max-height: 55vh;
-}
-
-.portal-modal__table-scroll {
-    max-height: 55vh;
-    overflow: auto;
-}
-
-.portal-modal__empty {
-    display: none;
-    padding: var(--space-5);
-    text-align: center;
-    color: var(--text-muted);
-    background: var(--gray-50);
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: none;
     border-radius: var(--radius-md);
-    font-size: var(--font-size-sm);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
 }
 
-.portal-modal__empty.is-visible {
-    display: block;
+.btn-primary {
+    background: var(--primary);
+    color: white;
 }
 
-.modal-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
 }
 
-.modal-table thead th {
-    position: sticky;
-    top: 0;
-    background: var(--gray-50);
-    z-index: 1;
-}
-
-.modal-table tbody tr:hover {
+.btn-secondary {
     background: var(--gray-100);
+    color: var(--text-primary);
 }
 
-.modal-table td:nth-child(1),
-.modal-table td:nth-child(2) {
+.btn-secondary:hover {
+    background: var(--gray-200);
+}
+
+/* === TABLE === */
+.service-table-wrapper {
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+}
+
+.service-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.service-table thead {
+    background: var(--gray-50);
+}
+
+.service-table th {
+    padding: 16px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid var(--border-base);
     white-space: nowrap;
 }
 
-@media (max-width: 767px) {
-    .portal-modal {
-        padding: var(--space-4);
-    }
-
-    .portal-modal__dialog {
-        border-radius: var(--radius-lg);
-    }
-
-    .portal-modal__header,
-    .portal-modal__body {
-        padding: var(--space-4);
-    }
+.service-table tbody tr {
+    border-bottom: 1px solid var(--border-light);
+    transition: background 0.15s ease;
 }
 
-/* === TABLES === */
-.simple-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    font-size: var(--font-size-sm) !important;
-    border: 1px solid var(--border-light) !important;
-    border-radius: var(--radius-lg) !important;
-    overflow: hidden;
-    box-shadow: var(--shadow-xs);
-    margin-top: var(--space-4);
-    margin-bottom: var(--space-6);
+.service-table tbody tr:hover {
+    background: var(--gray-50);
 }
 
-.simple-table thead {
-    background: var(--gray-50) !important;
+.service-table tbody tr:last-child {
+    border-bottom: none;
 }
 
-.simple-table th {
-    padding: var(--space-4) var(--space-5) !important;
-    text-align: left;
-    font-size: var(--font-size-xs) !important;
-    font-weight: var(--font-weight-semibold) !important;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted) !important;
-    border-bottom: 1px solid var(--border-light) !important;
+.service-table td {
+    padding: 16px;
+    color: var(--text-primary);
+    vertical-align: top;
 }
 
-.simple-table td {
-    padding: var(--space-4) var(--space-5) !important;
-    border-bottom: 1px solid var(--border-light) !important;
-    color: var(--text-primary) !important;
-    transition: background var(--transition-fast);
+/* Table Cells */
+.cell-strong {
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
-.table-note {
-    white-space: pre-wrap;
-    word-break: break-word;
+.cell-secondary {
     color: var(--text-secondary);
-    max-width: 28rem;
+    font-size: 13px;
 }
 
-.simple-table tbody tr {
-    transition: all var(--transition-fast);
-    cursor: pointer;
+.cell-muted {
+    color: var(--text-muted);
+    font-size: 13px;
 }
 
-.simple-table tbody tr:hover {
-    background: var(--gray-50) !important;
-}
-
-.simple-table tbody tr:last-child td {
-    border-bottom: none !important;
-}
-
-/* === TABLE LINKS === */
-.table-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3) !important;
-}
-
-.table-links--trailing {
-    margin-top: var(--space-6) !important;
-}
-
-.table-links a {
-    position: relative;
+/* Status Badge */
+.status-badge {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-2);
-    font-size: var(--font-size-sm) !important;
-    font-weight: var(--font-weight-medium) !important;
-    color: var(--primary) !important;
-    text-decoration: none !important;
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-md);
-    background: var(--primary-subtle);
-    transition: all var(--transition-base);
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
-.table-links a::after {
-    content: '↗';
-    font-size: 0.875em;
-    opacity: 0.7;
-    transition: transform var(--transition-fast);
+.status-badge.new {
+    background: #FFF3E0;
+    color: #E65100;
 }
 
-.table-links a:hover {
-    background: var(--primary-lightest);
-    color: var(--primary-dark) !important;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
+.status-badge.inspection {
+    background: var(--status-pending-light);
+    color: #F57C00;
 }
 
-.table-links a:hover::after {
-    transform: translate(2px, -2px);
-    opacity: 1;
+.status-badge.planning {
+    background: #E8EAF6;
+    color: #3F51B5;
 }
 
-/* === LIST EMPTY === */
-.list-empty {
-    display: none;
-    padding: var(--space-6) !important;
-    text-align: center;
-    color: var(--text-muted) !important;
-    font-style: italic;
-    font-size: var(--font-size-sm) !important;
-    background: var(--gray-50);
-    border-radius: var(--radius-md);
-    margin-bottom: var(--space-4);
+.status-badge.in-progress {
+    background: var(--status-progress-light);
+    color: #1565C0;
 }
 
-/* === SCROLLBAR === */
-::-webkit-scrollbar {
-    width: 12px;
-    height: 12px;
+.status-badge.qc {
+    background: #F3E5F5;
+    color: #7B1FA2;
 }
 
-::-webkit-scrollbar-track {
+.status-badge.completed {
+    background: var(--status-completed-light);
+    color: #2E7D32;
+}
+
+.status-badge.cancelled {
+    background: #FFEBEE;
+    color: #C62828;
+}
+
+/* Priority Badge */
+.priority-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.priority-badge.high {
+    background: #FFEBEE;
+    color: #C62828;
+}
+
+.priority-badge.medium {
+    background: #FFF8E1;
+    color: #F57C00;
+}
+
+.priority-badge.low {
+    background: #E8F5E9;
+    color: #2E7D32;
+}
+
+/* Service Type Badge */
+.service-type {
+    display: inline-block;
+    padding: 4px 10px;
     background: var(--gray-100);
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--gray-300);
     border-radius: var(--radius-sm);
-    border: 2px solid var(--gray-100);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
 }
 
-::-webkit-scrollbar-thumb:hover {
-    background: var(--gray-400);
+/* Vehicle Info */
+.vehicle-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
-/* === RESPONSIVE BREAKPOINTS === */
-@media (max-width: 1023px) {
-    .portal-hero--sub h1 {
-        font-size: var(--font-size-3xl) !important;
-    }
+.vehicle-plate {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: monospace;
+    font-size: 14px;
 }
 
-@media (max-width: 767px) {
-    .container {
-        padding-left: var(--space-4) !important;
-        padding-right: var(--space-4) !important;
+.vehicle-model {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+/* Customer Info */
+.customer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.customer-name {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.customer-contact {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+/* Action Buttons */
+.action-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border-base);
+    background: white;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.action-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-subtle);
+}
+
+.action-btn.primary {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.action-btn.primary:hover {
+    background: var(--primary-dark);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 64px 32px;
+    color: var(--text-muted);
+}
+
+.empty-state__icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state__title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.empty-state__message {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+/* Loading State */
+.loading-state {
+    text-align: center;
+    padding: 48px 32px;
+    color: var(--text-muted);
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-light);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
     }
     
-    .portal-hero--sub {
-        padding: var(--space-10) 0 var(--space-8) !important;
-    }
-    
-    .portal-hero--sub h1 {
-        font-size: var(--font-size-2xl) !important;
-    }
-    
-    .portal-hero--sub p {
-        font-size: var(--font-size-sm) !important;
-    }
-    
-    .portal-section {
-        padding: var(--space-8) 0 var(--space-12) !important;
-    }
-    
-    .portal-card {
-        padding: var(--space-6) !important;
-    }
-    
-    .portal-card h2 {
-        font-size: var(--font-size-xl) !important;
-    }
-    
-    .repeat-group {
-        padding: var(--space-5) !important;
-    }
-    
-    .repeat-row {
-        padding: var(--space-4) !important;
-    }
-    
-    .form-actions {
+    .section-header {
         flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
     }
     
-    .form-actions button {
-        width: 100%;
+    .service-table {
+        font-size: 13px;
+    }
+    
+    .service-table th,
+    .service-table td {
+        padding: 12px 8px;
     }
 }
 
-@media (max-width: 479px) {
-    .portal-hero--sub h1 {
-        font-size: var(--font-size-xl) !important;
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
     }
-    
-    .portal-card {
-        padding: var(--space-5) !important;
-    }
-    
-    .repeat-group {
-        padding: var(--space-4) !important;
-    }
-    
-    .repeat-row {
-        padding: var(--space-3) !important;
-        gap: var(--space-3) !important;
-    }
-    
-    .simple-table {
-        font-size: var(--font-size-xs) !important;
-    }
-    
-    .simple-table th,
-    .simple-table td {
-        padding: var(--space-3) !important;
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
-/* === PRINT STYLES === */
-@media print {
-    button,
-    .table-links {
-        display: none !important;
-    }
-    
-    .portal-card,
-    .repeat-group {
-        box-shadow: none !important;
-        border: 1px solid var(--border-base) !important;
-        page-break-inside: avoid;
-    }
-    
-    .portal-hero--sub {
-        background: var(--text-primary) !important;
-        color-adjust: exact;
-        -webkit-print-color-adjust: exact;
-    }
+.workflow-section {
+    animation: fadeIn 0.4s ease-out;
 }
 
-/* === ACCESSIBILITY === */
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
+.workflow-section:nth-child(1) { animation-delay: 0.1s; }
+.workflow-section:nth-child(2) { animation-delay: 0.2s; }
+.workflow-section:nth-child(3) { animation-delay: 0.3s; }
+
+/* Detail Badge */
+.detail-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--gray-100);
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-right: 4px;
 }
 
-/* === UTILITY CLASSES === */
-.text-center {
-    text-align: center !important;
+/* Currency */
+.currency {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
 }
 
-.text-right {
-    text-align: right !important;
+/* Date Display */
+.date-display {
+    font-size: 13px;
+    color: var(--text-secondary);
+    white-space: nowrap;
 }
 
-.mt-0 { margin-top: 0 !important; }
-.mt-2 { margin-top: var(--space-2) !important; }
-.mt-4 { margin-top: var(--space-4) !important; }
-.mt-6 { margin-top: var(--space-6) !important; }
-.mt-8 { margin-top: var(--space-8) !important; }
-
-.mb-0 { margin-bottom: 0 !important; }
-.mb-2 { margin-bottom: var(--space-2) !important; }
-.mb-4 { margin-bottom: var(--space-4) !important; }
-.mb-6 { margin-bottom: var(--space-6) !important; }
-.mb-8 { margin-bottom: var(--space-8) !important; }
+/* Notes Preview */
+.notes-preview {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-muted);
+    font-size: 13px;
+}
 </style>
 {% endblock %}
 
@@ -1253,7 +1180,7 @@ button:disabled {
             <div class="portal-hero__icon">🔧</div>
             <div>
                 <h1>Orkestrasi Servis Bengkel</h1>
-                <p>Kelola jadwal pengerjaan, kebutuhan teknisi, dan update progres pelanggan dalam satu alur terpadu.</p>
+                <p>Kelola workflow service dari intake hingga selesai - monitoring 3 tahap workflow</p>
             </div>
         </div>
     </div>
@@ -1273,330 +1200,338 @@ button:disabled {
     </div>
 </div>
 
-<section class="portal-section">
-    <div class="container">
-        <div class="portal-grid portal-grid--service">
-            <article class="portal-card portal-card--primary">
-                <h2>Buat Service Order</h2>
-                <p class="lead">
-                    Isi detail pekerjaan bengkel, estimasi biaya, dan kebutuhan task untuk membuat service order baru.
-                </p>
-                <form id="service-order-form" class="form-grid">
-                    <div class="form-grid two-column">
-                        <div class="form-field">
-                            <label for="service_order_type">Jenis Servis</label>
-                            <select id="service_order_type" name="service_order_type">
-                                <option value="Service/Repair">Service/Repair</option>
-                                <option value="Inspection">Inspection</option>
-                                <option value="Warranty">Warranty</option>
-                                <option value="Insurance Claim">Insurance Claim</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label for="order_category">Kategori</label>
-                            <select id="order_category" name="order_category">
-                                <option value="Workshop Service">Workshop Service</option>
-                                <option value="Body Repair">Body Repair</option>
-                                <option value="Quick Service">Quick Service</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label for="priority">Prioritas</label>
-                            <select id="priority" name="priority">
-                                <option value="Normal">Normal</option>
-                                <option value="High">High</option>
-                                <option value="Critical">Critical</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label for="service_customer">Customer</label>
-                            <select id="service_customer" name="customer">
-                                <option value="">— Pilih customer —</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label for="service_vehicle">Kendaraan</label>
-                            <select id="service_vehicle" name="vehicle">
-                                <option value="">— Pilih kendaraan —</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label for="service_advisor">Service Advisor</label>
-                            <input id="service_advisor" name="service_advisor" placeholder="User ID atau email" />
-                        </div>
-                        <div class="form-field">
-                            <label for="estimated_delivery_date">Estimasi Selesai</label>
-                            <input id="estimated_delivery_date" name="estimated_delivery_date" type="date" />
-                        </div>
-                        <div class="form-field">
-                            <label for="total_estimated_amount">Estimasi Biaya</label>
-                            <input id="total_estimated_amount" name="total_estimated_amount" type="number" min="0" step="0.01" data-cast="float" />
-                        </div>
-                    </div>
-                    <div class="form-field">
-                        <label for="inspection_summary">Ringkasan Inspeksi</label>
-                        <textarea id="inspection_summary" name="inspection_summary" placeholder="Temuan utama dari inspeksi awal"></textarea>
-                    </div>
-                    <div class="form-field">
-                        <label for="service_notes">Catatan Servis</label>
-                        <textarea id="service_notes" name="service_notes" placeholder="Catatan tambahan untuk teknisi"></textarea>
-                    </div>
-                    <div class="repeat-group" data-repeat="service_tasks">
-                        <header>
-                            <h3>Daftar Pekerjaan</h3>
-                            <button class="secondary" type="button" data-action="add-row">Tambah Task</button>
-                        </header>
-                        <div class="repeat-rows" data-role="rows"></div>
-                        <template data-role="row-template">
-                            <div class="repeat-row columns-4">
-                                <div class="form-field">
-                                    <label>Task</label>
-                                    <input data-field="task" placeholder="Nama tugas" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Teknisi</label>
-                                    <input data-field="technician" placeholder="User teknisi" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Estimasi Jam</label>
-                                    <input data-field="estimated_hours" type="number" step="0.1" min="0" data-cast="float" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Status</label>
-                                    <select data-field="status">
-                                        <option value="Pending">Pending</option>
-                                        <option value="In Progress">In Progress</option>
-                                        <option value="Completed">Completed</option>
-                                        <option value="Deferred">Deferred</option>
-                                    </select>
-                                </div>
-                                <div class="form-field">
-                                    <label>Deskripsi</label>
-                                    <textarea data-field="description" placeholder="Detail tugas"></textarea>
-                                </div>
-                                <div class="form-field">
-                                    <label>Jam Aktual</label>
-                                    <input data-field="actual_hours" type="number" step="0.1" min="0" data-cast="float" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Tgl Selesai</label>
-                                    <input data-field="completion_date" type="date" />
-                                </div>
-                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
-                            </div>
-                        </template>
-                    </div>
-                    <div class="repeat-group" data-repeat="required_parts">
-                        <header>
-                            <h3>Kebutuhan Sparepart</h3>
-                            <button class="secondary" type="button" data-action="add-row">Tambah Part</button>
-                        </header>
-                        <div class="repeat-rows" data-role="rows"></div>
-                        <template data-role="row-template">
-                            <div class="repeat-row columns-4">
-                                <div class="form-field">
-                                    <label>Kode Barang</label>
-                                    <input data-field="item_code" placeholder="Kode" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Nama Barang</label>
-                                    <input data-field="item_name" placeholder="Nama part" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Qty</label>
-                                    <input data-field="qty" type="number" min="0" step="0.01" data-cast="float" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Status Stok</label>
-                                    <select data-field="stock_status">
-                                        <option value="Pending Check">Pending Check</option>
-                                        <option value="Available">Available</option>
-                                        <option value="To Order">To Order</option>
-                                        <option value="Ordered">Ordered</option>
-                                        <option value="Received">Received</option>
-                                        <option value="Issued">Issued</option>
-                                    </select>
-                                </div>
-                                <div class="form-field">
-                                    <label>Uraian</label>
-                                    <textarea data-field="description" placeholder="Detail kebutuhan"></textarea>
-                                </div>
-                                <div class="form-field">
-                                    <label>Gudang</label>
-                                    <input data-field="warehouse" placeholder="Gudang" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Harga</label>
-                                    <input data-field="rate" type="number" min="0" step="0.01" data-cast="float" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Total</label>
-                                    <input data-field="amount" type="number" min="0" step="0.01" data-cast="float" />
-                                </div>
-                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
-                            </div>
-                        </template>
-                    </div>
-                    <div class="repeat-group" data-repeat="payment_schedule">
-                        <header>
-                            <h3>Jadwal Pembayaran</h3>
-                            <button class="secondary" type="button" data-action="add-row">Tambah Jadwal</button>
-                        </header>
-                        <div class="repeat-rows" data-role="rows"></div>
-                        <template data-role="row-template">
-                            <div class="repeat-row columns-3">
-                                <div class="form-field">
-                                    <label>Jatuh Tempo</label>
-                                    <input data-field="due_date" type="date" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Persentase</label>
-                                    <input data-field="percentage" type="number" min="0" max="100" step="0.01" data-cast="float" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Nilai</label>
-                                    <input data-field="amount" type="number" min="0" step="0.01" data-cast="float" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Status</label>
-                                    <select data-field="status">
-                                        <option value="Pending">Pending</option>
-                                        <option value="Paid">Paid</option>
-                                        <option value="Overdue">Overdue</option>
-                                    </select>
-                                </div>
-                                <div class="form-field">
-                                    <label>Deskripsi</label>
-                                    <input data-field="description" placeholder="Termin" />
-                                </div>
-                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
-                            </div>
-                        </template>
-                    </div>
-                    <div class="form-actions">
-                        <button class="primary" type="submit">Simpan Service Order</button>
-                    </div>
-                </form>
-            </article>
-            <article class="portal-card">
-                <h2>Status Servis</h2>
-                <p class="lead">Ikhtisar service order yang sedang berjalan dan kemajuan pengerjaan.</p>
-                <div class="metric-grid metric-grid--spaced">
-                    <div class="metric-card">
-                        <h3>Nilai Estimasi</h3>
-                        <div class="metric-value" data-metric="service-estimate">Rp0</div>
-                        <p class="metric-caption">Total estimasi biaya seluruh service order.</p>
-                    </div>
-                    <div class="metric-card">
-                        <h3>Order Aktif</h3>
-                        <div class="metric-value" data-metric="service-open-count">0</div>
-                        <p class="metric-caption">Service order dengan status aktif.</p>
-                    </div>
-                    <div class="metric-card">
-                        <h3>QC Pending</h3>
-                        <div class="metric-value" data-metric="qc-pending">0</div>
-                        <p class="metric-caption">Order menunggu quality check.</p>
-                    </div>
-                </div>
-                <h3 class="section-subtitle">Ringkasan Status</h3>
-                <ul class="status-list" data-status="service-orders"></ul>
-                <h3 class="section-subtitle">Service Order Aktif</h3>
-                <table class="simple-table">
-                    <thead>
-                        <tr>
-                            <th>Nomor</th>
-                            <th>Customer</th>
-                            <th>Catatan Intake</th>
-                            <th>Status</th>
-                            <th>Target Selesai</th>
-                        </tr>
-                    </thead>
-                    <tbody data-role="open-service-table"></tbody>
-                </table>
-                <div class="list-empty" data-empty="open-service">Belum ada order aktif.</div>
-                <div class="table-links table-links--trailing">
-                    <a data-desk-link="Garage Service Order" target="_blank">Buka di Desk</a>
-                </div>
-            </article>
-            <article class="portal-card">
-                <h2>Catat Progres Servis</h2>
-                <p class="lead">Tambahkan log progres untuk mengisi tabel progress_logs pada service order yang aktif.</p>
-                <form id="progress-form" class="form-grid">
-                    <div class="form-field">
-                        <label for="progress_service_order">Service Order</label>
-                        <select id="progress_service_order" name="name">
-                            <option value="">— Pilih service order —</option>
-                        </select>
-                    </div>
-                    <div class="form-grid two-column">
-                        <div class="form-field">
-                            <label for="progress_log_date">Tanggal</label>
-                            <input id="progress_log_date" name="log_date" type="date" />
-                        </div>
-                        <div class="form-field">
-                            <label for="progress_status">Status</label>
-                            <select id="progress_status" name="status">
-                                <option value="Started">Started</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Awaiting Parts">Awaiting Parts</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Paused">Paused</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-grid two-column">
-                        <div class="form-field">
-                            <label for="progress_technician">Teknisi</label>
-                            <input id="progress_technician" name="technician" placeholder="User teknisi" />
-                        </div>
-                        <div class="form-field">
-                            <label for="progress_percent">Persentase (%)</label>
-                            <input id="progress_percent" name="percent_complete" type="number" min="0" max="100" step="1" data-cast="float" />
-                        </div>
-                    </div>
-                    <div class="form-field">
-                        <label for="progress_notes">Catatan</label>
-                        <textarea id="progress_notes" name="progress_notes" placeholder="Detail progres"></textarea>
-                    </div>
-                    <div class="form-actions">
-                        <button class="primary" type="submit">Tambahkan Progres</button>
-                    </div>
-                </form>
-            </article>
+<div class="container" style="padding-top: 32px;">
+    <!-- Stats Overview -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-card__header">
+                <div class="stat-card__icon pending">📋</div>
+                <div class="stat-card__label">Inspection Entry</div>
+            </div>
+            <div class="stat-card__value" id="stat-inspection">-</div>
+            <div class="stat-card__subtitle">Menunggu inspeksi & planning</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-card__header">
+                <div class="stat-card__icon progress">⚙️</div>
+                <div class="stat-card__label">In Progress</div>
+            </div>
+            <div class="stat-card__value" id="stat-progress">-</div>
+            <div class="stat-card__subtitle">Sedang dikerjakan</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-card__header">
+                <div class="stat-card__icon completed">✅</div>
+                <div class="stat-card__label">Completed</div>
+            </div>
+            <div class="stat-card__value" id="stat-completed">-</div>
+            <div class="stat-card__subtitle">Selesai & siap diambil</div>
         </div>
     </div>
-</section>
 
-<div class="portal-modal" id="service-status-modal" aria-hidden="true">
-    <div class="portal-modal__backdrop" data-role="status-modal-close"></div>
-    <div class="portal-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="service-status-modal-title">
-        <header class="portal-modal__header">
-            <h3 class="portal-modal__title" id="service-status-modal-title" data-role="status-modal-title">Detail Status Servis</h3>
-            <button class="portal-modal__close" type="button" aria-label="Tutup" data-role="status-modal-close">&times;</button>
-        </header>
-        <div class="portal-modal__body">
-            <p class="portal-modal__summary" data-role="status-modal-summary"></p>
-            <div class="portal-modal__table-wrapper" data-role="status-modal-table-wrapper">
-                <div class="portal-modal__table-scroll">
-                    <table class="simple-table modal-table">
+    <!-- Inspection Entry Section -->
+    <div class="workflow-section">
+        <div class="section-header">
+            <div class="section-title">
+                <h2>📋 Inspection Entry</h2>
+                <span class="section-badge pending" id="badge-inspection">0</span>
+            </div>
+            <div class="section-actions">
+                <button class="btn btn-secondary" onclick="refreshData()">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <div class="service-table-wrapper">
+            <table class="service-table">
+                <thead>
+                    <tr>
+                        <th>Service Order</th>
+                        <th>Kendaraan</th>
+                        <th>Customer</th>
+                        <th>Status</th>
+                        <th>Catatan Intake</th>
+                        <th>Tgl. Masuk</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="table-inspection">
+                    <tr>
+                        <td colspan="7">
+                            <div class="loading-state">
+                                <div class="loading-spinner"></div>
+                                <p>Loading data...</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- In Progress Section -->
+    <div class="workflow-section">
+        <div class="section-header">
+            <div class="section-title">
+                <h2>⚙️ In Progress</h2>
+                <span class="section-badge progress" id="badge-progress">0</span>
+            </div>
+            <div class="section-actions">
+                <button class="btn btn-secondary" onclick="refreshData()">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <div class="service-table-wrapper">
+            <table class="service-table">
+                <thead>
+                    <tr>
+                        <th>Service Order</th>
+                        <th>Kendaraan</th>
+                        <th>Customer</th>
+                        <th>Service Details</th>
+                        <th>Progress</th>
+                        <th>Estimasi Selesai</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="table-progress">
+                    <tr>
+                        <td colspan="7">
+                            <div class="loading-state">
+                                <div class="loading-spinner"></div>
+                                <p>Loading data...</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+            <!-- Completed Section -->
+            <div class="workflow-section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>✅ Completed</h2>
+                        <span class="section-badge completed" id="badge-completed">0</span>
+                    </div>
+                    <div class="section-actions">
+                        <button class="btn btn-secondary" onclick="refreshData()">🔄 Refresh</button>
+                    </div>
+                </div>
+
+                <div class="service-table-wrapper">
+                    <table class="service-table">
                         <thead>
                             <tr>
-                                <th>Nomor</th>
-                                <th>Customer</th>
+                                <th>Service Order</th>
                                 <th>Kendaraan</th>
-                                <th>Prioritas</th>
-                                <th>Status</th>
-                                <th>Booking</th>
-                                <th>Target Selesai</th>
-                                <th>Tanggal Selesai</th>
-                                <th>QC Status</th>
+                                <th>Customer</th>
+                                <th>Service Summary</th>
+                                <th>Total Biaya</th>
+                                <th>Tgl. Selesai</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
-                        <tbody data-role="status-modal-table"></tbody>
+                        <tbody id="table-completed">
+                            <tr>
+                                <td colspan="7">
+                                    <div class="loading-state">
+                                        <div class="loading-spinner"></div>
+                                        <p>Loading data...</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
+
+
+                <div id="inspectionModal" class="inspection-modal">
+            <div class="modal-backdrop" onclick="closeInspectionModal()"></div>
+            <div class="modal-dialog">
+                <div class="modal-header">
+                    <h2>🔍 Inspeksi Service Order</h2>
+                    <button class="modal-close" onclick="closeInspectionModal()" aria-label="Close">×</button>
+                </div>
+                
+                <div class="modal-body">
+                    <form id="inspectionForm">
+                        <!-- Hidden field untuk order ID -->
+                        <input type="hidden" id="inspection_order_id" name="order_id">
+                        
+                        <!-- Service Order Info -->
+                        <div class="form-section">
+                            <div class="section-badge info">Info Order</div>
+                            <div class="order-info-display" id="orderInfoDisplay">
+                                <div class="info-item">
+                                    <span class="label">Order ID:</span>
+                                    <span class="value" id="display_order_id">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="label">Customer:</span>
+                                    <span class="value" id="display_customer">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="label">Kendaraan:</span>
+                                    <span class="value" id="display_vehicle">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="label">Catatan Intake:</span>
+                                    <span class="value" id="display_intake_notes">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Basic Service Details -->
+                        <div class="form-section">
+                            <div class="section-badge primary">Detail Service</div>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="service_order_type">
+                                        Jenis Service <span class="required">*</span>
+                                    </label>
+                                    <select id="service_order_type" name="service_order_type" required>
+                                        <option value="">-- Pilih Jenis Service --</option>
+                                        <option value="Regular Service">Regular Service</option>
+                                        <option value="Major Service">Major Service</option>
+                                        <option value="Repair">Repair</option>
+                                        <option value="Body Repair">Body Repair</option>
+                                        <option value="Inspection">Inspection</option>
+                                        <option value="Warranty">Warranty</option>
+                                        <option value="Insurance Claim">Insurance Claim</option>
+                                        <option value="Emergency Repair">Emergency Repair</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="order_category">
+                                        Kategori <span class="required">*</span>
+                                    </label>
+                                    <select id="order_category" name="order_category" required>
+                                        <option value="">-- Pilih Kategori --</option>
+                                        <option value="Engine">Engine</option>
+                                        <option value="Transmission">Transmission</option>
+                                        <option value="Electrical">Electrical</option>
+                                        <option value="Suspension">Suspension</option>
+                                        <option value="Brake System">Brake System</option>
+                                        <option value="Body Work">Body Work</option>
+                                        <option value="Interior">Interior</option>
+                                        <option value="AC System">AC System</option>
+                                        <option value="General Maintenance">General Maintenance</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="priority">
+                                        Prioritas <span class="required">*</span>
+                                    </label>
+                                    <select id="priority" name="priority" required>
+                                        <option value="Low">Low</option>
+                                        <option value="Medium" selected>Medium</option>
+                                        <option value="High">High</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="estimated_delivery_date">
+                                        Estimasi Selesai <span class="required">*</span>
+                                    </label>
+                                    <input type="date" id="estimated_delivery_date" name="estimated_delivery_date" required>
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label for="total_estimated_amount">
+                                        Estimasi Biaya (Rp) <span class="required">*</span>
+                                    </label>
+                                    <input type="number" id="total_estimated_amount" name="total_estimated_amount" 
+                                        min="0" step="1000" placeholder="0" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Inspection Summary -->
+                        <div class="form-section">
+                            <div class="section-badge warning">Hasil Inspeksi</div>
+                            <div class="form-grid">
+                                <div class="form-group full-width">
+                                    <label for="inspection_summary">
+                                        Ringkasan Inspeksi <span class="required">*</span>
+                                    </label>
+                                    <textarea id="inspection_summary" name="inspection_summary" 
+                                            rows="4" placeholder="Jelaskan hasil inspeksi dan temuan utama..." required></textarea>
+                                    <small class="form-hint">Ringkasan kondisi kendaraan dan masalah yang ditemukan</small>
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label for="service_notes">Catatan Servis</label>
+                                    <textarea id="service_notes" name="service_notes" 
+                                            rows="3" placeholder="Catatan tambahan untuk teknisi..."></textarea>
+                                    <small class="form-hint">Instruksi khusus atau informasi penting lainnya</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Service Tasks -->
+                        <div class="form-section">
+                            <div class="section-badge success">Daftar Pekerjaan</div>
+                            <div class="repeating-section" id="serviceTasksSection">
+                                <div class="repeating-header">
+                                    <span class="repeating-count">0 Pekerjaan</span>
+                                    <button type="button" class="btn-add" onclick="addServiceTask()">
+                                        ➕ Tambah Pekerjaan
+                                    </button>
+                                </div>
+                                <div id="serviceTasksList" class="repeating-list">
+                                    <!-- Tasks will be added here dynamically -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Required Parts -->
+                        <div class="form-section">
+                            <div class="section-badge danger">Kebutuhan Sparepart</div>
+                            <div class="repeating-section" id="requiredPartsSection">
+                                <div class="repeating-header">
+                                    <span class="repeating-count">0 Part</span>
+                                    <button type="button" class="btn-add" onclick="addRequiredPart()">
+                                        ➕ Tambah Part
+                                    </button>
+                                </div>
+                                <div id="requiredPartsList" class="repeating-list">
+                                    <!-- Parts will be added here dynamically -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Schedule -->
+                        <div class="form-section">
+                            <div class="section-badge primary">Jadwal Pembayaran</div>
+                            <div class="repeating-section" id="paymentScheduleSection">
+                                <div class="repeating-header">
+                                    <span class="repeating-count">0 Pembayaran</span>
+                                    <button type="button" class="btn-add" onclick="addPaymentSchedule()">
+                                        ➕ Tambah Jadwal
+                                    </button>
+                                </div>
+                                <div id="paymentScheduleList" class="repeating-list">
+                                    <!-- Payment schedules will be added here dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeInspectionModal()">
+                        ❌ Batal
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="submitInspection()">
+                        ✅ Simpan & Pindah ke In Progress
+                    </button>
+                </div>
             </div>
-            <div class="portal-modal__empty" data-role="status-modal-empty">Tidak ada service order dengan status ini.</div>
         </div>
     </div>
 </div>
@@ -1604,6 +1539,838 @@ button:disabled {
 
 {% block script %}
 <script>
-    frappe.require("/assets/garage/js/garage_portal.js");
+(function() {
+    'use strict';
+
+    // API Configuration - Sesuaikan dengan struktur app Anda
+    const API_CONFIG = {
+        listServiceOrders: 'garage.api.portal.list_service_orders', // Adjust path
+    };
+
+    // Format currency
+    function formatCurrency(amount) {
+        if (!amount) return '-';
+        return 'Rp ' + new Intl.NumberFormat('id-ID').format(amount);
+    }
+
+    // Format date
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('id-ID', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+        });
+    }
+
+    // Format datetime
+    function formatDateTime(dateStr) {
+        if (!dateStr) return '-';
+        const date = new Date(dateStr);
+        return date.toLocaleString('id-ID', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    // Get status badge HTML
+    function getStatusBadge(status) {
+        const statusMap = {
+            'Draft': { class: 'new', label: 'New' },
+            'Pending Inspection': { class: 'inspection', label: 'Inspection' },
+            'Planning': { class: 'planning', label: 'Planning' },
+            'In Progress': { class: 'in-progress', label: 'In Progress' },
+            'Quality Check': { class: 'qc', label: 'QC' },
+            'Completed': { class: 'completed', label: 'Completed' },
+            'Cancelled': { class: 'cancelled', label: 'Cancelled' }
+        };
+        
+        const statusInfo = statusMap[status] || { class: 'new', label: status };
+        return `<span class="status-badge ${statusInfo.class}">${statusInfo.label}</span>`;
+    }
+
+    // Get priority badge HTML
+    function getPriorityBadge(priority) {
+        if (!priority) return '';
+        const priorityClass = priority.toLowerCase();
+        return `<span class="priority-badge ${priorityClass}">${priority}</span>`;
+    }
+
+    // Render Inspection Entry table
+    function renderInspectionTable(orders) {
+        const tbody = document.getElementById('table-inspection');
+        
+        if (!orders || orders.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <div class="empty-state__icon">📋</div>
+                            <div class="empty-state__title">Tidak ada service untuk inspeksi</div>
+                            <div class="empty-state__message">Service order baru dari intake akan muncul di sini</div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = orders.map(order => `
+            <tr>
+                <td>
+                    <div class="cell-strong">${order.name || '-'}</div>
+                    <div class="cell-secondary">${order.service_order_type || '-'}</div>
+                    ${order.priority ? getPriorityBadge(order.priority) : ''}
+                </td>
+                <td>
+                    <div class="vehicle-info">
+                        <div class="vehicle-plate">${order.vehicle_plate || '-'}</div>
+                        <div class="vehicle-model">${order.vehicle_brand || ''} ${order.vehicle_model || ''}</div>
+                    </div>
+                </td>
+                <td>
+                    <div class="customer-info">
+                        <div class="customer-name">${order.customer_name || '-'}</div>
+                        <div class="customer-contact">${order.customer_phone || '-'}</div>
+                    </div>
+                </td>
+                <td>${getStatusBadge(order.status)}</td>
+                <td>
+                    <div class="notes-preview" title="${order.service_notes || '-'}">${order.service_notes || '-'}</div>
+                </td>
+                <td>
+                    <div class="date-display">${formatDateTime(order.creation)}</div>
+                </td>
+                <td>
+                    <button class="action-btn primary" onclick="openInspectionModal('${order.name}')">
+                        🔍 Inspeksi
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // Render In Progress table
+    function renderProgressTable(orders) {
+        const tbody = document.getElementById('table-progress');
+        
+        if (!orders || orders.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <div class="empty-state__icon">⚙️</div>
+                            <div class="empty-state__title">Tidak ada service yang sedang dikerjakan</div>
+                            <div class="empty-state__message">Service yang sudah direncanakan akan muncul di sini</div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = orders.map(order => `
+            <tr>
+                <td>
+                    <div class="cell-strong">${order.name || '-'}</div>
+                    <div class="cell-secondary">${order.service_order_type || '-'}</div>
+                    ${order.order_category ? `<span class="service-type">${order.order_category}</span>` : ''}
+                </td>
+                <td>
+                    <div class="vehicle-info">
+                        <div class="vehicle-plate">${order.vehicle_plate || '-'}</div>
+                        <div class="vehicle-model">${order.vehicle_brand || ''} ${order.vehicle_model || ''}</div>
+                    </div>
+                </td>
+                <td>
+                    <div class="customer-info">
+                        <div class="customer-name">${order.customer_name || '-'}</div>
+                        <div class="customer-contact">${order.customer_phone || '-'}</div>
+                    </div>
+                </td>
+                <td>
+                    <div class="detail-badge">Teknisi: ${order.technician_count || 0}</div>
+                    <div class="detail-badge">Part: ${order.parts_count || 0}</div>
+                    <div class="detail-badge">Task: ${order.tasks_count || 0}</div>
+                </td>
+                <td>${getStatusBadge(order.status)}</td>
+                <td>
+                    <div class="date-display">${formatDate(order.estimated_delivery_date)}</div>
+                    ${order.total_estimated_amount ? `<div class="currency">${formatCurrency(order.total_estimated_amount)}</div>` : ''}
+                </td>
+                <td>
+                    <button class="action-btn" onclick="viewServiceDetails('${order.name}')">
+                        📄 Detail
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // Render Completed table
+    function renderCompletedTable(orders) {
+        const tbody = document.getElementById('table-completed');
+        
+        if (!orders || orders.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <div class="empty-state__icon">✅</div>
+                            <div class="empty-state__title">Belum ada service yang selesai</div>
+                            <div class="empty-state__message">Service yang sudah selesai akan muncul di sini</div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = orders.map(order => `
+            <tr>
+                <td>
+                    <div class="cell-strong">${order.name || '-'}</div>
+                    <div class="cell-secondary">${order.service_order_type || '-'}</div>
+                </td>
+                <td>
+                    <div class="vehicle-info">
+                        <div class="vehicle-plate">${order.vehicle_plate || '-'}</div>
+                        <div class="vehicle-model">${order.vehicle_brand || ''} ${order.vehicle_model || ''}</div>
+                    </div>
+                </td>
+                <td>
+                    <div class="customer-info">
+                        <div class="customer-name">${order.customer_name || '-'}</div>
+                        <div class="customer-contact">${order.customer_phone || '-'}</div>
+                    </div>
+                </td>
+                <td>
+                    <div class="cell-muted">${order.inspection_summary || '-'}</div>
+                </td>
+                <td>
+                    <div class="currency">${formatCurrency(order.total_approved_amount || order.total_estimated_amount)}</div>
+                </td>
+                <td>
+                    <div class="date-display">${formatDateTime(order.actual_delivery_date || order.modified)}</div>
+                </td>
+                <td>
+                    <button class="action-btn" onclick="viewServiceDetails('${order.name}')">
+                        📄 Detail
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // Update stats
+    function updateStats(data) {
+        const inspectionCount = data.inspection?.length || 0;
+        const progressCount = data.progress?.length || 0;
+        const completedCount = data.completed?.length || 0;
+
+        document.getElementById('stat-inspection').textContent = inspectionCount;
+        document.getElementById('stat-progress').textContent = progressCount;
+        document.getElementById('stat-completed').textContent = completedCount;
+
+        document.getElementById('badge-inspection').textContent = inspectionCount;
+        document.getElementById('badge-progress').textContent = progressCount;
+        document.getElementById('badge-completed').textContent = completedCount;
+    }
+
+    // Global variables untuk tracking
+    let currentOrderId = null;
+    let serviceTasks = [];
+    let requiredParts = [];
+    let paymentSchedule = [];
+
+    /**
+     * Open inspection modal
+     */
+    window.openInspectionModal = async function(orderId) {
+        currentOrderId = orderId;
+        
+        // Show modal
+        const modal = document.getElementById('inspectionModal');
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        
+        // Reset form
+        document.getElementById('inspectionForm').reset();
+        document.getElementById('inspection_order_id').value = orderId;
+        
+        // Clear repeating sections
+        serviceTasks = [];
+        requiredParts = [];
+        paymentSchedule = [];
+        updateRepeatingCounts();
+        
+        // Load order details
+        try {
+            const response = await frappe.call({
+                method: API_CONFIG.getServiceOrderDetails || 'garage.api.portal.get_service_order_details',
+                args: { order_id: orderId }
+            });
+            
+            if (response.message) {
+                populateOrderInfo(response.message);
+            }
+        } catch (error) {
+            console.error('[Inspection] Error loading order details:', error);
+            showNotification('Error loading order details', 'error');
+        }
+        
+        // Set default estimated delivery date (3 days from now)
+        const defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 3);
+        document.getElementById('estimated_delivery_date').value = defaultDate.toISOString().split('T')[0];
+    };
+
+    /**
+     * Close inspection modal
+     */
+    window.closeInspectionModal = function() {
+        const modal = document.getElementById('inspectionModal');
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+        currentOrderId = null;
+    };
+
+    /**
+     * Populate order info in modal
+     */
+    function populateOrderInfo(orderData) {
+        // Display order ID
+        document.getElementById('display_order_id').textContent = orderData.name || '-';
+        
+        // Display customer
+        const customerName = orderData.customer_details?.customer_name || orderData.customer || '-';
+        document.getElementById('display_customer').textContent = customerName;
+        
+        // Display vehicle
+        const vehicleInfo = orderData.vehicle_details 
+            ? `${orderData.vehicle_details.license_plate} - ${orderData.vehicle_details.brand} ${orderData.vehicle_details.model}`
+            : orderData.vehicle || '-';
+        document.getElementById('display_vehicle').textContent = vehicleInfo;
+        
+        // Display intake notes
+        document.getElementById('display_intake_notes').textContent = orderData.service_notes || '-';
+        
+        // Pre-fill existing data if available
+        if (orderData.service_order_type) {
+            document.getElementById('service_order_type').value = orderData.service_order_type;
+        }
+        
+        if (orderData.order_category) {
+            document.getElementById('order_category').value = orderData.order_category;
+        }
+        
+        if (orderData.priority) {
+            document.getElementById('priority').value = orderData.priority;
+        }
+        
+        if (orderData.estimated_delivery_date) {
+            document.getElementById('estimated_delivery_date').value = orderData.estimated_delivery_date;
+        }
+        
+        if (orderData.total_estimated_amount) {
+            document.getElementById('total_estimated_amount').value = orderData.total_estimated_amount;
+        }
+        
+        if (orderData.inspection_summary) {
+            document.getElementById('inspection_summary').value = orderData.inspection_summary;
+        }
+        
+        // Load existing tasks, parts, and payment schedule if available
+        if (orderData.service_tasks && orderData.service_tasks.length > 0) {
+            serviceTasks = orderData.service_tasks.map(task => ({
+                task: task.task || '',
+                description: task.description || '',
+                estimated_hours: task.estimated_hours || 0,
+                technician: task.technician || ''
+            }));
+            renderServiceTasks();
+        }
+        
+        if (orderData.required_parts && orderData.required_parts.length > 0) {
+            requiredParts = orderData.required_parts.map(part => ({
+                item_name: part.item_name || '',
+                description: part.description || '',
+                qty: part.qty || 1,
+                rate: part.rate || 0
+            }));
+            renderRequiredParts();
+        }
+        
+        if (orderData.payment_schedule && orderData.payment_schedule.length > 0) {
+            paymentSchedule = orderData.payment_schedule.map(payment => ({
+                description: payment.description || '',
+                percentage: payment.percentage || 0,
+                amount: payment.amount || 0
+            }));
+            renderPaymentSchedule();
+        }
+    }
+
+    /**
+     * Add Service Task
+     */
+    window.addServiceTask = function() {
+        serviceTasks.push({
+            task: '',
+            description: '',
+            estimated_hours: 1,
+            technician: ''
+        });
+        renderServiceTasks();
+    };
+
+    /**
+     * Remove Service Task
+     */
+    function removeServiceTask(index) {
+        serviceTasks.splice(index, 1);
+        renderServiceTasks();
+    }
+
+    /**
+     * Render Service Tasks
+     */
+    function renderServiceTasks() {
+        const container = document.getElementById('serviceTasksList');
+        
+        if (serviceTasks.length === 0) {
+            container.innerHTML = `
+                <div class="empty-repeating">
+                    <p>Belum ada pekerjaan. Klik "Tambah Pekerjaan" untuk menambah.</p>
+                </div>
+            `;
+        } else {
+            container.innerHTML = serviceTasks.map((task, index) => `
+                <div class="repeating-item">
+                    <div class="item-header">
+                        <span class="item-number">Pekerjaan #${index + 1}</span>
+                        <button type="button" class="btn-remove" onclick="removeServiceTask(${index})">
+                            🗑️ Hapus
+                        </button>
+                    </div>
+                    <div class="item-grid">
+                        <div class="form-group">
+                            <label>Nama Pekerjaan *</label>
+                            <input type="text" value="${task.task}" 
+                                onchange="serviceTasks[${index}].task = this.value" 
+                                placeholder="Contoh: Ganti Oli Mesin" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Teknisi</label>
+                            <input type="text" value="${task.technician}" 
+                                onchange="serviceTasks[${index}].technician = this.value" 
+                                placeholder="Nama atau ID teknisi">
+                        </div>
+                        <div class="form-group">
+                            <label>Estimasi Jam</label>
+                            <input type="number" value="${task.estimated_hours}" 
+                                onchange="serviceTasks[${index}].estimated_hours = parseFloat(this.value)" 
+                                min="0" step="0.5" placeholder="1">
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Deskripsi</label>
+                            <textarea onchange="serviceTasks[${index}].description = this.value" 
+                                    rows="2" placeholder="Detail pekerjaan...">${task.description}</textarea>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        updateRepeatingCounts();
+    }
+
+    /**
+     * Add Required Part
+     */
+    window.addRequiredPart = function() {
+        requiredParts.push({
+            item_name: '',
+            description: '',
+            qty: 1,
+            rate: 0
+        });
+        renderRequiredParts();
+    };
+
+    /**
+     * Remove Required Part
+     */
+    function removeRequiredPart(index) {
+        requiredParts.splice(index, 1);
+        renderRequiredParts();
+    }
+
+    /**
+     * Render Required Parts
+     */
+    function renderRequiredParts() {
+        const container = document.getElementById('requiredPartsList');
+        
+        if (requiredParts.length === 0) {
+            container.innerHTML = `
+                <div class="empty-repeating">
+                    <p>Belum ada sparepart. Klik "Tambah Part" untuk menambah.</p>
+                </div>
+            `;
+        } else {
+            container.innerHTML = requiredParts.map((part, index) => `
+                <div class="repeating-item">
+                    <div class="item-header">
+                        <span class="item-number">Part #${index + 1}</span>
+                        <button type="button" class="btn-remove" onclick="removeRequiredPart(${index})">
+                            🗑️ Hapus
+                        </button>
+                    </div>
+                    <div class="item-grid cols-4">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Nama Part *</label>
+                            <input type="text" value="${part.item_name}" 
+                                onchange="requiredParts[${index}].item_name = this.value" 
+                                placeholder="Contoh: Oli Shell Helix 5W-30" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Qty *</label>
+                            <input type="number" value="${part.qty}" 
+                                onchange="requiredParts[${index}].qty = parseInt(this.value)" 
+                                min="1" placeholder="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Harga Satuan (Rp) *</label>
+                            <input type="number" value="${part.rate}" 
+                                onchange="requiredParts[${index}].rate = parseFloat(this.value); updatePartAmount(${index})" 
+                                min="0" step="1000" placeholder="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Total (Rp)</label>
+                            <input type="number" value="${part.qty * part.rate}" 
+                                id="part_amount_${index}" readonly 
+                                style="background: #F5F7FA; cursor: not-allowed;">
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Keterangan</label>
+                            <textarea onchange="requiredParts[${index}].description = this.value" 
+                                    rows="2" placeholder="Deskripsi atau spesifikasi part...">${part.description}</textarea>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        updateRepeatingCounts();
+    }
+
+    /**
+     * Update part amount
+     */
+    function updatePartAmount(index) {
+        const part = requiredParts[index];
+        const amount = part.qty * part.rate;
+        const amountField = document.getElementById(`part_amount_${index}`);
+        if (amountField) {
+            amountField.value = amount;
+        }
+    }
+
+    /**
+     * Add Payment Schedule
+     */
+    window.addPaymentSchedule = function() {
+        paymentSchedule.push({
+            description: '',
+            percentage: 0,
+            amount: 0
+        });
+        renderPaymentSchedule();
+    };
+
+    /**
+     * Remove Payment Schedule
+     */
+    function removePaymentSchedule(index) {
+        paymentSchedule.splice(index, 1);
+        renderPaymentSchedule();
+    }
+
+    /**
+     * Render Payment Schedule
+     */
+    function renderPaymentSchedule() {
+        const container = document.getElementById('paymentScheduleList');
+        
+        if (paymentSchedule.length === 0) {
+            container.innerHTML = `
+                <div class="empty-repeating">
+                    <p>Belum ada jadwal pembayaran. Klik "Tambah Jadwal" untuk menambah.</p>
+                </div>
+            `;
+        } else {
+            container.innerHTML = paymentSchedule.map((payment, index) => `
+                <div class="repeating-item">
+                    <div class="item-header">
+                        <span class="item-number">Pembayaran #${index + 1}</span>
+                        <button type="button" class="btn-remove" onclick="removePaymentSchedule(${index})">
+                            🗑️ Hapus
+                        </button>
+                    </div>
+                    <div class="item-grid cols-3">
+                        <div class="form-group">
+                            <label>Deskripsi *</label>
+                            <input type="text" value="${payment.description}" 
+                                onchange="paymentSchedule[${index}].description = this.value" 
+                                placeholder="Contoh: DP 50%" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Persentase (%)</label>
+                            <input type="number" value="${payment.percentage}" 
+                                onchange="paymentSchedule[${index}].percentage = parseFloat(this.value); calculatePaymentAmount(${index})" 
+                                min="0" max="100" step="1" placeholder="50">
+                        </div>
+                        <div class="form-group">
+                            <label>Jumlah (Rp) *</label>
+                            <input type="number" value="${payment.amount}" 
+                                onchange="paymentSchedule[${index}].amount = parseFloat(this.value)" 
+                                id="payment_amount_${index}" 
+                                min="0" step="1000" placeholder="0" required>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        updateRepeatingCounts();
+    }
+
+    /**
+     * Calculate payment amount from percentage
+     */
+    function calculatePaymentAmount(index) {
+        const estimatedAmount = parseFloat(document.getElementById('total_estimated_amount').value) || 0;
+        const percentage = paymentSchedule[index].percentage;
+        
+        if (estimatedAmount > 0 && percentage > 0) {
+            const amount = (estimatedAmount * percentage) / 100;
+            paymentSchedule[index].amount = amount;
+            
+            const amountField = document.getElementById(`payment_amount_${index}`);
+            if (amountField) {
+                amountField.value = amount;
+            }
+        }
+    }
+
+    /**
+     * Update repeating counts
+     */
+    function updateRepeatingCounts() {
+        const tasksCount = document.querySelector('#serviceTasksSection .repeating-count');
+        const partsCount = document.querySelector('#requiredPartsSection .repeating-count');
+        const paymentsCount = document.querySelector('#paymentScheduleSection .repeating-count');
+        
+        if (tasksCount) tasksCount.textContent = `${serviceTasks.length} Pekerjaan`;
+        if (partsCount) partsCount.textContent = `${requiredParts.length} Part`;
+        if (paymentsCount) paymentsCount.textContent = `${paymentSchedule.length} Pembayaran`;
+    }
+
+    /**
+     * Submit Inspection
+     */
+    window.submitInspection = async function() {
+        // Validate form
+        const form = document.getElementById('inspectionForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        
+        // Check if at least one task is added
+        if (serviceTasks.length === 0) {
+            showNotification('⚠️ Minimal harus ada 1 pekerjaan!', 'warning');
+            return;
+        }
+        
+        // Prepare data
+        const inspectionData = {
+            order_id: currentOrderId,
+            service_order_type: document.getElementById('service_order_type').value,
+            order_category: document.getElementById('order_category').value,
+            priority: document.getElementById('priority').value,
+            estimated_delivery_date: document.getElementById('estimated_delivery_date').value,
+            total_estimated_amount: parseFloat(document.getElementById('total_estimated_amount').value),
+            inspection_summary: document.getElementById('inspection_summary').value,
+            service_notes: document.getElementById('service_notes').value,
+            service_tasks: serviceTasks,
+            required_parts: requiredParts,
+            payment_schedule: paymentSchedule,
+            status: 'In Progress'  // Important: Move to In Progress
+        };
+        
+        console.log('[Inspection] Submitting data:', inspectionData);
+        
+        // Disable submit button
+        const submitBtn = event.target;
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Menyimpan...';
+        
+        try {
+            // Submit to API
+            const response = await frappe.call({
+                method: API_CONFIG.updateInspection || 'garage.api.portal.update_service_order_inspection',
+                args: {
+                    order_id: currentOrderId,
+                    inspection_data: inspectionData
+                }
+            });
+            
+            console.log('[Inspection] Response:', response);
+            
+            if (response.message) {
+                showNotification('✅ Inspeksi berhasil disimpan! Service dipindah ke In Progress.', 'success');
+                
+                // Close modal
+                closeInspectionModal();
+                
+                // Refresh data
+                setTimeout(() => {
+                    refreshData();
+                }, 500);
+            }
+            
+        } catch (error) {
+            console.error('[Inspection] Error submitting:', error);
+            showNotification('❌ Error: ' + (error.message || 'Gagal menyimpan inspeksi'), 'error');
+            
+            // Re-enable button
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✅ Simpan & Pindah ke In Progress';
+        }
+    };
+
+    // Close modal when clicking outside
+    document.addEventListener('click', function(event) {
+        const modal = document.getElementById('inspectionModal');
+        if (modal && event.target === modal) {
+            closeInspectionModal();
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const modal = document.getElementById('inspectionModal');
+            if (modal && modal.classList.contains('active')) {
+                closeInspectionModal();
+            }
+        }
+    });
+
+    console.log('[Inspection Modal] JavaScript loaded');
+
+    // Load data from API
+    async function loadServiceOrders() {
+        try {
+            console.log('[Service] Loading service orders...');
+
+            const response = await frappe.call({
+                method: API_CONFIG.listServiceOrders,
+                args: {},
+                freeze: false
+            });
+
+            console.log('[Service] API Response:', response);
+
+            const data = response.message || {};
+
+            // Categorize orders based on status
+            const allOrders = data.orders || [];
+            
+            const inspection = allOrders.filter(o => 
+                ['Draft', 'Pending Inspection', 'Planning'].includes(o.status)
+            );
+            
+            const progress = allOrders.filter(o => 
+                ['In Progress', 'Quality Check'].includes(o.status)
+            );
+            
+            const completed = allOrders.filter(o => 
+                o.status === 'Completed'
+            );
+
+            const categorized = {
+                inspection: inspection,
+                progress: progress,
+                completed: completed
+            };
+
+            // Update UI
+            updateStats(categorized);
+            renderInspectionTable(categorized.inspection);
+            renderProgressTable(categorized.progress);
+            renderCompletedTable(categorized.completed);
+
+            console.log('[Service] Data loaded successfully');
+
+        } catch (error) {
+            console.error('[Service] Error loading data:', error);
+            
+            // Show error in all tables
+            const errorHTML = `
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <div class="empty-state__icon">⚠️</div>
+                            <div class="empty-state__title">Error loading data</div>
+                            <div class="empty-state__message">${error.message || 'Unknown error'}</div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            
+            document.getElementById('table-inspection').innerHTML = errorHTML;
+            document.getElementById('table-progress').innerHTML = errorHTML;
+            document.getElementById('table-completed').innerHTML = errorHTML;
+        }
+    }
+
+    // Refresh data
+    window.refreshData = function() {
+        loadServiceOrders();
+    };
+
+    // View service details
+    window.viewServiceDetails = function(orderId) {
+        console.log('View details for:', orderId);
+        // Open detail page or modal
+        window.location.href = `/app/garage-service-order/${orderId}`;
+    };
+
+    // Initialize
+    function init() {
+        console.log('[Service] Initializing service management page...');
+        
+        // Load data on page load
+        loadServiceOrders();
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadServiceOrders, 30000);
+    }
+
+    // Run init when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
 </script>
 {% endblock %}

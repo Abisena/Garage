@@ -862,6 +862,519 @@ def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, An
 
     return {"vehicle": vehicle, "customer": customer_doc}
 
+# ============================================================================
+# SERVICE MANAGEMENT API ENDPOINTS - FIXED VERSION
+# Tambahkan code ini ke file portal.py yang sudah ada
+# ============================================================================
+
+@frappe.whitelist()
+def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
+    """List all service orders with filtering and categorization."""
+    
+    _require_login()
+    
+    filter_dict = _ensure_dict(filters or {})
+    
+    # Base fields to fetch
+    fields = [
+        "name",
+        "status",
+        "service_order_type",
+        "order_category",
+        "priority",
+        "customer",
+        "vehicle",
+        "service_booking_date",
+        "estimated_delivery_date",
+        "actual_delivery_date",
+        "total_estimated_amount",
+        "total_approved_amount",
+        "inspection_summary",
+        "service_notes",
+        "job_card_status",
+        "work_order_status",
+        "qc_status",
+        "creation",
+        "modified"
+    ]
+    
+    # Build filters
+    db_filters = {}
+    
+    # Add status filter if provided
+    if filter_dict.get("status"):
+        db_filters["status"] = filter_dict["status"]
+    
+    # Add date range filter if provided
+    if filter_dict.get("from_date"):
+        db_filters["creation"] = [">=", filter_dict["from_date"]]
+    
+    if filter_dict.get("to_date"):
+        if "creation" in db_filters:
+            db_filters["creation"] = [
+                [">=", filter_dict["from_date"]],
+                ["<=", filter_dict["to_date"]]
+            ]
+        else:
+            db_filters["creation"] = ["<=", filter_dict["to_date"]]
+    
+    # Fetch service orders
+    try:
+        orders = frappe.get_all(
+            "Garage Service Order",
+            filters=db_filters,
+            fields=fields,
+            order_by="creation desc",
+            limit_page_length=100
+        )
+    except Exception as e:
+        frappe.log_error(f"Error fetching service orders: {str(e)}")
+        return {
+            "orders": [],
+            "total_count": 0,
+            "error": str(e)
+        }
+    
+    # Enrich with related data
+    enriched_orders = []
+    
+    for order in orders:
+        # Get customer info
+        if order.get("customer"):
+            try:
+                customer = frappe.db.get_value(
+                    "Garage Customer",
+                    order["customer"],
+                    ["customer_name", "phone", "email"],
+                    as_dict=True
+                )
+                if customer:
+                    order["customer_name"] = customer.get("customer_name")
+                    order["customer_phone"] = customer.get("phone")
+                    order["customer_email"] = customer.get("email")
+            except Exception:
+                pass  # Skip if customer not found
+        
+        # Get vehicle info
+        if order.get("vehicle"):
+            try:
+                vehicle = frappe.db.get_value(
+                    "Garage Vehicle",
+                    order["vehicle"],
+                    ["license_plate", "brand", "model", "vehicle_year"],
+                    as_dict=True
+                )
+                if vehicle:
+                    order["vehicle_plate"] = vehicle.get("license_plate")
+                    order["vehicle_brand"] = vehicle.get("brand")
+                    order["vehicle_model"] = vehicle.get("model")
+                    order["vehicle_year"] = vehicle.get("vehicle_year")
+            except Exception:
+                pass  # Skip if vehicle not found
+        
+        # Count related items - with error handling for missing tables
+        order["technician_count"] = 0
+        order["parts_count"] = 0
+        order["tasks_count"] = 0
+        
+        # Try to count service tasks
+        try:
+            # Check if table exists first
+            if frappe.db.table_exists("Garage Service Task"):
+                order["tasks_count"] = frappe.db.count(
+                    "Garage Service Task",
+                    {"parent": order["name"], "parenttype": "Garage Service Order"}
+                )
+        except Exception:
+            pass
+        
+        # Try to count required parts
+        try:
+            if frappe.db.table_exists("Garage Required Part"):
+                order["parts_count"] = frappe.db.count(
+                    "Garage Required Part",
+                    {"parent": order["name"], "parenttype": "Garage Service Order"}
+                )
+        except Exception:
+            pass
+        
+        # Technician count - dari service tasks yang punya technician
+        try:
+            if frappe.db.table_exists("Garage Service Task"):
+                # Count distinct technicians from tasks
+                result = frappe.db.sql("""
+                    SELECT COUNT(DISTINCT technician) 
+                    FROM `tabGarage Service Task` 
+                    WHERE parent = %s 
+                    AND parenttype = 'Garage Service Order'
+                    AND technician IS NOT NULL
+                    AND technician != ''
+                """, (order["name"],))
+                
+                if result and result[0][0]:
+                    order["technician_count"] = result[0][0]
+        except Exception:
+            pass
+        
+        enriched_orders.append(order)
+    
+    return {
+        "orders": enriched_orders,
+        "total_count": len(enriched_orders)
+    }
+
+
+@frappe.whitelist()
+def get_service_order_details(order_id: str) -> Dict[str, Any]:
+    """Get complete details of a service order including all child tables."""
+    
+    _require_login()
+    
+    if not order_id:
+        frappe.throw(_("Service Order ID diperlukan."))
+    
+    try:
+        # Get main document
+        order = frappe.get_doc("Garage Service Order", order_id)
+    except Exception as e:
+        frappe.throw(_("Service Order tidak ditemukan: {0}").format(str(e)))
+    
+    # Build response
+    result = {
+        # Main fields
+        "name": order.name,
+        "status": order.status,
+        "service_order_type": order.service_order_type,
+        "order_category": order.order_category,
+        "priority": order.priority,
+        "service_booking_date": order.service_booking_date,
+        "estimated_delivery_date": order.estimated_delivery_date,
+        "actual_delivery_date": order.actual_delivery_date,
+        "total_estimated_amount": order.total_estimated_amount,
+        "total_approved_amount": order.total_approved_amount,
+        "approval_date": order.approval_date,
+        "customer_confirmation": order.customer_confirmation,
+        "rejection_reason": order.rejection_reason,
+        "inspection_summary": order.inspection_summary,
+        "service_notes": order.service_notes,
+        "job_card_status": order.job_card_status,
+        "work_order_status": order.work_order_status,
+        "qc_status": order.qc_status,
+        
+        # Customer info
+        "customer": order.customer,
+        "vehicle": order.vehicle,
+        "service_advisor": order.service_advisor,
+        "primary_contact": order.primary_contact,
+        
+        # Child tables (will be populated if they exist)
+        "inspection_items": [],
+        "service_tasks": [],
+        "required_parts": [],
+        "progress_logs": [],
+        "quality_checks": [],
+        "payment_schedule": [],
+        
+        # Timestamps
+        "creation": order.creation,
+        "modified": order.modified
+    }
+    
+    # Get customer details
+    if order.customer:
+        try:
+            customer = frappe.get_doc("Garage Customer", order.customer)
+            result["customer_details"] = {
+                "name": customer.name,
+                "customer_name": customer.customer_name,
+                "customer_type": customer.customer_type,
+                "phone": customer.phone,
+                "email": customer.email,
+                "is_vip": customer.is_vip
+            }
+        except Exception:
+            pass
+    
+    # Get vehicle details
+    if order.vehicle:
+        try:
+            vehicle = frappe.get_doc("Garage Vehicle", order.vehicle)
+            result["vehicle_details"] = {
+                "name": vehicle.name,
+                "license_plate": vehicle.license_plate,
+                "brand": vehicle.brand,
+                "model": vehicle.model,
+                "vehicle_year": vehicle.vehicle_year,
+                "color": vehicle.color,
+                "transmission": vehicle.transmission,
+                "fuel_type": vehicle.fuel_type,
+                "mileage": vehicle.mileage
+            }
+        except Exception:
+            pass
+    
+    # Get child table data - with error handling
+    try:
+        if hasattr(order, "inspection_items") and order.inspection_items:
+            result["inspection_items"] = [item.as_dict() for item in order.inspection_items]
+    except Exception:
+        pass
+    
+    try:
+        if hasattr(order, "service_tasks") and order.service_tasks:
+            result["service_tasks"] = [task.as_dict() for task in order.service_tasks]
+    except Exception:
+        pass
+    
+    try:
+        if hasattr(order, "required_parts") and order.required_parts:
+            result["required_parts"] = [part.as_dict() for part in order.required_parts]
+    except Exception:
+        pass
+    
+    try:
+        if hasattr(order, "progress_logs") and order.progress_logs:
+            result["progress_logs"] = [log.as_dict() for log in order.progress_logs]
+    except Exception:
+        pass
+    
+    try:
+        if hasattr(order, "quality_checks") and order.quality_checks:
+            result["quality_checks"] = [qc.as_dict() for qc in order.quality_checks]
+    except Exception:
+        pass
+    
+    try:
+        if hasattr(order, "payment_schedule") and order.payment_schedule:
+            result["payment_schedule"] = [payment.as_dict() for payment in order.payment_schedule]
+    except Exception:
+        pass
+    
+    return result
+
+
+@frappe.whitelist()
+def update_service_order_inspection(order_id: str, inspection_data: Optional[Any] = None) -> Dict[str, Any]:
+    """Update service order with inspection and planning details."""
+    
+    _require_login()
+    
+    if not order_id:
+        frappe.throw(_("Service Order ID diperlukan."))
+    
+    data = _ensure_dict(inspection_data or {})
+    
+    # Get the document
+    doc = _get_doc("Garage Service Order", order_id)
+    
+    # Update main fields
+    allowed_fields = {
+        "service_order_type",
+        "order_category",
+        "priority",
+        "estimated_delivery_date",
+        "total_estimated_amount",
+        "inspection_summary",
+        "service_notes"
+    }
+    
+    for field, value in data.items():
+        if field in allowed_fields and value is not None:
+            setattr(doc, field, value)
+    
+    # Update status if inspection is complete
+    if data.get("status") == "Planning":
+        doc.status = "Planning"
+    elif data.get("status") == "In Progress":
+        doc.status = "In Progress"
+    
+    # Handle child tables if provided - with error handling
+    if "inspection_items" in data:
+        try:
+            if hasattr(doc, "inspection_items"):
+                doc.inspection_items = []
+                for item in data["inspection_items"]:
+                    doc.append("inspection_items", item)
+        except Exception as e:
+            frappe.log_error(f"Error updating inspection_items: {str(e)}")
+    
+    if "service_tasks" in data:
+        try:
+            if hasattr(doc, "service_tasks"):
+                doc.service_tasks = []
+                for task in data["service_tasks"]:
+                    doc.append("service_tasks", task)
+        except Exception as e:
+            frappe.log_error(f"Error updating service_tasks: {str(e)}")
+    
+    if "required_parts" in data:
+        try:
+            if hasattr(doc, "required_parts"):
+                doc.required_parts = []
+                for part in data["required_parts"]:
+                    doc.append("required_parts", part)
+        except Exception as e:
+            frappe.log_error(f"Error updating required_parts: {str(e)}")
+    
+    if "payment_schedule" in data:
+        try:
+            if hasattr(doc, "payment_schedule"):
+                doc.payment_schedule = []
+                for payment in data["payment_schedule"]:
+                    doc.append("payment_schedule", payment)
+        except Exception as e:
+            frappe.log_error(f"Error updating payment_schedule: {str(e)}")
+    
+    # Save document
+    _save_doc(doc)
+    
+    return {
+        "name": doc.name,
+        "status": doc.status,
+        "message": _("Inspection data berhasil disimpan.")
+    }
+
+
+@frappe.whitelist()
+def move_to_in_progress(order_id: str) -> Dict[str, Any]:
+    """Move service order from Planning to In Progress."""
+    
+    _require_login()
+    
+    if not order_id:
+        frappe.throw(_("Service Order ID diperlukan."))
+    
+    doc = _get_doc("Garage Service Order", order_id)
+    
+    # Validate current status
+    if doc.status not in ["Planning", "Pending Inspection", "Draft"]:
+        frappe.throw(_("Service order harus dalam status Planning untuk dipindah ke In Progress."))
+    
+    # Update status
+    doc.status = "In Progress"
+    if hasattr(doc, "job_card_status"):
+        doc.job_card_status = "In Progress"
+    
+    _save_doc(doc)
+    
+    return {
+        "name": doc.name,
+        "status": doc.status,
+        "message": _("Service order berhasil dipindah ke In Progress.")
+    }
+
+
+@frappe.whitelist()
+def complete_service_order(order_id: str, completion_data: Optional[Any] = None) -> Dict[str, Any]:
+    """Mark service order as completed."""
+    
+    _require_login()
+    
+    if not order_id:
+        frappe.throw(_("Service Order ID diperlukan."))
+    
+    data = _ensure_dict(completion_data or {})
+    
+    doc = _get_doc("Garage Service Order", order_id)
+    
+    # Validate current status
+    if doc.status not in ["In Progress", "Quality Check"]:
+        frappe.throw(_("Service order harus dalam status In Progress atau Quality Check untuk diselesaikan."))
+    
+    # Update status
+    doc.status = "Completed"
+    if hasattr(doc, "job_card_status"):
+        doc.job_card_status = "Completed"
+    if hasattr(doc, "qc_status"):
+        doc.qc_status = "Passed"
+    
+    doc.actual_delivery_date = data.get("actual_delivery_date") or nowdate()
+    
+    # Update approved amount if provided
+    if data.get("total_approved_amount"):
+        doc.total_approved_amount = data.get("total_approved_amount")
+        if hasattr(doc, "approval_date"):
+            doc.approval_date = nowdate()
+    
+    # Add completion notes if provided
+    if data.get("completion_notes"):
+        if doc.service_notes:
+            doc.service_notes += f"\n\n[Completion] {data.get('completion_notes')}"
+        else:
+            doc.service_notes = data.get("completion_notes")
+    
+    _save_doc(doc)
+    
+    return {
+        "name": doc.name,
+        "status": doc.status,
+        "message": _("Service order berhasil diselesaikan.")
+    }
+
+
+@frappe.whitelist()
+def get_service_statistics() -> Dict[str, Any]:
+    """Get service order statistics for dashboard."""
+    
+    _require_login()
+    
+    # Count by status
+    status_counts = {}
+    statuses = ["Draft", "Pending Inspection", "Planning", "In Progress", "Quality Check", "Completed", "Cancelled"]
+    
+    for status in statuses:
+        try:
+            count = frappe.db.count("Garage Service Order", {"status": status})
+            status_counts[status] = count
+        except Exception:
+            status_counts[status] = 0
+    
+    # Aggregate counts for workflow stages
+    inspection_count = (
+        status_counts.get("Draft", 0) +
+        status_counts.get("Pending Inspection", 0) +
+        status_counts.get("Planning", 0)
+    )
+    
+    progress_count = (
+        status_counts.get("In Progress", 0) +
+        status_counts.get("Quality Check", 0)
+    )
+    
+    completed_count = status_counts.get("Completed", 0)
+    
+    # Get today's orders
+    try:
+        today_orders = frappe.db.count(
+            "Garage Service Order",
+            {"creation": [">=", nowdate()]}
+        )
+    except Exception:
+        today_orders = 0
+    
+    # Get orders needing attention (overdue)
+    try:
+        overdue_orders = frappe.db.count(
+            "Garage Service Order",
+            {
+                "status": ["in", ["In Progress", "Planning"]],
+                "estimated_delivery_date": ["<", nowdate()]
+            }
+        )
+    except Exception:
+        overdue_orders = 0
+    
+    return {
+        "status_counts": status_counts,
+        "workflow_counts": {
+            "inspection": inspection_count,
+            "progress": progress_count,
+            "completed": completed_count
+        },
+        "today_orders": today_orders,
+        "overdue_orders": overdue_orders
+    }
+
 
 @frappe.whitelist()
 def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> Dict[str, Any]:

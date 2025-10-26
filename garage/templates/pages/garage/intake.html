@@ -1319,4 +1319,376 @@ button:disabled {
 <script>
     frappe.require("/assets/garage/js/garage_portal.js");
 </script>
+<script>
+/**
+ * Auto-fill Customer Data from License Plate
+ * Fitur untuk mengisi otomatis data customer dan kendaraan berdasarkan nomor polisi
+ */
+
+(function() {
+    'use strict';
+
+    // Debounce function untuk menghindari terlalu banyak request
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Fungsi untuk mencari data berdasarkan nomor polisi
+    async function searchByLicensePlate(licensePlate) {
+        if (!licensePlate || licensePlate.trim().length < 3) {
+            return null;
+        }
+
+        try {
+            const response = await frappe.call({
+                method: 'garage.api.portal.lookup_customer',
+                args: {
+                    identifier: licensePlate.trim()
+                },
+                freeze: false // Tidak freeze UI agar lebih smooth
+            });
+
+            return response.message;
+        } catch (error) {
+            console.error('Error fetching customer data:', error);
+            return null;
+        }
+    }
+
+    // Fungsi untuk mengisi data customer
+    function fillCustomerData(customerData) {
+        if (!customerData || !customerData.customer) {
+            return;
+        }
+
+        const customer = customerData.customer;
+        
+        // Isi data customer
+        if (customer.name) {
+            const existingCustomerSelect = document.getElementById('existing_customer');
+            if (existingCustomerSelect) {
+                // Tambahkan option jika belum ada
+                let optionExists = false;
+                for (let option of existingCustomerSelect.options) {
+                    if (option.value === customer.name) {
+                        optionExists = true;
+                        break;
+                    }
+                }
+                
+                if (!optionExists) {
+                    const option = document.createElement('option');
+                    option.value = customer.name;
+                    option.text = customer.customer_name || customer.name;
+                    existingCustomerSelect.add(option);
+                }
+                
+                existingCustomerSelect.value = customer.name;
+                
+                // Trigger change event
+                existingCustomerSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+
+        if (customer.customer_name) {
+            setFieldValue('customer_name', customer.customer_name);
+        }
+
+        if (customer.customer_type) {
+            setFieldValue('customer_type', customer.customer_type);
+        }
+
+        if (customer.phone) {
+            setFieldValue('phone', customer.phone);
+        }
+
+        if (customer.email) {
+            setFieldValue('email', customer.email);
+        }
+
+        if (customer.preferred_contact_method) {
+            setFieldValue('preferred_contact_method', customer.preferred_contact_method);
+        }
+
+        if (customer.is_vip !== undefined) {
+            setFieldValue('is_vip', customer.is_vip ? '1' : '0');
+        }
+
+        if (customer.marketing_source) {
+            setFieldValue('marketing_source', customer.marketing_source);
+        }
+
+        // Tampilkan notifikasi sukses
+        showNotification('Data customer ditemukan dan telah diisi otomatis! ✅', 'success');
+    }
+
+    // Fungsi untuk mengisi data kendaraan
+    function fillVehicleData(customerData) {
+        if (!customerData || !customerData.vehicles || customerData.vehicles.length === 0) {
+            return;
+        }
+
+        // Ambil kendaraan pertama yang cocok dengan nomor polisi
+        const licensePlateInput = document.getElementById('license_plate');
+        const searchPlate = licensePlateInput ? licensePlateInput.value.trim().toUpperCase() : '';
+        
+        let vehicle = null;
+        
+        // Cari kendaraan yang cocok dengan nomor polisi yang diinput
+        if (searchPlate) {
+            vehicle = customerData.vehicles.find(v => 
+                v.license_plate && v.license_plate.toUpperCase() === searchPlate
+            );
+        }
+        
+        // Jika tidak ditemukan, ambil kendaraan terbaru
+        if (!vehicle && customerData.vehicles.length > 0) {
+            vehicle = customerData.vehicles[0];
+        }
+
+        if (!vehicle) {
+            return;
+        }
+
+        // Isi data kendaraan
+        if (vehicle.brand) {
+            setFieldValue('brand', vehicle.brand);
+        }
+
+        if (vehicle.model) {
+            setFieldValue('model', vehicle.model);
+        }
+
+        if (vehicle.vehicle_year) {
+            setFieldValue('vehicle_year', vehicle.vehicle_year);
+        }
+
+        if (vehicle.color) {
+            setFieldValue('color', vehicle.color);
+        }
+
+        if (vehicle.transmission) {
+            setFieldValue('transmission', vehicle.transmission);
+        }
+
+        if (vehicle.fuel_type) {
+            setFieldValue('fuel_type', vehicle.fuel_type);
+        }
+
+        if (vehicle.mileage) {
+            setFieldValue('mileage', vehicle.mileage);
+        }
+    }
+
+    // Helper function untuk set nilai field
+    function setFieldValue(fieldId, value) {
+        const field = document.getElementById(fieldId);
+        if (field && value) {
+            field.value = value;
+            
+            // Trigger change event
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            // Tambahkan visual indicator bahwa field telah diisi otomatis
+            field.classList.add('auto-filled');
+            setTimeout(() => {
+                field.classList.remove('auto-filled');
+            }, 2000);
+        }
+    }
+
+    // Fungsi untuk menampilkan notifikasi
+    function showNotification(message, type = 'info') {
+        // Cek apakah ada frappe.show_alert
+        if (typeof frappe !== 'undefined' && frappe.show_alert) {
+            frappe.show_alert({
+                message: message,
+                indicator: type
+            });
+        } else {
+            // Fallback: buat notifikasi sederhana
+            const notification = document.createElement('div');
+            notification.className = `custom-notification notification-${type}`;
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#00C853' : '#0066FF'};
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                z-index: 10000;
+                animation: slideIn 0.3s ease-out;
+                font-weight: 500;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 3000);
+        }
+    }
+
+    // Fungsi untuk menampilkan loading indicator
+    function showLoadingIndicator(show) {
+        const licensePlateField = document.getElementById('license_plate');
+        if (!licensePlateField) return;
+
+        const wrapper = licensePlateField.parentElement;
+        let indicator = wrapper.querySelector('.loading-indicator');
+
+        if (show) {
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.className = 'loading-indicator';
+                indicator.innerHTML = '🔍 Mencari data...';
+                indicator.style.cssText = `
+                    position: absolute;
+                    right: 12px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    font-size: 12px;
+                    color: #0066FF;
+                    font-weight: 500;
+                    pointer-events: none;
+                `;
+                wrapper.style.position = 'relative';
+                wrapper.appendChild(indicator);
+            }
+        } else {
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+    }
+
+    // Handler untuk event input pada license plate
+    const handleLicensePlateInput = debounce(async function(event) {
+        const licensePlate = event.target.value;
+        
+        if (!licensePlate || licensePlate.trim().length < 3) {
+            return;
+        }
+
+        showLoadingIndicator(true);
+
+        try {
+            const data = await searchByLicensePlate(licensePlate);
+            
+            if (data && data.customer) {
+                fillCustomerData(data);
+                fillVehicleData(data);
+            } else {
+                showNotification('Nomor polisi tidak ditemukan. Anda dapat mengisi data baru.', 'info');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        } finally {
+            showLoadingIndicator(false);
+        }
+    }, 800); // Tunggu 800ms setelah user berhenti mengetik
+
+    // Inisialisasi
+    function init() {
+        // Tunggu hingga DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+            return;
+        }
+
+        // Tambahkan CSS untuk animasi dan styling
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+
+            @keyframes pulseGreen {
+                0%, 100% {
+                    box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.4);
+                }
+                50% {
+                    box-shadow: 0 0 0 8px rgba(0, 200, 83, 0);
+                }
+            }
+
+            .auto-filled {
+                animation: pulseGreen 1s ease-out;
+                border-color: #00C853 !important;
+            }
+
+            .loading-indicator {
+                animation: pulse 1.5s ease-in-out infinite;
+            }
+
+            @keyframes pulse {
+                0%, 100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.5;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Attach event listener ke license plate field
+        const licensePlateField = document.getElementById('license_plate');
+        if (licensePlateField) {
+            licensePlateField.addEventListener('input', handleLicensePlateInput);
+            
+            // Tambahkan hint text
+            const hint = licensePlateField.parentElement.querySelector('.form-hint');
+            if (hint) {
+                hint.innerHTML += ' <strong style="color: #0066FF;">💡 Ketik nomor polisi untuk auto-fill data customer!</strong>';
+            }
+        } else {
+            console.warn('License plate field not found');
+        }
+    }
+
+    // Jalankan inisialisasi
+    init();
+
+    // Export untuk debugging
+    window.GarageAutoFill = {
+        searchByLicensePlate,
+        fillCustomerData,
+        fillVehicleData
+    };
+
+})();
+</script>
 {% endblock %}
