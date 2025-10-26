@@ -794,6 +794,75 @@ def portal_bootstrap() -> Dict[str, Any]:
 
 
 @frappe.whitelist()
+def fetch_license_plate_catalog(limit: int = 200) -> List[Dict[str, Any]]:
+    """Return vehicle/customer pairs for populating the intake license plate selector."""
+
+    _require_login()
+
+    requested_limit = cint(limit)
+    page_length = requested_limit if requested_limit > 0 else 200
+
+    vehicle_fields = [
+        "name",
+        "customer",
+        "license_plate",
+        "brand",
+        "model",
+        "vehicle_year",
+        "color",
+        "transmission",
+        "fuel_type",
+        "mileage",
+        "last_service_date",
+    ]
+    if frappe.db.has_column("Garage Vehicle", "last_service_logged_at"):
+        vehicle_fields.append("last_service_logged_at")
+
+    vehicles = _list_dicts("Garage Vehicle", vehicle_fields, limit=page_length)
+    if not vehicles:
+        return []
+
+    customer_names = {
+        vehicle.get("customer")
+        for vehicle in vehicles
+        if vehicle and vehicle.get("customer")
+    }
+
+    customer_docs: Dict[str, Dict[str, Any]] = {}
+    if customer_names:
+        customer_fields = [
+            "name",
+            "customer_name",
+            "customer_type",
+            "phone",
+            "email",
+            "preferred_contact_method",
+            "marketing_source",
+            "is_vip",
+        ]
+        customer_docs = {
+            row["name"]: row
+            for row in _list_dicts(
+                "Garage Customer",
+                customer_fields,
+                filters=[["name", "in", list(customer_names)]],
+                limit=len(customer_names),
+            )
+            if row.get("name")
+        }
+
+    catalog: List[Dict[str, Any]] = []
+    for vehicle in vehicles:
+        entry: Dict[str, Any] = {"vehicle": vehicle}
+        customer_name = vehicle.get("customer")
+        if customer_name and customer_name in customer_docs:
+            entry["customer"] = customer_docs[customer_name]
+        catalog.append(entry)
+
+    return catalog
+
+
+@frappe.whitelist()
 def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, Any]:
     """Look up a single vehicle (and its customer) by license plate."""
 
