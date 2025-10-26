@@ -44,6 +44,7 @@
 
             this.datalists = {
                 existingCustomer: document.getElementById('existing_customer_options'),
+                licensePlates: document.getElementById('license_plate_options'),
             };
 
             this.selects = {
@@ -351,7 +352,7 @@
                 return;
             }
             const customer = this.customerIndex.get(value);
-            if (customer) {
+            if (customer && !this.isCustomerProfileIncomplete(customer)) {
                 this.prefillCustomerFields(customer);
                 this.updateCustomerSearchInput(customer);
             }
