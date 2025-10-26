@@ -90,11 +90,11 @@ body {
 }
 
 .inspection-modal.active {
-    display: block;
+    display: flex;
 }
 
 .modal-backdrop {
-    position: fixed;
+    position: absolute;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
     animation: fadeIn 0.2s ease;
@@ -103,9 +103,9 @@ body {
 
 .modal-dialog {
     position: relative;
-    width: 90%;
+    width: 100%;
     max-width: 1000px;
-    margin: 40px auto;
+    margin: 0 auto;
     background: white;
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
