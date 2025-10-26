@@ -453,57 +453,102 @@ body {
 {% block script %}
 <script>
 (function() {
-    'use strict';
-
-    function getCSRFToken() {
+    function getCSRFTokenFromCookie() {
         const match = document.cookie.match(/(?:^|; )csrf_token=([^;]+)/);
         return match ? decodeURIComponent(match[1]) : null;
     }
 
-    const csrfToken = typeof frappe !== 'undefined' && frappe.csrf_token ? frappe.csrf_token : getCSRFToken();
+    function resolveCSRFToken() {
+        if (typeof frappe !== 'undefined') {
+            if (frappe.csrf_token) {
+                return frappe.csrf_token;
+            }
 
-    // Get order ID from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const orderId = urlParams.get('order_id');
+            if (frappe.boot && frappe.boot.csrf_token) {
+                frappe.csrf_token = frappe.boot.csrf_token;
+                return frappe.csrf_token;
+            }
+        }
 
-    if (!orderId) {
-        frappe.show_alert({
-            message: '❌ Order ID tidak ditemukan!',
-            indicator: 'red'
-        }, 5);
-        setTimeout(() => window.location.href = '/garage/service', 2000);
-        return;
+        if (typeof window !== 'undefined' && window.csrf_token) {
+            if (typeof frappe !== 'undefined' && !frappe.csrf_token) {
+                frappe.csrf_token = window.csrf_token;
+            }
+            return window.csrf_token;
+        }
+
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta && meta.content) {
+            if (typeof frappe !== 'undefined' && !frappe.csrf_token) {
+                frappe.csrf_token = meta.content;
+            }
+            return meta.content;
+        }
+
+        const cookieToken = getCSRFTokenFromCookie();
+        if (cookieToken && typeof frappe !== 'undefined' && !frappe.csrf_token) {
+            frappe.csrf_token = cookieToken;
+        }
+        return cookieToken;
     }
 
-    
+    function withCSRF(options = {}) {
+        const token = resolveCSRFToken();
 
-    let serviceTasks = [];
-    let requiredParts = [];
-    let paymentSchedule = [];
+        if (!token) {
+            return options;
+        }
 
-    // Load order data
-    async function loadOrderData() {
-        try {
-            const response = await frappe.call({
-                method: 'garage.api.portal.get_service_order_details',
-                args: { order_id: orderId },
-                type: 'POST',
-                headers: csrfToken ? {
-                    'X-Frappe-CSRF-Token': csrfToken
-                } : undefined
-            });
+        return Object.assign({}, options, {
+            args: Object.assign({}, options.args, { csrf_token: token }),
+            headers: Object.assign({}, options.headers, {
+                'X-Frappe-CSRF-Token': token
+            })
+        });
+    }
 
-            if (response.message) {
-                populateOrderInfo(response.message);
-            }
-        } catch (error) {
-            console.error('Error:', error);
+    function boot() {
+        'use strict';
+
+        // Get order ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('order_id');
+
+        if (!orderId) {
             frappe.show_alert({
-                message: '❌ Gagal load data order',
+                message: '❌ Order ID tidak ditemukan!',
                 indicator: 'red'
             }, 5);
+            setTimeout(() => window.location.href = '/garage/service', 2000);
+            return;
         }
-    }
+
+
+
+        let serviceTasks = [];
+        let requiredParts = [];
+        let paymentSchedule = [];
+
+        // Load order data
+        async function loadOrderData() {
+            try {
+                const response = await frappe.call(withCSRF({
+                    method: 'garage.api.portal.get_service_order_details',
+                    args: { order_id: orderId },
+                    type: 'POST'
+                }));
+
+                if (response.message) {
+                    populateOrderInfo(response.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                frappe.show_alert({
+                    message: '❌ Gagal load data order',
+                    indicator: 'red'
+                }, 5);
+            }
+        }
 
     function populateOrderInfo(order) {
         document.getElementById('display_order_id').textContent = order.name || '-';
@@ -651,61 +696,65 @@ body {
         `).join('');
     }
 
-    // Submit
-    window.submitInspection = async function() {
-        const form = document.getElementById('inspectionForm');
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            return;
-        }
+        // Submit
+        window.submitInspection = async function() {
+            const form = document.getElementById('inspectionForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
 
-        if (serviceTasks.length === 0) {
-            frappe.show_alert({ message: '⚠️ Minimal harus ada 1 pekerjaan!', indicator: 'orange' }, 5);
-            return;
-        }
+            if (serviceTasks.length === 0) {
+                frappe.show_alert({ message: '⚠️ Minimal harus ada 1 pekerjaan!', indicator: 'orange' }, 5);
+                return;
+            }
 
-        const data = {
-            order_id: orderId,
-            service_order_type: document.getElementById('service_order_type').value,
-            order_category: document.getElementById('order_category').value,
-            priority: document.getElementById('priority').value,
-            estimated_delivery_date: document.getElementById('estimated_delivery_date').value,
-            total_estimated_amount: parseFloat(document.getElementById('total_estimated_amount').value),
-            inspection_summary: document.getElementById('inspection_summary').value,
-            service_notes: document.getElementById('service_notes').value,
-            service_tasks: serviceTasks,
-            required_parts: requiredParts,
-            payment_schedule: paymentSchedule,
-            status: 'In Progress'
+            const data = {
+                order_id: orderId,
+                service_order_type: document.getElementById('service_order_type').value,
+                order_category: document.getElementById('order_category').value,
+                priority: document.getElementById('priority').value,
+                estimated_delivery_date: document.getElementById('estimated_delivery_date').value,
+                total_estimated_amount: parseFloat(document.getElementById('total_estimated_amount').value),
+                inspection_summary: document.getElementById('inspection_summary').value,
+                service_notes: document.getElementById('service_notes').value,
+                service_tasks: serviceTasks,
+                required_parts: requiredParts,
+                payment_schedule: paymentSchedule,
+                status: 'In Progress'
+            };
+
+            try {
+                await frappe.call(withCSRF({
+                    method: 'garage.api.portal.update_service_order_inspection',
+                    args: { order_id: orderId, inspection_data: data },
+                    type: 'POST'
+                }));
+
+                frappe.show_alert({ message: '✅ Inspeksi berhasil!', indicator: 'green' }, 3);
+                setTimeout(() => window.location.href = '/garage/service', 1000);
+            } catch (error) {
+                console.error('Error:', error);
+                frappe.show_alert({ message: '❌ Error: ' + (error.message || 'Gagal menyimpan'), indicator: 'red' }, 5);
+            }
         };
 
-        try {
-            await frappe.call({
-                method: 'garage.api.portal.update_service_order_inspection',
-                args: Object.assign({ order_id: orderId, inspection_data: data }, csrfToken ? { csrf_token: csrfToken } : {}),
-                type: 'POST',
-                headers: csrfToken ? {
-                    'X-Frappe-CSRF-Token': csrfToken
-                } : undefined
-            });
+        // Initialize
+        loadOrderData();
 
-            frappe.show_alert({ message: '✅ Inspeksi berhasil!', indicator: 'green' }, 3);
-            setTimeout(() => window.location.href = '/garage/service', 1000);
-        } catch (error) {
-            console.error('Error:', error);
-            frappe.show_alert({ message: '❌ Error: ' + (error.message || 'Gagal menyimpan'), indicator: 'red' }, 5);
-        }
-    };
+        // Set default date (+3 days)
+        const defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 3);
+        document.getElementById('estimated_delivery_date').value = defaultDate.toISOString().split('T')[0];
 
-    // Initialize
-    loadOrderData();
+        console.log('✅ Inspection page loaded!');
+    }
 
-    // Set default date (+3 days)
-    const defaultDate = new Date();
-    defaultDate.setDate(defaultDate.getDate() + 3);
-    document.getElementById('estimated_delivery_date').value = defaultDate.toISOString().split('T')[0];
-
-    console.log('✅ Inspection page loaded!');
+    if (typeof frappe !== 'undefined' && typeof frappe.ready === 'function') {
+        frappe.ready(boot);
+    } else {
+        document.addEventListener('DOMContentLoaded', boot);
+    }
 })();
 </script>
 {% endblock %}
