@@ -614,13 +614,14 @@ def _update_document(doctype: str, name: str, data: Mapping[str, Any]) -> frappe
 def _list_dicts(doctype: str, fields: Iterable[str], *, filters: Optional[Any] = None, limit: int = DEFAULT_LIMIT) -> List[Dict[str, Any]]:
     try:
         with _ignoring_permissions():
-            rows = frappe.get_all(
+            rows = frappe.db.get_all(
                 doctype,
                 fields=list(fields),
                 filters=filters or [],
                 order_by="modified desc",
-                limit_page_length=limit,
+                limit=limit,
                 ignore_permissions=True,
+                ignore_user_permissions=True,
             )
     except Exception:
         return []
@@ -636,6 +637,7 @@ def _group_status(doctype: str) -> Dict[str, int]:
                 group_by="status",
                 order_by="total desc",
                 ignore_permissions=True,
+                ignore_user_permissions=True,
             )
     except Exception:
         return {}
@@ -650,6 +652,7 @@ def _sum_field(doctype: str, field: str, filters: Optional[Any] = None) -> float
                 filters=filters or [],
                 fields=[f"sum({field}) as total"],
                 ignore_permissions=True,
+                ignore_user_permissions=True,
             )
     except Exception:
         return 0.0
