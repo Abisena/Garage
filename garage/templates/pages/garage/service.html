@@ -933,14 +933,25 @@ body {
     color: #E65100;
 }
 
+
 .status-badge.inspection {
     background: var(--status-pending-light);
     color: #F57C00;
 }
 
-.status-badge.planning {
+.status-badge.estimate {
     background: #E8EAF6;
     color: #3F51B5;
+}
+
+.status-badge.awaiting-approval {
+    background: #FFF0F6;
+    color: #AD1457;
+}
+
+.status-badge.approved {
+    background: #E3F2FD;
+    color: #1565C0;
 }
 
 .status-badge.in-progress {
@@ -948,7 +959,7 @@ body {
     color: #1565C0;
 }
 
-.status-badge.qc {
+.status-badge.awaiting-qc {
     background: #F3E5F5;
     color: #7B1FA2;
 }
@@ -1421,11 +1432,17 @@ body {
     // Get status badge HTML
     function getStatusBadge(status) {
         const statusMap = {
-            'Draft': { class: 'new', label: 'New' },
+            'Draft': { class: 'new', label: 'Draft' },
+            'Inspection': { class: 'inspection', label: 'Inspection' },
             'Pending Inspection': { class: 'inspection', label: 'Inspection' },
-            'Planning': { class: 'planning', label: 'Planning' },
+            'Estimate': { class: 'estimate', label: 'Estimate' },
+            'Planning': { class: 'estimate', label: 'Planning' },
+            'Awaiting Approval': { class: 'awaiting-approval', label: 'Awaiting Approval' },
+            'Approved': { class: 'approved', label: 'Approved' },
+            'Work In Progress': { class: 'in-progress', label: 'Work In Progress' },
             'In Progress': { class: 'in-progress', label: 'In Progress' },
-            'Quality Check': { class: 'qc', label: 'QC' },
+            'Awaiting QC': { class: 'awaiting-qc', label: 'Awaiting QC' },
+            'Quality Check': { class: 'awaiting-qc', label: 'Quality Check' },
             'Completed': { class: 'completed', label: 'Completed' },
             'Cancelled': { class: 'cancelled', label: 'Cancelled' }
         };
@@ -1643,16 +1660,19 @@ body {
 
             // Categorize orders based on status
             const allOrders = data.orders || [];
-            
-            const inspection = allOrders.filter(o => 
-                ['Draft', 'Pending Inspection', 'Planning'].includes(o.status)
+
+            const inspectionStageStatuses = ['Draft', 'Inspection', 'Estimate', 'Awaiting Approval', 'Approved', 'Pending Inspection', 'Planning'];
+            const progressStageStatuses = ['Work In Progress', 'Awaiting QC', 'In Progress', 'Quality Check'];
+
+            const inspection = allOrders.filter(o =>
+                inspectionStageStatuses.includes(o.status)
             );
-            
-            const progress = allOrders.filter(o => 
-                ['In Progress', 'Quality Check'].includes(o.status)
+
+            const progress = allOrders.filter(o =>
+                progressStageStatuses.includes(o.status)
             );
-            
-            const completed = allOrders.filter(o => 
+
+            const completed = allOrders.filter(o =>
                 o.status === 'Completed'
             );
 
