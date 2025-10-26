@@ -341,11 +341,11 @@
                 return;
             }
             const customer = this.customerIndex.get(value);
-            if (customer) {
+            if (customer && !this.isCustomerProfileIncomplete(customer)) {
                 this.prefillCustomerFields(customer);
                 this.updateCustomerSearchInput(customer);
             } else {
-                this.updateCustomerSearchInput(null);
+                this.fetchCustomerDetailsByName(value);
             }
             if (this.selects.vehicleCustomer) {
                 this.setSelectValue(this.selects.vehicleCustomer, value);
@@ -572,6 +572,55 @@
             if (updateSelect) {
                 this.ensureCustomerOptions(customer.name, customer.customer_name || customer.name);
             }
+        }
+
+        isCustomerProfileIncomplete(customer) {
+            if (!customer) {
+                return true;
+            }
+            const requiredKeys = [
+                'customer_name',
+                'customer_type',
+                'phone',
+                'email',
+                'preferred_contact_method',
+                'marketing_source',
+                'is_vip',
+            ];
+            return requiredKeys.some((key) => !(key in customer));
+        }
+
+        fetchCustomerDetailsByName(name) {
+            if (!name) {
+                this.updateCustomerSearchInput(null);
+                return;
+            }
+            if (!window.frappe || !frappe.call) {
+                this.updateCustomerSearchInput(null);
+                this.notifyCustomerNotFound();
+                return;
+            }
+            frappe.call({
+                method: 'garage.api.portal.lookup_customer',
+                args: { name },
+                callback: (response) => {
+                    const data = response?.message || {};
+                    const customer = data.customer;
+                    if (!customer) {
+                        this.notifyCustomerNotFound();
+                        return;
+                    }
+                    this.registerCustomerData(customer);
+                    if (Array.isArray(data.vehicles)) {
+                        data.vehicles.forEach((vehicle) => this.registerVehicleData(vehicle));
+                    }
+                    this.prefillCustomerFields(customer);
+                    this.updateCustomerSearchInput(customer);
+                },
+                error: () => {
+                    this.notifyCustomerNotFound();
+                },
+            });
         }
 
         rebuildCustomerSearch(customers) {
