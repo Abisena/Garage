@@ -2276,34 +2276,35 @@ body {
         const modalDialog = inspectionModal.querySelector('.modal-dialog');
         const modalBackdrop = inspectionModal.querySelector('.modal-backdrop');
 
-        // Close only when user clicks explicit backdrop or outside area
-        const shouldCloseModal = (event) => {
-            const clickedBackdrop = modalBackdrop && event.target === modalBackdrop;
-            const clickedOutside = event.target === inspectionModal;
-            const clickedInsideDialog = modalDialog?.contains(event.target);
-
-            return !clickedInsideDialog && (clickedBackdrop || clickedOutside);
-        };
-
-        inspectionModal.addEventListener('click', (event) => {
-            if (shouldCloseModal(event)) {
-                closeInspectionModal();
-            }
-        });
-
-        if (modalBackdrop) {
-            modalBackdrop.addEventListener('click', () => {
-                closeInspectionModal();
-            });
-        }
-
+        // Always keep interactions inside the dialog from bubbling to the container
         if (modalDialog) {
-            ['click', 'mousedown', 'touchstart'].forEach((evtName) => {
+            ['click', 'mousedown', 'touchstart', 'touchmove'].forEach((evtName) => {
                 modalDialog.addEventListener(evtName, (event) => {
                     event.stopPropagation();
                 });
             });
         }
+
+        // Close only when the dedicated backdrop area is clicked
+        if (modalBackdrop) {
+            modalBackdrop.addEventListener('click', (event) => {
+                event.stopPropagation();
+                closeInspectionModal();
+            });
+        }
+
+        // Prevent clicks on the overall modal container from force-closing the dialog
+        inspectionModal.addEventListener('click', (event) => {
+            const clickedBackdrop = modalBackdrop && event.target === modalBackdrop;
+            if (clickedBackdrop) {
+                return; // already handled above
+            }
+
+            const clickedInsideDialog = modalDialog?.contains(event.target);
+            if (!clickedInsideDialog) {
+                event.stopPropagation();
+            }
+        }, true);
     }
 
     // Close modal with Escape key
