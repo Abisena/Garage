@@ -2276,35 +2276,35 @@ body {
         const modalDialog = inspectionModal.querySelector('.modal-dialog');
         const modalBackdrop = inspectionModal.querySelector('.modal-backdrop');
 
-        const clickIsInsideDialog = (event) => {
-            if (!modalDialog) {
-                return false;
-            }
-
-            if (typeof event.composedPath === 'function') {
-                return event.composedPath().includes(modalDialog);
-            }
-
-            return modalDialog.contains(event.target);
-        };
-
-        inspectionModal.addEventListener('click', function(event) {
-            if (clickIsInsideDialog(event)) {
-                return;
-            }
-
-            if (event.target === inspectionModal || event.target === modalBackdrop) {
-                closeInspectionModal();
-            }
-        });
-
+        // Always keep interactions inside the dialog from bubbling to the container
         if (modalDialog) {
-            ['click', 'mousedown', 'touchstart'].forEach((evtName) => {
-                modalDialog.addEventListener(evtName, function(event) {
+            ['click', 'mousedown', 'touchstart', 'touchmove'].forEach((evtName) => {
+                modalDialog.addEventListener(evtName, (event) => {
                     event.stopPropagation();
                 });
             });
         }
+
+        // Close only when the dedicated backdrop area is clicked
+        if (modalBackdrop) {
+            modalBackdrop.addEventListener('click', (event) => {
+                event.stopPropagation();
+                closeInspectionModal();
+            });
+        }
+
+        // Prevent clicks on the overall modal container from force-closing the dialog
+        inspectionModal.addEventListener('click', (event) => {
+            const clickedBackdrop = modalBackdrop && event.target === modalBackdrop;
+            if (clickedBackdrop) {
+                return; // already handled above
+            }
+
+            const clickedInsideDialog = modalDialog?.contains(event.target);
+            if (!clickedInsideDialog) {
+                event.stopPropagation();
+            }
+        }, true);
     }
 
     // Close modal with Escape key
