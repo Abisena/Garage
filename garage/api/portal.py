@@ -224,6 +224,41 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "notes",
         },
     },
+    "Garage Spare Part": {
+        "fields": {
+            "part_code",
+            "part_name",
+            "category",
+            "brand",
+            "uom",
+            "unit_price",
+            "stock_qty",
+            "reserved_qty",
+            "reorder_level",
+            "warehouse_location",
+            "managed_by",
+            "status",
+            "last_restocked_on",
+            "image",
+            "notes",
+        },
+        "update_fields": {
+            "part_name",
+            "category",
+            "brand",
+            "uom",
+            "unit_price",
+            "stock_qty",
+            "reserved_qty",
+            "reorder_level",
+            "warehouse_location",
+            "managed_by",
+            "status",
+            "last_restocked_on",
+            "image",
+            "notes",
+        },
+    },
     "Garage Procurement Order": {
         "fields": {
             "reference_type",
@@ -735,6 +770,51 @@ def portal_bootstrap() -> Dict[str, Any]:
         ["name", "status", "customer", "order_date", "delivery_date"],
         filters=[["status", "not in", ["Delivered", "Cancelled"]]],
     )
+    spare_parts = _list_dicts(
+        "Garage Spare Part",
+        [
+            "name",
+            "part_code",
+            "part_name",
+            "category",
+            "brand",
+            "uom",
+            "unit_price",
+            "stock_qty",
+            "reserved_qty",
+            "reorder_level",
+            "warehouse_location",
+            "managed_by",
+            "status",
+            "last_restocked_on",
+            "image",
+            "notes",
+        ],
+        limit=200,
+    )
+    spare_part_requests = _list_dicts(
+        "Garage Service Order Part",
+        [
+            "name",
+            "parent",
+            "idx",
+            "item_code",
+            "item_name",
+            "description",
+            "qty",
+            "uom",
+            "rate",
+            "amount",
+            "stock_status",
+            "warehouse",
+            "source",
+        ],
+        filters=[
+            ["parenttype", "=", "Garage Service Order"],
+            ["stock_status", "not in", ["Received", "Issued"]],
+        ],
+        limit=200,
+    )
     procurement_orders = _list_dicts(
         "Garage Procurement Order",
         ["name", "status", "supplier", "order_date", "expected_date", "total_qty", "total_amount"],
@@ -806,6 +886,8 @@ def portal_bootstrap() -> Dict[str, Any]:
         "open_service_orders": open_service_orders,
         "spare_orders": spare_orders,
         "open_spare_orders": open_spare_orders,
+        "spare_parts": spare_parts,
+        "spare_part_requests": spare_part_requests,
         "procurement_orders": procurement_orders,
         "pending_procurement": pending_procurement,
         "stock_movements": stock_movements,
@@ -1176,7 +1258,30 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
             result["payment_schedule"] = [payment.as_dict() for payment in order.payment_schedule]
     except Exception:
         pass
-    
+
+    result["available_spare_parts"] = _list_dicts(
+        "Garage Spare Part",
+        [
+            "name",
+            "part_code",
+            "part_name",
+            "category",
+            "brand",
+            "uom",
+            "unit_price",
+            "stock_qty",
+            "reserved_qty",
+            "reorder_level",
+            "warehouse_location",
+            "managed_by",
+            "status",
+            "last_restocked_on",
+            "image",
+            "notes",
+        ],
+        limit=200,
+    )
+
     return result
 
 
@@ -1629,6 +1734,27 @@ def update_spare_part_order(name: str, updates: Optional[Any] = None) -> Dict[st
     data = _ensure_dict(updates or {})
     doc = _update_document("Garage Spare Part Order", name, data)
     return {"name": doc.name, "status": doc.status}
+
+
+@frappe.whitelist()
+def create_spare_part(part: Optional[Any] = None) -> Dict[str, Any]:
+    _require_login()
+    data = _ensure_dict(part or {})
+    doc = _insert_document("Garage Spare Part", data)
+    return {"name": doc.name, "part_code": getattr(doc, "part_code", doc.name)}
+
+
+@frappe.whitelist()
+def update_spare_part(name: str, updates: Optional[Any] = None) -> Dict[str, Any]:
+    _require_login()
+    data = _ensure_dict(updates or {})
+    doc = _update_document("Garage Spare Part", name, data)
+    return {
+        "name": doc.name,
+        "part_code": getattr(doc, "part_code", doc.name),
+        "stock_qty": getattr(doc, "stock_qty", 0),
+        "unit_price": getattr(doc, "unit_price", 0),
+    }
 
 
 @frappe.whitelist()

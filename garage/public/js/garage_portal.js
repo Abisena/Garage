@@ -13,6 +13,11 @@
             this.lastPrefilledPlate = null;
             this.customerSearchIndex = new Map();
             this.customerNameMap = new Map();
+            this.sparePartIndex = new Map();
+            this.sparePartCatalog = [];
+            this.filteredSpareParts = [];
+            this.currentSparePart = null;
+            this.creatingSparePart = false;
         }
 
         init() {
@@ -33,11 +38,13 @@
                 invoice: document.getElementById('invoice-form'),
                 payment: document.getElementById('payment-form'),
                 receipt: document.getElementById('receipt-form'),
+                sparePartDetail: document.getElementById('spare-detail-form'),
             };
 
             this.inputs = {
                 licensePlate: document.getElementById('license_plate'),
                 existingCustomerSearch: document.getElementById('existing_customer_search'),
+                spareSearch: document.querySelector('[data-role="spare-search"]'),
             };
 
             this.datalists = {
@@ -61,6 +68,8 @@
                 customerVehicles: document.querySelector('[data-role="customer-vehicle-table"]'),
                 openService: document.querySelector('[data-role="open-service-table"]'),
                 spareOrders: document.querySelector('[data-role="spare-table"]'),
+                spareRequests: document.querySelector('[data-role="spare-request-table"]'),
+                spareInventory: document.querySelector('[data-role="spare-inventory-table"]'),
                 pendingProcurement: document.querySelector('[data-role="pending-procurement-table"]'),
                 openInvoices: document.querySelector('[data-role="open-invoice-table"]'),
                 payments: document.querySelector('[data-role="payment-table"]'),
@@ -70,15 +79,33 @@
                 customerVehicles: document.querySelector('[data-empty="customer-vehicle"]'),
                 openService: document.querySelector('[data-empty="open-service"]'),
                 spare: document.querySelector('[data-empty="spare"]'),
+                spareRequests: document.querySelector('[data-empty="spare-requests"]'),
+                spareInventory: document.querySelector('[data-empty="spare-inventory"]'),
                 pendingProcurement: document.querySelector('[data-empty="pending-procurement"]'),
                 openInvoice: document.querySelector('[data-empty="open-invoice"]'),
                 payment: document.querySelector('[data-empty="payment"]'),
+            };
+
+            this.buttons = {
+                createSparePart: document.querySelector('[data-action="create-spare-part"]'),
+            };
+
+            this.spareDetail = {
+                panel: document.querySelector('[data-role="spare-detail-panel"]'),
+                title: document.querySelector('[data-role="spare-detail-title"]'),
+                image: document.querySelector('[data-role="spare-preview"]'),
+                name: document.querySelector('[data-role="spare-preview-name"]'),
+                meta: document.querySelector('[data-role="spare-preview-meta"]'),
+                status: document.querySelector('[data-role="spare-status-badge"]'),
             };
 
             this.metrics = {
                 serviceEstimate: document.querySelector('[data-metric="service-estimate"]'),
                 serviceOpenCount: document.querySelector('[data-metric="service-open-count"]'),
                 qcPending: document.querySelector('[data-metric="qc-pending"]'),
+                spareCount: document.querySelector('[data-metric="spare-count"]'),
+                spareRequestCount: document.querySelector('[data-metric="spare-request-count"]'),
+                spareLowStock: document.querySelector('[data-metric="spare-low-stock"]'),
                 invoiceTotal: document.querySelector('[data-metric="invoice-total"]'),
                 outstandingTotal: document.querySelector('[data-metric="outstanding-total"]'),
                 paymentsTotal: document.querySelector('[data-metric="payments-total"]'),
@@ -199,6 +226,13 @@
                 });
             }
 
+            if (this.forms.sparePartDetail) {
+                this.forms.sparePartDetail.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    this.submitSparePartDetail();
+                });
+            }
+
             if (this.forms.procurement) {
                 this.forms.procurement.addEventListener('submit', (event) => {
                     event.preventDefault();
@@ -294,6 +328,27 @@
                     if (!event.target.value && this.selects.existingCustomer) {
                         this.setSelectValue(this.selects.existingCustomer, '');
                         this.applyExistingCustomerSelection();
+                    }
+                });
+            }
+
+            if (this.inputs.spareSearch) {
+                this.inputs.spareSearch.addEventListener('input', (event) => {
+                    this.applySpareSearch(event.target.value || '');
+                });
+            }
+
+            if (this.buttons.createSparePart) {
+                this.buttons.createSparePart.addEventListener('click', () => {
+                    this.startCreateSparePart();
+                });
+            }
+
+            if (this.tables.spareInventory) {
+                this.tables.spareInventory.addEventListener('click', (event) => {
+                    const row = event.target.closest('tr[data-part-name]');
+                    if (row) {
+                        this.selectSparePart(row.getAttribute('data-part-name'));
                     }
                 });
             }
@@ -1036,14 +1091,659 @@
             });
         }
 
+        updateSpareMetrics() {
+            const totalParts = this.sparePartCatalog ? this.sparePartCatalog.length : 0;
+            const requestTotal = this.asArray(this.state.spare_part_requests).length;
+            const lowStockTotal = (this.sparePartCatalog || []).filter((part) => this.isLowStock(part)).length;
+
+            if (this.metrics.spareCount) {
+                this.metrics.spareCount.textContent = totalParts.toString();
+            }
+            if (this.metrics.spareRequestCount) {
+                this.metrics.spareRequestCount.textContent = requestTotal.toString();
+            }
+            if (this.metrics.spareLowStock) {
+                this.metrics.spareLowStock.textContent = lowStockTotal.toString();
+            }
+        }
+
         renderSpareOrders() {
             const spareOrders = this.asArray(this.state.spare_orders);
-            this.renderTable(this.tables.spareOrders, spareOrders, (row) => [
-                this.renderLink('Garage Spare Part Order', row.name),
-                row.customer || '-',
-                row.status || '-',
-                row.delivery_date || '-',
-            ], this.emptyStates.spare);
+            if (this.tables.spareOrders) {
+                this.renderTable(this.tables.spareOrders, spareOrders, (row) => [
+                    this.renderLink('Garage Spare Part Order', row.name),
+                    row.customer || '-',
+                    row.status || '-',
+                    row.delivery_date || '-',
+                ], this.emptyStates.spare);
+            }
+
+            this.sparePartCatalog = this.asArray(this.state.spare_parts);
+            this.sparePartIndex = new Map();
+            this.sparePartCatalog.forEach((part) => {
+                if (part?.name) {
+                    this.sparePartIndex.set(part.name, part);
+                }
+                if (part?.part_code) {
+                    this.sparePartIndex.set(part.part_code, part);
+                }
+            });
+
+            const serviceOrders = this.asArray(this.state.service_orders);
+            this.renderSpareRequestsTable(serviceOrders);
+
+            this.updateSpareMetrics();
+
+            const searchValue = this.inputs.spareSearch ? this.inputs.spareSearch.value || '' : '';
+            this.applySpareSearch(searchValue, false);
+        }
+
+        renderSpareRequestsTable(serviceOrders) {
+            const table = this.tables.spareRequests;
+            if (!table) {
+                return;
+            }
+
+            const requests = this.asArray(this.state.spare_part_requests);
+            table.innerHTML = '';
+            if (!requests.length) {
+                if (this.emptyStates.spareRequests) {
+                    this.emptyStates.spareRequests.style.display = 'block';
+                }
+                return;
+            }
+            if (this.emptyStates.spareRequests) {
+                this.emptyStates.spareRequests.style.display = 'none';
+            }
+
+            const serviceIndex = new Map(serviceOrders.map((order) => [order.name, order]));
+
+            requests.forEach((request) => {
+                const order = serviceIndex.get(request.parent) || {};
+                const part = this.lookupSparePart(request.item_code) || this.lookupSparePart(request.item_name) || {};
+
+                const tr = document.createElement('tr');
+                tr.className = 'spare-request-row';
+
+                const orderCell = document.createElement('td');
+                orderCell.className = 'spare-request-cell spare-request-cell--order';
+                orderCell.appendChild(this.renderLink('Garage Service Order', request.parent, request.parent || '-'));
+                const orderMeta = document.createElement('div');
+                orderMeta.className = 'table-meta';
+                orderMeta.textContent = order.customer || '-';
+                orderCell.appendChild(orderMeta);
+                tr.appendChild(orderCell);
+
+                const partCell = document.createElement('td');
+                partCell.className = 'spare-request-cell spare-request-cell--part';
+                const nameEl = document.createElement('div');
+                nameEl.className = 'spare-part-name';
+                nameEl.textContent = request.item_name || part.part_name || request.item_code || '-';
+                partCell.appendChild(nameEl);
+                const codeMeta = document.createElement('div');
+                codeMeta.className = 'table-meta';
+                codeMeta.textContent = request.item_code || part.part_code || __('Manual');
+                partCell.appendChild(codeMeta);
+                if (request.description) {
+                    const desc = document.createElement('div');
+                    desc.className = 'table-note';
+                    desc.textContent = request.description;
+                    partCell.appendChild(desc);
+                }
+                tr.appendChild(partCell);
+
+                const qtyCell = document.createElement('td');
+                qtyCell.className = 'spare-request-cell spare-request-cell--qty';
+                const qtyValue = document.createElement('div');
+                qtyValue.className = 'metric-text';
+                const qty = parseFloat(request.qty) || 0;
+                const uom = request.uom || part.uom || '';
+                qtyValue.textContent = `${qty} ${uom}`.trim();
+                qtyCell.appendChild(qtyValue);
+                const stockMeta = document.createElement('div');
+                stockMeta.className = 'table-meta';
+                const available = this.formatStockValue(part.stock_qty);
+                stockMeta.textContent = available ? `${__('Stok')}: ${available}` : __('Stok tidak diketahui');
+                qtyCell.appendChild(stockMeta);
+                tr.appendChild(qtyCell);
+
+                const statusCell = document.createElement('td');
+                statusCell.className = 'spare-request-cell spare-request-cell--status';
+                statusCell.appendChild(this.createStatusBadge(request.stock_status || part.status));
+                const statusMeta = document.createElement('div');
+                statusMeta.className = 'table-meta';
+                const statusParts = [];
+                if (request.source) {
+                    statusParts.push(request.source);
+                }
+                if (request.warehouse || part.warehouse_location) {
+                    statusParts.push(request.warehouse || part.warehouse_location);
+                }
+                if (order.priority) {
+                    statusParts.push(`${__('Prioritas')}: ${order.priority}`);
+                }
+                if (this.isOutOfStock(part)) {
+                    statusParts.push(__('Stok habis'));
+                } else if (this.isLowStock(part)) {
+                    statusParts.push(__('Stok menipis'));
+                }
+                statusMeta.textContent = statusParts.filter(Boolean).join(' • ') || __('-');
+                statusCell.appendChild(statusMeta);
+                tr.appendChild(statusCell);
+
+                const managerCell = document.createElement('td');
+                managerCell.className = 'spare-request-cell spare-request-cell--manager';
+                managerCell.textContent = part.managed_by || __('Belum ditetapkan');
+                tr.appendChild(managerCell);
+
+                table.appendChild(tr);
+            });
+        }
+
+        applySpareSearch(query = '', preserveSelection = true) {
+            const normalized = (query || '').toString().toLowerCase().trim();
+            if (!normalized) {
+                this.filteredSpareParts = [...this.sparePartCatalog];
+            } else {
+                this.filteredSpareParts = this.sparePartCatalog.filter((part) => {
+                    const haystack = [
+                        part.part_code,
+                        part.part_name,
+                        part.category,
+                        part.brand,
+                        part.warehouse_location,
+                        part.managed_by,
+                    ]
+                        .filter(Boolean)
+                        .join(' ')
+                        .toLowerCase();
+                    return haystack.includes(normalized);
+                });
+            }
+
+            this.renderSpareInventoryTable();
+
+            const currentName = this.currentSparePart?.name;
+            const stillVisible = currentName && this.filteredSpareParts.some((part) => part.name === currentName);
+
+            if (!preserveSelection || !stillVisible) {
+                const first = this.filteredSpareParts[0];
+                if (first) {
+                    this.selectSparePart(first.name, { focusForm: false, silent: true });
+                } else {
+                    this.currentSparePart = null;
+                    this.renderSpareDetail(null);
+                    this.highlightSelectedSpare(null);
+                }
+            } else {
+                this.highlightSelectedSpare(currentName);
+            }
+        }
+
+        renderSpareInventoryTable() {
+            const table = this.tables.spareInventory;
+            if (!table) {
+                return;
+            }
+
+            table.innerHTML = '';
+            const parts = this.filteredSpareParts || [];
+            if (!parts.length) {
+                if (this.emptyStates.spareInventory) {
+                    this.emptyStates.spareInventory.style.display = 'block';
+                }
+                return;
+            }
+            if (this.emptyStates.spareInventory) {
+                this.emptyStates.spareInventory.style.display = 'none';
+            }
+
+            parts.forEach((part) => {
+                const tr = document.createElement('tr');
+                tr.className = 'inventory-row';
+                if (part?.name) {
+                    tr.setAttribute('data-part-name', part.name);
+                }
+                const outOfStock = this.isOutOfStock(part);
+                const lowStock = this.isLowStock(part);
+                if (outOfStock) {
+                    tr.classList.add('inventory-row--critical');
+                } else if (lowStock) {
+                    tr.classList.add('inventory-row--low');
+                }
+
+                const infoCell = document.createElement('td');
+                infoCell.className = 'inventory-cell inventory-cell--info';
+                const infoWrapper = document.createElement('div');
+                infoWrapper.className = 'inventory-info';
+                if (part.image) {
+                    const thumb = document.createElement('div');
+                    thumb.className = 'inventory-thumb';
+                    thumb.style.backgroundImage = `url('${encodeURI(part.image)}')`;
+                    infoWrapper.appendChild(thumb);
+                } else {
+                    const thumb = document.createElement('div');
+                    thumb.className = 'inventory-thumb is-empty';
+                    thumb.textContent = '🧩';
+                    infoWrapper.appendChild(thumb);
+                }
+                const textWrapper = document.createElement('div');
+                textWrapper.className = 'inventory-info__text';
+                const title = document.createElement('div');
+                title.className = 'inventory-name';
+                title.textContent = part.part_name || part.part_code || '-';
+                textWrapper.appendChild(title);
+                const metaLine = document.createElement('div');
+                metaLine.className = 'table-meta';
+                const metaParts = [part.part_code, part.category].filter(Boolean);
+                metaLine.textContent = metaParts.length ? metaParts.join(' • ') : __('Tidak ada kategori');
+                textWrapper.appendChild(metaLine);
+                if (part.brand) {
+                    const brandMeta = document.createElement('div');
+                    brandMeta.className = 'table-meta';
+                    brandMeta.textContent = part.brand;
+                    textWrapper.appendChild(brandMeta);
+                }
+                infoWrapper.appendChild(textWrapper);
+                infoCell.appendChild(infoWrapper);
+                tr.appendChild(infoCell);
+
+                const stockCell = document.createElement('td');
+                stockCell.className = 'inventory-cell inventory-cell--stock';
+                const available = document.createElement('div');
+                available.className = 'metric-text';
+                available.textContent = this.formatStockValue(part.stock_qty) || '0';
+                stockCell.appendChild(available);
+                const reserved = document.createElement('div');
+                reserved.className = 'table-meta';
+                reserved.textContent = `${__('Reservasi')}: ${this.formatStockValue(part.reserved_qty) || '0'}`;
+                stockCell.appendChild(reserved);
+                if (part.reorder_level) {
+                    const reorderMeta = document.createElement('div');
+                    reorderMeta.className = 'table-meta';
+                    reorderMeta.textContent = `${__('Batas Reorder')}: ${this.formatStockValue(part.reorder_level)}`;
+                    stockCell.appendChild(reorderMeta);
+                }
+                if (outOfStock) {
+                    const alert = document.createElement('div');
+                    alert.className = 'stock-alert stock-alert--critical';
+                    alert.textContent = `⚠️ ${__('Stok habis – perlu restock')}`;
+                    stockCell.appendChild(alert);
+                } else if (lowStock) {
+                    const alert = document.createElement('div');
+                    alert.className = 'stock-alert stock-alert--low';
+                    alert.textContent = `⚠️ ${__('Stok menipis')}`;
+                    stockCell.appendChild(alert);
+                }
+                tr.appendChild(stockCell);
+
+                const priceCell = document.createElement('td');
+                priceCell.className = 'inventory-cell inventory-cell--price';
+                const priceValue = document.createElement('div');
+                priceValue.className = 'metric-text';
+                priceValue.textContent = this.currencyFormatter.format(parseFloat(part.unit_price) || 0);
+                priceCell.appendChild(priceValue);
+                const priceMeta = document.createElement('div');
+                priceMeta.className = 'table-meta';
+                priceMeta.textContent = part.last_restocked_on
+                    ? this.formatTimestamp(part.last_restocked_on)
+                    : __('Belum pernah restock');
+                priceCell.appendChild(priceMeta);
+                tr.appendChild(priceCell);
+
+                const metaCell = document.createElement('td');
+                metaCell.className = 'inventory-cell inventory-cell--meta';
+                metaCell.appendChild(this.createStatusBadge(part.status || 'Active'));
+                const metaInfo = document.createElement('div');
+                metaInfo.className = 'table-meta';
+                const metaText = [part.warehouse_location, part.managed_by]
+                    .filter(Boolean)
+                    .join(' • ');
+                metaInfo.textContent = metaText || __('Tidak ada info gudang');
+                metaCell.appendChild(metaInfo);
+                tr.appendChild(metaCell);
+
+                table.appendChild(tr);
+            });
+
+            this.highlightSelectedSpare(this.currentSparePart?.name);
+        }
+
+        renderSpareDetail(part) {
+            const form = this.forms.sparePartDetail;
+            if (!form) {
+                return;
+            }
+
+            if (!part) {
+                this.resetSpareDetailForm();
+                return;
+            }
+
+            this.populateSpareDetailForm(part);
+
+            if (this.spareDetail.title) {
+                this.spareDetail.title.textContent = __('Detail Sparepart');
+            }
+            if (this.spareDetail.name) {
+                this.spareDetail.name.textContent = part.part_name || part.part_code || '-';
+            }
+            if (this.spareDetail.meta) {
+                this.spareDetail.meta.textContent = [
+                    part.category,
+                    part.brand,
+                    part.warehouse_location,
+                ]
+                    .filter(Boolean)
+                    .join(' • ');
+            }
+            if (this.spareDetail.status) {
+                this.spareDetail.status.innerHTML = '';
+                this.spareDetail.status.appendChild(this.createStatusBadge(part.status || 'Active'));
+                if (this.isOutOfStock(part)) {
+                    const alert = document.createElement('div');
+                    alert.className = 'stock-alert stock-alert--critical';
+                    alert.textContent = `⚠️ ${__('Stok habis – perlu restock')}`;
+                    this.spareDetail.status.appendChild(alert);
+                } else if (this.isLowStock(part)) {
+                    const alert = document.createElement('div');
+                    alert.className = 'stock-alert stock-alert--low';
+                    alert.textContent = `⚠️ ${__('Stok menipis')}`;
+                    this.spareDetail.status.appendChild(alert);
+                }
+            }
+            if (this.spareDetail.image) {
+                if (part.image) {
+                    this.spareDetail.image.style.backgroundImage = `url('${encodeURI(part.image)}')`;
+                    this.spareDetail.image.classList.remove('is-empty');
+                } else {
+                    this.spareDetail.image.style.backgroundImage = '';
+                    this.spareDetail.image.classList.add('is-empty');
+                }
+            }
+        }
+
+        populateSpareDetailForm(part) {
+            const form = this.forms.sparePartDetail;
+            if (!form) {
+                return;
+            }
+            const fields = [
+                'name',
+                'part_code',
+                'part_name',
+                'category',
+                'brand',
+                'uom',
+                'unit_price',
+                'stock_qty',
+                'reserved_qty',
+                'reorder_level',
+                'warehouse_location',
+                'managed_by',
+                'status',
+                'last_restocked_on',
+                'image',
+                'notes',
+            ];
+            fields.forEach((field) => {
+                const input = form.querySelector(`[name="${field}"]`);
+                if (!input) {
+                    return;
+                }
+                const value = part[field];
+                if (value === undefined || value === null) {
+                    input.value = '';
+                } else {
+                    input.value = value;
+                }
+            });
+        }
+
+        resetSpareDetailForm() {
+            const form = this.forms.sparePartDetail;
+            if (!form) {
+                return;
+            }
+            form.reset();
+            const nameInput = form.querySelector('[name="name"]');
+            if (nameInput) {
+                nameInput.value = '';
+            }
+            const statusInput = form.querySelector('[name="status"]');
+            if (statusInput) {
+                statusInput.value = 'Active';
+            }
+            const uomInput = form.querySelector('[name="uom"]');
+            if (uomInput) {
+                uomInput.value = 'Unit';
+            }
+            if (this.spareDetail.title) {
+                this.spareDetail.title.textContent = __('Tambah Sparepart');
+            }
+            if (this.spareDetail.name) {
+                this.spareDetail.name.textContent = __('Sparepart baru');
+            }
+            if (this.spareDetail.meta) {
+                this.spareDetail.meta.textContent = __('Lengkapi detail di formulir.');
+            }
+            if (this.spareDetail.status) {
+                this.spareDetail.status.innerHTML = '';
+            }
+            if (this.spareDetail.image) {
+                this.spareDetail.image.style.backgroundImage = '';
+                this.spareDetail.image.classList.add('is-empty');
+            }
+        }
+
+        highlightSelectedSpare(name) {
+            if (!this.tables.spareInventory) {
+                return;
+            }
+            this.tables.spareInventory.querySelectorAll('tr').forEach((row) => {
+                if (name && row.getAttribute('data-part-name') === name) {
+                    row.classList.add('is-selected');
+                } else {
+                    row.classList.remove('is-selected');
+                }
+            });
+        }
+
+        lookupSparePart(key) {
+            if (!key) {
+                return null;
+            }
+            return this.sparePartIndex.get(key) || null;
+        }
+
+        startCreateSparePart() {
+            this.creatingSparePart = true;
+            this.currentSparePart = null;
+            this.highlightSelectedSpare(null);
+            this.resetSpareDetailForm();
+            if (this.inputs.spareSearch) {
+                this.inputs.spareSearch.value = '';
+            }
+            this.filteredSpareParts = [...this.sparePartCatalog];
+            this.renderSpareInventoryTable();
+        }
+
+        selectSparePart(name, options = {}) {
+            if (!name) {
+                return;
+            }
+            const part = this.lookupSparePart(name);
+            if (!part) {
+                return;
+            }
+            this.creatingSparePart = false;
+            this.currentSparePart = part;
+            this.renderSpareDetail(part);
+            this.highlightSelectedSpare(part.name);
+            if (options.focusForm !== false && this.forms.sparePartDetail) {
+                const focusField = this.forms.sparePartDetail.querySelector('[name="stock_qty"]');
+                if (focusField) {
+                    focusField.focus();
+                }
+            }
+        }
+
+        async submitSparePartDetail() {
+            const form = this.forms.sparePartDetail;
+            if (!form) {
+                return;
+            }
+            const nameInput = form.querySelector('[name="name"]');
+            const existingName = nameInput?.value?.trim();
+            const fields = [
+                'part_code',
+                'part_name',
+                'category',
+                'brand',
+                'uom',
+                'unit_price',
+                'stock_qty',
+                'reserved_qty',
+                'reorder_level',
+                'warehouse_location',
+                'managed_by',
+                'status',
+                'last_restocked_on',
+                'image',
+                'notes',
+            ];
+            const payload = this.collectFormData(form, fields);
+            if (!existingName && !payload.part_code) {
+                frappe.show_alert({ message: __('Masukkan kode sparepart terlebih dahulu.'), indicator: 'orange' });
+                const codeField = form.querySelector('[name="part_code"]');
+                codeField?.focus();
+                return;
+            }
+
+            const primaryButton = form.querySelector('button.primary');
+            if (primaryButton) {
+                primaryButton.disabled = true;
+            }
+
+            const method = existingName ? 'garage.api.portal.update_spare_part' : 'garage.api.portal.create_spare_part';
+            const args = existingName ? { name: existingName, updates: payload } : { part: payload };
+
+            try {
+                const response = await frappe.call({ method, args, freeze: true });
+                const message = response?.message || {};
+                frappe.show_alert({
+                    message: existingName ? __('Sparepart diperbarui.') : __('Sparepart baru ditambahkan.'),
+                    indicator: 'green',
+                });
+                this.updateSparePartState(existingName, payload, message);
+            } catch (error) {
+                frappe.show_alert({ message: __('Gagal menyimpan sparepart.'), indicator: 'red' });
+                if (window.console) {
+                    console.error('Spare part save failed', error);
+                }
+            } finally {
+                if (primaryButton) {
+                    primaryButton.disabled = false;
+                }
+            }
+        }
+
+        updateSparePartState(existingName, payload, responseMessage) {
+            const docname = responseMessage?.name || existingName || payload.part_code;
+            if (!docname) {
+                return;
+            }
+            const partCode = responseMessage?.part_code || payload.part_code || existingName;
+            const merged = { ...(this.lookupSparePart(existingName) || {}), ...payload };
+            merged.name = docname;
+            if (partCode) {
+                merged.part_code = partCode;
+            }
+            if (Object.prototype.hasOwnProperty.call(responseMessage, 'stock_qty')) {
+                merged.stock_qty = responseMessage.stock_qty;
+            }
+            if (Object.prototype.hasOwnProperty.call(responseMessage, 'unit_price')) {
+                merged.unit_price = responseMessage.unit_price;
+            }
+
+            const index = this.sparePartCatalog.findIndex((part) => part.name === docname || part.name === existingName);
+            if (index >= 0) {
+                this.sparePartCatalog.splice(index, 1, merged);
+            } else {
+                this.sparePartCatalog.push(merged);
+            }
+            this.state.spare_parts = [...this.sparePartCatalog];
+            this.sparePartIndex = new Map();
+            this.sparePartCatalog.forEach((part) => {
+                if (part?.name) {
+                    this.sparePartIndex.set(part.name, part);
+                }
+                if (part?.part_code) {
+                    this.sparePartIndex.set(part.part_code, part);
+                }
+            });
+
+            const query = this.inputs.spareSearch ? this.inputs.spareSearch.value || '' : '';
+            this.applySpareSearch(query, true);
+            this.renderSpareRequestsTable(this.asArray(this.state.service_orders));
+            this.updateSpareMetrics();
+            this.selectSparePart(docname, { focusForm: false });
+        }
+
+        createStatusBadge(status) {
+            const badge = document.createElement('span');
+            badge.className = 'status-pill';
+            const label = status || __('Tidak diketahui');
+            badge.textContent = label;
+            const normalized = label.toString().toLowerCase();
+            if (normalized.includes('available') || normalized.includes('received')) {
+                badge.classList.add('status-pill--success');
+            } else if (normalized.includes('order') || normalized.includes('pending')) {
+                badge.classList.add('status-pill--warning');
+            } else if (normalized.includes('cancel') || normalized.includes('stop')) {
+                badge.classList.add('status-pill--danger');
+            }
+            return badge;
+        }
+
+        formatStockValue(value) {
+            const numeric = parseFloat(value);
+            if (Number.isNaN(numeric)) {
+                return '';
+            }
+            if (Number.isInteger(numeric)) {
+                return numeric.toLocaleString('id-ID');
+            }
+            return numeric.toLocaleString('id-ID', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+        }
+
+        isOutOfStock(part) {
+            if (!part) {
+                return false;
+            }
+            const stock = parseFloat(part.stock_qty);
+            if (!Number.isFinite(stock)) {
+                return false;
+            }
+            return stock <= 0;
+        }
+
+        isLowStock(part) {
+            if (!part) {
+                return false;
+            }
+            const stock = parseFloat(part.stock_qty);
+            if (!Number.isFinite(stock)) {
+                return false;
+            }
+            if (stock <= 0) {
+                return true;
+            }
+            const reorder = parseFloat(part.reorder_level);
+            if (!Number.isFinite(reorder) || reorder <= 0) {
+                return false;
+            }
+            return stock <= reorder;
         }
 
         renderProcurement() {
@@ -1134,6 +1834,19 @@
                     list.appendChild(item);
                 });
             });
+        }
+
+        escapeHtml(value) {
+            if (value === undefined || value === null) {
+                return '';
+            }
+            return value
+                .toString()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
 
         renderTable(table, rows, rowRenderer, emptyState) {
