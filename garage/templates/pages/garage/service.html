@@ -176,6 +176,9 @@ body {
 .modal-body {
     padding: 32px;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
     flex: 1;
     min-height: 0;
 }
@@ -2342,38 +2345,39 @@ body {
         const modalOverlay = inspectionModalElement.querySelector('[data-modal-overlay]');
         const modalCloseButtons = inspectionModalElement.querySelectorAll('[data-modal-close]');
 
-        const stopEventPropagation = (event) => {
-            if (!event) return;
-            event.stopPropagation();
-        };
-
-        ['click', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'pointerdown', 'pointerup'].forEach((eventName) => {
-            inspectionModalDialog.addEventListener(eventName, stopEventPropagation);
-        });
-
-        inspectionModalDialog.addEventListener('touchmove', stopEventPropagation, { passive: true });
-        inspectionModalDialog.addEventListener('pointermove', stopEventPropagation);
-
         const handleCloseRequest = (event) => {
             if (event) {
-                event.preventDefault?.();
+                if (event.type === 'click') {
+                    event.preventDefault?.();
+                }
                 event.stopPropagation?.();
             }
             closeInspectionModal();
         };
 
+        const handleBackdropInteraction = (event) => {
+            const target = event?.target;
+            if (!target) {
+                return;
+            }
+
+            if (!inspectionModalDialog.contains(target)) {
+                handleCloseRequest(event);
+            }
+        };
+
         if (modalOverlay) {
-            modalOverlay.addEventListener('click', handleCloseRequest);
+            ['click', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'pointerdown', 'pointerup'].forEach((eventName) => {
+                modalOverlay.addEventListener(eventName, handleCloseRequest);
+            });
         }
 
         modalCloseButtons.forEach((button) => {
             button.addEventListener('click', handleCloseRequest);
         });
 
-        inspectionModalElement.addEventListener('click', (event) => {
-            if (event.target === inspectionModalElement) {
-                handleCloseRequest(event);
-            }
+        ['mousedown', 'mouseup', 'click', 'touchstart', 'touchend', 'pointerdown', 'pointerup'].forEach((eventName) => {
+            inspectionModalElement.addEventListener(eventName, handleBackdropInteraction);
         });
 
         inspectionModalElement.addEventListener('keydown', (event) => {
