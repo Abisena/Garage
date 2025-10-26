@@ -391,6 +391,86 @@ a:hover {
     color: var(--gray-800);
 }
 
+.sparepart-item {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.sparepart-selection select {
+    width: 100%;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    font-size: 14px;
+    background: #fff;
+}
+
+.sparepart-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.sparepart-summary {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.part-thumbnail {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--gray-100);
+    border: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: var(--text-secondary);
+}
+
+.part-thumbnail.is-empty {
+    color: var(--text-muted);
+}
+
+.sparepart-summary__text {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sparepart-title {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--gray-900);
+}
+
+.sparepart-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.sparepart-hint {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--status-pending);
+}
+
+.form-grid.compact {
+    gap: 12px;
+}
+
+.form-grid.compact .form-group {
+    min-width: 0;
+}
+
 .btn {
     display: inline-flex;
     align-items: center;
@@ -930,6 +1010,70 @@ a:hover {
         return currencyFormatter.format(number);
     }
 
+    function escapeHtml(value) {
+        if (value === undefined || value === null) {
+            return '';
+        }
+        return value
+            .toString()
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatNumber(value) {
+        const numeric = Number(value);
+        if (Number.isNaN(numeric)) {
+            return '0';
+        }
+        if (Number.isInteger(numeric)) {
+            return numeric.toLocaleString('id-ID');
+        }
+        return numeric.toLocaleString('id-ID', { maximumFractionDigits: 2 });
+    }
+
+    function setSparePartCatalog(parts) {
+        sparePartCatalog = Array.isArray(parts) ? parts : [];
+        sparePartIndex = new Map();
+        sparePartCatalog.forEach((part) => {
+            if (part?.name) {
+                sparePartIndex.set(part.name, part);
+            }
+            if (part?.part_code) {
+                sparePartIndex.set(part.part_code, part);
+            }
+        });
+    }
+
+    function lookupSparePart(identifier) {
+        if (!identifier) {
+            return null;
+        }
+        return sparePartIndex.get(identifier) || null;
+    }
+
+    function mergeRequiredPartWithCatalog(part, catalogPart) {
+        if (!catalogPart) {
+            return part;
+        }
+        const merged = { ...part };
+        merged.catalog_name = catalogPart.name;
+        merged.catalog_part_code = catalogPart.part_code;
+        merged.catalog_stock_qty = catalogPart.stock_qty;
+        merged.catalog_reserved_qty = catalogPart.reserved_qty;
+        merged.catalog_managed_by = catalogPart.managed_by;
+        merged.catalog_image = catalogPart.image;
+        merged.catalog_unit_price = catalogPart.unit_price;
+        merged.item_code = catalogPart.part_code || merged.item_code || '';
+        merged.item_name = catalogPart.part_name || merged.item_name || '';
+        merged.uom = merged.uom || catalogPart.uom || 'Unit';
+        merged.rate = catalogPart.unit_price ?? merged.rate ?? 0;
+        merged.warehouse = merged.warehouse || catalogPart.warehouse_location || '';
+        return merged;
+    }
+
     function safeDateParse(value) {
         if (!value) {
             return null;
@@ -1092,6 +1236,16 @@ a:hover {
         let serviceTasks = [];
         let requiredParts = [];
         let paymentSchedule = [];
+        let sparePartCatalog = [];
+        let sparePartIndex = new Map();
+        const stockStatusOptions = [
+            'Pending Check',
+            'Available',
+            'To Order',
+            'Ordered',
+            'Received',
+            'Issued'
+        ];
 
         const totalEstimateInput = document.getElementById('total_estimated_amount');
         const estimatedDateInput = document.getElementById('estimated_delivery_date');
@@ -1271,16 +1425,36 @@ a:hover {
             }
             renderServiceTasks();
 
+            setSparePartCatalog(order.available_spare_parts || []);
+
             if (Array.isArray(order.required_parts)) {
-                requiredParts = order.required_parts.map((part) => ({
-                    item_name: part.item_name || part.part_name || '',
-                    description: part.description || '',
-                    qty: part.qty ?? part.quantity ?? 1,
-                    rate: part.rate ?? part.price ?? 0
-                }));
+                requiredParts = order.required_parts.map((part) => {
+                    const base = {
+                        item_code: part.item_code || part.part_code || '',
+                        item_name: part.item_name || part.part_name || '',
+                        description: part.description || '',
+                        qty: Number(part.qty ?? part.quantity ?? 1) || 0,
+                        rate: Number(part.rate ?? part.price ?? 0) || 0,
+                        uom: part.uom || part.unit || 'Unit',
+                        stock_status: part.stock_status || 'Pending Check',
+                        source: part.source || part.part_source || 'On Hand',
+                        warehouse: part.warehouse || '',
+                    };
+                    const catalogPart =
+                        lookupSparePart(base.item_code) ||
+                        lookupSparePart(part.catalog_name) ||
+                        lookupSparePart(part.catalog_part_code) ||
+                        lookupSparePart(base.item_name);
+                    return mergeRequiredPartWithCatalog(base, catalogPart);
+                });
             } else {
                 requiredParts = [];
             }
+
+            requiredParts = requiredParts.map((part) => ({
+                ...part,
+                amount: (part.qty || 0) * (part.rate || 0)
+            }));
             renderRequiredParts();
 
             if (Array.isArray(order.payment_schedule)) {
@@ -1348,13 +1522,101 @@ a:hover {
         }
 
         window.addRequiredPart = function() {
-            requiredParts.push({ item_name: '', description: '', qty: 1, rate: 0 });
+            requiredParts.push({
+                item_code: '',
+                item_name: '',
+                description: '',
+                qty: 1,
+                rate: 0,
+                uom: 'Unit',
+                stock_status: 'Pending Check',
+                source: 'On Hand',
+                warehouse: '',
+                catalog_name: null,
+                catalog_part_code: '',
+                catalog_stock_qty: null,
+                catalog_reserved_qty: null,
+                catalog_managed_by: '',
+                catalog_image: '',
+                catalog_unit_price: null,
+                amount: 0
+            });
             renderRequiredParts();
         };
 
         window.removeRequiredPart = function(index) {
             requiredParts.splice(index, 1);
             renderRequiredParts();
+        };
+
+        window.selectRequiredPart = function(index, value) {
+            const part = requiredParts[index];
+            if (!part) {
+                return;
+            }
+            if (!value || value.startsWith('__manual__')) {
+                return;
+            }
+            const catalog = lookupSparePart(value);
+            if (!catalog) {
+                return;
+            }
+            requiredParts[index] = mergeRequiredPartWithCatalog({
+                ...part,
+                catalog_name: catalog.name,
+                catalog_part_code: catalog.part_code,
+                source: part.source || 'On Hand'
+            }, catalog);
+            renderRequiredParts();
+        };
+
+        window.updateRequiredPartQty = function(index, value) {
+            if (!requiredParts[index]) {
+                return;
+            }
+            const qty = Number(value);
+            requiredParts[index].qty = Number.isNaN(qty) ? 0 : Math.max(0, qty);
+            requiredParts[index].amount = (requiredParts[index].qty || 0) * (requiredParts[index].rate || 0);
+            renderRequiredParts();
+        };
+
+        window.updateRequiredPartRate = function(index, value) {
+            if (!requiredParts[index]) {
+                return;
+            }
+            const rate = Number(value);
+            requiredParts[index].rate = Number.isNaN(rate) ? 0 : Math.max(0, rate);
+            requiredParts[index].amount = (requiredParts[index].qty || 0) * (requiredParts[index].rate || 0);
+            renderRequiredParts();
+        };
+
+        window.updateRequiredPartUom = function(index, value) {
+            if (!requiredParts[index]) {
+                return;
+            }
+            requiredParts[index].uom = value;
+        };
+
+        window.updateRequiredPartStatus = function(index, value) {
+            if (!requiredParts[index]) {
+                return;
+            }
+            requiredParts[index].stock_status = value;
+        };
+
+        window.updateRequiredPartWarehouse = function(index, value) {
+            if (!requiredParts[index]) {
+                return;
+            }
+            requiredParts[index].warehouse = value;
+            renderRequiredParts();
+        };
+
+        window.updateRequiredPartDescription = function(index, value) {
+            if (!requiredParts[index]) {
+                return;
+            }
+            requiredParts[index].description = value;
         };
 
         function renderRequiredParts() {
@@ -1371,32 +1633,101 @@ a:hover {
                 `;
                 return;
             }
-            container.innerHTML = requiredParts.map((part, i) => `
-                <div class="repeating-item">
-                    <div class="item-header">
-                        <span class="item-number">Part #${i + 1}</span>
-                        <button type="button" class="btn-remove" onclick="removeRequiredPart(${i})">🗑️ Hapus</button>
-                    </div>
-                    <div class="form-grid">
-                        <div class="form-group" style="grid-column: 1 / -1;">
-                            <label>Nama Part *</label>
-                            <input type="text" value="${part.item_name}" onchange="requiredParts[${i}].item_name = this.value" required>
+
+            requiredParts = requiredParts.map((part) => ({
+                ...part,
+                amount: (part.qty || 0) * (part.rate || 0)
+            }));
+
+            container.innerHTML = requiredParts
+                .map((part, i) => {
+                    const catalogOptions = sparePartCatalog
+                        .map((catalog) => `
+                            <option value="${escapeHtml(catalog.name)}" ${catalog.name === part.catalog_name ? 'selected' : ''}>
+                                ${escapeHtml(catalog.part_code || catalog.part_name || catalog.name)} — ${escapeHtml(catalog.part_name || '')}
+                            </option>
+                        `)
+                        .join('');
+                    const catalogRef = lookupSparePart(part.catalog_name || part.item_code);
+                    const manualOption = !part.catalog_name && part.item_code
+                        ? `<option value="__manual__${i}" selected>Manual: ${escapeHtml(part.item_code)}${part.item_name ? ` – ${escapeHtml(part.item_name)}` : ''}</option>`
+                        : '';
+                    const statusOptions = stockStatusOptions
+                        .map((status) => `<option value="${escapeHtml(status)}" ${status === (part.stock_status || 'Pending Check') ? 'selected' : ''}>${escapeHtml(status)}</option>`)
+                        .join('');
+                    const stockDisplay = part.catalog_name ? `${formatNumber(part.catalog_stock_qty ?? catalogRef?.stock_qty ?? 0)} unit` : 'Tidak diketahui';
+                    const managedBy = part.catalog_managed_by || catalogRef?.managed_by || '-';
+                    const warehouseDisplay = part.warehouse || catalogRef?.warehouse_location || '-';
+                    const previewImage = part.catalog_image || catalogRef?.image;
+                    const imageStyle = previewImage ? `background-image: url('${encodeURI(previewImage)}')` : '';
+                    const thumbnail = previewImage
+                        ? `<div class="part-thumbnail" style="${imageStyle}"></div>`
+                        : '<div class="part-thumbnail is-empty">🔧</div>';
+                    const catalogHint = sparePartCatalog.length ? '' : '<p class="sparepart-hint">Katalog sparepart masih kosong. Tambahkan data di halaman Sparepart.</p>';
+
+                    return `
+                        <div class="repeating-item sparepart-item">
+                            <div class="item-header">
+                                <span class="item-number">Part #${i + 1}</span>
+                                <button type="button" class="btn-remove" onclick="removeRequiredPart(${i})">🗑️ Hapus</button>
+                            </div>
+                            <div class="sparepart-selection">
+                                <label>Pilih Sparepart *</label>
+                                <select onchange="selectRequiredPart(${i}, this.value)" ${part.catalog_name || part.item_code ? '' : 'required'}>
+                                    <option value="">— Pilih sparepart —</option>
+                                    ${manualOption}
+                                    ${catalogOptions}
+                                </select>
+                                ${catalogHint}
+                            </div>
+                            <div class="sparepart-body">
+                                <div class="sparepart-summary">
+                                    ${thumbnail}
+                                        <div class="sparepart-summary__text">
+                                            <div class="sparepart-title">${escapeHtml(part.item_name || 'Sparepart belum dipilih')}</div>
+                                            <div class="sparepart-meta">
+                                                <span>${escapeHtml(part.item_code || '-')}</span>
+                                                <span>Stok: ${stockDisplay}</span>
+                                                <span>Gudang: ${escapeHtml(warehouseDisplay)}</span>
+                                                <span>Penjaga: ${escapeHtml(managedBy)}</span>
+                                            </div>
+                                    </div>
+                                </div>
+                                <div class="form-grid compact">
+                                    <div class="form-group">
+                                        <label>Qty *</label>
+                                        <input type="number" value="${part.qty}" min="0" step="0.01" onchange="updateRequiredPartQty(${i}, this.value)" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Harga Satuan *</label>
+                                        <input type="number" value="${part.rate}" min="0" step="0.01" onchange="updateRequiredPartRate(${i}, this.value)" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>UOM</label>
+                                        <input type="text" value="${escapeHtml(part.uom || '')}" onchange="updateRequiredPartUom(${i}, this.value)">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Status</label>
+                                        <select onchange="updateRequiredPartStatus(${i}, this.value)">${statusOptions}</select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Gudang</label>
+                                        <input type="text" value="${escapeHtml(part.warehouse || '')}" onchange="updateRequiredPartWarehouse(${i}, this.value)">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Total</label>
+                                        <div class="calculated-value">${formatCurrency(part.amount || 0)}</div>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label>Catatan</label>
+                                    <textarea rows="2" onchange="updateRequiredPartDescription(${i}, this.value)">${escapeHtml(part.description || '')}</textarea>
+                                </div>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Qty *</label>
-                            <input type="number" value="${part.qty}" onchange="requiredParts[${i}].qty = parseInt(this.value, 10) || 0; renderRequiredParts();" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Harga Satuan *</label>
-                            <input type="number" value="${part.rate}" onchange="requiredParts[${i}].rate = parseFloat(this.value) || 0; renderRequiredParts();" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Total</label>
-                            <div class="calculated-value">${formatCurrency((part.qty || 0) * (part.rate || 0))}</div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+                    `;
+                })
+                .join('');
         }
 
         window.addPaymentSchedule = function() {
@@ -1459,6 +1790,25 @@ a:hover {
                 return;
             }
 
+            const invalidPartIndex = requiredParts.findIndex((part) => !part.item_code);
+            if (invalidPartIndex !== -1) {
+                frappe.show_alert({ message: `⚠️ Pilih sparepart untuk Part #${invalidPartIndex + 1}`, indicator: 'orange' }, 5);
+                return;
+            }
+
+            const sanitizedParts = requiredParts.map((part) => ({
+                item_code: part.item_code,
+                item_name: part.item_name,
+                description: part.description,
+                qty: part.qty || 0,
+                rate: part.rate || 0,
+                amount: (part.qty || 0) * (part.rate || 0),
+                uom: part.uom || 'Unit',
+                stock_status: part.stock_status || 'Pending Check',
+                source: part.source || 'On Hand',
+                warehouse: part.warehouse || ''
+            }));
+
             const data = {
                 order_id: orderId,
                 service_order_type: document.getElementById('service_order_type').value,
@@ -1469,7 +1819,7 @@ a:hover {
                 inspection_summary: document.getElementById('inspection_summary').value,
                 service_notes: document.getElementById('service_notes').value,
                 service_tasks: serviceTasks,
-                required_parts: requiredParts,
+                required_parts: sanitizedParts,
                 payment_schedule: paymentSchedule,
                 status: 'Work In Progress'
             };

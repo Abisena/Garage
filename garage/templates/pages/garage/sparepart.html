@@ -1004,6 +1004,320 @@ button:disabled {
 .mb-4 { margin-bottom: var(--space-4) !important; }
 .mb-6 { margin-bottom: var(--space-6) !important; }
 .mb-8 { margin-bottom: var(--space-8) !important; }
+
+/* === WAREHOUSE LAYOUT === */
+.portal-card--highlight {
+    background: linear-gradient(135deg, rgba(0, 102, 255, 0.08), rgba(0, 102, 255, 0.02));
+    border: 1px solid var(--border-accent);
+    box-shadow: var(--shadow-sm);
+}
+
+.warehouse-overview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    margin-bottom: var(--space-6);
+}
+
+.warehouse-summary h2 {
+    font-size: var(--font-size-2xl);
+    margin-bottom: var(--space-2);
+}
+
+.warehouse-summary p {
+    color: var(--text-secondary);
+}
+
+.warehouse-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-6);
+    margin-top: var(--space-4);
+}
+
+.warehouse-metric {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid var(--border-light);
+    min-width: 160px;
+}
+
+.warehouse-metric .label {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.warehouse-metric .value {
+    font-size: var(--font-size-3xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--primary);
+}
+
+.warehouse-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+    gap: var(--space-6);
+    align-items: flex-start;
+}
+
+.warehouse-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+}
+
+.warehouse-sidebar .sticky {
+    position: sticky;
+    top: var(--space-6);
+}
+
+.card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.card-header .lead {
+    color: var(--text-secondary);
+    margin-top: var(--space-1);
+}
+
+.card-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.inventory-search {
+    appearance: none;
+    border: 1px solid var(--border-base);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-sm);
+    background: var(--bg-body);
+    min-width: 220px;
+}
+
+.primary.subtle {
+    background: var(--primary-subtle);
+    color: var(--primary);
+    border: 1px solid rgba(0, 102, 255, 0.2);
+}
+
+.primary.subtle:hover {
+    background: rgba(0, 102, 255, 0.12);
+}
+
+.spare-requests-table th,
+.spare-requests-table td,
+.spare-inventory-table th,
+.spare-inventory-table td {
+    vertical-align: top;
+}
+
+.spare-request-row + .spare-request-row {
+    border-top: 1px solid var(--border-light);
+}
+
+.spare-request-cell .metric-text {
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-lg);
+    color: var(--text-primary);
+}
+
+.table-meta {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.table-note {
+    margin-top: 6px;
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+.inventory-row {
+    transition: background var(--transition-base);
+    cursor: pointer;
+}
+
+.inventory-row--low:not(.is-selected) {
+    background: rgba(255, 179, 0, 0.08);
+    box-shadow: inset 3px 0 0 rgba(255, 179, 0, 0.6);
+}
+
+.inventory-row--low .metric-text {
+    color: var(--accent-warning);
+}
+
+.inventory-row--critical:not(.is-selected) {
+    background: rgba(255, 61, 0, 0.08);
+    box-shadow: inset 3px 0 0 rgba(255, 61, 0, 0.6);
+}
+
+.inventory-row--critical .metric-text {
+    color: var(--accent-danger);
+}
+
+.inventory-row:hover {
+    background: var(--primary-subtle);
+}
+
+.inventory-row.is-selected {
+    background: rgba(0, 102, 255, 0.12);
+    box-shadow: inset 2px 0 0 var(--primary);
+}
+
+.inventory-cell {
+    padding: var(--space-3) var(--space-2);
+}
+
+.inventory-info {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+}
+
+.inventory-thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    background-size: cover;
+    background-position: center;
+    background-color: var(--gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-lg);
+}
+
+.inventory-thumb.is-empty {
+    color: var(--text-muted);
+}
+
+.inventory-info__text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.inventory-name {
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+.metric-text {
+    font-weight: var(--font-weight-semibold);
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    background: var(--gray-100);
+    color: var(--text-secondary);
+}
+
+.status-pill--success {
+    background: var(--status-completed-light);
+    color: var(--status-completed);
+}
+
+.status-pill--warning {
+    background: var(--status-pending-light);
+    color: var(--status-pending);
+}
+
+.status-pill--danger {
+    background: var(--status-cancelled-light);
+    color: var(--status-cancelled);
+}
+
+.stock-alert {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+    margin-top: 8px;
+}
+
+.stock-alert--low {
+    background: rgba(255, 179, 0, 0.15);
+    color: var(--accent-warning);
+}
+
+.stock-alert--critical {
+    background: rgba(255, 61, 0, 0.15);
+    color: var(--accent-danger);
+}
+
+.spare-detail-preview {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+    margin-bottom: var(--space-4);
+}
+
+.spare-detail-image {
+    width: 72px;
+    height: 72px;
+    border-radius: var(--radius-lg);
+    background-size: cover;
+    background-position: center;
+    background-color: var(--gray-100);
+    border: 1px dashed var(--border-base);
+    flex-shrink: 0;
+}
+
+.spare-detail-image.is-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: var(--font-size-xl);
+}
+
+.spare-detail-info h3 {
+    margin-bottom: var(--space-1);
+}
+
+.detail-form .form-grid {
+    gap: var(--space-3);
+}
+
+.detail-form .form-field.full-width {
+    grid-column: 1 / -1;
+}
+
+.detail-form textarea {
+    min-height: 96px;
+}
+
+@media (max-width: 992px) {
+    .warehouse-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .warehouse-sidebar .sticky {
+        position: static;
+    }
+}
 </style>
 {% endblock %}
 
@@ -1036,118 +1350,174 @@ button:disabled {
 
 <section class="portal-section">
     <div class="container">
-        <div class="portal-grid two-column">
-            <article class="portal-card">
-                <h2>Buat Order Sparepart</h2>
-                <p class="lead">Isi detail customer dan item sparepart yang dibutuhkan pada form berikut.</p>
-                <form id="spare-order-form" class="form-grid">
-                    <div class="form-grid two-column">
-                        <div class="form-field">
-                            <label for="spare_customer">Customer</label>
-                            <select id="spare_customer" name="customer">
-                                <option value="">— Pilih customer —</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label for="order_date">Tanggal Order</label>
-                            <input id="order_date" name="order_date" type="date" />
-                        </div>
-                        <div class="form-field">
-                            <label for="pickup_method">Metode Pemenuhan</label>
-                            <select id="pickup_method" name="pickup_method">
-                                <option value="Pickup">Pickup</option>
-                                <option value="Delivery">Delivery</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label for="delivery_date">Tanggal Pengambilan/Pengiriman</label>
-                            <input id="delivery_date" name="delivery_date" type="date" />
-                        </div>
-                        <div class="form-field">
-                            <label for="warehouse">Gudang</label>
-                            <input id="warehouse" name="warehouse" placeholder="Gudang utama" />
-                        </div>
-                        <div class="form-field">
-                            <label for="total_amount">Total</label>
-                            <input id="total_amount" name="total_amount" type="number" min="0" step="0.01" data-cast="float" />
-                        </div>
+        <div class="warehouse-overview">
+            <article class="portal-card portal-card--highlight">
+                <div class="warehouse-summary">
+                    <h2>Gudang Sparepart</h2>
+                    <p>Monitor permintaan dari tim servis, cek stok fisik, dan tetapkan penanggung jawab setiap part dalam satu tampilan.</p>
+                </div>
+                <div class="warehouse-metrics">
+                    <div class="warehouse-metric">
+                        <span class="label">Total Sparepart</span>
+                        <span class="value" data-metric="spare-count">0</span>
                     </div>
-                    <div class="repeat-group" data-repeat="items">
-                        <header>
-                            <h3>Detail Item</h3>
-                            <button class="secondary" type="button" data-action="add-row">Tambah Item</button>
-                        </header>
-                        <div class="repeat-rows" data-role="rows"></div>
-                        <template data-role="row-template">
-                            <div class="repeat-row columns-4">
-                                <div class="form-field">
-                                    <label>Kode</label>
-                                    <input data-field="item_code" placeholder="Kode barang" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Nama</label>
-                                    <input data-field="item_name" placeholder="Nama barang" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Qty</label>
-                                    <input data-field="qty" type="number" min="0" step="0.01" data-cast="float" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Harga</label>
-                                    <input data-field="rate" type="number" min="0" step="0.01" data-cast="float" />
-                                </div>
-                                <div class="form-field">
-                                    <label>UOM</label>
-                                    <input data-field="uom" placeholder="Unit" />
-                                </div>
-                                <div class="form-field">
-                                    <label>Status Stok</label>
-                                    <select data-field="stock_status">
-                                        <option value="Pending Check">Pending Check</option>
-                                        <option value="Available">Available</option>
-                                        <option value="To Order">To Order</option>
-                                        <option value="Ordered">Ordered</option>
-                                        <option value="Received">Received</option>
-                                    </select>
-                                </div>
-                                <div class="form-field">
-                                    <label>Total</label>
-                                    <input data-field="amount" type="number" min="0" step="0.01" data-cast="float" />
-                                </div>
-                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
-                            </div>
-                        </template>
+                    <div class="warehouse-metric">
+                        <span class="label">Permintaan Aktif</span>
+                        <span class="value" data-metric="spare-request-count">0</span>
                     </div>
-                    <div class="form-field">
-                        <label for="notes_spare">Catatan</label>
-                        <textarea id="notes_spare" name="notes" placeholder="Instruksi pengiriman atau catatan customer"></textarea>
+                    <div class="warehouse-metric">
+                        <span class="label">Stok Menipis</span>
+                        <span class="value" data-metric="spare-low-stock">0</span>
                     </div>
-                    <div class="form-actions">
-                        <button class="primary" type="submit">Simpan Order Sparepart</button>
-                    </div>
-                </form>
-            </article>
-            <article class="portal-card">
-                <h2>Status Order Sparepart</h2>
-                <p class="lead">Pantau pesanan yang masuk, status pemenuhan stok, dan jadwal pengiriman.</p>
-                <ul class="status-list" data-status="spare-orders"></ul>
-                <h3 class="section-subtitle">Order Aktif</h3>
-                <table class="simple-table">
-                    <thead>
-                        <tr>
-                            <th>Nomor</th>
-                            <th>Customer</th>
-                            <th>Status</th>
-                            <th>Pengiriman</th>
-                        </tr>
-                    </thead>
-                    <tbody data-role="spare-table"></tbody>
-                </table>
-                <div class="list-empty" data-empty="spare">Belum ada order sparepart.</div>
-                <div class="table-links table-links--trailing">
-                    <a data-desk-link="Garage Spare Part Order" target="_blank">Buka di Desk</a>
                 </div>
             </article>
+        </div>
+
+        <div class="warehouse-layout">
+            <div class="warehouse-main">
+                <article class="portal-card">
+                    <header class="card-header">
+                        <div>
+                            <h2>Permintaan dari Servis</h2>
+                            <p class="lead">Daftar kebutuhan sparepart yang dikirim dari inspeksi service order.</p>
+                        </div>
+                        <div class="card-actions">
+                            <a class="secondary" data-desk-link="Garage Service Order" target="_blank">Buka Service Order</a>
+                        </div>
+                    </header>
+                    <table class="simple-table spare-requests-table">
+                        <thead>
+                            <tr>
+                                <th>Service Order</th>
+                                <th>Sparepart</th>
+                                <th>Kuantitas</th>
+                                <th>Status</th>
+                                <th>Penanggung Jawab</th>
+                            </tr>
+                        </thead>
+                        <tbody data-role="spare-request-table"></tbody>
+                    </table>
+                    <div class="list-empty" data-empty="spare-requests">Belum ada permintaan sparepart dari tim servis.</div>
+                </article>
+
+                <article class="portal-card">
+                    <header class="card-header">
+                        <div>
+                            <h2>Inventaris Sparepart</h2>
+                            <p class="lead">Pantau stok, harga, dan penjaga gudang untuk setiap part.</p>
+                        </div>
+                        <div class="card-actions">
+                            <input type="search" class="inventory-search" placeholder="Cari kode, nama, atau kategori" data-role="spare-search" />
+                            <button class="primary subtle" type="button" data-action="create-spare-part">+ Tambah Sparepart</button>
+                        </div>
+                    </header>
+                    <table class="simple-table spare-inventory-table">
+                        <thead>
+                            <tr>
+                                <th>Sparepart</th>
+                                <th>Stok</th>
+                                <th>Harga</th>
+                                <th>Gudang &amp; Status</th>
+                            </tr>
+                        </thead>
+                        <tbody data-role="spare-inventory-table"></tbody>
+                    </table>
+                    <div class="list-empty" data-empty="spare-inventory">Belum ada data sparepart di gudang.</div>
+                    <div class="table-links table-links--trailing">
+                        <a data-desk-link="Garage Spare Part" target="_blank">Buka Master Sparepart</a>
+                    </div>
+                </article>
+            </div>
+
+            <aside class="warehouse-sidebar">
+                <article class="portal-card sticky" data-role="spare-detail-panel">
+                    <header class="card-header">
+                        <div>
+                            <h2 data-role="spare-detail-title">Tambah Sparepart</h2>
+                            <p class="lead" data-role="spare-preview-meta">Lengkapi formulir di bawah untuk menyimpan data sparepart.</p>
+                        </div>
+                    </header>
+                    <div class="spare-detail-preview">
+                        <div class="spare-detail-image is-empty" data-role="spare-preview"></div>
+                        <div class="spare-detail-info">
+                            <h3 data-role="spare-preview-name">Sparepart baru</h3>
+                            <div class="spare-detail-status" data-role="spare-status-badge"></div>
+                        </div>
+                    </div>
+                    <form id="spare-detail-form" class="detail-form">
+                        <input type="hidden" name="name" />
+                        <div class="form-grid two-column">
+                            <div class="form-field">
+                                <label>Kode Sparepart *</label>
+                                <input name="part_code" placeholder="Contoh: BRK-001" required />
+                            </div>
+                            <div class="form-field">
+                                <label>Nama Sparepart *</label>
+                                <input name="part_name" placeholder="Nama part" required />
+                            </div>
+                            <div class="form-field">
+                                <label>Kategori</label>
+                                <input name="category" placeholder="Kategori" />
+                            </div>
+                            <div class="form-field">
+                                <label>Brand / OEM</label>
+                                <input name="brand" placeholder="Brand terkait" />
+                            </div>
+                            <div class="form-field">
+                                <label>UOM</label>
+                                <input name="uom" placeholder="Unit" />
+                            </div>
+                            <div class="form-field">
+                                <label>Harga Satuan</label>
+                                <input name="unit_price" type="number" min="0" step="0.01" data-cast="float" placeholder="0" />
+                            </div>
+                            <div class="form-field">
+                                <label>Stok Tersedia</label>
+                                <input name="stock_qty" type="number" min="0" step="0.01" data-cast="float" placeholder="0" />
+                            </div>
+                            <div class="form-field">
+                                <label>Stok Direservasi</label>
+                                <input name="reserved_qty" type="number" min="0" step="0.01" data-cast="float" placeholder="0" />
+                            </div>
+                            <div class="form-field">
+                                <label>Reorder Level</label>
+                                <input name="reorder_level" type="number" min="0" step="0.01" data-cast="float" placeholder="0" />
+                            </div>
+                            <div class="form-field">
+                                <label>Lokasi Gudang</label>
+                                <input name="warehouse_location" placeholder="Rak / area" />
+                            </div>
+                            <div class="form-field">
+                                <label>Penanggung Jawab</label>
+                                <input name="managed_by" placeholder="User penjaga stok" />
+                            </div>
+                            <div class="form-field">
+                                <label>Status</label>
+                                <select name="status">
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                    <option value="Discontinued">Discontinued</option>
+                                </select>
+                            </div>
+                            <div class="form-field">
+                                <label>Terakhir Restock</label>
+                                <input name="last_restocked_on" type="date" />
+                            </div>
+                            <div class="form-field full-width">
+                                <label>URL / Path Gambar</label>
+                                <input name="image" placeholder="/files/brakepad.png" />
+                            </div>
+                            <div class="form-field full-width">
+                                <label>Catatan</label>
+                                <textarea name="notes" rows="3" placeholder="Catatan internal, kompatibilitas, dll."></textarea>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button class="primary" type="submit">Simpan Sparepart</button>
+                        </div>
+                    </form>
+                </article>
+            </aside>
         </div>
     </div>
 </section>

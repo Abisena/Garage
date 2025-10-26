@@ -1,0 +1,173 @@
+{
+  "actions": [],
+  "allow_guest_to_edit": 0,
+  "allow_guest_to_view": 0,
+  "allow_import": 1,
+  "allow_rename": 0,
+  "autoname": "field:part_code",
+  "beta": 0,
+  "creation": "2024-06-02 00:00:00.000000",
+  "default_view": "List",
+  "disable_prepared_report": 0,
+  "docstatus": 0,
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "part_code",
+    "part_name",
+    "category",
+    "brand",
+    "uom",
+    "unit_price",
+    "stock_qty",
+    "reserved_qty",
+    "reorder_level",
+    "warehouse_location",
+    "managed_by",
+    "status",
+    "last_restocked_on",
+    "image",
+    "notes"
+  ],
+  "fields": [
+    {
+      "fieldname": "part_code",
+      "fieldtype": "Data",
+      "label": "Part Code",
+      "reqd": 1,
+      "in_list_view": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "part_name",
+      "fieldtype": "Data",
+      "label": "Part Name",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "category",
+      "fieldtype": "Data",
+      "label": "Category",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "brand",
+      "fieldtype": "Data",
+      "label": "Brand"
+    },
+    {
+      "fieldname": "uom",
+      "fieldtype": "Data",
+      "label": "UOM",
+      "default": "Unit"
+    },
+    {
+      "fieldname": "unit_price",
+      "fieldtype": "Currency",
+      "label": "Unit Price",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "stock_qty",
+      "fieldtype": "Float",
+      "label": "Available Stock",
+      "default": 0,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "reserved_qty",
+      "fieldtype": "Float",
+      "label": "Reserved Stock",
+      "default": 0
+    },
+    {
+      "fieldname": "reorder_level",
+      "fieldtype": "Float",
+      "label": "Reorder Level",
+      "default": 0
+    },
+    {
+      "fieldname": "warehouse_location",
+      "fieldtype": "Data",
+      "label": "Warehouse Location"
+    },
+    {
+      "fieldname": "managed_by",
+      "fieldtype": "Link",
+      "label": "Managed By",
+      "options": "User"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Active\nInactive\nDiscontinued",
+      "default": "Active",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "last_restocked_on",
+      "fieldtype": "Date",
+      "label": "Last Restocked On"
+    },
+    {
+      "fieldname": "image",
+      "fieldtype": "Attach Image",
+      "label": "Image"
+    },
+    {
+      "fieldname": "notes",
+      "fieldtype": "Small Text",
+      "label": "Notes"
+    }
+  ],
+  "has_web_view": 0,
+  "hide_heading": 0,
+  "hide_toolbar": 0,
+  "idx": 0,
+  "image_field": "image",
+  "in_create": 0,
+  "info_fields": [],
+  "is_submittable": 0,
+  "issingle": 0,
+  "istable": 0,
+  "links": [],
+  "make_attachments_public": 0,
+  "max_attachments": 0,
+  "modified": "2024-06-02 00:00:00.000000",
+  "module": "Garage",
+  "name": "Garage Spare Part",
+  "naming_rule": "",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1,
+      "export": 1
+    }
+  ],
+  "quick_entry": 0,
+  "read_only": 0,
+  "read_only_onload": 0,
+  "search_fields": "part_code,part_name,category,brand",
+  "show_name_in_global_search": 1,
+  "show_preview_popup": 0,
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "subject": "",
+  "title_field": "part_name",
+  "track_changes": 1,
+  "track_seen": 0,
+  "translated_doctype": 0,
+  "migration_hash": "",
+  "description": "Master data for spare parts stored in the workshop warehouse."
+}
