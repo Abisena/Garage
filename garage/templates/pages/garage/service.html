@@ -86,30 +86,33 @@ body {
     z-index: 9999;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px;
 }
 
 .inspection-modal.active {
-    display: block;
+    display: flex;
 }
 
 .modal-backdrop {
-    position: fixed;
+    position: absolute;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
     animation: fadeIn 0.2s ease;
+    z-index: 1;
 }
 
 .modal-dialog {
     position: relative;
-    width: 90%;
+    width: 100%;
     max-width: 1000px;
-    margin: 40px auto;
+    margin: 0 auto;
     background: white;
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     animation: slideUp 0.3s ease;
-    z-index: 1;
+    z-index: 2;
 }
 
 @keyframes fadeIn {
@@ -1349,7 +1352,7 @@ body {
 
 
                 <div id="inspectionModal" class="inspection-modal">
-            <div class="modal-backdrop" onclick="closeInspectionModal()"></div>
+            <div class="modal-backdrop"></div>
             <div class="modal-dialog">
                 <div class="modal-header">
                     <h2>🔍 Inspeksi Service Order</h2>
@@ -2255,13 +2258,27 @@ body {
         }
     };
 
-    // Close modal when clicking outside
-    document.addEventListener('click', function(event) {
-        const modal = document.getElementById('inspectionModal');
-        if (modal && event.target === modal) {
-            closeInspectionModal();
+    // Close modal when clicking the backdrop
+    const inspectionModal = document.getElementById('inspectionModal');
+    if (inspectionModal) {
+        const modalDialog = inspectionModal.querySelector('.modal-dialog');
+
+        inspectionModal.addEventListener('click', function(event) {
+            if (!modalDialog) {
+                return;
+            }
+
+            if (!modalDialog.contains(event.target)) {
+                closeInspectionModal();
+            }
+        });
+
+        if (modalDialog) {
+            modalDialog.addEventListener('click', function(event) {
+                event.stopPropagation();
+            });
         }
-    });
+    }
 
     // Close modal with Escape key
     document.addEventListener('keydown', function(event) {
