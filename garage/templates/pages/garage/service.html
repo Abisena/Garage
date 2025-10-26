@@ -2276,31 +2276,30 @@ body {
         const modalDialog = inspectionModal.querySelector('.modal-dialog');
         const modalBackdrop = inspectionModal.querySelector('.modal-backdrop');
 
-        const clickIsInsideDialog = (event) => {
-            if (!modalDialog) {
-                return false;
-            }
+        // Close only when user clicks explicit backdrop or outside area
+        const shouldCloseModal = (event) => {
+            const clickedBackdrop = modalBackdrop && event.target === modalBackdrop;
+            const clickedOutside = event.target === inspectionModal;
+            const clickedInsideDialog = modalDialog?.contains(event.target);
 
-            if (typeof event.composedPath === 'function') {
-                return event.composedPath().includes(modalDialog);
-            }
-
-            return modalDialog.contains(event.target);
+            return !clickedInsideDialog && (clickedBackdrop || clickedOutside);
         };
 
-        inspectionModal.addEventListener('click', function(event) {
-            if (clickIsInsideDialog(event)) {
-                return;
-            }
-
-            if (event.target === inspectionModal || event.target === modalBackdrop) {
+        inspectionModal.addEventListener('click', (event) => {
+            if (shouldCloseModal(event)) {
                 closeInspectionModal();
             }
         });
 
+        if (modalBackdrop) {
+            modalBackdrop.addEventListener('click', () => {
+                closeInspectionModal();
+            });
+        }
+
         if (modalDialog) {
             ['click', 'mousedown', 'touchstart'].forEach((evtName) => {
-                modalDialog.addEventListener(evtName, function(event) {
+                modalDialog.addEventListener(evtName, (event) => {
                     event.stopPropagation();
                 });
             });
