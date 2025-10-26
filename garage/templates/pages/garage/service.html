@@ -1363,14 +1363,14 @@ body {
                 </div>
 
 
-                <div id="inspectionModal" class="inspection-modal">
-            <div class="modal-backdrop"></div>
-            <div class="modal-dialog">
+                <div id="inspectionModal" class="inspection-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="inspectionModalTitle">
+            <div class="modal-backdrop" data-modal-overlay></div>
+            <div class="modal-dialog" role="document" tabindex="-1">
                 <div class="modal-header">
-                    <h2>🔍 Inspeksi Service Order</h2>
-                    <button class="modal-close" onclick="closeInspectionModal()" aria-label="Close">×</button>
+                    <h2 id="inspectionModalTitle">🔍 Inspeksi Service Order</h2>
+                    <button type="button" class="modal-close" data-modal-close aria-label="Close">×</button>
                 </div>
-                
+
                 <div class="modal-body">
                     <form id="inspectionForm">
                         <!-- Hidden field untuk order ID -->
@@ -1539,10 +1539,10 @@ body {
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeInspectionModal()">
+                    <button type="button" class="btn btn-secondary" data-modal-close>
                         ❌ Batal
                     </button>
-                    <button type="button" class="btn btn-primary" onclick="submitInspection()">
+                    <button type="button" class="btn btn-primary" onclick="submitInspection(event)">
                         ✅ Simpan & Pindah ke In Progress
                     </button>
                 </div>
@@ -1801,18 +1801,72 @@ body {
     let serviceTasks = [];
     let requiredParts = [];
     let paymentSchedule = [];
+    let lastFocusedBeforeModal = null;
+
+    const FOCUSABLE_MODAL_ELEMENTS = [
+        'a[href]',
+        'button:not([disabled])',
+        'textarea:not([disabled])',
+        'input:not([disabled])',
+        'select:not([disabled])',
+        '[tabindex]:not([tabindex="-1"])'
+    ].join(',');
+
+    const inspectionModalElement = document.getElementById('inspectionModal');
+    const inspectionModalDialog = inspectionModalElement?.querySelector('.modal-dialog');
+
+    function toggleBodyScroll(shouldLock) {
+        document.body.style.overflow = shouldLock ? 'hidden' : '';
+    }
+
+    function setModalVisibility(isVisible) {
+        if (!inspectionModalElement) {
+            return;
+        }
+
+        inspectionModalElement.classList.toggle('active', isVisible);
+        inspectionModalElement.setAttribute('aria-hidden', String(!isVisible));
+
+        if (isVisible) {
+            toggleBodyScroll(true);
+
+            requestAnimationFrame(() => {
+                if (!inspectionModalDialog) {
+                    return;
+                }
+
+                const focusable = inspectionModalDialog.querySelectorAll(FOCUSABLE_MODAL_ELEMENTS);
+                if (focusable.length > 0) {
+                    focusable[0].focus({ preventScroll: true });
+                } else {
+                    inspectionModalDialog.focus({ preventScroll: true });
+                }
+            });
+        } else {
+            toggleBodyScroll(false);
+
+            if (lastFocusedBeforeModal && typeof lastFocusedBeforeModal.focus === 'function') {
+                try {
+                    lastFocusedBeforeModal.focus({ preventScroll: true });
+                } catch (focusError) {
+                    console.warn('[Inspection Modal] Unable to restore focus:', focusError);
+                }
+            }
+
+            lastFocusedBeforeModal = null;
+        }
+    }
 
     /**
      * Open inspection modal
      */
     window.openInspectionModal = async function(orderId) {
         currentOrderId = orderId;
-        
+        lastFocusedBeforeModal = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
         // Show modal
-        const modal = document.getElementById('inspectionModal');
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-        
+        setModalVisibility(true);
+
         // Reset form
         document.getElementById('inspectionForm').reset();
         document.getElementById('inspection_order_id').value = orderId;
@@ -1848,9 +1902,7 @@ body {
      * Close inspection modal
      */
     window.closeInspectionModal = function() {
-        const modal = document.getElementById('inspectionModal');
-        modal.classList.remove('active');
-        document.body.style.overflow = '';
+        setModalVisibility(false);
         currentOrderId = null;
     };
 
@@ -2199,7 +2251,11 @@ body {
     /**
      * Submit Inspection
      */
-    window.submitInspection = async function() {
+    window.submitInspection = async function(submitEvent) {
+        if (submitEvent && typeof submitEvent.preventDefault === 'function') {
+            submitEvent.preventDefault();
+        }
+
         // Validate form
         const form = document.getElementById('inspectionForm');
         if (!form.checkValidity()) {
@@ -2232,9 +2288,14 @@ body {
         console.log('[Inspection] Submitting data:', inspectionData);
         
         // Disable submit button
-        const submitBtn = event.target;
-        submitBtn.disabled = true;
-        submitBtn.textContent = '⏳ Menyimpan...';
+        const submitBtn = (submitEvent?.target instanceof HTMLElement)
+            ? submitEvent.target
+            : form.querySelector('.modal-footer .btn-primary');
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Menyimpan...';
+        }
         
         try {
             // Submit to API
@@ -2250,10 +2311,15 @@ body {
             
             if (response.message) {
                 showNotification('✅ Inspeksi berhasil disimpan! Service dipindah ke In Progress.', 'success');
-                
+
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '✅ Simpan & Pindah ke In Progress';
+                }
+
                 // Close modal
                 closeInspectionModal();
-                
+
                 // Refresh data
                 setTimeout(() => {
                     refreshData();
@@ -2265,55 +2331,77 @@ body {
             showNotification('❌ Error: ' + (error.message || 'Gagal menyimpan inspeksi'), 'error');
             
             // Re-enable button
-            submitBtn.disabled = false;
-            submitBtn.textContent = '✅ Simpan & Pindah ke In Progress';
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✅ Simpan & Pindah ke In Progress';
+            }
         }
     };
 
-    // Close modal when clicking the backdrop
-    const inspectionModal = document.getElementById('inspectionModal');
-    if (inspectionModal) {
-        const modalDialog = inspectionModal.querySelector('.modal-dialog');
-        const modalBackdrop = inspectionModal.querySelector('.modal-backdrop');
+    if (inspectionModalElement && inspectionModalDialog) {
+        const modalOverlay = inspectionModalElement.querySelector('[data-modal-overlay]');
+        const modalCloseButtons = inspectionModalElement.querySelectorAll('[data-modal-close]');
 
-        const clickIsInsideDialog = (event) => {
-            if (!modalDialog) {
-                return false;
-            }
-
-            if (typeof event.composedPath === 'function') {
-                return event.composedPath().includes(modalDialog);
-            }
-
-            return modalDialog.contains(event.target);
+        const stopEventPropagation = (event) => {
+            if (!event) return;
+            event.stopPropagation();
         };
 
-        inspectionModal.addEventListener('click', function(event) {
-            if (clickIsInsideDialog(event)) {
-                return;
-            }
+        ['click', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'pointerdown', 'pointerup'].forEach((eventName) => {
+            inspectionModalDialog.addEventListener(eventName, stopEventPropagation);
+        });
 
-            if (event.target === inspectionModal || event.target === modalBackdrop) {
-                closeInspectionModal();
+        inspectionModalDialog.addEventListener('touchmove', stopEventPropagation, { passive: true });
+        inspectionModalDialog.addEventListener('pointermove', stopEventPropagation);
+
+        const handleCloseRequest = (event) => {
+            if (event) {
+                event.preventDefault?.();
+                event.stopPropagation?.();
+            }
+            closeInspectionModal();
+        };
+
+        if (modalOverlay) {
+            modalOverlay.addEventListener('click', handleCloseRequest);
+        }
+
+        modalCloseButtons.forEach((button) => {
+            button.addEventListener('click', handleCloseRequest);
+        });
+
+        inspectionModalElement.addEventListener('click', (event) => {
+            if (event.target === inspectionModalElement) {
+                handleCloseRequest(event);
             }
         });
 
-        if (modalDialog) {
-            ['click', 'mousedown', 'touchstart'].forEach((evtName) => {
-                modalDialog.addEventListener(evtName, function(event) {
-                    event.stopPropagation();
-                });
-            });
-        }
+        inspectionModalElement.addEventListener('keydown', (event) => {
+            if (event.key === 'Tab') {
+                const focusableElements = inspectionModalDialog.querySelectorAll(FOCUSABLE_MODAL_ELEMENTS);
+
+                if (focusableElements.length === 0) {
+                    event.preventDefault();
+                    return;
+                }
+
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+
+                if (!event.shiftKey && document.activeElement === lastElement) {
+                    event.preventDefault();
+                    firstElement.focus();
+                } else if (event.shiftKey && document.activeElement === firstElement) {
+                    event.preventDefault();
+                    lastElement.focus();
+                }
+            }
+        });
     }
 
-    // Close modal with Escape key
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            const modal = document.getElementById('inspectionModal');
-            if (modal && modal.classList.contains('active')) {
-                closeInspectionModal();
-            }
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && inspectionModalElement?.classList.contains('active')) {
+            closeInspectionModal();
         }
     });
 
