@@ -614,13 +614,12 @@ def _update_document(doctype: str, name: str, data: Mapping[str, Any]) -> frappe
 def _list_dicts(doctype: str, fields: Iterable[str], *, filters: Optional[Any] = None, limit: int = DEFAULT_LIMIT) -> List[Dict[str, Any]]:
     try:
         with _ignoring_permissions():
-            rows = frappe.get_all(
+            rows = frappe.db.get_all(
                 doctype,
                 fields=list(fields),
                 filters=filters or [],
                 order_by="modified desc",
-                limit_page_length=limit,
-                ignore_permissions=True,
+                limit=limit,
             )
     except Exception:
         return []
