@@ -455,6 +455,13 @@ body {
 (function() {
     'use strict';
 
+    function getCSRFToken() {
+        const match = document.cookie.match(/(?:^|; )csrf_token=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : null;
+    }
+
+    const csrfToken = typeof frappe !== 'undefined' && frappe.csrf_token ? frappe.csrf_token : getCSRFToken();
+
     // Get order ID from URL
     const urlParams = new URLSearchParams(window.location.search);
     const orderId = urlParams.get('order_id');
@@ -481,9 +488,9 @@ body {
                 method: 'garage.api.portal.get_service_order_details',
                 args: { order_id: orderId },
                 type: 'POST',
-                headers: {
-                    'X-Frappe-CSRF-Token': frappe.csrf_token
-                }
+                headers: csrfToken ? {
+                    'X-Frappe-CSRF-Token': csrfToken
+                } : undefined
             });
 
             if (response.message) {
@@ -675,11 +682,11 @@ body {
         try {
             await frappe.call({
                 method: 'garage.api.portal.update_service_order_inspection',
-                args: { order_id: orderId, inspection_data: data },
+                args: Object.assign({ order_id: orderId, inspection_data: data }, csrfToken ? { csrf_token: csrfToken } : {}),
                 type: 'POST',
-                headers: {
-                    'X-Frappe-CSRF-Token': frappe.csrf_token
-                }
+                headers: csrfToken ? {
+                    'X-Frappe-CSRF-Token': csrfToken
+                } : undefined
             });
 
             frappe.show_alert({ message: '✅ Inspeksi berhasil!', indicator: 'green' }, 3);
