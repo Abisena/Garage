@@ -492,6 +492,37 @@ body {
         return cookieToken;
     }
 
+    function normaliseDateInput(value) {
+        if (!value) {
+            return '';
+        }
+
+        if (value instanceof Date) {
+            return value.toISOString().split('T')[0];
+        }
+
+        if (typeof value === 'string') {
+            if (value.includes('T')) {
+                return value.split('T')[0];
+            }
+
+            if (value.includes(' ')) {
+                return value.split(' ')[0];
+            }
+
+            if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                return value;
+            }
+
+            const parsed = new Date(value);
+            if (!Number.isNaN(parsed.getTime())) {
+                return parsed.toISOString().split('T')[0];
+            }
+        }
+
+        return '';
+    }
+
     function withCSRF(options = {}) {
         const token = resolveCSRFToken();
 
@@ -550,151 +581,226 @@ body {
             }
         }
 
-    function populateOrderInfo(order) {
-        document.getElementById('display_order_id').textContent = order.name || '-';
-        document.getElementById('display_customer').textContent = order.customer_name || '-';
-        document.getElementById('display_vehicle').textContent = 
-            (order.vehicle_brand || '') + ' ' + (order.vehicle_model || '') + ' - ' + (order.vehicle_plate || '');
-        document.getElementById('display_intake_notes').textContent = order.service_notes || '-';
+        function populateOrderInfo(order) {
+            const customerDetails = order.customer_details || {};
+            const vehicleDetails = order.vehicle_details || {};
 
-        if (order.service_order_type) document.getElementById('service_order_type').value = order.service_order_type;
-        if (order.order_category) document.getElementById('order_category').value = order.order_category;
-        if (order.priority) document.getElementById('priority').value = order.priority;
-        if (order.estimated_delivery_date) document.getElementById('estimated_delivery_date').value = order.estimated_delivery_date;
-        if (order.total_estimated_amount) document.getElementById('total_estimated_amount').value = order.total_estimated_amount;
-        if (order.inspection_summary) document.getElementById('inspection_summary').value = order.inspection_summary;
-    }
+            document.getElementById('display_order_id').textContent = order.name || order.order_id || '-';
 
-    // Service Tasks
-    window.addServiceTask = function() {
-        serviceTasks.push({ task: '', description: '', estimated_hours: 1, technician: '' });
-        renderServiceTasks();
-    };
+            const customerName = order.customer_name
+                || customerDetails.customer_name
+                || customerDetails.name
+                || order.customer
+                || '-';
+            document.getElementById('display_customer').textContent = customerName;
 
-    window.removeServiceTask = function(index) {
-        serviceTasks.splice(index, 1);
-        renderServiceTasks();
-    };
+            const vehicleParts = [];
+            const licensePlate = order.vehicle_plate || vehicleDetails.license_plate;
+            const brandModel = [order.vehicle_brand || vehicleDetails.brand, order.vehicle_model || vehicleDetails.model]
+                .filter(Boolean)
+                .join(' ')
+                .trim();
 
-    function renderServiceTasks() {
-        const container = document.getElementById('serviceTasksList');
-        if (serviceTasks.length === 0) {
-            container.innerHTML = '<div class="empty-state"><p>Belum ada pekerjaan</p></div>';
-            return;
+            if (licensePlate) vehicleParts.push(licensePlate);
+            if (brandModel) vehicleParts.push(brandModel);
+
+            const vehicleDisplay = vehicleParts.join(' • ');
+            document.getElementById('display_vehicle').textContent = vehicleDisplay || '-';
+
+            const intakeNotes = order.intake_notes || order.inspection_summary || order.service_notes;
+            document.getElementById('display_intake_notes').textContent = intakeNotes || '-';
+
+            if (order.service_order_type) {
+                document.getElementById('service_order_type').value = order.service_order_type;
+            }
+            if (order.order_category) {
+                document.getElementById('order_category').value = order.order_category;
+            }
+            if (order.priority) {
+                document.getElementById('priority').value = order.priority;
+            }
+            if (order.estimated_delivery_date) {
+                const formattedDate = normaliseDateInput(order.estimated_delivery_date);
+                if (formattedDate) {
+                    document.getElementById('estimated_delivery_date').value = formattedDate;
+                }
+            }
+            if (order.total_estimated_amount !== undefined && order.total_estimated_amount !== null) {
+                document.getElementById('total_estimated_amount').value = order.total_estimated_amount;
+            }
+            if (order.inspection_summary) {
+                document.getElementById('inspection_summary').value = order.inspection_summary;
+            }
+            if (order.service_notes) {
+                document.getElementById('service_notes').value = order.service_notes;
+            }
+
+            if (Array.isArray(order.service_tasks)) {
+                serviceTasks = order.service_tasks.map((task) => ({
+                    task: task.task || task.name || '',
+                    description: task.description || '',
+                    estimated_hours: task.estimated_hours ?? task.estimated_time ?? 1,
+                    technician: task.technician || task.assigned_to || ''
+                }));
+            } else {
+                serviceTasks = [];
+            }
+            renderServiceTasks();
+
+            if (Array.isArray(order.required_parts)) {
+                requiredParts = order.required_parts.map((part) => ({
+                    item_name: part.item_name || part.part_name || '',
+                    description: part.description || '',
+                    qty: part.qty ?? part.quantity ?? 1,
+                    rate: part.rate ?? part.price ?? 0
+                }));
+            } else {
+                requiredParts = [];
+            }
+            renderRequiredParts();
+
+            if (Array.isArray(order.payment_schedule)) {
+                paymentSchedule = order.payment_schedule.map((schedule) => ({
+                    description: schedule.description || '',
+                    percentage: schedule.percentage ?? 0,
+                    amount: schedule.amount ?? 0
+                }));
+            } else {
+                paymentSchedule = [];
+            }
+            renderPaymentSchedule();
         }
-        container.innerHTML = serviceTasks.map((task, i) => `
-            <div class="repeating-item">
-                <div class="item-header">
-                    <span class="item-number">Pekerjaan #${i + 1}</span>
-                    <button type="button" class="btn-remove" onclick="removeServiceTask(${i})">🗑️ Hapus</button>
+
+        // Service Tasks
+        window.addServiceTask = function() {
+            serviceTasks.push({ task: '', description: '', estimated_hours: 1, technician: '' });
+            renderServiceTasks();
+        };
+
+        window.removeServiceTask = function(index) {
+            serviceTasks.splice(index, 1);
+            renderServiceTasks();
+        };
+
+        function renderServiceTasks() {
+            const container = document.getElementById('serviceTasksList');
+            if (serviceTasks.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>Belum ada pekerjaan</p></div>';
+                return;
+            }
+            container.innerHTML = serviceTasks.map((task, i) => `
+                <div class="repeating-item">
+                    <div class="item-header">
+                        <span class="item-number">Pekerjaan #${i + 1}</span>
+                        <button type="button" class="btn-remove" onclick="removeServiceTask(${i})">🗑️ Hapus</button>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Nama Pekerjaan *</label>
+                            <input type="text" value="${task.task}" onchange="serviceTasks[${i}].task = this.value" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Teknisi</label>
+                            <input type="text" value="${task.technician}" onchange="serviceTasks[${i}].technician = this.value">
+                        </div>
+                        <div class="form-group">
+                            <label>Estimasi Jam</label>
+                            <input type="number" value="${task.estimated_hours}" onchange="serviceTasks[${i}].estimated_hours = parseFloat(this.value)" step="0.5">
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Deskripsi</label>
+                            <textarea onchange="serviceTasks[${i}].description = this.value" rows="2">${task.description}</textarea>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Nama Pekerjaan *</label>
-                        <input type="text" value="${task.task}" onchange="serviceTasks[${i}].task = this.value" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Teknisi</label>
-                        <input type="text" value="${task.technician}" onchange="serviceTasks[${i}].technician = this.value">
-                    </div>
-                    <div class="form-group">
-                        <label>Estimasi Jam</label>
-                        <input type="number" value="${task.estimated_hours}" onchange="serviceTasks[${i}].estimated_hours = parseFloat(this.value)" step="0.5">
-                    </div>
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <label>Deskripsi</label>
-                        <textarea onchange="serviceTasks[${i}].description = this.value" rows="2">${task.description}</textarea>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    // Required Parts (similar pattern)
-    window.addRequiredPart = function() {
-        requiredParts.push({ item_name: '', description: '', qty: 1, rate: 0 });
-        renderRequiredParts();
-    };
-
-    window.removeRequiredPart = function(index) {
-        requiredParts.splice(index, 1);
-        renderRequiredParts();
-    };
-
-    function renderRequiredParts() {
-        const container = document.getElementById('requiredPartsList');
-        if (requiredParts.length === 0) {
-            container.innerHTML = '<div class="empty-state"><p>Belum ada sparepart</p></div>';
-            return;
+            `).join('');
         }
-        container.innerHTML = requiredParts.map((part, i) => `
-            <div class="repeating-item">
-                <div class="item-header">
-                    <span class="item-number">Part #${i + 1}</span>
-                    <button type="button" class="btn-remove" onclick="removeRequiredPart(${i})">🗑️ Hapus</button>
+
+        // Required Parts (similar pattern)
+        window.addRequiredPart = function() {
+            requiredParts.push({ item_name: '', description: '', qty: 1, rate: 0 });
+            renderRequiredParts();
+        };
+
+        window.removeRequiredPart = function(index) {
+            requiredParts.splice(index, 1);
+            renderRequiredParts();
+        };
+
+        function renderRequiredParts() {
+            const container = document.getElementById('requiredPartsList');
+            if (requiredParts.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>Belum ada sparepart</p></div>';
+                return;
+            }
+            container.innerHTML = requiredParts.map((part, i) => `
+                <div class="repeating-item">
+                    <div class="item-header">
+                        <span class="item-number">Part #${i + 1}</span>
+                        <button type="button" class="btn-remove" onclick="removeRequiredPart(${i})">🗑️ Hapus</button>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Nama Part *</label>
+                            <input type="text" value="${part.item_name}" onchange="requiredParts[${i}].item_name = this.value" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Qty *</label>
+                            <input type="number" value="${part.qty}" onchange="requiredParts[${i}].qty = parseInt(this.value); renderRequiredParts()" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Harga Satuan *</label>
+                            <input type="number" value="${part.rate}" onchange="requiredParts[${i}].rate = parseFloat(this.value); renderRequiredParts()" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Total</label>
+                            <input type="number" value="${part.qty * part.rate}" readonly style="background: var(--gray-100);">
+                        </div>
+                    </div>
                 </div>
-                <div class="form-grid">
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <label>Nama Part *</label>
-                        <input type="text" value="${part.item_name}" onchange="requiredParts[${i}].item_name = this.value" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Qty *</label>
-                        <input type="number" value="${part.qty}" onchange="requiredParts[${i}].qty = parseInt(this.value); renderRequiredParts()" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Harga Satuan *</label>
-                        <input type="number" value="${part.rate}" onchange="requiredParts[${i}].rate = parseFloat(this.value); renderRequiredParts()" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Total</label>
-                        <input type="number" value="${part.qty * part.rate}" readonly style="background: var(--gray-100);">
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    // Payment Schedule (similar pattern)
-    window.addPaymentSchedule = function() {
-        paymentSchedule.push({ description: '', percentage: 0, amount: 0 });
-        renderPaymentSchedule();
-    };
-
-    window.removePaymentSchedule = function(index) {
-        paymentSchedule.splice(index, 1);
-        renderPaymentSchedule();
-    };
-
-    function renderPaymentSchedule() {
-        const container = document.getElementById('paymentScheduleList');
-        if (paymentSchedule.length === 0) {
-            container.innerHTML = '<div class="empty-state"><p>Belum ada jadwal pembayaran</p></div>';
-            return;
+            `).join('');
         }
-        container.innerHTML = paymentSchedule.map((payment, i) => `
-            <div class="repeating-item">
-                <div class="item-header">
-                    <span class="item-number">Pembayaran #${i + 1}</span>
-                    <button type="button" class="btn-remove" onclick="removePaymentSchedule(${i})">🗑️ Hapus</button>
+
+        // Payment Schedule (similar pattern)
+        window.addPaymentSchedule = function() {
+            paymentSchedule.push({ description: '', percentage: 0, amount: 0 });
+            renderPaymentSchedule();
+        };
+
+        window.removePaymentSchedule = function(index) {
+            paymentSchedule.splice(index, 1);
+            renderPaymentSchedule();
+        };
+
+        function renderPaymentSchedule() {
+            const container = document.getElementById('paymentScheduleList');
+            if (paymentSchedule.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>Belum ada jadwal pembayaran</p></div>';
+                return;
+            }
+            container.innerHTML = paymentSchedule.map((payment, i) => `
+                <div class="repeating-item">
+                    <div class="item-header">
+                        <span class="item-number">Pembayaran #${i + 1}</span>
+                        <button type="button" class="btn-remove" onclick="removePaymentSchedule(${i})">🗑️ Hapus</button>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Deskripsi *</label>
+                            <input type="text" value="${payment.description}" onchange="paymentSchedule[${i}].description = this.value" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Persentase (%)</label>
+                            <input type="number" value="${payment.percentage}" onchange="paymentSchedule[${i}].percentage = parseFloat(this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>Jumlah (Rp) *</label>
+                            <input type="number" value="${payment.amount}" onchange="paymentSchedule[${i}].amount = parseFloat(this.value)" required>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Deskripsi *</label>
-                        <input type="text" value="${payment.description}" onchange="paymentSchedule[${i}].description = this.value" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Persentase (%)</label>
-                        <input type="number" value="${payment.percentage}" onchange="paymentSchedule[${i}].percentage = parseFloat(this.value)">
-                    </div>
-                    <div class="form-group">
-                        <label>Jumlah (Rp) *</label>
-                        <input type="number" value="${payment.amount}" onchange="paymentSchedule[${i}].amount = parseFloat(this.value)" required>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
+            `).join('');
+        }
 
         // Submit
         window.submitInspection = async function() {
