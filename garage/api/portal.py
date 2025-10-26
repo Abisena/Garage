@@ -1209,12 +1209,30 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
         if field in allowed_fields and value is not None:
             setattr(doc, field, value)
     
-    # Update status to reflect inspection completion and move into execution
-    if doc.status not in {"Work In Progress", "Awaiting QC", "Completed"}:
-        doc.status = "Work In Progress"
-        if hasattr(doc, "qc_status") and (not doc.qc_status or doc.qc_status in {"Not Required", ""}):
-            doc.qc_status = "Pending"
+    status_update = data.get("status")
+    if status_update:
+        allowed_statuses = {
+            "Draft",
+            "Inspection",
+            "Estimate",
+            "Awaiting Approval",
+            "Approved",
+            "Work In Progress",
+            "Awaiting QC",
+            "Completed",
+            "Cancelled",
+        }
+        if status_update not in allowed_statuses:
+            frappe.throw(_("Status {0} tidak diperbolehkan untuk inspeksi.").format(status_update))
 
+        doc.status = status_update
+
+        if status_update == "Work In Progress" and hasattr(doc, "job_card_status"):
+            doc.job_card_status = "Work In Progress"
+
+        if status_update == "Awaiting QC" and hasattr(doc, "qc_status"):
+            doc.qc_status = "Pending"
+    
     # Handle child tables if provided - with error handling
     if "inspection_items" in data:
         try:
@@ -1278,15 +1296,14 @@ def move_to_in_progress(order_id: str) -> Dict[str, Any]:
     doc = _get_doc("Garage Service Order", order_id)
     
     # Validate current status
-    allowed_statuses = ["Inspection", "Estimate", "Awaiting Approval", "Approved"]
-    if doc.status not in allowed_statuses:
-        frappe.throw(_("Service order harus dalam status Inspection/Estimate sebelum masuk Work In Progress."))
+    if doc.status not in ["Inspection", "Estimate", "Awaiting Approval", "Approved"]:
+        frappe.throw(_("Service order harus dalam status Inspection atau persiapan sebelum dikerjakan."))
 
     # Update status
     doc.status = "Work In Progress"
     if hasattr(doc, "job_card_status"):
-        doc.job_card_status = "In Progress"
-
+        doc.job_card_status = "Work In Progress"
+    
     _save_doc(doc)
     
     return {
@@ -1360,6 +1377,7 @@ def get_service_statistics() -> Dict[str, Any]:
         "Approved",
         "Work In Progress",
         "Awaiting QC",
+        "Quality Check",
         "Completed",
         "Cancelled",
     ]
@@ -1372,12 +1390,16 @@ def get_service_statistics() -> Dict[str, Any]:
             status_counts[status] = 0
     
     # Aggregate counts for workflow stages
-    inspection_statuses = ["Draft", "Inspection", "Estimate", "Awaiting Approval", "Approved"]
-    progress_statuses = ["Work In Progress", "Awaiting QC"]
+    inspection_count = sum(
+        status_counts.get(stage, 0)
+        for stage in ["Draft", "Inspection", "Estimate", "Awaiting Approval", "Approved"]
+    )
 
-    inspection_count = sum(status_counts.get(status, 0) for status in inspection_statuses)
-
-    progress_count = sum(status_counts.get(status, 0) for status in progress_statuses)
+    progress_count = (
+        status_counts.get("Work In Progress", 0)
+        + status_counts.get("Awaiting QC", 0)
+        + status_counts.get("Quality Check", 0)
+    )
     
     completed_count = status_counts.get("Completed", 0)
     
@@ -1395,7 +1417,7 @@ def get_service_statistics() -> Dict[str, Any]:
         overdue_orders = frappe.db.count(
             "Garage Service Order",
             {
-                "status": ["in", progress_statuses],
+                "status": ["in", ["Work In Progress", "Awaiting QC"]],
                 "estimated_delivery_date": ["<", nowdate()]
             }
         )
@@ -1548,6 +1570,7 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         service_payload: Dict[str, Any] = {
             "customer": customer_name,
             "vehicle": vehicle_name,
+            "status": "Inspection",
         }
         if intake_notes:
             service_payload["service_notes"] = intake_notes

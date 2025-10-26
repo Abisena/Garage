@@ -147,9 +147,39 @@ a:hover {
     color: var(--gray-600);
 }
 
+.status-inspection {
+    background: var(--status-pending-light);
+    color: var(--status-pending);
+}
+
+.status-estimate {
+    background: var(--status-pending-light);
+    color: var(--status-pending);
+}
+
+.status-awaiting-approval {
+    background: var(--status-pending-light);
+    color: var(--status-pending);
+}
+
+.status-approved {
+    background: var(--status-progress-light);
+    color: var(--status-progress);
+}
+
 .status-in-progress {
     background: var(--status-progress-light);
     color: var(--status-progress);
+}
+
+.status-work-in-progress {
+    background: var(--status-progress-light);
+    color: var(--status-progress);
+}
+
+.status-awaiting-qc {
+    background: var(--status-pending-light);
+    color: var(--status-pending);
 }
 
 .status-completed {
@@ -727,9 +757,9 @@ a:hover {
                             <label>Kategori *</label>
                             <select id="order_category" required>
                                 <option value="">-- Pilih --</option>
-                                <option value="Workshop Service">Workshop Service</option>
-                                <option value="Body Repair">Body Repair</option>
-                                <option value="Quick Service">Quick Service</option>
+                                <option value="Normal">Normal</option>
+                                <option value="Express">Express</option>
+                                <option value="Emergency">Emergency</option>
                             </select>
                         </div>
 
