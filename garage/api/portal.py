@@ -1153,7 +1153,7 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
     return result
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def update_service_order_inspection(order_id: str, inspection_data: Optional[Any] = None) -> Dict[str, Any]:
     """Update service order with inspection and planning details."""
     

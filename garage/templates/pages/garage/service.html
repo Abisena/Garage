@@ -1364,191 +1364,6 @@ body {
                         </tbody>
                     </table>
                 </div>
-
-
-                <div id="inspectionModal" class="inspection-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="inspectionModalTitle">
-            <div class="modal-backdrop" data-modal-overlay></div>
-            <div class="modal-dialog" role="document" tabindex="-1">
-                <div class="modal-header">
-                    <h2 id="inspectionModalTitle">🔍 Inspeksi Service Order</h2>
-                    <button type="button" class="modal-close" data-modal-close aria-label="Close">×</button>
-                </div>
-
-                <div class="modal-body">
-                    <form id="inspectionForm">
-                        <!-- Hidden field untuk order ID -->
-                        <input type="hidden" id="inspection_order_id" name="order_id">
-                        
-                        <!-- Service Order Info -->
-                        <div class="form-section">
-                            <div class="section-badge info">Info Order</div>
-                            <div class="order-info-display" id="orderInfoDisplay">
-                                <div class="info-item">
-                                    <span class="label">Order ID:</span>
-                                    <span class="value" id="display_order_id">-</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="label">Customer:</span>
-                                    <span class="value" id="display_customer">-</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="label">Kendaraan:</span>
-                                    <span class="value" id="display_vehicle">-</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="label">Catatan Intake:</span>
-                                    <span class="value" id="display_intake_notes">-</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Basic Service Details -->
-                        <div class="form-section">
-                            <div class="section-badge primary">Detail Service</div>
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="service_order_type">
-                                        Jenis Service <span class="required">*</span>
-                                    </label>
-                                    <select id="service_order_type" name="service_order_type" required>
-                                        <option value="">-- Pilih Jenis Service --</option>
-                                        <option value="Regular Service">Regular Service</option>
-                                        <option value="Major Service">Major Service</option>
-                                        <option value="Repair">Repair</option>
-                                        <option value="Body Repair">Body Repair</option>
-                                        <option value="Inspection">Inspection</option>
-                                        <option value="Warranty">Warranty</option>
-                                        <option value="Insurance Claim">Insurance Claim</option>
-                                        <option value="Emergency Repair">Emergency Repair</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="order_category">
-                                        Kategori <span class="required">*</span>
-                                    </label>
-                                    <select id="order_category" name="order_category" required>
-                                        <option value="">-- Pilih Kategori --</option>
-                                        <option value="Engine">Engine</option>
-                                        <option value="Transmission">Transmission</option>
-                                        <option value="Electrical">Electrical</option>
-                                        <option value="Suspension">Suspension</option>
-                                        <option value="Brake System">Brake System</option>
-                                        <option value="Body Work">Body Work</option>
-                                        <option value="Interior">Interior</option>
-                                        <option value="AC System">AC System</option>
-                                        <option value="General Maintenance">General Maintenance</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="priority">
-                                        Prioritas <span class="required">*</span>
-                                    </label>
-                                    <select id="priority" name="priority" required>
-                                        <option value="Low">Low</option>
-                                        <option value="Medium" selected>Medium</option>
-                                        <option value="High">High</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="estimated_delivery_date">
-                                        Estimasi Selesai <span class="required">*</span>
-                                    </label>
-                                    <input type="date" id="estimated_delivery_date" name="estimated_delivery_date" required>
-                                </div>
-
-                                <div class="form-group full-width">
-                                    <label for="total_estimated_amount">
-                                        Estimasi Biaya (Rp) <span class="required">*</span>
-                                    </label>
-                                    <input type="number" id="total_estimated_amount" name="total_estimated_amount" 
-                                        min="0" step="1000" placeholder="0" required>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Inspection Summary -->
-                        <div class="form-section">
-                            <div class="section-badge warning">Hasil Inspeksi</div>
-                            <div class="form-grid">
-                                <div class="form-group full-width">
-                                    <label for="inspection_summary">
-                                        Ringkasan Inspeksi <span class="required">*</span>
-                                    </label>
-                                    <textarea id="inspection_summary" name="inspection_summary" 
-                                            rows="4" placeholder="Jelaskan hasil inspeksi dan temuan utama..." required></textarea>
-                                    <small class="form-hint">Ringkasan kondisi kendaraan dan masalah yang ditemukan</small>
-                                </div>
-
-                                <div class="form-group full-width">
-                                    <label for="service_notes">Catatan Servis</label>
-                                    <textarea id="service_notes" name="service_notes" 
-                                            rows="3" placeholder="Catatan tambahan untuk teknisi..."></textarea>
-                                    <small class="form-hint">Instruksi khusus atau informasi penting lainnya</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Service Tasks -->
-                        <div class="form-section">
-                            <div class="section-badge success">Daftar Pekerjaan</div>
-                            <div class="repeating-section" id="serviceTasksSection">
-                                <div class="repeating-header">
-                                    <span class="repeating-count">0 Pekerjaan</span>
-                                    <button type="button" class="btn-add" onclick="addServiceTask()">
-                                        ➕ Tambah Pekerjaan
-                                    </button>
-                                </div>
-                                <div id="serviceTasksList" class="repeating-list">
-                                    <!-- Tasks will be added here dynamically -->
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Required Parts -->
-                        <div class="form-section">
-                            <div class="section-badge danger">Kebutuhan Sparepart</div>
-                            <div class="repeating-section" id="requiredPartsSection">
-                                <div class="repeating-header">
-                                    <span class="repeating-count">0 Part</span>
-                                    <button type="button" class="btn-add" onclick="addRequiredPart()">
-                                        ➕ Tambah Part
-                                    </button>
-                                </div>
-                                <div id="requiredPartsList" class="repeating-list">
-                                    <!-- Parts will be added here dynamically -->
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Payment Schedule -->
-                        <div class="form-section">
-                            <div class="section-badge primary">Jadwal Pembayaran</div>
-                            <div class="repeating-section" id="paymentScheduleSection">
-                                <div class="repeating-header">
-                                    <span class="repeating-count">0 Pembayaran</span>
-                                    <button type="button" class="btn-add" onclick="addPaymentSchedule()">
-                                        ➕ Tambah Jadwal
-                                    </button>
-                                </div>
-                                <div id="paymentScheduleList" class="repeating-list">
-                                    <!-- Payment schedules will be added here dynamically -->
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-modal-close>
-                        ❌ Batal
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="submitInspection(event)">
-                        ✅ Simpan & Pindah ke In Progress
-                    </button>
-                </div>
             </div>
         </div>
     </div>
@@ -1560,10 +1375,18 @@ body {
 (function() {
     'use strict';
 
-    // API Configuration - Sesuaikan dengan struktur app Anda
+    // ============================================================================
+    // API CONFIGURATION
+    // ============================================================================
     const API_CONFIG = {
-        listServiceOrders: 'garage.api.portal.list_service_orders', // Adjust path
+        listServiceOrders: 'garage.api.portal.list_service_orders',
+        getServiceOrderDetails: 'garage.api.portal.get_service_order_details',
+        updateInspection: 'garage.api.portal.update_service_order_inspection'
     };
+
+    // ============================================================================
+    // UTILITY FUNCTIONS
+    // ============================================================================
 
     // Format currency
     function formatCurrency(amount) {
@@ -1618,6 +1441,10 @@ body {
         return `<span class="priority-badge ${priorityClass}">${priority}</span>`;
     }
 
+    // ============================================================================
+    // TABLE RENDERING FUNCTIONS
+    // ============================================================================
+
     // Render Inspection Entry table
     function renderInspectionTable(orders) {
         const tbody = document.getElementById('table-inspection');
@@ -1664,7 +1491,7 @@ body {
                     <div class="date-display">${formatDateTime(order.creation)}</div>
                 </td>
                 <td>
-                    <button class="action-btn primary" onclick="openInspectionModal('${order.name}')">
+                    <button class="action-btn primary" onclick="window.location.href='/garage/inspection?order_id=${order.name}'">
                         🔍 Inspeksi
                     </button>
                 </td>
@@ -1682,8 +1509,8 @@ body {
                     <td colspan="7">
                         <div class="empty-state">
                             <div class="empty-state__icon">⚙️</div>
-                            <div class="empty-state__title">Tidak ada service yang sedang dikerjakan</div>
-                            <div class="empty-state__message">Service yang sudah direncanakan akan muncul di sini</div>
+                            <div class="empty-state__title">Tidak ada service dalam pengerjaan</div>
+                            <div class="empty-state__message">Service yang sudah diinspeksi akan masuk ke sini</div>
                         </div>
                     </td>
                 </tr>
@@ -1696,7 +1523,7 @@ body {
                 <td>
                     <div class="cell-strong">${order.name || '-'}</div>
                     <div class="cell-secondary">${order.service_order_type || '-'}</div>
-                    ${order.order_category ? `<span class="service-type">${order.order_category}</span>` : ''}
+                    ${order.priority ? getPriorityBadge(order.priority) : ''}
                 </td>
                 <td>
                     <div class="vehicle-info">
@@ -1710,15 +1537,12 @@ body {
                         <div class="customer-contact">${order.customer_phone || '-'}</div>
                     </div>
                 </td>
-                <td>
-                    <div class="detail-badge">Teknisi: ${order.technician_count || 0}</div>
-                    <div class="detail-badge">Part: ${order.parts_count || 0}</div>
-                    <div class="detail-badge">Task: ${order.tasks_count || 0}</div>
-                </td>
                 <td>${getStatusBadge(order.status)}</td>
                 <td>
+                    <div class="cell-muted">${order.inspection_summary || '-'}</div>
+                </td>
+                <td>
                     <div class="date-display">${formatDate(order.estimated_delivery_date)}</div>
-                    ${order.total_estimated_amount ? `<div class="currency">${formatCurrency(order.total_estimated_amount)}</div>` : ''}
                 </td>
                 <td>
                     <button class="action-btn" onclick="viewServiceDetails('${order.name}')">
@@ -1799,622 +1623,13 @@ body {
         document.getElementById('badge-completed').textContent = completedCount;
     }
 
-    // Global variables untuk tracking
-    let currentOrderId = null;
-    let serviceTasks = [];
-    let requiredParts = [];
-    let paymentSchedule = [];
-    let lastFocusedBeforeModal = null;
+    // ============================================================================
+    // LOAD SERVICE ORDERS FROM API
+    // ============================================================================
 
-    const FOCUSABLE_MODAL_ELEMENTS = [
-        'a[href]',
-        'button:not([disabled])',
-        'textarea:not([disabled])',
-        'input:not([disabled])',
-        'select:not([disabled])',
-        '[tabindex]:not([tabindex="-1"])'
-    ].join(',');
-
-    const inspectionModalElement = document.getElementById('inspectionModal');
-    const inspectionModalDialog = inspectionModalElement?.querySelector('.modal-dialog');
-
-    function toggleBodyScroll(shouldLock) {
-        document.body.style.overflow = shouldLock ? 'hidden' : '';
-    }
-
-    function setModalVisibility(isVisible) {
-        if (!inspectionModalElement) {
-            return;
-        }
-
-        inspectionModalElement.classList.toggle('active', isVisible);
-        inspectionModalElement.setAttribute('aria-hidden', String(!isVisible));
-
-        if (isVisible) {
-            toggleBodyScroll(true);
-
-            requestAnimationFrame(() => {
-                if (!inspectionModalDialog) {
-                    return;
-                }
-
-                const focusable = inspectionModalDialog.querySelectorAll(FOCUSABLE_MODAL_ELEMENTS);
-                if (focusable.length > 0) {
-                    focusable[0].focus({ preventScroll: true });
-                } else {
-                    inspectionModalDialog.focus({ preventScroll: true });
-                }
-            });
-        } else {
-            toggleBodyScroll(false);
-
-            if (lastFocusedBeforeModal && typeof lastFocusedBeforeModal.focus === 'function') {
-                try {
-                    lastFocusedBeforeModal.focus({ preventScroll: true });
-                } catch (focusError) {
-                    console.warn('[Inspection Modal] Unable to restore focus:', focusError);
-                }
-            }
-
-            lastFocusedBeforeModal = null;
-        }
-    }
-
-    /**
-     * Open inspection modal
-     */
-    window.openInspectionModal = async function(orderId) {
-        currentOrderId = orderId;
-        lastFocusedBeforeModal = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-
-        // Show modal
-        setModalVisibility(true);
-
-        // Reset form
-        document.getElementById('inspectionForm').reset();
-        document.getElementById('inspection_order_id').value = orderId;
-        
-        // Clear repeating sections
-        serviceTasks = [];
-        requiredParts = [];
-        paymentSchedule = [];
-        updateRepeatingCounts();
-        
-        // Load order details
-        try {
-            const response = await frappe.call({
-                method: API_CONFIG.getServiceOrderDetails || 'garage.api.portal.get_service_order_details',
-                args: { order_id: orderId }
-            });
-            
-            if (response.message) {
-                populateOrderInfo(response.message);
-            }
-        } catch (error) {
-            console.error('[Inspection] Error loading order details:', error);
-            showNotification('Error loading order details', 'error');
-        }
-        
-        // Set default estimated delivery date (3 days from now)
-        const defaultDate = new Date();
-        defaultDate.setDate(defaultDate.getDate() + 3);
-        document.getElementById('estimated_delivery_date').value = defaultDate.toISOString().split('T')[0];
-    };
-
-    /**
-     * Close inspection modal
-     */
-    window.closeInspectionModal = function() {
-        setModalVisibility(false);
-        currentOrderId = null;
-    };
-
-    /**
-     * Populate order info in modal
-     */
-    function populateOrderInfo(orderData) {
-        // Display order ID
-        document.getElementById('display_order_id').textContent = orderData.name || '-';
-        
-        // Display customer
-        const customerName = orderData.customer_details?.customer_name || orderData.customer || '-';
-        document.getElementById('display_customer').textContent = customerName;
-        
-        // Display vehicle
-        const vehicleInfo = orderData.vehicle_details 
-            ? `${orderData.vehicle_details.license_plate} - ${orderData.vehicle_details.brand} ${orderData.vehicle_details.model}`
-            : orderData.vehicle || '-';
-        document.getElementById('display_vehicle').textContent = vehicleInfo;
-        
-        // Display intake notes
-        document.getElementById('display_intake_notes').textContent = orderData.service_notes || '-';
-        
-        // Pre-fill existing data if available
-        if (orderData.service_order_type) {
-            document.getElementById('service_order_type').value = orderData.service_order_type;
-        }
-        
-        if (orderData.order_category) {
-            document.getElementById('order_category').value = orderData.order_category;
-        }
-        
-        if (orderData.priority) {
-            document.getElementById('priority').value = orderData.priority;
-        }
-        
-        if (orderData.estimated_delivery_date) {
-            document.getElementById('estimated_delivery_date').value = orderData.estimated_delivery_date;
-        }
-        
-        if (orderData.total_estimated_amount) {
-            document.getElementById('total_estimated_amount').value = orderData.total_estimated_amount;
-        }
-        
-        if (orderData.inspection_summary) {
-            document.getElementById('inspection_summary').value = orderData.inspection_summary;
-        }
-        
-        // Load existing tasks, parts, and payment schedule if available
-        if (orderData.service_tasks && orderData.service_tasks.length > 0) {
-            serviceTasks = orderData.service_tasks.map(task => ({
-                task: task.task || '',
-                description: task.description || '',
-                estimated_hours: task.estimated_hours || 0,
-                technician: task.technician || ''
-            }));
-            renderServiceTasks();
-        }
-        
-        if (orderData.required_parts && orderData.required_parts.length > 0) {
-            requiredParts = orderData.required_parts.map(part => ({
-                item_name: part.item_name || '',
-                description: part.description || '',
-                qty: part.qty || 1,
-                rate: part.rate || 0
-            }));
-            renderRequiredParts();
-        }
-        
-        if (orderData.payment_schedule && orderData.payment_schedule.length > 0) {
-            paymentSchedule = orderData.payment_schedule.map(payment => ({
-                description: payment.description || '',
-                percentage: payment.percentage || 0,
-                amount: payment.amount || 0
-            }));
-            renderPaymentSchedule();
-        }
-    }
-
-    /**
-     * Add Service Task
-     */
-    window.addServiceTask = function() {
-        serviceTasks.push({
-            task: '',
-            description: '',
-            estimated_hours: 1,
-            technician: ''
-        });
-        renderServiceTasks();
-    };
-
-    /**
-     * Remove Service Task
-     */
-    function removeServiceTask(index) {
-        serviceTasks.splice(index, 1);
-        renderServiceTasks();
-    }
-
-    /**
-     * Render Service Tasks
-     */
-    function renderServiceTasks() {
-        const container = document.getElementById('serviceTasksList');
-        
-        if (serviceTasks.length === 0) {
-            container.innerHTML = `
-                <div class="empty-repeating">
-                    <p>Belum ada pekerjaan. Klik "Tambah Pekerjaan" untuk menambah.</p>
-                </div>
-            `;
-        } else {
-            container.innerHTML = serviceTasks.map((task, index) => `
-                <div class="repeating-item">
-                    <div class="item-header">
-                        <span class="item-number">Pekerjaan #${index + 1}</span>
-                        <button type="button" class="btn-remove" onclick="removeServiceTask(${index})">
-                            🗑️ Hapus
-                        </button>
-                    </div>
-                    <div class="item-grid">
-                        <div class="form-group">
-                            <label>Nama Pekerjaan *</label>
-                            <input type="text" value="${task.task}" 
-                                onchange="serviceTasks[${index}].task = this.value" 
-                                placeholder="Contoh: Ganti Oli Mesin" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Teknisi</label>
-                            <input type="text" value="${task.technician}" 
-                                onchange="serviceTasks[${index}].technician = this.value" 
-                                placeholder="Nama atau ID teknisi">
-                        </div>
-                        <div class="form-group">
-                            <label>Estimasi Jam</label>
-                            <input type="number" value="${task.estimated_hours}" 
-                                onchange="serviceTasks[${index}].estimated_hours = parseFloat(this.value)" 
-                                min="0" step="0.5" placeholder="1">
-                        </div>
-                        <div class="form-group" style="grid-column: 1 / -1;">
-                            <label>Deskripsi</label>
-                            <textarea onchange="serviceTasks[${index}].description = this.value" 
-                                    rows="2" placeholder="Detail pekerjaan...">${task.description}</textarea>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        updateRepeatingCounts();
-    }
-
-    /**
-     * Add Required Part
-     */
-    window.addRequiredPart = function() {
-        requiredParts.push({
-            item_name: '',
-            description: '',
-            qty: 1,
-            rate: 0
-        });
-        renderRequiredParts();
-    };
-
-    /**
-     * Remove Required Part
-     */
-    function removeRequiredPart(index) {
-        requiredParts.splice(index, 1);
-        renderRequiredParts();
-    }
-
-    /**
-     * Render Required Parts
-     */
-    function renderRequiredParts() {
-        const container = document.getElementById('requiredPartsList');
-        
-        if (requiredParts.length === 0) {
-            container.innerHTML = `
-                <div class="empty-repeating">
-                    <p>Belum ada sparepart. Klik "Tambah Part" untuk menambah.</p>
-                </div>
-            `;
-        } else {
-            container.innerHTML = requiredParts.map((part, index) => `
-                <div class="repeating-item">
-                    <div class="item-header">
-                        <span class="item-number">Part #${index + 1}</span>
-                        <button type="button" class="btn-remove" onclick="removeRequiredPart(${index})">
-                            🗑️ Hapus
-                        </button>
-                    </div>
-                    <div class="item-grid cols-4">
-                        <div class="form-group" style="grid-column: 1 / -1;">
-                            <label>Nama Part *</label>
-                            <input type="text" value="${part.item_name}" 
-                                onchange="requiredParts[${index}].item_name = this.value" 
-                                placeholder="Contoh: Oli Shell Helix 5W-30" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Qty *</label>
-                            <input type="number" value="${part.qty}" 
-                                onchange="requiredParts[${index}].qty = parseInt(this.value)" 
-                                min="1" placeholder="1" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Harga Satuan (Rp) *</label>
-                            <input type="number" value="${part.rate}" 
-                                onchange="requiredParts[${index}].rate = parseFloat(this.value); updatePartAmount(${index})" 
-                                min="0" step="1000" placeholder="0" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Total (Rp)</label>
-                            <input type="number" value="${part.qty * part.rate}" 
-                                id="part_amount_${index}" readonly 
-                                style="background: #F5F7FA; cursor: not-allowed;">
-                        </div>
-                        <div class="form-group" style="grid-column: 1 / -1;">
-                            <label>Keterangan</label>
-                            <textarea onchange="requiredParts[${index}].description = this.value" 
-                                    rows="2" placeholder="Deskripsi atau spesifikasi part...">${part.description}</textarea>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        updateRepeatingCounts();
-    }
-
-    /**
-     * Update part amount
-     */
-    function updatePartAmount(index) {
-        const part = requiredParts[index];
-        const amount = part.qty * part.rate;
-        const amountField = document.getElementById(`part_amount_${index}`);
-        if (amountField) {
-            amountField.value = amount;
-        }
-    }
-
-    /**
-     * Add Payment Schedule
-     */
-    window.addPaymentSchedule = function() {
-        paymentSchedule.push({
-            description: '',
-            percentage: 0,
-            amount: 0
-        });
-        renderPaymentSchedule();
-    };
-
-    /**
-     * Remove Payment Schedule
-     */
-    function removePaymentSchedule(index) {
-        paymentSchedule.splice(index, 1);
-        renderPaymentSchedule();
-    }
-
-    /**
-     * Render Payment Schedule
-     */
-    function renderPaymentSchedule() {
-        const container = document.getElementById('paymentScheduleList');
-        
-        if (paymentSchedule.length === 0) {
-            container.innerHTML = `
-                <div class="empty-repeating">
-                    <p>Belum ada jadwal pembayaran. Klik "Tambah Jadwal" untuk menambah.</p>
-                </div>
-            `;
-        } else {
-            container.innerHTML = paymentSchedule.map((payment, index) => `
-                <div class="repeating-item">
-                    <div class="item-header">
-                        <span class="item-number">Pembayaran #${index + 1}</span>
-                        <button type="button" class="btn-remove" onclick="removePaymentSchedule(${index})">
-                            🗑️ Hapus
-                        </button>
-                    </div>
-                    <div class="item-grid cols-3">
-                        <div class="form-group">
-                            <label>Deskripsi *</label>
-                            <input type="text" value="${payment.description}" 
-                                onchange="paymentSchedule[${index}].description = this.value" 
-                                placeholder="Contoh: DP 50%" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Persentase (%)</label>
-                            <input type="number" value="${payment.percentage}" 
-                                onchange="paymentSchedule[${index}].percentage = parseFloat(this.value); calculatePaymentAmount(${index})" 
-                                min="0" max="100" step="1" placeholder="50">
-                        </div>
-                        <div class="form-group">
-                            <label>Jumlah (Rp) *</label>
-                            <input type="number" value="${payment.amount}" 
-                                onchange="paymentSchedule[${index}].amount = parseFloat(this.value)" 
-                                id="payment_amount_${index}" 
-                                min="0" step="1000" placeholder="0" required>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        updateRepeatingCounts();
-    }
-
-    /**
-     * Calculate payment amount from percentage
-     */
-    function calculatePaymentAmount(index) {
-        const estimatedAmount = parseFloat(document.getElementById('total_estimated_amount').value) || 0;
-        const percentage = paymentSchedule[index].percentage;
-        
-        if (estimatedAmount > 0 && percentage > 0) {
-            const amount = (estimatedAmount * percentage) / 100;
-            paymentSchedule[index].amount = amount;
-            
-            const amountField = document.getElementById(`payment_amount_${index}`);
-            if (amountField) {
-                amountField.value = amount;
-            }
-        }
-    }
-
-    /**
-     * Update repeating counts
-     */
-    function updateRepeatingCounts() {
-        const tasksCount = document.querySelector('#serviceTasksSection .repeating-count');
-        const partsCount = document.querySelector('#requiredPartsSection .repeating-count');
-        const paymentsCount = document.querySelector('#paymentScheduleSection .repeating-count');
-        
-        if (tasksCount) tasksCount.textContent = `${serviceTasks.length} Pekerjaan`;
-        if (partsCount) partsCount.textContent = `${requiredParts.length} Part`;
-        if (paymentsCount) paymentsCount.textContent = `${paymentSchedule.length} Pembayaran`;
-    }
-
-    /**
-     * Submit Inspection
-     */
-    window.submitInspection = async function(submitEvent) {
-        if (submitEvent && typeof submitEvent.preventDefault === 'function') {
-            submitEvent.preventDefault();
-        }
-
-        // Validate form
-        const form = document.getElementById('inspectionForm');
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            return;
-        }
-        
-        // Check if at least one task is added
-        if (serviceTasks.length === 0) {
-            showNotification('⚠️ Minimal harus ada 1 pekerjaan!', 'warning');
-            return;
-        }
-        
-        // Prepare data
-        const inspectionData = {
-            order_id: currentOrderId,
-            service_order_type: document.getElementById('service_order_type').value,
-            order_category: document.getElementById('order_category').value,
-            priority: document.getElementById('priority').value,
-            estimated_delivery_date: document.getElementById('estimated_delivery_date').value,
-            total_estimated_amount: parseFloat(document.getElementById('total_estimated_amount').value),
-            inspection_summary: document.getElementById('inspection_summary').value,
-            service_notes: document.getElementById('service_notes').value,
-            service_tasks: serviceTasks,
-            required_parts: requiredParts,
-            payment_schedule: paymentSchedule,
-            status: 'In Progress'  // Important: Move to In Progress
-        };
-        
-        console.log('[Inspection] Submitting data:', inspectionData);
-        
-        // Disable submit button
-        const submitBtn = (submitEvent?.target instanceof HTMLElement)
-            ? submitEvent.target
-            : form.querySelector('.modal-footer .btn-primary');
-
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.textContent = '⏳ Menyimpan...';
-        }
-        
-        try {
-            // Submit to API
-            const response = await frappe.call({
-                method: API_CONFIG.updateInspection || 'garage.api.portal.update_service_order_inspection',
-                args: {
-                    order_id: currentOrderId,
-                    inspection_data: inspectionData
-                }
-            });
-            
-            console.log('[Inspection] Response:', response);
-            
-            if (response.message) {
-                showNotification('✅ Inspeksi berhasil disimpan! Service dipindah ke In Progress.', 'success');
-
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = '✅ Simpan & Pindah ke In Progress';
-                }
-
-                // Close modal
-                closeInspectionModal();
-
-                // Refresh data
-                setTimeout(() => {
-                    refreshData();
-                }, 500);
-            }
-            
-        } catch (error) {
-            console.error('[Inspection] Error submitting:', error);
-            showNotification('❌ Error: ' + (error.message || 'Gagal menyimpan inspeksi'), 'error');
-            
-            // Re-enable button
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.textContent = '✅ Simpan & Pindah ke In Progress';
-            }
-        }
-    };
-
-    if (inspectionModalElement && inspectionModalDialog) {
-        const modalOverlay = inspectionModalElement.querySelector('[data-modal-overlay]');
-        const modalCloseButtons = inspectionModalElement.querySelectorAll('[data-modal-close]');
-
-        const handleCloseRequest = (event) => {
-            if (event) {
-                if (event.type === 'click') {
-                    event.preventDefault?.();
-                }
-                event.stopPropagation?.();
-            }
-            closeInspectionModal();
-        };
-
-        const handleBackdropInteraction = (event) => {
-            const target = event?.target;
-            if (!target) {
-                return;
-            }
-
-            if (!inspectionModalDialog.contains(target)) {
-                handleCloseRequest(event);
-            }
-        };
-
-        if (modalOverlay) {
-            ['click', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'pointerdown', 'pointerup'].forEach((eventName) => {
-                modalOverlay.addEventListener(eventName, handleCloseRequest);
-            });
-        }
-
-        modalCloseButtons.forEach((button) => {
-            button.addEventListener('click', handleCloseRequest);
-        });
-
-        ['mousedown', 'mouseup', 'click', 'touchstart', 'touchend', 'pointerdown', 'pointerup'].forEach((eventName) => {
-            inspectionModalElement.addEventListener(eventName, handleBackdropInteraction);
-        });
-
-        inspectionModalElement.addEventListener('keydown', (event) => {
-            if (event.key === 'Tab') {
-                const focusableElements = inspectionModalDialog.querySelectorAll(FOCUSABLE_MODAL_ELEMENTS);
-
-                if (focusableElements.length === 0) {
-                    event.preventDefault();
-                    return;
-                }
-
-                const firstElement = focusableElements[0];
-                const lastElement = focusableElements[focusableElements.length - 1];
-
-                if (!event.shiftKey && document.activeElement === lastElement) {
-                    event.preventDefault();
-                    firstElement.focus();
-                } else if (event.shiftKey && document.activeElement === firstElement) {
-                    event.preventDefault();
-                    lastElement.focus();
-                }
-            }
-        });
-    }
-
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && inspectionModalElement?.classList.contains('active')) {
-            closeInspectionModal();
-        }
-    });
-
-    console.log('[Inspection Modal] JavaScript loaded');
-
-    // Load data from API
     async function loadServiceOrders() {
         try {
-            console.log('[Service] Loading service orders...');
+            console.log('[API] Loading service orders...');
 
             const response = await frappe.call({
                 method: API_CONFIG.listServiceOrders,
@@ -2422,7 +1637,7 @@ body {
                 freeze: false
             });
 
-            console.log('[Service] API Response:', response);
+            console.log('[API] Response:', response);
 
             const data = response.message || {};
 
@@ -2453,10 +1668,10 @@ body {
             renderProgressTable(categorized.progress);
             renderCompletedTable(categorized.completed);
 
-            console.log('[Service] Data loaded successfully');
+            console.log('[API] Data loaded successfully');
 
         } catch (error) {
-            console.error('[Service] Error loading data:', error);
+            console.error('[API] Error loading data:', error);
             
             // Show error in all tables
             const errorHTML = `
@@ -2477,27 +1692,38 @@ body {
         }
     }
 
+    // ============================================================================
+    // PUBLIC FUNCTIONS
+    // ============================================================================
+
     // Refresh data
     window.refreshData = function() {
+        console.log('[Refresh] Refreshing service orders...');
         loadServiceOrders();
     };
 
     // View service details
     window.viewServiceDetails = function(orderId) {
-        console.log('View details for:', orderId);
-        // Open detail page or modal
+        console.log('[View] Viewing details for:', orderId);
         window.location.href = `/app/garage-service-order/${orderId}`;
     };
 
-    // Initialize
+    // ============================================================================
+    // INITIALIZATION
+    // ============================================================================
+
     function init() {
-        console.log('[Service] Initializing service management page...');
+        console.log('[Init] Initializing service management page...');
+        console.log('[Init] Browser:', navigator.userAgent);
+        console.log('[Init] Timestamp:', new Date().toISOString());
         
         // Load data on page load
         loadServiceOrders();
 
         // Auto-refresh every 30 seconds
         setInterval(loadServiceOrders, 30000);
+        
+        console.log('[Init] ✅ Initialization complete!');
     }
 
     // Run init when DOM is ready
@@ -2506,6 +1732,8 @@ body {
     } else {
         init();
     }
+
+    console.log('[Service] Module loaded successfully! 🚀');
 
 })();
 </script>
