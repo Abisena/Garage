@@ -145,15 +145,9 @@
                 this.forms.intake.addEventListener('submit', (event) => {
                     event.preventDefault();
                     const bookingDateInput = this.forms.intake.querySelector('[name="service_booking_date"]');
-                    const bookingChannelInput = this.forms.intake.querySelector('[name="booking_channel"]');
                     const intakeType = this.getIntakeTypeValue();
 
                     if (intakeType === 'Booking') {
-                        if (bookingChannelInput && !bookingChannelInput.value) {
-                            frappe.msgprint(__('Pilih channel booking agar tim mengetahui sumber reservasi.'));
-                            bookingChannelInput.focus();
-                            return;
-                        }
                         if (bookingDateInput && !bookingDateInput.value) {
                             frappe.msgprint(__('Tanggal & jam booking wajib diisi untuk registrasi booking.'));
                             bookingDateInput.focus();
@@ -181,8 +175,6 @@
                         'mileage',
                         'notes',
                         'intake_type',
-                        'booking_channel',
-                        'booking_reference',
                         'service_booking_date',
                     ]);
                     this.submitForm(this.forms.intake, 'garage.api.portal.register_customer_vehicle', { payload }, 'Data intake tersimpan.');
@@ -896,13 +888,10 @@
             if (!form) {
                 return;
             }
-            const typeInputs = form.querySelectorAll('[name="intake_type"]');
-            if (!typeInputs.length) {
-                return;
+            const bookingToggle = form.querySelector('[data-role="booking-toggle"]');
+            if (bookingToggle) {
+                bookingToggle.addEventListener('change', () => this.handleIntakeTypeChange());
             }
-            typeInputs.forEach((input) => {
-                input.addEventListener('change', () => this.handleIntakeTypeChange());
-            });
             this.handleIntakeTypeChange();
         }
 
@@ -911,13 +900,16 @@
             if (!form) {
                 return;
             }
-            const intakeType = this.getIntakeTypeValue();
-            const isBooking = intakeType === 'Booking';
-            const intakeOptions = form.querySelectorAll('.option-toggle__item');
-            intakeOptions.forEach((option) => {
-                const input = option.querySelector('input[name="intake_type"]');
-                option.classList.toggle('is-active', Boolean(input?.checked));
-            });
+            const bookingToggle = form.querySelector('[data-role="booking-toggle"]');
+            const hiddenIntakeType = form.querySelector('input[name="intake_type"]');
+            const isBooking = Boolean(bookingToggle?.checked);
+            if (hiddenIntakeType) {
+                hiddenIntakeType.value = isBooking ? 'Booking' : 'Walk-In';
+            }
+            const toggleWrapper = bookingToggle?.closest('.option-toggle__item');
+            if (toggleWrapper) {
+                toggleWrapper.classList.toggle('is-active', isBooking);
+            }
             const bookingFields = form.querySelectorAll('[data-intake-booking]');
             bookingFields.forEach((field) => {
                 field.classList.toggle('is-hidden', !isBooking);
@@ -946,6 +938,10 @@
             const form = this.forms.intake;
             if (!form) {
                 return 'Walk-In';
+            }
+            const hiddenInput = form.querySelector('input[name="intake_type"]');
+            if (hiddenInput && !hiddenInput.disabled) {
+                return hiddenInput.value || 'Walk-In';
             }
             const select = form.querySelector('select[name="intake_type"]');
             if (select && !select.disabled) {
