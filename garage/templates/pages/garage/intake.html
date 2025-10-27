@@ -1275,18 +1275,15 @@ button:disabled {
                             </header>
                             <div class="form-section__grid two-column">
                                 <div class="form-field form-field--full">
-                                    <label>Jenis Registrasi</label>
-                                    <div class="option-toggle" role="radiogroup" aria-label="Jenis Registrasi">
-                                        <label class="option-toggle__item is-active">
-                                            <input type="radio" name="intake_type" value="Walk-In" checked />
-                                            <span>Walk-In (datang langsung)</span>
-                                        </label>
-                                        <label class="option-toggle__item">
-                                            <input type="radio" name="intake_type" value="Booking" />
+                                    <input type="hidden" name="intake_type" value="Walk-In" />
+                                    <label for="intake_booking_toggle">Pengaturan Booking</label>
+                                    <div class="option-toggle" role="group" aria-label="Pengaturan Booking">
+                                        <label class="option-toggle__item" data-role="booking-toggle-wrapper">
+                                            <input type="checkbox" id="intake_booking_toggle" data-role="booking-toggle" />
                                             <span>Booking (reservasi jadwal)</span>
                                         </label>
                                     </div>
-                                    <p class="form-hint">Gunakan opsi booking jika customer memesan slot terlebih dahulu.</p>
+                                    <p class="form-hint">Centang untuk mencatat booking dan pilih tanggal kedatangan.</p>
                                 </div>
                                 <div class="form-field">
                                     <label for="existing_customer">Gunakan Customer Eksisting</label>
@@ -1303,26 +1300,9 @@ button:disabled {
                                     </select>
                                 </div>
                                 <div class="form-field" data-intake-booking>
-                                    <label for="booking_channel">Channel Booking</label>
-                                    <select id="booking_channel" name="booking_channel" disabled>
-                                        <option value="">—</option>
-                                        <option value="WhatsApp">WhatsApp</option>
-                                        <option value="Phone Call">Phone Call</option>
-                                        <option value="Admin Input">Admin Input</option>
-                                        <option value="Website">Website</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                    <p class="form-hint">Catat sumber booking agar tim mudah melakukan follow-up.</p>
-                                </div>
-                                <div class="form-field" data-intake-booking>
                                     <label for="service_booking_date">Jadwal Booking</label>
                                     <input id="service_booking_date" name="service_booking_date" type="datetime-local" disabled />
                                     <p class="form-hint">Tanggal &amp; jam kedatangan yang disepakati dengan customer.</p>
-                                </div>
-                                <div class="form-field" data-intake-booking>
-                                    <label for="booking_reference">Referensi Booking</label>
-                                    <input id="booking_reference" name="booking_reference" placeholder="Contoh: WA 0812-xxxx" disabled />
-                                    <p class="form-hint">Isi nomor kontak, kode reservasi, atau catatan admin untuk booking ini.</p>
                                 </div>
                                 <div class="booking-guidance" data-role="booking-hint">
                                     <strong>Reminder Booking</strong>
