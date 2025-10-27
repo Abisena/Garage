@@ -89,18 +89,12 @@ body {
     display: none;
     align-items: flex-start;
     justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    animation: fadeIn 0.2s ease;
 }
 
 .inspection-modal.active {
     display: flex;
-}
-
-.modal-backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    animation: fadeIn 0.2s ease;
-    z-index: 1;
 }
 
 .modal-dialog {
@@ -1393,7 +1387,6 @@ body {
 </div>
 <!-- Status Update Modal -->
 <div id="status-update-modal" class="inspection-modal" role="dialog" aria-modal="true" aria-hidden="true">
-    <div id="status-update-backdrop" class="modal-backdrop"></div>
     <div class="modal-dialog">
         <div class="modal-header">
             <div>
@@ -1444,6 +1437,53 @@ body {
                     </div>
                 </div>
             </div>
+            <button id="status-update-close" class="modal-close" type="button" aria-label="Tutup">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-section">
+                <span class="section-badge info">Ringkasan Order</span>
+                <div class="order-info-display">
+                    <div class="info-item">
+                        <div class="label">Service Order</div>
+                        <div class="value" id="status-update-order-id">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">Status Saat Ini</div>
+                        <div class="value" id="status-update-current-status">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">Customer</div>
+                        <div class="value" id="status-update-customer">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">Kendaraan</div>
+                        <div class="value" id="status-update-vehicle">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <span class="section-badge warning">Update Status</span>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="status-update-select">Status Baru <span class="required">*</span></label>
+                        <select id="status-update-select">
+                            <option value="Awaiting QC">Awaiting QC</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Work In Progress">Work In Progress</option>
+                        </select>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="status-update-note">Catatan Progress</label>
+                        <textarea id="status-update-note" rows="4" placeholder="Catatan singkat mengenai progress pengerjaan..." maxlength="500"></textarea>
+                        <span class="helper-text">Catatan akan tersimpan ke log progress service order.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" type="button" id="status-update-cancel">Batal</button>
+            <button class="btn btn-primary" type="button" id="status-update-submit">💾 Simpan Update</button>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" type="button" id="status-update-cancel">Batal</button>
@@ -1474,7 +1514,6 @@ body {
 
     const statusUpdateUI = {
         modal: document.getElementById('status-update-modal'),
-        backdrop: document.getElementById('status-update-backdrop'),
         close: document.getElementById('status-update-close'),
         cancel: document.getElementById('status-update-cancel'),
         orderId: document.getElementById('status-update-order-id'),
@@ -1798,16 +1837,27 @@ body {
         }
     }
 
-    if (statusUpdateUI.backdrop) {
-        statusUpdateUI.backdrop.addEventListener('click', closeStatusUpdateModal);
-    }
-
     if (statusUpdateUI.close) {
         statusUpdateUI.close.addEventListener('click', closeStatusUpdateModal);
     }
 
     if (statusUpdateUI.cancel) {
         statusUpdateUI.cancel.addEventListener('click', closeStatusUpdateModal);
+    }
+
+    if (statusUpdateUI.modal) {
+        statusUpdateUI.modal.addEventListener('click', (event) => {
+            if (event.target === statusUpdateUI.modal) {
+                closeStatusUpdateModal();
+            }
+        });
+
+        const dialog = statusUpdateUI.modal.querySelector('.modal-dialog');
+        if (dialog) {
+            dialog.addEventListener('click', (event) => {
+                event.stopPropagation();
+            });
+        }
     }
 
     if (statusUpdateUI.submit) {
