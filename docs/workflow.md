@@ -18,9 +18,10 @@ hingga pemeriksaan akhir Service Advisor.
    `PKB_CREATED`.
 3. **Distribusi Tugas Mekanik** – `distribute_mechanical_task` membuat
    work order beserta task dan kebutuhan part. Kekurangan part dapat
-   ditangani dengan `record_local_purchase`, sedangkan pengeluaran part
-   & bahan lokal dicatat melalui `record_part_release` dan
-   `record_material_release`.
+   ditangani dengan `record_local_purchase` (wajib menyertakan dokumen
+   pengadaan yang disetujui), sedangkan pengeluaran part & bahan lokal
+   dicatat melalui `record_part_release` dan `record_material_release`
+   yang kini selalu membutuhkan `TransactionDocument` bertandatangan.
 4. **Proses Mekanik** – `start_repair_process`,
    `update_repair_progress`, dan `complete_repair_work` menandai
    pengerjaan mekanik sesuai jalur PTM. Validasi memastikan repair tidak
@@ -46,10 +47,13 @@ atas dalam bentuk visual yang identik dengan gambar referensi.
 - **`garage/workflow/models.py`** menyimpan seluruh *data class* yang
   menjadi kontrak data workflow, seperti `ServiceBooking`,
   `ServiceFlow`, `ServiceFlowEvent`, serta entitas turunan lain yang
-  dipakai mesin workflow untuk menyimpan inspeksi, job card, invoice,
-  pembayaran, dan catatan audit. File ini tidak memiliki logika bisnis;
-  fokusnya hanya mendefinisikan bentuk data dan enumerasi status agar
-  tiap tahap pada diagram punya representasi yang jelas.
+  dipakai mesin workflow untuk menyimpan inspeksi, job card, persediaan
+  beserta kategorinya (`InventoryCategory` membedakan antara spare part
+  dan gudang bahan), invoice, pembayaran, dokumen transaksi lintas
+  departemen (`TransactionDocument`), dan catatan audit. File ini tidak
+  memiliki logika bisnis; fokusnya hanya mendefinisikan bentuk data dan
+  enumerasi status agar tiap tahap pada diagram punya representasi yang
+  jelas.
 - **`garage/workflow/engine.py`** merupakan pusat logika alur service.
   Di sini terdapat `GarageWorkflowEngine`, *in-memory store*, helper
   untuk pengecekan izin (`AccessController`), serta fungsi-fungsi yang
@@ -125,6 +129,8 @@ tersebut.
 | `ServiceFlowStage` | Enum yang memetakan setiap node pada diagram: `PRE_BOOKING`, `QUEUE_CHECK`, `PKB_CREATED`, `TASK_DISTRIBUTED`, `PARTS_PURCHASED`, `PARTS_ISSUED`, `MATERIAL_ISSUED`, `REPAIR_IN_PROGRESS`, `PROGRESS_UPDATED`, `REPAIR_COMPLETED`, `FOREMAN_CHECKED`, `OPL_LOGGED`, `SERVICE_INVOICE_PRINTED`, `PAYMENT_PROCESSED`, `FINAL_INVOICE_PRINTED`, `FINISH_CHECK`, `CLOSED`. |
 | `Estimate`, `JobCard`, `WorkOrder` | Tetap digunakan, namun terhubung otomatis dari `create_pkb_document` dan `distribute_mechanical_task`. |
 | `SalesInvoice`, `PaymentRecord`, `ReceiptDocument` | Dipakai pada tahap billing & payment untuk meniru blok "Adm Service" dan "Cashier". |
+| `StockItem` | Menyimpan stok beserta `InventoryCategory`-nya sehingga sistem dapat membedakan spare part dan gudang bahan. |
+| `TransactionDocument` | Bukti lintas departemen yang memuat permintaan, persetujuan, serta eksekusi transaksi antar halaman (service, intake, spare part) sebelum barang berpindah atau pembelian dilakukan. |
 
 ## Akses & Audit
 
@@ -134,13 +140,38 @@ Access Control List diperluas agar role mengikuti diagram:
   `create_pkb_document`, distribusi tugas, OPL, dan `finish_service_check`
   sekaligus `close_customer_interaction`.
 - **Inventory Controller** memiliki aksi `record_material_release` untuk
-  pengeluaran bahan.
+- **Inventory Controller** memiliki aksi `record_material_release` untuk
+  pengeluaran bahan serta memverifikasi dokumen transaksi sebelum barang
+  keluar dari gudang.
 - **Manager** memperoleh seluruh aksi baru termasuk logging OPL.
 - **Cashier** tetap bertugas pada pembayaran dan pencetakan bukti bayar.
 
 Setiap mutasi memanggil `_log_flow_event` sehingga audit log mencatat
 perubahan stage beserta metadata (job card, invoice, payment ID,
 referensi cetakan).
+
+### Dokumen Transaksi Internal
+
+Semua perpindahan spare part maupun gudang bahan sekarang wajib memiliki
+`TransactionDocument` yang diajukan oleh sumber permintaan dan disetujui
+oleh penanggung jawab tujuan (role target) atau Manager sebelum dapat
+dieksekusi. Prosesnya:
+
+1. Bagian pemohon memanggil `create_transaction_document` dengan jenis
+   `SPARE_PART_TRANSFER`, `MATERIAL_TRANSFER`, atau
+   `PROCUREMENT_REQUEST`, menyertakan daftar item serta referensi booking
+   terkait.
+2. Kepala bagian tujuan melakukan `approve_transaction_document`. Jika
+   ditolak gunakan `reject_transaction_document` dan alasan akan
+   terdokumentasi.
+3. Fungsi eksekusi seperti `record_part_release`,
+   `record_material_release`, maupun `record_local_purchase` menerima
+   `document_id` dan akan menolak transaksi bila dokumen belum disetujui
+   atau sudah dipakai sebelumnya.
+
+Setelah transaksi berhasil, status dokumen otomatis berubah menjadi
+`COMPLETED` sehingga audit trail memuat siapa pemohon, pemberi izin, dan
+eksekutor.
 
 ## Contoh Penggunaan
 
@@ -149,10 +180,12 @@ from datetime import datetime
 
 from garage.workflow import (
     GarageWorkflowEngine,
+    InventoryCategory,
     PaymentMethod,
     Role,
     ServiceType,
     ServiceFlowStage,
+    TransactionDocumentType,
 )
 from garage.workflow.models import User
 
@@ -195,9 +228,52 @@ work_order = engine.distribute_mechanical_task(
     required_parts={"OLI-001": 1},
 )
 
-engine.register_inventory_item(manager, "OLI-001", "Oli 10W-40", quantity=5)
-engine.record_part_release(manager, booking.booking_id, {"OLI-001": 1})
-engine.record_material_release(inventory, booking.booking_id, "Keluar kain lap & brake cleaner")
+engine.register_inventory_item(
+    manager,
+    "OLI-001",
+    "Oli 10W-40",
+    InventoryCategory.SPARE_PART,
+    quantity=5,
+)
+engine.register_inventory_item(
+    manager,
+    "MAT-001",
+    "Brake Cleaner",
+    InventoryCategory.MATERIAL,
+    quantity=10,
+)
+
+part_doc = engine.create_transaction_document(
+    advisor,
+    TransactionDocumentType.SPARE_PART_TRANSFER,
+    target_role=Role.INVENTORY_CONTROLLER,
+    items={"OLI-001": 1},
+    related_booking_id=booking.booking_id,
+    notes="Permintaan oli untuk servis berkala",
+)
+engine.approve_transaction_document(inventory, part_doc.document_id)
+engine.record_part_release(
+    inventory,
+    booking.booking_id,
+    {"OLI-001": 1},
+    document_id=part_doc.document_id,
+)
+
+material_doc = engine.create_transaction_document(
+    advisor,
+    TransactionDocumentType.MATERIAL_TRANSFER,
+    target_role=Role.INVENTORY_CONTROLLER,
+    items={"MAT-001": 1},
+    related_booking_id=booking.booking_id,
+    notes="Gudang bahan untuk detailing",
+)
+engine.approve_transaction_document(manager, material_doc.document_id)
+engine.record_material_release(
+    inventory,
+    booking.booking_id,
+    "Keluar kain lap & brake cleaner",
+    document_id=material_doc.document_id,
+)
 
 engine.start_repair_process(tech, booking.booking_id)
 engine.update_repair_progress(tech, booking.booking_id, "Pekerjaan 50%")

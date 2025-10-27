@@ -96,6 +96,11 @@ class PaymentMethod(str, Enum):
     CREDIT = "credit"
 
 
+class InventoryCategory(str, Enum):
+    SPARE_PART = "spare_part"
+    MATERIAL = "material"
+
+
 class InspectionSeverity(str, Enum):
     LOW = "low"
     MEDIUM = "medium"
@@ -113,6 +118,19 @@ class PaymentTermStatus(str, Enum):
     FOLLOWED_UP = "followed_up"
     SETTLED = "settled"
     ESCALATED = "escalated"
+
+
+class TransactionDocumentStatus(str, Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    COMPLETED = "completed"
+
+
+class TransactionDocumentType(str, Enum):
+    SPARE_PART_TRANSFER = "spare_part_transfer"
+    MATERIAL_TRANSFER = "material_transfer"
+    PROCUREMENT_REQUEST = "procurement_request"
 
 
 @dataclass(slots=True)
@@ -278,6 +296,7 @@ class PurchaseOrder:
 class StockItem:
     item_code: str
     description: str
+    category: InventoryCategory
     quantity_on_hand: int = 0
     reserved: int = 0
     reorder_level: int = 0
@@ -372,3 +391,22 @@ class ReceiptDocument:
     generated_by: str
     generated_at: datetime = field(default_factory=datetime.utcnow)
     content: str = ""
+
+
+@dataclass(slots=True)
+class TransactionDocument:
+    document_id: str
+    transaction_type: TransactionDocumentType
+    source_role: Role
+    target_role: Role
+    items: Dict[str, int]
+    status: TransactionDocumentStatus = TransactionDocumentStatus.PENDING
+    requested_by: str = ""
+    requested_at: datetime = field(default_factory=datetime.utcnow)
+    notes: Optional[str] = None
+    related_booking_id: Optional[str] = None
+    related_purchase_order_id: Optional[str] = None
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    executed_by: Optional[str] = None
+    executed_at: Optional[datetime] = None
