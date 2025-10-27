@@ -1385,65 +1385,6 @@ body {
 </div>
 </div>
 </div>
-<!-- Status Update Modal -->
-<div id="status-update-modal" class="inspection-modal" role="dialog" aria-modal="true" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-header">
-            <div>
-                <span class="section-badge primary">Update Progress</span>
-                <h2>Update Service Order</h2>
-                <p class="modal-subtitle">Perbarui status pengerjaan dan catatan progress sebelum melanjutkan ke tahap selanjutnya.</p>
-            </div>
-            <button id="status-update-close" class="modal-close" type="button" aria-label="Tutup">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div class="form-section">
-                <span class="section-badge info">Ringkasan Order</span>
-                <div class="order-info-display">
-                    <div class="info-item">
-                        <div class="label">Service Order</div>
-                        <div class="value" id="status-update-order-id">-</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="label">Status Saat Ini</div>
-                        <div class="value" id="status-update-current-status">-</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="label">Customer</div>
-                        <div class="value" id="status-update-customer">-</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="label">Kendaraan</div>
-                        <div class="value" id="status-update-vehicle">-</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-section">
-                <span class="section-badge warning">Update Status</span>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="status-update-select">Status Baru <span class="required">*</span></label>
-                        <select id="status-update-select">
-                            <option value="Awaiting QC">Awaiting QC</option>
-                            <option value="Completed">Completed</option>
-                            <option value="Work In Progress">Work In Progress</option>
-                        </select>
-                    </div>
-                    <div class="form-group full-width">
-                        <label for="status-update-note">Catatan Progress</label>
-                        <textarea id="status-update-note" rows="4" placeholder="Catatan singkat mengenai progress pengerjaan..." maxlength="500"></textarea>
-                        <span class="helper-text">Catatan akan tersimpan ke log progress service order.</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" type="button" id="status-update-cancel">Batal</button>
-            <button class="btn btn-primary" type="button" id="status-update-submit">💾 Simpan Update</button>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block script %}
@@ -1463,20 +1404,6 @@ body {
     };
 
     const orderLookup = {};
-    let activeUpdateOrderId = null;
-
-    const statusUpdateUI = {
-        modal: document.getElementById('status-update-modal'),
-        close: document.getElementById('status-update-close'),
-        cancel: document.getElementById('status-update-cancel'),
-        orderId: document.getElementById('status-update-order-id'),
-        currentStatus: document.getElementById('status-update-current-status'),
-        customer: document.getElementById('status-update-customer'),
-        vehicle: document.getElementById('status-update-vehicle'),
-        select: document.getElementById('status-update-select'),
-        note: document.getElementById('status-update-note'),
-        submit: document.getElementById('status-update-submit')
-    };
 
     // ============================================================================
     // UTILITY FUNCTIONS
@@ -1559,273 +1486,22 @@ body {
     }
 
     // ============================================================================
-    // STATUS UPDATE MODAL
+    // STATUS UPDATE REDIRECT
     // ============================================================================
 
-    function getSuggestedNextStatus(currentStatus) {
-        switch (currentStatus) {
-            case 'Work In Progress':
-            case 'In Progress':
-            case 'Quality Check':
-                return 'Awaiting QC';
-            case 'Awaiting QC':
-                return 'Completed';
-            case 'Completed':
-                return 'Completed';
-            default:
-                return 'Awaiting QC';
-        }
-    }
-
     function openStatusUpdateModal(orderId) {
-        if (!statusUpdateUI.modal) {
-            return;
-        }
-
-        const order = orderLookup[orderId];
-
-        if (!order) {
+        if (!orderId) {
             frappe.msgprint({
                 title: 'Order tidak ditemukan',
-                message: 'Tidak dapat menemukan data service order untuk diperbarui.',
-                indicator: 'red'
-            });
-            return;
-        }
-
-        activeUpdateOrderId = orderId;
-
-        if (statusUpdateUI.orderId) {
-            statusUpdateUI.orderId.textContent = order.name || '-';
-        }
-
-        if (statusUpdateUI.currentStatus) {
-            statusUpdateUI.currentStatus.textContent = order.status || '-';
-        }
-
-        if (statusUpdateUI.customer) {
-            statusUpdateUI.customer.textContent = order.customer_name || '-';
-        }
-
-        if (statusUpdateUI.vehicle) {
-            const vehicleDetails = [];
-            if (order.vehicle_plate) {
-                vehicleDetails.push(order.vehicle_plate);
-            }
-            const brandModel = [order.vehicle_brand, order.vehicle_model]
-                .filter(Boolean)
-                .join(' ')
-                .trim();
-            if (brandModel) {
-                vehicleDetails.push(brandModel);
-            }
-            statusUpdateUI.vehicle.textContent = vehicleDetails.length ? vehicleDetails.join(' • ') : '-';
-        }
-
-        const suggestedStatus = getSuggestedNextStatus(order.status);
-        if (statusUpdateUI.select) {
-            const allowedStatuses = Array.from(statusUpdateUI.select.options || []).map(option => option.value);
-            if (allowedStatuses.includes(suggestedStatus)) {
-                statusUpdateUI.select.value = suggestedStatus;
-            } else if (statusUpdateUI.select.options.length) {
-                statusUpdateUI.select.selectedIndex = 0;
-            }
-        }
-
-        if (statusUpdateUI.note) {
-            statusUpdateUI.note.value = '';
-        }
-
-        if (statusUpdateUI.submit) {
-            statusUpdateUI.submit.disabled = false;
-            statusUpdateUI.submit.innerHTML = '💾 Simpan Update';
-        }
-
-        statusUpdateUI.modal.classList.add('active');
-        statusUpdateUI.modal.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-
-        if (statusUpdateUI.select) {
-            setTimeout(() => {
-                if (statusUpdateUI.select) {
-                    statusUpdateUI.select.focus();
-                }
-            }, 50);
-        }
-    }
-
-    function closeStatusUpdateModal() {
-        if (!statusUpdateUI.modal) {
-            return;
-        }
-
-        activeUpdateOrderId = null;
-
-        if (statusUpdateUI.orderId) {
-            statusUpdateUI.orderId.textContent = '-';
-        }
-        if (statusUpdateUI.currentStatus) {
-            statusUpdateUI.currentStatus.textContent = '-';
-        }
-        if (statusUpdateUI.customer) {
-            statusUpdateUI.customer.textContent = '-';
-        }
-        if (statusUpdateUI.vehicle) {
-            statusUpdateUI.vehicle.textContent = '-';
-        }
-
-        if (statusUpdateUI.note) {
-            statusUpdateUI.note.value = '';
-        }
-
-        if (statusUpdateUI.select) {
-            if (statusUpdateUI.select.options.length) {
-                statusUpdateUI.select.selectedIndex = 0;
-            } else {
-                statusUpdateUI.select.value = '';
-            }
-        }
-
-        if (statusUpdateUI.submit) {
-            statusUpdateUI.submit.disabled = false;
-            statusUpdateUI.submit.innerHTML = '💾 Simpan Update';
-        }
-
-        statusUpdateUI.modal.classList.remove('active');
-        statusUpdateUI.modal.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
-    }
-
-    async function submitStatusUpdate(event) {
-        if (event && typeof event.preventDefault === 'function') {
-            event.preventDefault();
-        }
-
-        if (!activeUpdateOrderId) {
-            frappe.msgprint({
-                title: 'Tidak ada order dipilih',
-                message: 'Silakan pilih service order yang ingin diperbarui.',
+                message: 'Tidak ada service order yang dipilih untuk diperbarui.',
                 indicator: 'orange'
             });
             return;
         }
 
-        const newStatus = statusUpdateUI.select ? statusUpdateUI.select.value : '';
-        const progressNote = statusUpdateUI.note ? statusUpdateUI.note.value.trim() : '';
-
-        if (!newStatus) {
-            frappe.msgprint({
-                title: 'Status belum dipilih',
-                message: 'Pilih status baru sebelum menyimpan.',
-                indicator: 'orange'
-            });
-            return;
-        }
-
-        try {
-            if (statusUpdateUI.submit) {
-                statusUpdateUI.submit.disabled = true;
-                statusUpdateUI.submit.innerHTML = '⏳ Menyimpan...';
-            }
-
-            if (frappe.dom && typeof frappe.dom.freeze === 'function') {
-                frappe.dom.freeze('Menyimpan update service order...');
-            }
-
-            await frappe.call({
-                method: API_CONFIG.updateServiceOrder,
-                args: {
-                    name: activeUpdateOrderId,
-                    updates: { status: newStatus }
-                },
-                freeze: false
-            });
-
-            if (progressNote) {
-                const today = frappe.datetime && typeof frappe.datetime.get_today === 'function'
-                    ? frappe.datetime.get_today()
-                    : new Date().toISOString().slice(0, 10);
-
-                await frappe.call({
-                    method: API_CONFIG.appendProgressLog,
-                    args: {
-                        name: activeUpdateOrderId,
-                        log_entry: {
-                            log_date: today,
-                            progress_notes: progressNote
-                        }
-                    },
-                    freeze: false
-                });
-            }
-
-            const successMessage = progressNote
-                ? `Status diperbarui ke <b>${escapeHTML(newStatus)}</b> dan catatan progres tersimpan.`
-                : `Status diperbarui ke <b>${escapeHTML(newStatus)}</b>.`;
-
-            if (frappe.show_alert) {
-                frappe.show_alert({ message: successMessage, indicator: 'green' });
-            } else {
-                frappe.msgprint({ title: 'Berhasil', message: successMessage, indicator: 'green' });
-            }
-
-            closeStatusUpdateModal();
-            loadServiceOrders();
-        } catch (error) {
-            console.error('[Update] Gagal memperbarui service order:', error);
-            frappe.msgprint({
-                title: 'Gagal Update',
-                message: error.message || 'Terjadi kesalahan saat memperbarui service order.',
-                indicator: 'red'
-            });
-        } finally {
-            if (frappe.dom && typeof frappe.dom.unfreeze === 'function') {
-                frappe.dom.unfreeze();
-            }
-
-            if (statusUpdateUI.submit) {
-                statusUpdateUI.submit.disabled = false;
-                statusUpdateUI.submit.innerHTML = '💾 Simpan Update';
-            }
-        }
+        const targetUrl = `/garage/update-progress?order=${encodeURIComponent(orderId)}`;
+        window.location.href = targetUrl;
     }
-
-    if (statusUpdateUI.close) {
-        statusUpdateUI.close.addEventListener('click', closeStatusUpdateModal);
-    }
-
-    if (statusUpdateUI.cancel) {
-        statusUpdateUI.cancel.addEventListener('click', closeStatusUpdateModal);
-    }
-
-    if (statusUpdateUI.modal) {
-        statusUpdateUI.modal.addEventListener('click', (event) => {
-            if (event.target === statusUpdateUI.modal) {
-                closeStatusUpdateModal();
-            }
-        });
-
-        const dialog = statusUpdateUI.modal.querySelector('.modal-dialog');
-        if (dialog) {
-            dialog.addEventListener('click', (event) => {
-                event.stopPropagation();
-            });
-        }
-    }
-
-    if (statusUpdateUI.submit) {
-        statusUpdateUI.submit.addEventListener('click', submitStatusUpdate);
-    }
-
-    if (statusUpdateUI.select && statusUpdateUI.select.options.length) {
-        statusUpdateUI.select.selectedIndex = 0;
-    }
-
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && statusUpdateUI.modal && statusUpdateUI.modal.classList.contains('active')) {
-            closeStatusUpdateModal();
-        }
-    });
 
     window.openStatusUpdateModal = openStatusUpdateModal;
 
