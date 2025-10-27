@@ -1,30 +1,49 @@
-{% set privileged_roles = ['Administrator', 'System Manager', 'Manager Bengkel', 'Garage Manager'] %}
-{% set allowed_roles = (required_roles or []) + privileged_roles %}
+{% set required_roles = required_roles or [] %}
 {% if frappe.session.user == "Guest" %}
     <script>
         window.location.href = "/garage/login?redirect={{ frappe.request.path | urlencode }}";
     </script>
 {% else %}
-    {% set ns = namespace(has_access=False) %}
-    {% for role in frappe.get_roles(frappe.session.user) %}
-        {% if role in allowed_roles %}
-            {% set ns.has_access = True %}
-        {% endif %}
-    {% endfor %}
-    {% if not ns.has_access %}
-        <script>
-            window.addEventListener('DOMContentLoaded', function () {
+    <script>
+        window.addEventListener('DOMContentLoaded', function () {
+            var requiredRoles = {{ required_roles | tojson }};
+
+            var requestBody = {
+                cmd: 'garage.api.auth.check_portal_access',
+                required_roles: requiredRoles
+            };
+
+            function redirectToPortalHome() {
                 alert('Anda tidak memiliki akses');
                 fetch('/api/method/garage.api.auth.get_portal_home')
                     .then(function (response) { return response.json(); })
                     .then(function (data) {
-                        var route = (data.message && (data.message.route || data.message)) || '/garage/login';
+                        var message = data && data.message ? data.message : null;
+                        var route = (message && (message.route || message)) || '/garage/login';
                         window.location.href = route || '/garage/login';
                     })
                     .catch(function () {
                         window.location.href = '/garage/login';
                     });
-            });
-        </script>
-    {% endif %}
+            }
+
+            fetch('/api/method/garage.api.auth.check_portal_access', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            })
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    var hasAccess = data && data.message && data.message.has_access;
+                    if (!hasAccess) {
+                        redirectToPortalHome();
+                    }
+                })
+                .catch(function () {
+                    redirectToPortalHome();
+                });
+        });
+    </script>
 {% endif %}
