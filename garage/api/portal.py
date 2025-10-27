@@ -22,6 +22,7 @@ SERVICE_ORDER_ACTIVE_STATUSES = {
     "Awaiting QC",
 }
 TECHNICIAN_ACTIVE_STATUS = {"Active"}
+TECHNICIAN_ROLE_NAMES = {"Technician", "Teknisi"}
 
 # Whitelisted DocTypes that can be created/updated from the public portal along with
 # the permitted fields. The definition intentionally mirrors the JSON DocType schema
@@ -818,6 +819,8 @@ def _get_technician_roster(*, only_active: bool = False, exclude_order: Optional
     except Exception:
         return []
 
+    roster = _merge_technicians_with_role_assignments(roster, only_active=only_active)
+
     loads = _technician_load_map(exclude_order=exclude_order)
     for technician in roster:
         employee = technician.get("employee") or technician.get("name")
@@ -825,6 +828,106 @@ def _get_technician_roster(*, only_active: bool = False, exclude_order: Optional
         _update_roster_capacity(technician)
 
     return roster
+
+
+def _merge_technicians_with_role_assignments(
+    roster: List[Dict[str, Any]], *, only_active: bool
+) -> List[Dict[str, Any]]:
+    employees_in_roster = {
+        entry.get("employee") or entry.get("name") for entry in roster if entry.get("employee") or entry.get("name")
+    }
+
+    fallback_profiles = _technician_profiles_from_roles(
+        exclude_employees=employees_in_roster, only_active=only_active
+    )
+
+    if not fallback_profiles:
+        return roster
+
+    return roster + fallback_profiles
+
+
+def _technician_profiles_from_roles(
+    *, exclude_employees: Set[str], only_active: bool
+) -> List[Dict[str, Any]]:
+    users_with_roles = _technician_role_user_ids()
+    if not users_with_roles:
+        return []
+
+    try:
+        with _ignoring_permissions():
+            employee_filters: Dict[str, Any] = {
+                "user_id": ("in", list(users_with_roles)),
+            }
+            if only_active:
+                employee_filters["status"] = "Active"
+
+            employees = frappe.db.get_all(
+                "Employee",
+                fields=[
+                    "name",
+                    "employee_name",
+                    "user_id",
+                    "status",
+                    "cell_number",
+                    "company_email",
+                ],
+                filters=employee_filters,
+                limit=200,
+            )
+    except Exception:
+        return []
+
+    fallback: List[Dict[str, Any]] = []
+    for employee in employees:
+        identifier = employee.get("name")
+        if not identifier or identifier in exclude_employees:
+            continue
+
+        raw_status = (employee.get("status") or "").strip()
+        normalized_status = (
+            raw_status
+            if raw_status in {"Active", "On Leave", "Inactive"}
+            else ("Active" if raw_status.lower() == "active" else "Inactive")
+        )
+
+        fallback.append(
+            {
+                "name": identifier,
+                "employee": identifier,
+                "employee_name": employee.get("employee_name") or identifier,
+                "user_id": employee.get("user_id"),
+                "status": normalized_status or "Active",
+                "max_active_jobs": 3,
+                "skill_tags": "",
+                "phone": employee.get("cell_number"),
+                "email": employee.get("company_email"),
+                "notes": "",
+            }
+        )
+
+    return fallback
+
+
+def _technician_role_user_ids() -> Set[str]:
+    if not TECHNICIAN_ROLE_NAMES:
+        return set()
+
+    try:
+        with _ignoring_permissions():
+            rows = frappe.db.get_all(
+                "Has Role",
+                fields=["parent"],
+                filters={
+                    "parenttype": "User",
+                    "role": ("in", tuple(TECHNICIAN_ROLE_NAMES)),
+                },
+                limit=200,
+            )
+    except Exception:
+        return set()
+
+    return {row.get("parent") for row in rows if row.get("parent")}
 
 
 def _auto_assign_technicians(
