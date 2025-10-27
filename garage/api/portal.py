@@ -1130,6 +1130,169 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
         "orders": enriched_orders,
         "total_count": len(enriched_orders)
     }
+    
+@frappe.whitelist()
+def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
+    """
+    List all spare parts with filtering and search capabilities.
+    
+    Args:
+        filters: Optional filters dict with keys:
+            - search: Search term for part_code, part_name, or brand
+            - category: Filter by category
+            - status: Filter by status (Active/Inactive/Low Stock)
+            - min_stock: Show only items with stock_qty >= this value
+            - max_stock: Show only items with stock_qty <= this value
+            
+    Returns:
+        Dict containing:
+            - spare_parts: List of spare part records
+            - total_count: Total number of records
+            - active_count: Number of active parts
+            - low_stock_count: Number of parts below reorder level
+    """
+    _require_login()
+    
+    data = _ensure_dict(filters or {})
+    
+    # Build filters
+    filter_conditions = []
+    
+    # Status filter
+    if data.get("status"):
+        if data["status"] == "Low Stock":
+            # Special handling for low stock - will be filtered after query
+            pass
+        else:
+            filter_conditions.append(["status", "=", data["status"]])
+    
+    # Category filter
+    if data.get("category"):
+        filter_conditions.append(["category", "=", data["category"]])
+    
+    # Stock range filters
+    if data.get("min_stock"):
+        filter_conditions.append(["stock_qty", ">=", data["min_stock"]])
+    
+    if data.get("max_stock"):
+        filter_conditions.append(["stock_qty", "<=", data["max_stock"]])
+    
+    # Get all spare parts
+    spare_parts = _list_dicts(
+        "Garage Spare Part",
+        [
+            "name",
+            "part_code",
+            "part_name",
+            "category",
+            "brand",
+            "uom",
+            "unit_price",
+            "stock_qty",
+            "reserved_qty",
+            "reorder_level",
+            "warehouse_location",
+            "managed_by",
+            "status",
+            "last_restocked_on",
+            "image",
+            "notes",
+        ],
+        filters=filter_conditions if filter_conditions else None,
+        limit=500,
+    )
+    
+    # Apply search filter if provided
+    search_term = (data.get("search") or "").strip().lower()
+    if search_term:
+        spare_parts = [
+            part for part in spare_parts
+            if search_term in (part.get("part_code") or "").lower()
+            or search_term in (part.get("part_name") or "").lower()
+            or search_term in (part.get("brand") or "").lower()
+        ]
+    
+    # Filter low stock items if requested
+    if data.get("status") == "Low Stock":
+        spare_parts = [
+            part for part in spare_parts
+            if flt(part.get("stock_qty", 0)) <= flt(part.get("reorder_level", 0))
+        ]
+    
+    # Calculate statistics
+    active_parts = [p for p in spare_parts if p.get("status") == "Active"]
+    low_stock_parts = [
+        p for p in spare_parts
+        if flt(p.get("stock_qty", 0)) <= flt(p.get("reorder_level", 0))
+    ]
+    
+    return {
+        "spare_parts": spare_parts,
+        "total_count": len(spare_parts),
+        "active_count": len(active_parts),
+        "low_stock_count": len(low_stock_parts),
+    }
+
+
+# JUGA TAMBAHKAN FUNGSI INI UNTUK MENDAPATKAN STATISTIK SPARE PART
+
+@frappe.whitelist()
+def get_spare_part_stats() -> Dict[str, Any]:
+    """
+    Get spare part statistics for dashboard.
+    
+    Returns:
+        Dict containing:
+            - total_parts: Total number of spare parts
+            - active_parts: Number of active parts
+            - low_stock_parts: Number of parts below reorder level
+            - out_of_stock_parts: Number of parts with zero stock
+            - total_stock_value: Total value of all stock
+    """
+    _require_login()
+    
+    # Get all spare parts
+    spare_parts = _list_dicts(
+        "Garage Spare Part",
+        [
+            "name",
+            "status",
+            "stock_qty",
+            "reserved_qty",
+            "reorder_level",
+            "unit_price",
+        ],
+        limit=1000,
+    )
+    
+    # Calculate statistics
+    total_parts = len(spare_parts)
+    active_parts = len([p for p in spare_parts if p.get("status") == "Active"])
+    
+    low_stock_parts = len([
+        p for p in spare_parts
+        if flt(p.get("stock_qty", 0)) <= flt(p.get("reorder_level", 0))
+        and flt(p.get("stock_qty", 0)) > 0
+    ])
+    
+    out_of_stock_parts = len([
+        p for p in spare_parts
+        if flt(p.get("stock_qty", 0)) == 0
+    ])
+    
+    # Calculate total stock value
+    total_stock_value = sum(
+        flt(p.get("stock_qty", 0)) * flt(p.get("unit_price", 0))
+        for p in spare_parts
+    )
+    
+    return {
+        "total_parts": total_parts,
+        "active_parts": active_parts,
+        "low_stock_parts": low_stock_parts,
+        "out_of_stock_parts": out_of_stock_parts,
+        "total_stock_value": total_stock_value,
+    }
 
 
 @frappe.whitelist()

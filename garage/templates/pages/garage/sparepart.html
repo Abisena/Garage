@@ -1523,12 +1523,232 @@ button:disabled {
 </section>
 {% endblock %}
 
+
 {% block script %}
 <script>
-    frappe.require("/assets/garage/js/garage_portal.js");
-</script>
-{% endblock %}
+/**
+ * GARAGE SPAREPART PORTAL - Integrated JavaScript
+ */
+(function() {
+    'use strict';
 
-{% block style %}
-<style>@import url('/assets/garage/css/garage_portal.css');</style>
+    // API Configuration
+    const API = {
+        listSpareParts: 'garage.api.portal.list_spare_parts',
+        createSparePart: 'garage.api.portal.create_spare_part',
+        updateSparePart: 'garage.api.portal.update_spare_part',
+    };
+
+    // State
+    let state = {
+        spareParts: [],
+        currentSpare: null,
+        searchQuery: '',
+    };
+
+    // Utility Functions
+    function formatCurrency(value) {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(value || 0);
+    }
+
+    function getStatusBadge(status) {
+        const badges = {
+            'Active': '<span class="badge success">Active</span>',
+            'Inactive': '<span class="badge muted">Inactive</span>',
+            'Discontinued': '<span class="badge danger">Discontinued</span>',
+        };
+        return badges[status] || badges['Active'];
+    }
+
+    function getStockStatus(stockQty, reorderLevel) {
+        const stock = parseFloat(stockQty) || 0;
+        const reorder = parseFloat(reorderLevel) || 0;
+        if (stock === 0) return '<span class="badge danger">Habis</span>';
+        if (stock <= reorder) return '<span class="badge warning">Menipis</span>';
+        return '<span class="badge success">Cukup</span>';
+    }
+
+    // Load Data
+    async function loadSpareParts() {
+        try {
+            console.log('[Sparepart] Loading data...');
+            const response = await frappe.call({
+                method: API.listSpareParts,
+                args: { filters: { search: state.searchQuery } },
+                freeze: false
+            });
+
+            const data = response.message || {};
+            state.spareParts = data.spare_parts || [];
+
+            updateMetrics(data);
+            renderInventoryTable(state.spareParts);
+
+            console.log('[Sparepart] Loaded:', state.spareParts.length, 'parts');
+        } catch (error) {
+            console.error('[Sparepart] Error:', error);
+            frappe.show_alert({ message: 'Gagal memuat data: ' + error.message, indicator: 'red' }, 5);
+        }
+    }
+
+    // Update Metrics
+    function updateMetrics(data) {
+        ['spare-count', 'spare-request-count', 'spare-low-stock'].forEach((key, idx) => {
+            const el = document.querySelector(`[data-metric="${key}"]`);
+            if (el) el.textContent = [data.total_count, data.active_count, data.low_stock_count][idx] || 0;
+        });
+    }
+
+    // Render Table
+    function renderInventoryTable(spareParts) {
+        const tbody = document.querySelector('[data-role="spare-inventory-table"]');
+        const emptyState = document.querySelector('[data-empty="spare-inventory"]');
+
+        if (!spareParts || spareParts.length === 0) {
+            tbody.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        tbody.innerHTML = spareParts.map(part => `
+            <tr data-spare-id="${part.name}" style="cursor: pointer;">
+                <td>
+                    <div class="table-cell-primary">
+                        <strong>${part.part_code || '-'}</strong>
+                        <span class="table-cell-secondary">${part.part_name || '-'}</span>
+                    </div>
+                    ${part.category ? `<div class="table-cell-meta">
+                        <span class="badge subtle">${part.category}</span>
+                        ${part.brand ? `<span class="badge subtle">${part.brand}</span>` : ''}
+                    </div>` : ''}
+                </td>
+                <td>
+                    <div class="stock-display">
+                        <strong>${part.stock_qty || 0}</strong> ${part.uom || 'Unit'}
+                        ${getStockStatus(part.stock_qty, part.reorder_level)}
+                    </div>
+                    ${part.reserved_qty ? `<div class="table-cell-meta">Reserved: ${part.reserved_qty}</div>` : ''}
+                </td>
+                <td><strong>${formatCurrency(part.unit_price)}</strong></td>
+                <td>
+                    <div class="table-cell-primary">${part.warehouse_location || '-'}</div>
+                    <div class="table-cell-meta">${part.managed_by ? `👤 ${part.managed_by}` : ''}</div>
+                    ${getStatusBadge(part.status)}
+                </td>
+            </tr>
+        `).join('');
+
+        tbody.querySelectorAll('tr').forEach(row => {
+            row.addEventListener('click', () => {
+                const spare = spareParts.find(s => s.name === row.dataset.spareId);
+                if (spare) selectSpare(spare);
+            });
+        });
+    }
+
+    // Select Spare
+    function selectSpare(spare) {
+        state.currentSpare = spare;
+        document.querySelector('[data-role="spare-detail-title"]').textContent = 'Edit Sparepart';
+        document.querySelector('[data-role="spare-preview-name"]').textContent = spare.part_name || '-';
+        document.querySelector('[data-role="spare-status-badge"]').innerHTML = getStatusBadge(spare.status);
+
+        const preview = document.querySelector('[data-role="spare-preview"]');
+        if (spare.image) {
+            preview.style.backgroundImage = `url(${spare.image})`;
+            preview.classList.remove('is-empty');
+        } else {
+            preview.style.backgroundImage = '';
+            preview.classList.add('is-empty');
+        }
+
+        const form = document.getElementById('spare-detail-form');
+        Object.keys(spare).forEach(key => {
+            const input = form.querySelector(`[name="${key}"]`);
+            if (input) input.value = spare[key] || '';
+        });
+
+        document.querySelector('[data-role="spare-detail-panel"]').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Reset Form
+    function resetForm() {
+        state.currentSpare = null;
+        document.querySelector('[data-role="spare-detail-title"]').textContent = 'Tambah Sparepart';
+        document.querySelector('[data-role="spare-preview-name"]').textContent = 'Sparepart baru';
+        document.querySelector('[data-role="spare-status-badge"]').innerHTML = '';
+        document.querySelector('[data-role="spare-preview"]').style.backgroundImage = '';
+        document.querySelector('[data-role="spare-preview"]').classList.add('is-empty');
+        document.getElementById('spare-detail-form').reset();
+    }
+
+    // Form Submit
+    async function handleFormSubmit(e) {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+        const data = {};
+
+        formData.forEach((value, key) => {
+            const input = form.querySelector(`[name="${key}"]`);
+            if (input?.dataset?.cast === 'float') {
+                data[key] = parseFloat(value) || 0;
+            } else if (value) {
+                data[key] = value;
+            }
+        });
+
+        try {
+            const method = state.currentSpare ? API.updateSparePart : API.createSparePart;
+            const args = state.currentSpare ? { name: state.currentSpare.name, updates: data } : { part: data };
+
+            await frappe.call({ method, args, freeze: true, freeze_message: 'Menyimpan...' });
+            frappe.show_alert({ message: 'Berhasil disimpan!', indicator: 'green' }, 3);
+            
+            await loadSpareParts();
+            resetForm();
+        } catch (error) {
+            frappe.show_alert({ message: 'Gagal menyimpan: ' + error.message, indicator: 'red' }, 5);
+        }
+    }
+
+    // Search Handler
+    function handleSearch(e) {
+        state.searchQuery = e.target.value.trim();
+        clearTimeout(window.spareSearchTimeout);
+        window.spareSearchTimeout = setTimeout(loadSpareParts, 500);
+    }
+
+    // Init
+    function init() {
+        console.log('[Sparepart] Initializing...');
+        
+        loadSpareParts();
+        
+        document.getElementById('spare-detail-form')?.addEventListener('submit', handleFormSubmit);
+        document.querySelector('[data-action="create-spare-part"]')?.addEventListener('click', resetForm);
+        document.querySelector('[data-role="spare-search"]')?.addEventListener('input', handleSearch);
+        
+        document.querySelectorAll('[data-desk-link]').forEach(link => {
+            link.href = `/app/${link.dataset.deskLink.toLowerCase().replace(/ /g, '-')}`;
+        });
+
+        setInterval(loadSpareParts, 30000);
+        
+        console.log('[Sparepart] ✅ Ready!');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+</script>
 {% endblock %}
