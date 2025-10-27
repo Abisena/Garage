@@ -273,6 +273,14 @@ a:hover {
     word-break: break-word;
 }
 
+.summary-card .summary-subtext {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
 .content-grid {
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
@@ -392,6 +400,17 @@ a:hover {
 .form-group textarea {
     resize: vertical;
     min-height: 120px;
+}
+
+.form-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.form-group input[readonly] {
+    background: var(--gray-100);
+    cursor: not-allowed;
 }
 
 .repeating-list {
@@ -802,6 +821,7 @@ a:hover {
             <article class="summary-card">
                 <h3>Total Estimasi</h3>
                 <p id="display_total_estimate">Rp 0</p>
+                <small class="summary-subtext" id="display_estimate_breakdown">Jasa Rp 0 + Sparepart Rp 0</small>
             </article>
         </div>
     </header>
@@ -860,7 +880,8 @@ a:hover {
 
                         <div class="form-group">
                             <label>Total Estimasi (Rp) *</label>
-                            <input type="number" id="total_estimated_amount" min="0" step="1000" required>
+                            <input type="number" id="total_estimated_amount" min="0" step="1000" required readonly>
+                            <p class="form-hint" id="total_estimate_hint">Termasuk biaya jasa dasar Rp 0 dan total sparepart Rp 0.</p>
                         </div>
                     </div>
 
@@ -1023,6 +1044,7 @@ a:hover {
 {% block script %}
 <script>
 (() => {
+    const DEFAULT_SERVICE_FEE = 50000;
     const currencyFormatter = new Intl.NumberFormat('id-ID', {
         style: 'currency',
         currency: 'IDR',
@@ -1074,6 +1096,9 @@ a:hover {
             if (part?.part_code) {
                 sparePartIndex.set(part.part_code, part);
             }
+            if (part?.part_name) {
+                sparePartIndex.set(part.part_name, part);
+            }
         });
     }
 
@@ -1095,11 +1120,16 @@ a:hover {
         merged.catalog_reserved_qty = catalogPart.reserved_qty;
         merged.catalog_managed_by = catalogPart.managed_by;
         merged.catalog_image = catalogPart.image;
-        merged.catalog_unit_price = catalogPart.unit_price;
+        const unitPrice = Number(catalogPart.unit_price);
+        const normalizedUnitPrice = Number.isNaN(unitPrice) ? Number(part?.rate ?? 0) || 0 : unitPrice;
+        merged.catalog_unit_price = normalizedUnitPrice;
         merged.item_code = catalogPart.part_code || merged.item_code || '';
         merged.item_name = catalogPart.part_name || merged.item_name || '';
         merged.uom = merged.uom || catalogPart.uom || 'Unit';
-        merged.rate = catalogPart.unit_price ?? merged.rate ?? 0;
+        merged.rate = normalizedUnitPrice;
+        if (merged.qty === undefined || merged.qty === null || merged.qty === '') {
+            merged.qty = 1;
+        }
         merged.warehouse = merged.warehouse || catalogPart.warehouse_location || '';
         return merged;
     }
@@ -1268,6 +1298,7 @@ a:hover {
         let paymentSchedule = [];
         let sparePartCatalog = [];
         let sparePartIndex = new Map();
+        let catalogLoadedFromOrder = false;
         const stockStatusOptions = [
             'Pending Check',
             'Available',
@@ -1279,6 +1310,40 @@ a:hover {
 
         const totalEstimateInput = document.getElementById('total_estimated_amount');
         const estimatedDateInput = document.getElementById('estimated_delivery_date');
+
+        function calculateRequiredPartsTotal() {
+            return requiredParts.reduce((sum, part) => {
+                const amount = Number(part?.amount ?? ((Number(part?.qty) || 0) * (Number(part?.rate) || 0)));
+                if (Number.isNaN(amount)) {
+                    return sum;
+                }
+                return sum + amount;
+            }, 0);
+        }
+
+        function updateEstimateBreakdown(partsTotal) {
+            const serviceFee = Math.max(0, Math.round(DEFAULT_SERVICE_FEE));
+            const normalizedPartsTotal = Math.max(0, Math.round(partsTotal));
+            const breakdown = document.getElementById('display_estimate_breakdown');
+            if (breakdown) {
+                breakdown.textContent = `Jasa ${formatCurrency(serviceFee)} + Sparepart ${formatCurrency(normalizedPartsTotal)}`;
+            }
+            const hint = document.getElementById('total_estimate_hint');
+            if (hint) {
+                hint.textContent = `Termasuk biaya jasa dasar ${formatCurrency(serviceFee)} dan total sparepart ${formatCurrency(normalizedPartsTotal)}.`;
+            }
+        }
+
+        function recalculateTotals() {
+            const serviceFee = Math.max(0, Math.round(DEFAULT_SERVICE_FEE));
+            const partsTotal = Math.max(0, Math.round(calculateRequiredPartsTotal()));
+            const total = serviceFee + partsTotal;
+            if (totalEstimateInput) {
+                totalEstimateInput.value = total;
+            }
+            updateTotalEstimateDisplay(total);
+            updateEstimateBreakdown(partsTotal);
+        }
 
         function wireFormMirrors() {
             const serviceTypeInput = document.getElementById('service_order_type');
@@ -1317,6 +1382,30 @@ a:hover {
 
         wireFormMirrors();
 
+        async function fetchSparePartCatalog() {
+            try {
+                const response = await frappe.call(withCSRF({
+                    method: 'garage.api.portal.list_spare_parts',
+                    args: { filters: { status: 'Active' } },
+                    type: 'POST'
+                }));
+                const parts = response.message?.spare_parts || [];
+                setSparePartCatalog(parts);
+                renderRequiredParts();
+                if (parts.length > 0) {
+                    catalogLoadedFromOrder = true;
+                }
+            } catch (error) {
+                console.error('Error loading spare part catalog:', error);
+                if (window.frappe && typeof frappe.show_alert === 'function') {
+                    frappe.show_alert({
+                        message: '⚠️ Gagal memuat katalog sparepart.',
+                        indicator: 'orange'
+                    }, 5);
+                }
+            }
+        }
+
         async function loadOrderData() {
             try {
                 const response = await frappe.call(withCSRF({
@@ -1334,6 +1423,10 @@ a:hover {
                     message: '❌ Gagal load data order',
                     indicator: 'red'
                 }, 5);
+            } finally {
+                if (!catalogLoadedFromOrder) {
+                    await fetchSparePartCatalog();
+                }
             }
         }
 
@@ -1436,9 +1529,8 @@ a:hover {
             }
 
             if (order.total_estimated_amount !== undefined && order.total_estimated_amount !== null) {
-                totalEstimateInput.value = order.total_estimated_amount;
+                totalEstimateInput.value = Math.max(0, Math.round(order.total_estimated_amount));
             }
-            updateTotalEstimateDisplay(totalEstimateInput.value);
 
             document.getElementById('inspection_summary').value = order.inspection_summary || '';
             document.getElementById('service_notes').value = order.service_notes || '';
@@ -1455,7 +1547,11 @@ a:hover {
             }
             renderServiceTasks();
 
-            setSparePartCatalog(order.available_spare_parts || []);
+            const availableCatalog = Array.isArray(order.available_spare_parts) ? order.available_spare_parts : [];
+            setSparePartCatalog(availableCatalog);
+            if (availableCatalog.length > 0) {
+                catalogLoadedFromOrder = true;
+            }
 
             if (Array.isArray(order.required_parts)) {
                 requiredParts = order.required_parts.map((part) => {
@@ -1661,13 +1757,24 @@ a:hover {
                         <span>Tambahkan part yang dibutuhkan untuk perbaikan.</span>
                     </div>
                 `;
+                recalculateTotals();
                 return;
             }
 
-            requiredParts = requiredParts.map((part) => ({
-                ...part,
-                amount: (part.qty || 0) * (part.rate || 0)
-            }));
+            requiredParts = requiredParts.map((part) => {
+                const catalogRef = lookupSparePart(part.catalog_name || part.catalog_part_code || part.item_code || part.item_name);
+                const merged = catalogRef ? mergeRequiredPartWithCatalog(part, catalogRef) : { ...part };
+                const qty = Number(merged.qty);
+                const rate = Number(merged.rate);
+                const normalizedQty = Number.isNaN(qty) ? 0 : qty;
+                const normalizedRate = Number.isNaN(rate) ? 0 : rate;
+                return {
+                    ...merged,
+                    qty: normalizedQty,
+                    rate: normalizedRate,
+                    amount: normalizedQty * normalizedRate
+                };
+            });
 
             container.innerHTML = requiredParts
                 .map((part, i) => {
@@ -1758,6 +1865,7 @@ a:hover {
                     `;
                 })
                 .join('');
+            recalculateTotals();
         }
 
         window.addPaymentSchedule = function() {
@@ -1826,13 +1934,15 @@ a:hover {
                 return;
             }
 
+            recalculateTotals();
+
             const sanitizedParts = requiredParts.map((part) => ({
                 item_code: part.item_code,
                 item_name: part.item_name,
                 description: part.description,
-                qty: part.qty || 0,
-                rate: part.rate || 0,
-                amount: (part.qty || 0) * (part.rate || 0),
+                qty: Number(part.qty) || 0,
+                rate: Number(part.rate) || 0,
+                amount: (Number(part.qty) || 0) * (Number(part.rate) || 0),
                 uom: part.uom || 'Unit',
                 stock_status: part.stock_status || 'Pending Check',
                 source: part.source || 'On Hand',
@@ -1870,6 +1980,7 @@ a:hover {
         };
 
         loadOrderData();
+        recalculateTotals();
 
         const defaultDate = new Date();
         defaultDate.setDate(defaultDate.getDate() + 3);
@@ -1878,11 +1989,6 @@ a:hover {
             estimatedDateInput.value = defaultValue;
             updateEstimatedDeliveryDisplay(defaultValue);
         }
-
-        if (totalEstimateInput && !totalEstimateInput.value) {
-            totalEstimateInput.value = 0;
-        }
-        updateTotalEstimateDisplay(totalEstimateInput?.value ?? 0);
 
         console.log('✅ Inspection page loaded!');
     }
