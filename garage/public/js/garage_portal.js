@@ -141,8 +141,27 @@
 
         bindEvents() {
             if (this.forms.intake) {
+                this.setupIntakeTypeWatcher();
                 this.forms.intake.addEventListener('submit', (event) => {
                     event.preventDefault();
+                    const intakeTypeInput = this.forms.intake.querySelector('[name="intake_type"]');
+                    const bookingDateInput = this.forms.intake.querySelector('[name="service_booking_date"]');
+                    const bookingChannelInput = this.forms.intake.querySelector('[name="booking_channel"]');
+                    const intakeType = (intakeTypeInput?.value || 'Walk-In');
+
+                    if (intakeType === 'Booking') {
+                        if (bookingChannelInput && !bookingChannelInput.value) {
+                            frappe.msgprint(__('Pilih channel booking agar tim mengetahui sumber reservasi.'));
+                            bookingChannelInput.focus();
+                            return;
+                        }
+                        if (bookingDateInput && !bookingDateInput.value) {
+                            frappe.msgprint(__('Tanggal & jam booking wajib diisi untuk registrasi booking.'));
+                            bookingDateInput.focus();
+                            return;
+                        }
+                    }
+
                     const payload = this.collectFormData(this.forms.intake, [
                         'existing_customer',
                         'customer_type',
@@ -162,6 +181,10 @@
                         'fuel_type',
                         'mileage',
                         'notes',
+                        'intake_type',
+                        'booking_channel',
+                        'booking_reference',
+                        'service_booking_date',
                     ]);
                     this.submitForm(this.forms.intake, 'garage.api.portal.register_customer_vehicle', { payload }, 'Data intake tersimpan.');
                 });
@@ -866,6 +889,51 @@
                     message: __('Customer tidak ditemukan. Periksa kembali nama yang dimasukkan.'),
                     indicator: 'yellow',
                 });
+            }
+        }
+
+        setupIntakeTypeWatcher() {
+            const form = this.forms.intake;
+            if (!form) {
+                return;
+            }
+            const typeSelect = form.querySelector('[name="intake_type"]');
+            if (!typeSelect) {
+                return;
+            }
+            typeSelect.addEventListener('change', () => this.handleIntakeTypeChange());
+            this.handleIntakeTypeChange();
+        }
+
+        handleIntakeTypeChange() {
+            const form = this.forms.intake;
+            if (!form) {
+                return;
+            }
+            const typeSelect = form.querySelector('[name="intake_type"]');
+            const intakeType = (typeSelect?.value || 'Walk-In');
+            const isBooking = intakeType === 'Booking';
+            const bookingFields = form.querySelectorAll('[data-intake-booking]');
+            bookingFields.forEach((field) => {
+                field.classList.toggle('is-hidden', !isBooking);
+                field.setAttribute('aria-hidden', (!isBooking).toString());
+            });
+            const bookingInputs = form.querySelectorAll('[data-intake-booking] [name]');
+            bookingInputs.forEach((input) => {
+                if (
+                    input instanceof HTMLInputElement ||
+                    input instanceof HTMLSelectElement ||
+                    input instanceof HTMLTextAreaElement
+                ) {
+                    input.disabled = !isBooking;
+                    if (!isBooking) {
+                        input.value = '';
+                    }
+                }
+            });
+            const hint = form.querySelector('[data-role="booking-hint"]');
+            if (hint) {
+                hint.classList.toggle('is-visible', isBooking);
             }
         }
 
@@ -2273,7 +2341,7 @@
             const data = {};
             fields.forEach((fieldname) => {
                 const input = form.querySelector(`[name="${fieldname}"]`);
-                if (!input) {
+                if (!input || input.disabled) {
                     return;
                 }
                 const value = this.readInputValue(input);
@@ -2313,6 +2381,13 @@
             const raw = input.value;
             if (raw === '') {
                 return null;
+            }
+            if (input.type === 'datetime-local') {
+                const parts = raw.split('T');
+                if (parts.length === 2) {
+                    const timePart = parts[1].length === 5 ? `${parts[1]}:00` : parts[1];
+                    return `${parts[0]} ${timePart}`;
+                }
             }
             const cast = input.dataset.cast;
             if (cast === 'float') {
@@ -2356,6 +2431,7 @@
             });
             if (form === this.forms.intake) {
                 this.updateCustomerSearchInput(null);
+                this.handleIntakeTypeChange();
             }
         }
 

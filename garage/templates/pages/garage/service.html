@@ -861,6 +861,103 @@ body {
     background: var(--gray-200);
 }
 
+.booking-alert {
+    display: none;
+    margin-bottom: 24px;
+    padding: 20px 24px;
+    border-radius: var(--radius-lg);
+    border: 1.5px solid var(--primary-light);
+    background: var(--primary-subtle);
+    box-shadow: var(--shadow-sm);
+}
+
+.booking-alert.is-visible {
+    display: block;
+}
+
+.booking-alert__header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.booking-alert__icon {
+    font-size: 28px;
+}
+
+.booking-alert__title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--primary-dark);
+}
+
+.booking-alert__subtitle {
+    margin: 4px 0 0 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.booking-alert__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.booking-alert__item {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid rgba(0, 102, 255, 0.15);
+}
+
+.booking-alert__item.is-overdue {
+    border-color: rgba(220, 53, 69, 0.35);
+    background: rgba(255, 244, 244, 0.9);
+}
+
+.booking-alert__item.is-due,
+.booking-alert__item.is-arriving {
+    border-color: rgba(255, 179, 0, 0.35);
+    background: rgba(255, 250, 235, 0.9);
+}
+
+.booking-alert__time {
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.booking-alert__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 200px;
+}
+
+.booking-alert__order {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.booking-alert__info {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.booking-alert__status {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--primary-dark);
+    letter-spacing: 0.04em;
+}
+
 /* === TABLE === */
 .service-table-wrapper {
     overflow-x: auto;
@@ -909,6 +1006,34 @@ body {
     vertical-align: top;
 }
 
+.service-table tbody tr.booking-row {
+    position: relative;
+}
+
+.service-table tbody tr.booking-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    border-radius: 4px 0 0 4px;
+    background: var(--primary);
+}
+
+.service-table tbody tr.booking-row--overdue::before {
+    background: #d93025;
+}
+
+.service-table tbody tr.booking-row--due::before,
+.service-table tbody tr.booking-row--arriving::before {
+    background: var(--accent-warning);
+}
+
+.service-table tbody tr.booking-row--upcoming::before {
+    background: var(--primary-light);
+}
+
 /* Table Cells */
 .cell-strong {
     font-weight: 600;
@@ -923,6 +1048,62 @@ body {
 .cell-muted {
     color: var(--text-muted);
     font-size: 13px;
+}
+
+.intake-badge {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--gray-100);
+    color: var(--text-secondary);
+}
+
+.intake-badge.booking {
+    background: rgba(0, 102, 255, 0.12);
+    color: var(--primary-dark);
+    border: 1px solid rgba(0, 102, 255, 0.15);
+}
+
+.intake-badge.walk-in {
+    background: var(--gray-100);
+}
+
+.intake-badge[data-alert="overdue"] {
+    border-color: rgba(220, 53, 69, 0.4);
+    background: rgba(255, 238, 240, 0.9);
+    color: #b3261e;
+}
+
+.intake-badge[data-alert="due"],
+.intake-badge[data-alert="arriving"] {
+    border-color: rgba(255, 179, 0, 0.35);
+    background: rgba(255, 245, 230, 0.9);
+    color: var(--accent-warning);
+}
+
+.intake-badge__time {
+    font-size: 11px;
+    font-weight: 500;
+    color: inherit;
+}
+
+.intake-badge__note {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+.date-display .booking-date {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--primary-dark);
 }
 
 /* Status Badge */
@@ -1239,6 +1420,16 @@ body {
 </div>
 
 <div class="container" style="padding-top: 32px;">
+    <div class="booking-alert" id="booking-alert" aria-live="polite">
+        <div class="booking-alert__header">
+            <div class="booking-alert__icon">📅</div>
+            <div>
+                <h3 class="booking-alert__title">Jadwal Booking Terdekat</h3>
+                <p class="booking-alert__subtitle">Siapkan tim inspeksi sebelum customer booking tiba.</p>
+            </div>
+        </div>
+        <ul class="booking-alert__list" id="booking-alert-list"></ul>
+    </div>
     <!-- Stats Overview -->
     <div class="stats-grid">
         <div class="stat-card">
@@ -1439,10 +1630,11 @@ body {
     function formatDate(dateStr) {
         if (!dateStr) return '-';
         const date = new Date(dateStr);
-        return date.toLocaleDateString('id-ID', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric' 
+        if (Number.isNaN(date.getTime())) return '-';
+        return date.toLocaleDateString('id-ID', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
         });
     }
 
@@ -1450,6 +1642,7 @@ body {
     function formatDateTime(dateStr) {
         if (!dateStr) return '-';
         const date = new Date(dateStr);
+        if (Number.isNaN(date.getTime())) return '-';
         return date.toLocaleString('id-ID', {
             year: 'numeric',
             month: 'short',
@@ -1457,6 +1650,90 @@ body {
             hour: '2-digit',
             minute: '2-digit'
         });
+    }
+
+    function escapeHtml(value) {
+        if (value === undefined || value === null) {
+            return '';
+        }
+        return value
+            .toString()
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function getRowClass(order) {
+        if (!order || !order.intake_type) {
+            return '';
+        }
+        const type = (order.intake_type || '').toLowerCase();
+        if (type !== 'booking') {
+            return '';
+        }
+        const classes = ['booking-row'];
+        const windowState = (order.booking_window || '').toLowerCase();
+        const allowedStates = ['overdue', 'arriving', 'due', 'upcoming', 'scheduled'];
+        if (allowedStates.includes(windowState)) {
+            classes.push(`booking-row--${windowState}`);
+        }
+        return classes.join(' ');
+    }
+
+    function renderIntakeBadge(order) {
+        if (!order) {
+            return '';
+        }
+        const type = (order.intake_type || 'Walk-In').toLowerCase() === 'booking' ? 'Booking' : 'Walk-In';
+        const classes = ['intake-badge', type.toLowerCase().replace(' ', '-')];
+        let dataAlert = '';
+        if (type === 'Booking' && order.booking_window) {
+            dataAlert = ` data-alert="${escapeHtml(order.booking_window)}"`;
+        }
+        if (type !== 'Booking') {
+            return `<div class="${classes.join(' ')}">Walk-In</div>`;
+        }
+        const channel = order.booking_channel ? ` • ${escapeHtml(order.booking_channel)}` : '';
+        const bookingTime = order.service_booking_date ? formatDateTime(order.service_booking_date) : '';
+        const timeLine = bookingTime ? `<span class="intake-badge__time">${escapeHtml(bookingTime)}</span>` : '';
+        const referenceLine = order.booking_reference
+            ? `<span class="intake-badge__note">${escapeHtml(order.booking_reference)}</span>`
+            : '';
+        return `
+            <div class="${classes.join(' ')}"${dataAlert}>
+                <span>Booking${channel}</span>
+                ${timeLine}
+                ${referenceLine}
+            </div>
+        `;
+    }
+
+    function renderBookingDate(order) {
+        if (!order || !order.service_booking_date) {
+            return '';
+        }
+        if ((order.intake_type || '').toLowerCase() !== 'booking') {
+            return '';
+        }
+        const label = formatDateTime(order.service_booking_date);
+        if (label === '-') {
+            return '';
+        }
+        return `<span class="booking-date">Booking: ${escapeHtml(label)}</span>`;
+    }
+
+    function getBookingStatusLabel(order) {
+        const state = (order?.booking_window || '').toLowerCase();
+        const labels = {
+            overdue: 'Lewat jadwal',
+            arriving: 'Dalam perjalanan',
+            due: 'Segera tiba',
+            upcoming: 'Booking mendatang',
+            scheduled: 'Terjadwal',
+        };
+        return labels[state] || 'Booking aktif';
     }
 
     // Get status badge HTML
@@ -1531,12 +1808,16 @@ body {
             return;
         }
 
-        tbody.innerHTML = orders.map(order => `
-            <tr>
+        tbody.innerHTML = orders.map(order => {
+            const rowClass = getRowClass(order);
+            const classAttr = rowClass ? ` class="${rowClass}"` : '';
+            return `
+            <tr${classAttr}>
                 <td>
                     <div class="cell-strong">${order.name || '-'}</div>
                     <div class="cell-secondary">${order.service_order_type || '-'}</div>
                     ${order.priority ? getPriorityBadge(order.priority) : ''}
+                    ${renderIntakeBadge(order)}
                 </td>
                 <td>
                     <div class="vehicle-info">
@@ -1555,7 +1836,7 @@ body {
                     <div class="notes-preview" title="${order.service_notes || '-'}">${order.service_notes || '-'}</div>
                 </td>
                 <td>
-                    <div class="date-display">${formatDateTime(order.creation)}</div>
+                    <div class="date-display">${formatDateTime(order.creation)}${renderBookingDate(order)}</div>
                 </td>
                 <td>
                     <button class="action-btn primary" onclick="window.location.href='/garage/inspection?order_id=${order.name}'">
@@ -1563,7 +1844,7 @@ body {
                     </button>
                 </td>
             </tr>
-        `).join('');
+        `; }).join('');
     }
 
     // Render In Progress table
@@ -1585,12 +1866,16 @@ body {
             return;
         }
 
-        tbody.innerHTML = orders.map(order => `
-            <tr>
+        tbody.innerHTML = orders.map(order => {
+            const rowClass = getRowClass(order);
+            const classAttr = rowClass ? ` class="${rowClass}"` : '';
+            return `
+            <tr${classAttr}>
                 <td>
                     <div class="cell-strong">${order.name || '-'}</div>
                     <div class="cell-secondary">${order.service_order_type || '-'}</div>
                     ${order.priority ? getPriorityBadge(order.priority) : ''}
+                    ${renderIntakeBadge(order)}
                 </td>
                 <td>
                     <div class="vehicle-info">
@@ -1609,7 +1894,7 @@ body {
                     <div class="cell-muted">${order.inspection_summary || '-'}</div>
                 </td>
                 <td>
-                    <div class="date-display">${formatDate(order.estimated_delivery_date)}</div>
+                    <div class="date-display">${formatDate(order.estimated_delivery_date)}${renderBookingDate(order)}</div>
                 </td>
                 <td>
                     <button class="action-btn" data-order="${escapeAttribute(order.name || '')}" onclick="openStatusUpdateModal(this.dataset.order)">
@@ -1617,7 +1902,7 @@ body {
                     </button>
                 </td>
             </tr>
-        `).join('');
+        `; }).join('');
     }
 
     // Render Completed table
@@ -1639,11 +1924,15 @@ body {
             return;
         }
 
-        tbody.innerHTML = orders.map(order => `
-            <tr>
+        tbody.innerHTML = orders.map(order => {
+            const rowClass = getRowClass(order);
+            const classAttr = rowClass ? ` class="${rowClass}"` : '';
+            return `
+            <tr${classAttr}>
                 <td>
                     <div class="cell-strong">${order.name || '-'}</div>
                     <div class="cell-secondary">${order.service_order_type || '-'}</div>
+                    ${renderIntakeBadge(order)}
                 </td>
                 <td>
                     <div class="vehicle-info">
@@ -1664,7 +1953,7 @@ body {
                     <div class="currency">${formatCurrency(order.total_approved_amount || order.total_estimated_amount)}</div>
                 </td>
                 <td>
-                    <div class="date-display">${formatDateTime(order.actual_delivery_date || order.modified)}</div>
+                    <div class="date-display">${formatDateTime(order.actual_delivery_date || order.modified)}${renderBookingDate(order)}</div>
                 </td>
                 <td>
                     <button class="action-btn" onclick="viewServiceDetails('${order.name}')">
@@ -1672,7 +1961,64 @@ body {
                     </button>
                 </td>
             </tr>
-        `).join('');
+        `; }).join('');
+    }
+
+    function renderBookingAlerts(orders) {
+        const container = document.getElementById('booking-alert');
+        const list = document.getElementById('booking-alert-list');
+        if (!container || !list) {
+            return;
+        }
+
+        const relevantStates = ['overdue', 'arriving', 'due', 'upcoming'];
+        const highlighted = (orders || [])
+            .filter((order) => (order?.intake_type || '').toLowerCase() === 'booking')
+            .filter((order) => order.service_booking_date)
+            .filter((order) => relevantStates.includes((order.booking_window || '').toLowerCase()))
+            .sort((a, b) => {
+                const aTime = new Date(a.service_booking_date || 0).getTime();
+                const bTime = new Date(b.service_booking_date || 0).getTime();
+                return aTime - bTime;
+            })
+            .slice(0, 5);
+
+        if (!highlighted.length) {
+            container.classList.remove('is-visible');
+            list.innerHTML = '';
+            return;
+        }
+
+        container.classList.add('is-visible');
+        list.innerHTML = highlighted
+            .map((order) => {
+                const schedule = formatDateTime(order.service_booking_date);
+                const customer = order.customer_name || order.customer || '-';
+                const vehicleParts = [
+                    order.vehicle_plate,
+                    [order.vehicle_brand, order.vehicle_model].filter(Boolean).join(' ')
+                ].filter(Boolean);
+                const vehicleInfo = vehicleParts.join(' • ');
+                const channelInfo = order.booking_channel ? ` • ${escapeHtml(order.booking_channel)}` : '';
+                const state = (order.booking_window || '').toLowerCase();
+                const statusLabel = getBookingStatusLabel(order);
+                const referenceLine = order.booking_reference
+                    ? `<span class="booking-alert__info">${escapeHtml(order.booking_reference)}</span>`
+                    : '';
+                const itemClass = relevantStates.includes(state) ? ` is-${state}` : '';
+                return `
+                    <li class="booking-alert__item${itemClass}">
+                        <div class="booking-alert__time">${escapeHtml(schedule)}</div>
+                        <div class="booking-alert__meta">
+                            <div class="booking-alert__order">${escapeHtml(order.name || '-')} • ${escapeHtml(customer)}</div>
+                            <div class="booking-alert__info">${escapeHtml(vehicleInfo || 'Tanpa detail kendaraan')}${channelInfo}</div>
+                            ${referenceLine}
+                        </div>
+                        <div class="booking-alert__status">${escapeHtml(statusLabel)}</div>
+                    </li>
+                `;
+            })
+            .join('');
     }
 
     // Update stats
@@ -1740,6 +2086,7 @@ body {
             };
 
             // Update UI
+            renderBookingAlerts(allOrders);
             updateStats(categorized);
             renderInspectionTable(categorized.inspection);
             renderProgressTable(categorized.progress);

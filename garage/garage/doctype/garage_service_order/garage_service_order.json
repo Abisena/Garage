@@ -18,6 +18,9 @@
     "order_category",
     "status",
     "priority",
+    "intake_type",
+    "booking_channel",
+    "booking_reference",
     "service_booking_date",
     "customer",
     "vehicle",
@@ -72,6 +75,26 @@
       "label": "Priority",
       "options": "Normal\nHigh\nCritical",
       "default": "Normal"
+    },
+    {
+      "fieldname": "intake_type",
+      "fieldtype": "Select",
+      "label": "Registration Type",
+      "options": "Walk-In\nBooking",
+      "default": "Walk-In",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "booking_channel",
+      "fieldtype": "Select",
+      "label": "Booking Channel",
+      "options": "\nWhatsApp\nPhone Call\nAdmin Input\nWebsite\nOther"
+    },
+    {
+      "fieldname": "booking_reference",
+      "fieldtype": "Data",
+      "label": "Booking Reference"
     },
     {
       "fieldname": "service_booking_date",

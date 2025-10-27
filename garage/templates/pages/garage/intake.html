@@ -615,6 +615,32 @@ header .navbar-nav li button {
     flex-direction: column;
 }
 
+.form-field.is-hidden {
+    display: none !important;
+}
+
+.booking-guidance {
+    grid-column: 1 / -1;
+    display: none;
+    padding: var(--space-4) var(--space-5) !important;
+    border-radius: var(--radius-md);
+    border: 1.5px dashed var(--primary-light);
+    background: var(--primary-subtle);
+    color: var(--primary-dark);
+    font-size: var(--font-size-sm) !important;
+    line-height: var(--line-height-relaxed) !important;
+}
+
+.booking-guidance strong {
+    display: block;
+    font-size: var(--font-size-base) !important;
+    margin-bottom: var(--space-2) !important;
+}
+
+.booking-guidance.is-visible {
+    display: block;
+}
+
 .form-field label {
     display: block;
     font-size: var(--font-size-sm) !important;
@@ -1114,15 +1140,61 @@ button:disabled {
                             Detail kendaraan diisi pertama kali untuk mengecek apakah unit sudah pernah daftarkan. Setelah itu tentukan customer yang sesuai dan tambahkan catatan penting sebelum disimpan.
                         </p>
                         <ul class="form-banner__steps">
-                            <li>Langkah 1 · Detail Kendaraan</li>
-                            <li>Langkah 2 · Data Customer</li>
-                            <li>Langkah 3 · Catatan &amp; Konfirmasi</li>
+                            <li>Langkah 1 · Detail Registrasi</li>
+                            <li>Langkah 2 · Detail Kendaraan</li>
+                            <li>Langkah 3 · Data Customer</li>
+                            <li>Langkah 4 · Catatan &amp; Konfirmasi</li>
                         </ul>
                     </div>
                     <form id="customer-vehicle-form" class="form-grid">
                         <div class="form-section">
                             <header class="form-section__header">
                                 <span class="form-section__tag">Langkah 1</span>
+                                <h3 class="form-section__title">Detail Registrasi</h3>
+                                <p class="form-section__subtitle">
+                                    Tentukan apakah customer datang langsung (walk-in) atau melakukan booking terjadwal.
+                                </p>
+                            </header>
+                            <div class="form-section__grid two-column">
+                                <div class="form-field">
+                                    <label for="intake_type">Jenis Registrasi</label>
+                                    <select id="intake_type" name="intake_type">
+                                        <option value="Walk-In" selected>Walk-In (datang langsung)</option>
+                                        <option value="Booking">Booking (reservasi jadwal)</option>
+                                    </select>
+                                    <p class="form-hint">Gunakan opsi booking jika customer memesan slot melalui admin, WA, atau kanal lain.</p>
+                                </div>
+                                <div class="form-field" data-intake-booking>
+                                    <label for="booking_channel">Channel Booking</label>
+                                    <select id="booking_channel" name="booking_channel" disabled>
+                                        <option value="">—</option>
+                                        <option value="WhatsApp">WhatsApp</option>
+                                        <option value="Phone Call">Phone Call</option>
+                                        <option value="Admin Input">Admin Input</option>
+                                        <option value="Website">Website</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                    <p class="form-hint">Catat sumber booking agar tim mudah melakukan follow-up.</p>
+                                </div>
+                                <div class="form-field" data-intake-booking>
+                                    <label for="service_booking_date">Jadwal Booking</label>
+                                    <input id="service_booking_date" name="service_booking_date" type="datetime-local" disabled />
+                                    <p class="form-hint">Tanggal &amp; jam kedatangan yang disepakati dengan customer.</p>
+                                </div>
+                                <div class="form-field" data-intake-booking>
+                                    <label for="booking_reference">Referensi Booking</label>
+                                    <input id="booking_reference" name="booking_reference" placeholder="Contoh: WA 0812-xxxx" disabled />
+                                    <p class="form-hint">Isi nomor kontak, kode reservasi, atau catatan admin untuk booking ini.</p>
+                                </div>
+                                <div class="booking-guidance" data-role="booking-hint">
+                                    <strong>Reminder Booking</strong>
+                                    Notifikasi booking akan muncul otomatis menjelang jadwal yang dipilih sehingga tim inspeksi siap menerima unit.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <header class="form-section__header">
+                                <span class="form-section__tag">Langkah 2</span>
                                 <h3 class="form-section__title">Detail Kendaraan</h3>
                                 <p class="form-section__subtitle">
                                     Mulai dengan data unit. Isi nomor polisi untuk mencari riwayat kendaraan & customer secara otomatis.
@@ -1196,7 +1268,7 @@ button:disabled {
                         </div>
                         <div class="form-section">
                             <header class="form-section__header">
-                                <span class="form-section__tag">Langkah 2</span>
+                                <span class="form-section__tag">Langkah 3</span>
                                 <h3 class="form-section__title">Data Customer</h3>
                                 <p class="form-section__subtitle">
                                     Pastikan customer yang tepat sudah dipilih atau buat data baru, lalu lengkapi informasi kontak.
@@ -1259,7 +1331,7 @@ button:disabled {
                         </div>
                         <div class="form-section">
                             <header class="form-section__header">
-                                <span class="form-section__tag">Langkah 3</span>
+                                <span class="form-section__tag">Langkah 4</span>
                                 <h3 class="form-section__title">Catatan &amp; Konfirmasi</h3>
                                 <p class="form-section__subtitle">
                                     Tambahkan catatan penting sebelum menyimpan intake untuk memastikan tim service siap menangani unit.
