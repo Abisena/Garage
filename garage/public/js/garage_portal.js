@@ -18,6 +18,7 @@
             this.filteredSpareParts = [];
             this.currentSparePart = null;
             this.creatingSparePart = false;
+            this.bookingDateField = null;
         }
 
         init() {
@@ -141,16 +142,20 @@
 
         bindEvents() {
             if (this.forms.intake) {
+                this.setupBookingDateField();
                 this.setupIntakeTypeWatcher();
                 this.forms.intake.addEventListener('submit', (event) => {
                     event.preventDefault();
                     const bookingDateInput = this.forms.intake.querySelector('[name="service_booking_date"]');
+                    const bookingDateField = this.forms.intake.querySelector('[data-role="booking-date"]');
+                    const bookingTimeField = this.forms.intake.querySelector('[data-role="booking-time"]');
                     const intakeType = this.getIntakeTypeValue();
 
                     if (intakeType === 'Booking') {
                         if (bookingDateInput && !bookingDateInput.value) {
                             frappe.msgprint(__('Tanggal & jam booking wajib diisi untuk registrasi booking.'));
-                            bookingDateInput.focus();
+                            const focusTarget = bookingDateField || bookingTimeField || bookingDateInput;
+                            focusTarget?.focus();
                             return;
                         }
                     }
@@ -928,10 +933,67 @@
                     }
                 }
             });
+            if (this.bookingDateField?.update) {
+                this.bookingDateField.update();
+            }
             const hint = form.querySelector('[data-role="booking-hint"]');
             if (hint) {
                 hint.classList.toggle('is-visible', isBooking);
             }
+        }
+
+        setupBookingDateField() {
+            const form = this.forms.intake;
+            if (!form) {
+                return;
+            }
+            const dateInput = form.querySelector('[data-role="booking-date"]');
+            const timeInput = form.querySelector('[data-role="booking-time"]');
+            const hiddenInput = form.querySelector('input[name="service_booking_date"]');
+            if (!dateInput || !timeInput || !hiddenInput) {
+                return;
+            }
+
+            const update = () => {
+                const dateValue = dateInput.value;
+                const timeValue = timeInput.value;
+                if (dateValue && timeValue) {
+                    const normalizedTime = timeValue.length === 5 ? `${timeValue}:00` : timeValue;
+                    hiddenInput.value = `${dateValue} ${normalizedTime}`;
+                } else {
+                    hiddenInput.value = '';
+                }
+            };
+
+            const applyExistingValue = () => {
+                const rawValue = hiddenInput.value || '';
+                if (!rawValue) {
+                    dateInput.value = '';
+                    timeInput.value = '';
+                    return;
+                }
+                const [datePart, timePartRaw] = rawValue.split(' ');
+                if (datePart) {
+                    dateInput.value = datePart;
+                }
+                if (timePartRaw) {
+                    const normalizedTime = timePartRaw.trim().slice(0, 5);
+                    timeInput.value = normalizedTime;
+                }
+            };
+
+            dateInput.addEventListener('change', update);
+            timeInput.addEventListener('change', update);
+            dateInput.addEventListener('input', update);
+            timeInput.addEventListener('input', update);
+
+            this.bookingDateField = {
+                update,
+                applyExistingValue,
+            };
+
+            applyExistingValue();
+            update();
         }
 
         getIntakeTypeValue() {
