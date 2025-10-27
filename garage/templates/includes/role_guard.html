@@ -14,33 +14,43 @@
             };
 
             function disablePortalNav() {
-                var navWrapper = document.querySelector('.portal-nav-wrapper');
-                if (!navWrapper) {
+                var navWrappers = document.querySelectorAll('.portal-nav-wrapper');
+                if (!navWrappers.length) {
                     return;
                 }
-
-                navWrapper.classList.add('portal-nav-disabled');
-
-                var navLinks = navWrapper.querySelectorAll('.portal-nav__link');
-                navLinks.forEach(function (link) {
-                    link.classList.add('is-disabled');
-                    link.setAttribute('aria-disabled', 'true');
-                    link.setAttribute('tabindex', '-1');
-                    link.dataset.portalNavDisabled = 'true';
-                });
 
                 var disableClick = function (event) {
                     event.preventDefault();
                     event.stopPropagation();
                 };
 
-                navLinks.forEach(function (link) {
-                    link.addEventListener('click', disableClick, true);
-                    link.addEventListener('keydown', function (event) {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                            disableClick(event);
+                navWrappers.forEach(function (wrapper) {
+                    wrapper.classList.add('portal-nav-disabled');
+
+                    var navLinks = wrapper.querySelectorAll('.portal-nav__link');
+                    navLinks.forEach(function (link) {
+                        if (link.dataset.portalNavDisabled === 'true') {
+                            return;
                         }
-                    }, true);
+
+                        var originalHref = link.getAttribute('href');
+                        if (originalHref) {
+                            link.dataset.portalNavOriginalHref = originalHref;
+                            link.removeAttribute('href');
+                        }
+
+                        link.classList.add('is-disabled');
+                        link.setAttribute('aria-disabled', 'true');
+                        link.setAttribute('tabindex', '-1');
+                        link.dataset.portalNavDisabled = 'true';
+
+                        link.addEventListener('click', disableClick, true);
+                        link.addEventListener('keydown', function (event) {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                                disableClick(event);
+                            }
+                        }, true);
+                    });
                 });
             }
 
