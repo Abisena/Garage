@@ -927,6 +927,7 @@
                     input instanceof HTMLSelectElement ||
                     input instanceof HTMLTextAreaElement
                 ) {
+                    input.toggleAttribute('disabled', !isBooking);
                     input.disabled = !isBooking;
                     if (!isBooking) {
                         input.value = '';
