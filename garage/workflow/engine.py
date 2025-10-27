@@ -17,6 +17,7 @@ from .models import (
     EstimateLine,
     InspectionReport,
     InspectionSeverity,
+    InventoryCategory,
     InvoiceStatus,
     JobCard,
     JobCardStatus,
@@ -41,6 +42,9 @@ from .models import (
     StockEntry,
     StockItem,
     StockMovement,
+    TransactionDocument,
+    TransactionDocumentStatus,
+    TransactionDocumentType,
     User,
     Vehicle,
     WorkOrder,
@@ -97,6 +101,9 @@ class AccessController:
             "finish_service_check",
             "generate_reports",
             "evaluate_reorder_levels",
+            "create_transaction_document",
+            "approve_transaction_document",
+            "reject_transaction_document",
         ),
         Role.SERVICE_ADVISOR: (
             "register_customer",
@@ -113,6 +120,9 @@ class AccessController:
             "finish_service_check",
             "close_customer_interaction",
             "generate_sales_invoice",
+            "create_transaction_document",
+            "approve_transaction_document",
+            "reject_transaction_document",
         ),
         Role.TECHNICIAN: (
             "start_work",
@@ -133,6 +143,9 @@ class AccessController:
             "reserve_sales_stock",
             "create_delivery_note",
             "evaluate_reorder_levels",
+            "create_transaction_document",
+            "approve_transaction_document",
+            "reject_transaction_document",
         ),
         Role.CASHIER: (
             "generate_sales_invoice",
@@ -180,6 +193,7 @@ class InMemoryStore:
         self.receipts: Dict[str, ReceiptDocument] = {}
         self.service_flows: Dict[str, ServiceFlow] = {}
         self.service_flow_index: Dict[str, str] = {}
+        self.transaction_documents: Dict[str, TransactionDocument] = {}
         self.audit_log: List[AuditLogEntry] = []
 
 
@@ -245,6 +259,7 @@ class GarageWorkflowEngine:
         user: User,
         item_code: str,
         description: str,
+        category: InventoryCategory,
         quantity: int = 0,
         reorder_level: int = 0,
         uom: str = "pcs",
@@ -257,6 +272,7 @@ class GarageWorkflowEngine:
         stock_item = StockItem(
             item_code=item_code,
             description=description,
+            category=category,
             quantity_on_hand=quantity,
             reorder_level=reorder_level,
             uom=uom,
@@ -275,6 +291,64 @@ class GarageWorkflowEngine:
         self.store.stock_movements.append(movement)
         self._log_action(user, "adjust_inventory", item_code, asdict(movement))
         return stock_item
+
+    def create_transaction_document(
+        self,
+        user: User,
+        transaction_type: TransactionDocumentType,
+        *,
+        target_role: Role,
+        items: Dict[str, int],
+        related_booking_id: Optional[str] = None,
+        notes: Optional[str] = None,
+    ) -> TransactionDocument:
+        self.access.require(user, "create_transaction_document")
+        if related_booking_id:
+            self._get_booking(related_booking_id)
+        validated_items = self._validate_transaction_document_items(transaction_type, items)
+        document = TransactionDocument(
+            document_id=_generate_id("TDOC"),
+            transaction_type=transaction_type,
+            source_role=user.role,
+            target_role=target_role,
+            items=validated_items,
+            requested_by=user.user_id,
+            related_booking_id=related_booking_id,
+            notes=notes,
+        )
+        if transaction_type == TransactionDocumentType.PROCUREMENT_REQUEST and target_role != Role.MANAGER:
+            raise ValidationError("Procurement requests must target the manager role")
+        self.store.transaction_documents[document.document_id] = document
+        self._log_action(user, "create_transaction_document", document.document_id, asdict(document))
+        return document
+
+    def approve_transaction_document(self, user: User, document_id: str) -> TransactionDocument:
+        self.access.require(user, "approve_transaction_document")
+        document = self._get_transaction_document(document_id)
+        if document.status != TransactionDocumentStatus.PENDING:
+            raise InvalidTransitionError("Only pending documents can be approved")
+        if user.role not in {document.target_role, Role.MANAGER}:
+            raise PermissionError("Only the responsible role or manager may approve this document")
+        document.status = TransactionDocumentStatus.APPROVED
+        document.approved_by = user.user_id
+        document.approved_at = datetime.utcnow()
+        self._log_action(user, "approve_transaction_document", document.document_id, asdict(document))
+        return document
+
+    def reject_transaction_document(self, user: User, document_id: str, reason: Optional[str] = None) -> TransactionDocument:
+        self.access.require(user, "reject_transaction_document")
+        document = self._get_transaction_document(document_id)
+        if document.status != TransactionDocumentStatus.PENDING:
+            raise InvalidTransitionError("Only pending documents can be rejected")
+        if user.role not in {document.target_role, Role.MANAGER}:
+            raise PermissionError("Only the responsible role or manager may reject this document")
+        document.status = TransactionDocumentStatus.REJECTED
+        document.approved_by = user.user_id
+        document.approved_at = datetime.utcnow()
+        if reason:
+            document.notes = f"{document.notes + ' | ' if document.notes else ''}{reason}"
+        self._log_action(user, "reject_transaction_document", document.document_id, asdict(document))
+        return document
 
     def _log_action(self, user: User, action: str, reference_id: str, details: Dict[str, object]) -> None:
         entry = AuditLogEntry(timestamp=datetime.utcnow(), user_id=user.user_id, action=action, reference_id=reference_id, details=details)
@@ -592,6 +666,7 @@ class GarageWorkflowEngine:
         booking_id: str,
         items: Dict[str, int],
         *,
+        document_id: str,
         auto_receive: bool = True,
     ) -> PurchaseOrder:
         booking = self._get_booking(booking_id)
@@ -606,20 +681,38 @@ class GarageWorkflowEngine:
         job_card_id = flow.metadata.get("job_card_id")
         if not job_card_id:
             raise ValidationError("Job card reference missing on service flow")
+        document = self._validate_transaction_document(
+            document_id,
+            expected_type=TransactionDocumentType.PROCUREMENT_REQUEST,
+            expected_target_role=Role.MANAGER,
+            expected_booking_id=booking.booking_id,
+            expected_items=items,
+        )
         purchase_order = self.create_purchase_order(user, job_card_id, items)
         if auto_receive:
             self.receive_purchase_order(user, purchase_order.purchase_order_id)
             self.create_stock_entry(user, purchase_order.purchase_order_id)
+        document.related_purchase_order_id = purchase_order.purchase_order_id
+        self._complete_transaction_document(document, user)
+        self._log_action(
+            user,
+            "link_transaction_document",
+            document.document_id,
+            {"purchase_order_id": purchase_order.purchase_order_id},
+        )
         self._log_flow_event(
             user,
             flow,
             ServiceFlowStage.PARTS_PURCHASED,
             note="Local parts purchased",
-            extra={"purchase_order_id": purchase_order.purchase_order_id},
+            extra={
+                "purchase_order_id": purchase_order.purchase_order_id,
+                "transaction_document_id": document.document_id,
+            },
         )
         return purchase_order
 
-    def record_part_release(self, user: User, booking_id: str, items: Dict[str, int]) -> None:
+    def record_part_release(self, user: User, booking_id: str, items: Dict[str, int], *, document_id: str) -> None:
         booking = self._get_booking(booking_id)
         flow = self._get_flow_by_booking(booking.booking_id)
         if flow.stage not in {
@@ -632,13 +725,21 @@ class GarageWorkflowEngine:
         job_card_id = flow.metadata.get("job_card_id")
         if not job_card_id:
             raise ValidationError("Job card reference missing on service flow")
-        self.issue_materials(user, job_card_id, items)
+        document = self._validate_transaction_document(
+            document_id,
+            expected_type=TransactionDocumentType.SPARE_PART_TRANSFER,
+            expected_target_role=Role.INVENTORY_CONTROLLER,
+            expected_booking_id=booking.booking_id,
+            expected_items=items,
+        )
+        self.issue_materials(user, job_card_id, items, expected_category=InventoryCategory.SPARE_PART)
+        self._complete_transaction_document(document, user)
         self._log_flow_event(
             user,
             flow,
             ServiceFlowStage.PARTS_ISSUED,
             note="Local parts issued",
-            extra={"issued_parts": items},
+            extra={"issued_parts": items, "transaction_document_id": document.document_id},
         )
 
     def record_material_release(
@@ -646,6 +747,8 @@ class GarageWorkflowEngine:
         user: User,
         booking_id: str,
         description: str,
+        *,
+        document_id: str,
     ) -> ServiceFlow:
         self.access.require(user, "record_material_release")
         booking = self._get_booking(booking_id)
@@ -657,11 +760,30 @@ class GarageWorkflowEngine:
             ServiceFlowStage.MATERIAL_ISSUED,
         }:
             raise InvalidTransitionError("Material release follows parts issuance or purchase")
+        job_card_id = flow.metadata.get("job_card_id")
+        if not job_card_id:
+            raise ValidationError("Job card reference missing on service flow")
+        document = self._validate_transaction_document(
+            document_id,
+            expected_type=TransactionDocumentType.MATERIAL_TRANSFER,
+            expected_target_role=Role.INVENTORY_CONTROLLER,
+            expected_booking_id=booking.booking_id,
+        )
+        if not document.items:
+            raise ValidationError("Material transfer documents must include item details")
+        self.issue_materials(
+            user,
+            job_card_id,
+            document.items,
+            expected_category=InventoryCategory.MATERIAL,
+        )
+        self._complete_transaction_document(document, user)
         self._log_flow_event(
             user,
             flow,
             ServiceFlowStage.MATERIAL_ISSUED,
             note=description,
+            extra={"issued_materials": document.items, "transaction_document_id": document.document_id},
         )
         return flow
 
@@ -974,7 +1096,14 @@ class GarageWorkflowEngine:
         self._log_action(user, "create_stock_entry", entry.entry_id, asdict(entry))
         return entry
 
-    def issue_materials(self, user: User, job_card_id: str, items: Dict[str, int]) -> None:
+    def issue_materials(
+        self,
+        user: User,
+        job_card_id: str,
+        items: Dict[str, int],
+        *,
+        expected_category: Optional[InventoryCategory] = None,
+    ) -> None:
         self.access.require(user, "issue_materials")
         job_card = self._get_job_card(job_card_id)
         if job_card.status not in {JobCardStatus.APPROVED, JobCardStatus.IN_PROGRESS, JobCardStatus.QUALITY_CHECK}:
@@ -984,6 +1113,10 @@ class GarageWorkflowEngine:
             if qty <= 0:
                 raise ValidationError("Issued quantity must be positive")
             stock_item = self._get_stock_item(item_code)
+            if expected_category and stock_item.category != expected_category:
+                raise ValidationError(
+                    f"Item {item_code} must be registered as {expected_category.value} for this transaction"
+                )
             if stock_item.available < qty:
                 raise ValidationError(f"Insufficient stock for {item_code}")
             stock_item.quantity_on_hand -= qty
@@ -1389,6 +1522,25 @@ class GarageWorkflowEngine:
     # Internal helpers
     # ------------------------------------------------------------------
 
+    def _validate_transaction_document_items(
+        self,
+        transaction_type: TransactionDocumentType,
+        items: Dict[str, int],
+    ) -> Dict[str, int]:
+        if not items:
+            raise ValidationError("Transaction document requires at least one item")
+        validated: Dict[str, int] = {}
+        for item_code, qty in items.items():
+            if qty <= 0:
+                raise ValidationError("Transaction document item quantities must be positive")
+            stock_item = self._get_stock_item(item_code)
+            if transaction_type == TransactionDocumentType.SPARE_PART_TRANSFER and stock_item.category != InventoryCategory.SPARE_PART:
+                raise ValidationError(f"Item {item_code} must be classified as spare part")
+            if transaction_type == TransactionDocumentType.MATERIAL_TRANSFER and stock_item.category != InventoryCategory.MATERIAL:
+                raise ValidationError(f"Item {item_code} must be classified as material")
+            validated[item_code] = qty
+        return validated
+
     def _coerce_estimate_lines(self, lines: Sequence[EstimateLine | Dict[str, object]]) -> List[EstimateLine]:
         result: List[EstimateLine] = []
         for line in lines:
@@ -1420,12 +1572,17 @@ class GarageWorkflowEngine:
             if item.available <= item.reorder_level
         ]
 
+    def _get_transaction_document(self, document_id: str) -> TransactionDocument:
+        try:
+            return self.store.transaction_documents[document_id]
+        except KeyError as exc:
+            raise ValidationError(f"Transaction document {document_id} not found") from exc
+
     def _ensure_stock_placeholder(self, item_code: str) -> StockItem:
-        stock_item = self.store.inventory.get(item_code)
-        if not stock_item:
-            stock_item = StockItem(item_code=item_code, description=item_code)
-            self.store.inventory[item_code] = stock_item
-        return stock_item
+        try:
+            return self.store.inventory[item_code]
+        except KeyError as exc:
+            raise ValidationError(f"Inventory item {item_code} must be registered before use") from exc
 
     def _get_customer(self, customer_id: str) -> Customer:
         try:
@@ -1462,6 +1619,36 @@ class GarageWorkflowEngine:
             if work_order.job_card_id == job_card_id:
                 return work_order
         raise ValidationError(f"Work order for job {job_card_id} not found")
+
+    def _validate_transaction_document(
+        self,
+        document_id: str,
+        *,
+        expected_type: TransactionDocumentType,
+        expected_target_role: Optional[Role] = None,
+        expected_booking_id: Optional[str] = None,
+        expected_items: Optional[Dict[str, int]] = None,
+    ) -> TransactionDocument:
+        document = self._get_transaction_document(document_id)
+        if document.status != TransactionDocumentStatus.APPROVED:
+            raise ValidationError("Transaction document must be approved before execution")
+        if document.executed_at is not None:
+            raise ValidationError("Transaction document has already been executed")
+        if document.transaction_type != expected_type:
+            raise ValidationError("Transaction document type mismatch")
+        if expected_target_role and document.target_role != expected_target_role:
+            raise ValidationError("Transaction document target role mismatch")
+        if expected_booking_id and document.related_booking_id != expected_booking_id:
+            raise ValidationError("Transaction document is not linked to the expected booking")
+        if expected_items is not None and document.items != expected_items:
+            raise ValidationError("Transaction document items do not match the requested items")
+        return document
+
+    def _complete_transaction_document(self, document: TransactionDocument, user: User) -> None:
+        document.status = TransactionDocumentStatus.COMPLETED
+        document.executed_by = user.user_id
+        document.executed_at = datetime.utcnow()
+        self._log_action(user, "complete_transaction_document", document.document_id, asdict(document))
 
     def _get_purchase_order(self, purchase_order_id: str) -> PurchaseOrder:
         try:

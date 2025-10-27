@@ -63,10 +63,15 @@
                 <p>
                     <code>distribute_mechanical_task</code> membuat work order dan task
                     mekanik. Kekurangan part ditangani dengan
-                    <code>record_local_purchase</code>, sedangkan pengeluaran part dan
-                    bahan lokal tercatat lewat <code>record_part_release</code> dan
-                    <code>record_material_release</code> sesuai peran Partman dan
-                    Admin Departemen.
+                    <code>record_local_purchase</code> (menyertakan dokumen pengadaan
+                    yang sudah disetujui), sedangkan pengeluaran part maupun gudang
+                    bahan wajib melalui <code>record_part_release</code> dan
+                    <code>record_material_release</code> yang sekarang memerlukan
+                    <code>TransactionDocument</code> bertandatangan sebelum stok
+                    berpindah antar halaman. Setiap item inventori sudah
+                    diklasifikasikan sebagai <em>spare part</em> atau
+                    <em>gudang bahan</em> lewat <code>InventoryCategory</code> sehingga jalur
+                    persetujuan antar peran semakin jelas.
                 </p>
             </article>
             <article>
