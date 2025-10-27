@@ -1260,7 +1260,93 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
         filters=filter_conditions if filter_conditions else None,
         limit=500,
     )
-    
+
+    # Fetch open spare part requests from service orders so the portal can
+    # surface new needs from the workshop.
+    spare_part_requests = _list_dicts(
+        "Garage Service Order Part",
+        [
+            "name",
+            "parent",
+            "idx",
+            "item_code",
+            "item_name",
+            "description",
+            "qty",
+            "uom",
+            "rate",
+            "amount",
+            "stock_status",
+            "warehouse",
+            "source",
+        ],
+        filters=[
+            ["parenttype", "=", "Garage Service Order"],
+            ["stock_status", "not in", ["Received", "Issued"]],
+        ],
+        limit=200,
+    )
+
+    # Enrich requests with service order context and technician information to
+    # make the UI rendering straightforward.
+    parent_order_names = sorted(
+        {request.get("parent") for request in spare_part_requests if request.get("parent")}
+    )
+    service_order_map: Dict[str, Dict[str, Any]] = {}
+    if parent_order_names:
+        service_orders = _list_dicts(
+            "Garage Service Order",
+            ["name", "customer", "vehicle", "priority", "service_advisor"],
+            filters=[["name", "in", parent_order_names]],
+            limit=len(parent_order_names),
+        )
+        service_order_map = {row.get("name"): row for row in service_orders}
+
+        service_tasks = _list_dicts(
+            "Garage Service Order Task",
+            ["name", "parent", "task", "status", "technician"],
+            filters=[["parent", "in", parent_order_names]],
+            limit=500,
+        )
+
+        technician_ids = sorted(
+            {task.get("technician") for task in service_tasks if task.get("technician")}
+        )
+        technician_display = _user_display_map(technician_ids)
+
+        tasks_by_parent: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        for task in service_tasks:
+            parent = task.get("parent")
+            if parent:
+                tasks_by_parent[parent].append(task)
+
+        for request in spare_part_requests:
+            parent = request.get("parent")
+            if not parent:
+                continue
+
+            order_info = service_order_map.get(parent, {})
+            request["service_customer"] = order_info.get("customer")
+            request["service_vehicle"] = order_info.get("vehicle")
+            request["service_priority"] = order_info.get("priority")
+            request["service_advisor"] = order_info.get("service_advisor")
+
+            technicians: List[Dict[str, Any]] = []
+            for task in tasks_by_parent.get(parent, []):
+                technician = task.get("technician")
+                if not technician:
+                    continue
+                technicians.append(
+                    {
+                        "technician": technician,
+                        "technician_name": technician_display.get(technician, technician),
+                        "task": task.get("task"),
+                        "status": task.get("status"),
+                    }
+                )
+            if technicians:
+                request["technicians"] = technicians
+
     # Apply search filter if provided
     search_term = (data.get("search") or "").strip().lower()
     if search_term:
@@ -1284,12 +1370,14 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
         p for p in spare_parts
         if flt(p.get("stock_qty", 0)) <= flt(p.get("reorder_level", 0))
     ]
-    
+
     return {
         "spare_parts": spare_parts,
+        "spare_part_requests": spare_part_requests,
         "total_count": len(spare_parts),
         "active_count": len(active_parts),
         "low_stock_count": len(low_stock_parts),
+        "request_count": len(spare_part_requests),
     }
 
 
