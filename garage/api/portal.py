@@ -1,9 +1,10 @@
 """Frappe API endpoints powering the Garage website workflow portal."""
 from __future__ import annotations
 
+from collections import defaultdict
 from contextlib import contextmanager
 import re
-from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence
+from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Set
 
 import frappe
 from frappe import _
@@ -626,6 +627,27 @@ def _list_dicts(doctype: str, fields: Iterable[str], *, filters: Optional[Any] =
     return [dict(row) for row in rows]
 
 
+def _user_display_map(user_ids: Iterable[str]) -> Dict[str, str]:
+    unique_ids = sorted({user for user in user_ids if user})
+    if not unique_ids:
+        return {}
+
+    try:
+        with _ignoring_permissions():
+            rows = frappe.db.get_all(
+                "User",
+                filters=[["name", "in", unique_ids]],
+                fields=["name", "full_name"],
+            )
+    except Exception:
+        return {user: user for user in unique_ids}
+
+    display_map = {row.get("name"): row.get("full_name") or row.get("name") for row in rows}
+    for user in unique_ids:
+        display_map.setdefault(user, user)
+    return display_map
+
+
 def _group_status(doctype: str) -> Dict[str, int]:
     try:
         with _ignoring_permissions():
@@ -814,6 +836,43 @@ def portal_bootstrap() -> Dict[str, Any]:
         ],
         limit=200,
     )
+    service_tasks = _list_dicts(
+        "Garage Service Order Task",
+        ["name", "parent", "task", "status", "technician"],
+        filters=[["parenttype", "=", "Garage Service Order"]],
+        limit=500,
+    )
+
+    technician_ids: Set[str] = set()
+    tasks_by_order: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for task in service_tasks:
+        parent = task.get("parent")
+        if not parent:
+            continue
+        technician = task.get("technician")
+        if technician:
+            technician_ids.add(technician)
+        tasks_by_order[parent].append(task)
+
+    technician_display = _user_display_map(technician_ids)
+    for request in spare_part_requests:
+        parent = request.get("parent")
+        if not parent:
+            continue
+        technicians = []
+        for task in tasks_by_order.get(parent, []):
+            technician = task.get("technician")
+            if technician:
+                technicians.append(
+                    {
+                        "technician": technician,
+                        "technician_name": technician_display.get(technician, technician),
+                        "task": task.get("task"),
+                        "status": task.get("status"),
+                    }
+                )
+        if technicians:
+            request["technicians"] = technicians
     procurement_orders = _list_dicts(
         "Garage Procurement Order",
         ["name", "status", "supplier", "order_date", "expected_date", "total_qty", "total_amount"],
