@@ -1387,6 +1387,12 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
             result["payment_schedule"] = [payment.as_dict() for payment in doc.payment_schedule]
     except Exception:
         pass
+
+    try:
+        if hasattr(doc, "progress_logs") and doc.progress_logs:
+            result["progress_logs"] = [log.as_dict() for log in doc.progress_logs]
+    except Exception:
+        pass
     
     # ========== CRITICAL: GET AVAILABLE SPARE PARTS ==========
     # This is needed for the dropdown in inspection page
