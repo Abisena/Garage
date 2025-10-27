@@ -57,12 +57,35 @@ app_license = "mit"
 # ----------
 
 # application home page (will override Website Settings)
-# home_page = "login"
+home_page = "garage/login"
 
 # website user home page (by Role)
-# role_home_page = {
-# 	"Role": "home_page"
-# }
+role_home_page = {
+	"Admin": "garage/intake",
+	"Registrasi": "garage/intake",
+	"Customer Service": "garage/intake",
+	"Front Desk": "garage/intake",
+	"Service": "garage/service",
+	"Servis": "garage/service",
+	"Service Advisor": "garage/service",
+	"Technician": "garage/service",
+	"Teknisi": "garage/service",
+	"Sparepart": "garage/sparepart",
+	"Spare Part": "garage/sparepart",
+	"Inventory": "garage/sparepart",
+	"Inventory Controller": "garage/sparepart",
+	"Pengadaan": "garage/procurement",
+	"Procurement": "garage/procurement",
+	"Buying": "garage/procurement",
+	"Finance": "garage/finance",
+	"Keuangan": "garage/finance",
+	"Accountant": "garage/finance",
+	"Cashier": "garage/finance",
+	"Administrator": "garage",
+	"System Manager": "garage",
+	"Manager Bengkel": "garage",
+	"Garage Manager": "garage",
+}
 
 # Generators
 # ----------

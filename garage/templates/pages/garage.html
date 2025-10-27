@@ -2,6 +2,9 @@
 
 {% block title %}Garage Service Portal{% endblock %}
 
+{% set required_roles = [] %}
+{% include "garage/templates/includes/role_guard.html" %}
+
 {% block head_include %}
 <!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">

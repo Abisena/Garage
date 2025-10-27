@@ -2,6 +2,9 @@
 
 {% block title %}Registrasi Customer & Kendaraan{% endblock %}
 
+{% set required_roles = ['Admin', 'Registrasi', 'Customer Service', 'Front Desk'] %}
+{% include "garage/templates/includes/role_guard.html" %}
+
 {% block head_include %}
 <!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
