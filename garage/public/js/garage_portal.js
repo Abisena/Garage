@@ -918,7 +918,14 @@
                         this.handleBootstrapFailure(response);
                         return;
                     }
-                    this.state = response.message || {};
+
+                    const payload = response?.message;
+                    const message = (payload && typeof payload === 'object' && !Array.isArray(payload)
+                        ? payload.message || payload
+                        : {});
+
+                    this.state = message && typeof message === 'object' && !Array.isArray(message) ? message : {};
+
                     this.render();
                     if (showNotification) {
                         frappe.show_alert({ message: __('Data portal diperbarui.'), indicator: 'green' });
