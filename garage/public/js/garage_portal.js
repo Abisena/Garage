@@ -1240,7 +1240,44 @@
 
                 const managerCell = document.createElement('td');
                 managerCell.className = 'spare-request-cell spare-request-cell--manager';
-                managerCell.textContent = part.managed_by || __('Belum ditetapkan');
+                const technicianRows = this.asArray(request.technicians);
+                const technicianNames = technicianRows
+                    .map((row) => (row && (row.technician_name || row.technician)) || '')
+                    .filter(Boolean);
+
+                if (technicianNames.length) {
+                    const primary = document.createElement('div');
+                    primary.className = 'metric-text';
+                    primary.textContent = technicianNames.join(', ');
+                    managerCell.appendChild(primary);
+
+                    const assignmentDetails = technicianRows
+                        .map((row) => {
+                            if (!row) {
+                                return '';
+                            }
+                            const details = [];
+                            if (row.task) {
+                                details.push(row.task);
+                            }
+                            if (row.status) {
+                                details.push(row.status);
+                            }
+                            return details.join(' • ');
+                        })
+                        .filter(Boolean);
+
+                    if (assignmentDetails.length) {
+                        const taskMeta = document.createElement('div');
+                        taskMeta.className = 'table-meta';
+                        taskMeta.textContent = assignmentDetails.join(', ');
+                        managerCell.appendChild(taskMeta);
+                    }
+                } else if (part.managed_by) {
+                    managerCell.textContent = part.managed_by;
+                } else {
+                    managerCell.textContent = __('Belum ditetapkan');
+                }
                 tr.appendChild(managerCell);
 
                 table.appendChild(tr);
