@@ -10,6 +10,18 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, now_datetime, nowdate
 
+TECHNICIAN_ACTIVE_TASK_STATUSES = {"Pending", "In Progress"}
+SERVICE_ORDER_ACTIVE_STATUSES = {
+    "Draft",
+    "Inspection",
+    "Estimate",
+    "Awaiting Approval",
+    "Approved",
+    "Work In Progress",
+    "Awaiting QC",
+}
+TECHNICIAN_ACTIVE_STATUS = {"Active"}
+
 # Whitelisted DocTypes that can be created/updated from the public portal along with
 # the permitted fields. The definition intentionally mirrors the JSON DocType schema
 # so the website can drive the same flow as the Desk (Pravenya) implementation.
@@ -650,6 +662,198 @@ def _user_display_map(user_ids: Iterable[str]) -> Dict[str, str]:
     return display_map
 
 
+def _employee_display_map(employee_ids: Iterable[str]) -> Dict[str, str]:
+    unique_ids = sorted({emp for emp in employee_ids if emp})
+    if not unique_ids:
+        return {}
+
+    try:
+        with _ignoring_permissions():
+            rows = frappe.db.get_all(
+                "Employee",
+                filters=[["name", "in", unique_ids]],
+                fields=["name", "employee_name", "user_id"],
+            )
+    except Exception:
+        return {emp: emp for emp in unique_ids}
+
+    user_display = _user_display_map(row.get("user_id") for row in rows if row.get("user_id"))
+    display_map: Dict[str, str] = {}
+    for row in rows:
+        name = row.get("name")
+        user_id = row.get("user_id")
+        display_map[name] = (
+            row.get("employee_name")
+            or (user_display.get(user_id) if user_id else None)
+            or user_id
+            or name
+        )
+
+    for emp in unique_ids:
+        display_map.setdefault(emp, emp)
+
+    return display_map
+
+
+def _technician_load_map(exclude_order: Optional[str] = None) -> Dict[str, int]:
+    statuses = tuple(TECHNICIAN_ACTIVE_TASK_STATUSES)
+    order_statuses = tuple(SERVICE_ORDER_ACTIVE_STATUSES)
+    if not statuses:
+        return {}
+
+    status_placeholders = ", ".join(["%s"] * len(statuses))
+    order_placeholders = ", ".join(["%s"] * len(order_statuses)) if order_statuses else ""
+
+    conditions = [
+        "task.parenttype = 'Garage Service Order'",
+        "COALESCE(task.technician, '') != ''",
+        f"task.status in ({status_placeholders})",
+    ]
+    params: List[Any] = list(statuses)
+
+    if order_placeholders:
+        conditions.append(f"so.status in ({order_placeholders})")
+        params.extend(order_statuses)
+
+    if exclude_order:
+        conditions.append("task.parent != %s")
+        params.append(exclude_order)
+
+    query = f"""
+        select task.technician, count(*) as total
+        from `tabGarage Service Order Task` task
+        inner join `tabGarage Service Order` so on so.name = task.parent
+        where {' and '.join(conditions)}
+        group by task.technician
+    """
+
+    try:
+        with _ignoring_permissions():
+            rows = frappe.db.sql(query, tuple(params))
+    except Exception:
+        return {}
+
+    return {row[0]: cint(row[1]) for row in rows if row and row[0]}
+
+
+def _update_roster_capacity(technician: MutableMapping[str, Any]) -> None:
+    max_jobs = cint(technician.get("max_active_jobs") or 0)
+    load = cint(technician.get("active_task_count") or 0)
+    technician["available_capacity"] = max(0, max_jobs - load) if max_jobs else None
+    technician["is_available"] = (
+        technician.get("status") in TECHNICIAN_ACTIVE_STATUS
+        and (max_jobs == 0 or load < max_jobs)
+    )
+
+
+def _get_technician_roster(*, only_active: bool = False, exclude_order: Optional[str] = None) -> List[Dict[str, Any]]:
+    filters = [["status", "=", "Active"]] if only_active else None
+
+    try:
+        roster = _list_dicts(
+            "Garage Technician",
+            [
+                "name",
+                "employee",
+                "employee_name",
+                "user_id",
+                "status",
+                "max_active_jobs",
+                "skill_tags",
+                "phone",
+                "email",
+                "notes",
+            ],
+            filters=filters,
+            limit=200,
+        )
+    except Exception:
+        return []
+
+    loads = _technician_load_map(exclude_order=exclude_order)
+    for technician in roster:
+        employee = technician.get("employee") or technician.get("name")
+        technician["active_task_count"] = loads.get(employee, 0)
+        _update_roster_capacity(technician)
+
+    return roster
+
+
+def _auto_assign_technicians(
+    tasks: List[Dict[str, Any]],
+    *,
+    current_order: Optional[str] = None,
+) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    if not tasks:
+        return tasks, []
+
+    roster = _get_technician_roster(only_active=False, exclude_order=current_order)
+    if not roster:
+        return tasks, []
+
+    roster_by_employee = {
+        (tech.get("employee") or tech.get("name")): tech for tech in roster if tech.get("employee") or tech.get("name")
+    }
+
+    loads = {
+        employee: cint(meta.get("active_task_count") or 0) for employee, meta in roster_by_employee.items()
+    }
+
+    for task in tasks:
+        technician = task.get("technician")
+        if technician:
+            loads[technician] = loads.get(technician, 0) + 1
+            meta = roster_by_employee.get(technician)
+            if meta:
+                meta["active_task_count"] = loads[technician]
+                _update_roster_capacity(meta)
+
+    auto_assigned: List[Dict[str, Any]] = []
+
+    for task in tasks:
+        if task.get("technician"):
+            continue
+
+        candidates = []
+        for employee, meta in roster_by_employee.items():
+            if meta.get("status") not in TECHNICIAN_ACTIVE_STATUS:
+                continue
+
+            max_jobs = cint(meta.get("max_active_jobs") or 0)
+            current_load = loads.get(employee, 0)
+            if max_jobs and current_load >= max_jobs:
+                continue
+
+            candidates.append(
+                (
+                    current_load,
+                    meta.get("employee_name") or employee,
+                    employee,
+                )
+            )
+
+        if not candidates:
+            continue
+
+        candidates.sort()
+        chosen_employee = candidates[0][2]
+        task["technician"] = chosen_employee
+        loads[chosen_employee] = loads.get(chosen_employee, 0) + 1
+        meta = roster_by_employee.get(chosen_employee)
+        if meta:
+            meta["active_task_count"] = loads[chosen_employee]
+            _update_roster_capacity(meta)
+
+        auto_assigned.append(
+            {
+                "task": task.get("task"),
+                "technician": chosen_employee,
+            }
+        )
+
+    return tasks, auto_assigned
+
+
 def _group_status(doctype: str) -> Dict[str, int]:
     try:
         with _ignoring_permissions():
@@ -856,7 +1060,7 @@ def portal_bootstrap() -> Dict[str, Any]:
             technician_ids.add(technician)
         tasks_by_order[parent].append(task)
 
-    technician_display = _user_display_map(technician_ids)
+    technician_display = _employee_display_map(technician_ids)
     for request in spare_part_requests:
         parent = request.get("parent")
         if not parent:
@@ -1314,7 +1518,7 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
         technician_ids = sorted(
             {task.get("technician") for task in service_tasks if task.get("technician")}
         )
-        technician_display = _user_display_map(technician_ids)
+        technician_display = _employee_display_map(technician_ids)
 
         tasks_by_parent: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
         for task in service_tasks:
@@ -1521,7 +1725,15 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
     # Get child table data
     try:
         if hasattr(doc, "service_tasks") and doc.service_tasks:
-            result["service_tasks"] = [task.as_dict() for task in doc.service_tasks]
+            tasks = [task.as_dict() for task in doc.service_tasks]
+            technician_display = _employee_display_map(
+                task.get("technician") for task in tasks if task.get("technician")
+            )
+            for task in tasks:
+                technician = task.get("technician")
+                if technician:
+                    task["technician_name"] = technician_display.get(technician, technician)
+            result["service_tasks"] = tasks
     except Exception:
         pass
     
@@ -1539,7 +1751,15 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
 
     try:
         if hasattr(doc, "progress_logs") and doc.progress_logs:
-            result["progress_logs"] = [log.as_dict() for log in doc.progress_logs]
+            logs = [log.as_dict() for log in doc.progress_logs]
+            technician_display = _employee_display_map(
+                log.get("technician") for log in logs if log.get("technician")
+            )
+            for log in logs:
+                technician = log.get("technician")
+                if technician:
+                    log["technician_name"] = technician_display.get(technician, technician)
+            result["progress_logs"] = logs
     except Exception:
         pass
     
@@ -1570,6 +1790,8 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
     )
     # =========================================================
 
+    result["available_technicians"] = _get_technician_roster()
+
     return result
 
 @frappe.whitelist(allow_guest=True)
@@ -1583,6 +1805,8 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
     
     data = _ensure_dict(inspection_data or {})
     
+    auto_assignments: List[Dict[str, Any]] = []
+
     # Get the document
     doc = _get_doc("Garage Service Order", order_id)
     
@@ -1641,6 +1865,7 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
                 doc.service_tasks = []
                 child_config = ALLOWED_DOCS["Garage Service Order"]["children"]["service_tasks"]
                 tasks = _sanitize_child_rows("service_tasks", data["service_tasks"], child_config)
+                tasks, auto_assignments = _auto_assign_technicians(tasks, current_order=doc.name)
                 for task in tasks:
                     doc.append("service_tasks", task)
         except Exception as e:
@@ -1669,11 +1894,17 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
     # Save document
     _save_doc(doc)
     
-    return {
+    response = {
         "name": doc.name,
         "status": doc.status,
-        "message": _("Inspection data berhasil disimpan.")
+        "message": _("Inspection data berhasil disimpan."),
+        "available_technicians": _get_technician_roster(),
     }
+
+    if auto_assignments:
+        response["auto_assignments"] = auto_assignments
+
+    return response
 
 
 @frappe.whitelist()

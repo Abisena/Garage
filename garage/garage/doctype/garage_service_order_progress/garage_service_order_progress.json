@@ -39,7 +39,7 @@
       "fieldname": "technician",
       "fieldtype": "Link",
       "label": "Technician",
-      "options": "User"
+      "options": "Employee"
     },
     {
       "fieldname": "percent_complete",

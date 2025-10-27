@@ -726,6 +726,102 @@ a:hover {
     gap: 12px;
 }
 
+.roster-summary {
+    margin: 0 0 12px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.roster-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.roster-item {
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: var(--gray-50);
+}
+
+.roster-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.roster-name {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.roster-status {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--gray-200);
+    color: var(--gray-700);
+}
+
+.roster-status.available {
+    background: rgba(34, 197, 94, 0.16);
+    color: #15803d;
+}
+
+.roster-status.busy {
+    background: rgba(234, 179, 8, 0.18);
+    color: #92400e;
+}
+
+.roster-status.inactive {
+    background: rgba(148, 163, 184, 0.32);
+    color: #475569;
+}
+
+.roster-meta {
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--gray-600);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.roster-meta span strong {
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+.roster-empty {
+    font-size: 13px;
+    color: var(--gray-600);
+    background: var(--gray-100);
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.btn-compact {
+    padding: 6px 12px;
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+.technician-status-note {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.technician-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 @media (max-width: 1024px) {
     .content-grid {
         grid-template-columns: 1fr;
@@ -1008,6 +1104,14 @@ a:hover {
                         <dd id="display_vehicle_mileage">-</dd>
                     </div>
                 </dl>
+            </section>
+
+            <section class="detail-card" id="technicianRosterCard">
+                <h3>🛠️ Status Teknisi</h3>
+                <p class="roster-summary" id="technicianRosterSummary">Memuat data teknisi...</p>
+                <div class="roster-list" id="technicianRosterList">
+                    <div class="roster-empty">Data teknisi belum dimuat.</div>
+                </div>
             </section>
 
             <section class="detail-card">
@@ -1312,6 +1416,7 @@ a:hover {
         let serviceTasks = [];
         let requiredParts = [];
         let paymentSchedule = [];
+        let technicianRoster = [];
         // NOTE: sparePartCatalog & sparePartIndex sudah dideklarasi di atas (global scope)
         // JANGAN declare ulang di sini!
         let catalogLoadedFromOrder = false;
@@ -1359,6 +1464,291 @@ a:hover {
             }
             updateTotalEstimateDisplay(total);
             updateEstimateBreakdown(partsTotal);
+        }
+
+        function computeAvailableCapacity(technician) {
+            if (!technician) {
+                return null;
+            }
+            const maxJobs = Number(technician.max_active_jobs ?? 0);
+            const load = Number(technician.active_task_count ?? 0);
+            if (!maxJobs) {
+                return null;
+            }
+            return Math.max(maxJobs - load, 0);
+        }
+
+        function computeIsAvailable(technician) {
+            if (!technician) {
+                return false;
+            }
+            if ((technician.status || 'Active') !== 'Active') {
+                return false;
+            }
+            const maxJobs = Number(technician.max_active_jobs ?? 0);
+            const load = Number(technician.active_task_count ?? 0);
+            return !maxJobs || load < maxJobs;
+        }
+
+        function canTechnicianTakeNewTask(technician) {
+            return computeIsAvailable(technician);
+        }
+
+        function findTechnicianById(identifier) {
+            if (!identifier || !Array.isArray(technicianRoster)) {
+                return undefined;
+            }
+            return technicianRoster.find((tech) => {
+                const employeeId = tech?.employee || tech?.name || tech?.technician;
+                return employeeId === identifier;
+            });
+        }
+
+        function normalizeTechnicianRoster(roster) {
+            if (!Array.isArray(roster)) {
+                return [];
+            }
+            return roster
+                .map((raw) => {
+                    const employeeId = raw?.employee || raw?.name || raw?.technician || '';
+                    if (!employeeId) {
+                        return null;
+                    }
+                    const normalized = {
+                        ...raw,
+                        employee: employeeId,
+                        employee_name: raw.employee_name || raw.technician_name || raw.name || employeeId,
+                        active_task_count: Number(raw.active_task_count ?? 0),
+                        max_active_jobs: Number(raw.max_active_jobs ?? 0),
+                        status: raw.status || 'Active',
+                        skill_tags: raw.skill_tags || '',
+                        phone: raw.phone || '',
+                        email: raw.email || '',
+                    };
+                    const availableCapacity = raw.available_capacity;
+                    if (availableCapacity === undefined || availableCapacity === null || Number.isNaN(Number(availableCapacity))) {
+                        normalized.available_capacity = computeAvailableCapacity(normalized);
+                    } else {
+                        normalized.available_capacity = Number(availableCapacity);
+                    }
+                    normalized.is_available = computeIsAvailable(normalized);
+                    return normalized;
+                })
+                .filter(Boolean);
+        }
+
+        function syncRosterWithAssignments() {
+            if (!Array.isArray(technicianRoster) || technicianRoster.length === 0) {
+                return;
+            }
+            const assignmentCounts = serviceTasks.reduce((map, task) => {
+                if (!task || !task.technician) {
+                    return map;
+                }
+                map[task.technician] = (map[task.technician] || 0) + 1;
+                return map;
+            }, {});
+
+            technicianRoster = technicianRoster.map((tech) => {
+                if (!tech || !tech.employee) {
+                    return tech;
+                }
+                const updated = { ...tech };
+                const existingLoad = Number(updated.active_task_count ?? 0);
+                const assignmentLoad = Number(assignmentCounts[updated.employee] ?? 0);
+                if (assignmentLoad > existingLoad) {
+                    updated.active_task_count = assignmentLoad;
+                }
+                updated.available_capacity = computeAvailableCapacity(updated);
+                updated.is_available = computeIsAvailable(updated);
+                return updated;
+            });
+        }
+
+        function resolveTechnicianLabel(identifier, fallback = '') {
+            if (!identifier) {
+                return 'Belum ditugaskan';
+            }
+            const match = findTechnicianById(identifier);
+            if (match) {
+                return match.employee_name || match.employee || fallback || identifier;
+            }
+            return fallback || identifier;
+        }
+
+        function renderTechnicianRoster() {
+            const listElement = document.getElementById('technicianRosterList');
+            const summaryElement = document.getElementById('technicianRosterSummary');
+            if (!listElement) {
+                return;
+            }
+
+            if (!Array.isArray(technicianRoster) || technicianRoster.length === 0) {
+                if (summaryElement) {
+                    summaryElement.textContent = 'Belum ada teknisi terdaftar.';
+                }
+                listElement.innerHTML = `
+                    <div class="roster-empty">
+                        Belum ada teknisi terdaftar. Tambahkan teknisi melalui Desk untuk mengaktifkan penugasan otomatis.
+                    </div>
+                `;
+                return;
+            }
+
+            technicianRoster = technicianRoster.map((tech) => {
+                if (!tech) {
+                    return tech;
+                }
+                const updated = { ...tech };
+                updated.available_capacity = computeAvailableCapacity(updated);
+                updated.is_available = computeIsAvailable(updated);
+                return updated;
+            });
+
+            const availableCount = technicianRoster.filter((tech) => computeIsAvailable(tech)).length;
+            const busyCount = technicianRoster.length - availableCount;
+            if (summaryElement) {
+                summaryElement.textContent = `${availableCount} siap • ${busyCount} sibuk`;
+            }
+
+            listElement.innerHTML = technicianRoster
+                .map((tech) => {
+                    const employeeName = tech.employee_name || tech.employee || '-';
+                    const load = Number(tech.active_task_count ?? 0);
+                    const maxJobs = Number(tech.max_active_jobs ?? 0);
+                    const availableSlots = computeAvailableCapacity(tech);
+                    const status = tech.status || 'Active';
+                    let statusClass = 'available';
+                    let statusLabel = 'Siap';
+                    if (status !== 'Active') {
+                        statusClass = 'inactive';
+                        statusLabel = status === 'On Leave' ? 'Cuti' : 'Nonaktif';
+                    } else if (maxJobs && availableSlots === 0) {
+                        statusClass = 'busy';
+                        statusLabel = 'Penuh';
+                    } else if (load > 0) {
+                        statusClass = 'busy';
+                        statusLabel = 'Sedang kerja';
+                    }
+                    const assignmentsLabel = maxJobs
+                        ? `${load}/${maxJobs} pekerjaan aktif`
+                        : `${load} pekerjaan aktif`;
+                    const availabilityLabel = availableSlots === null
+                        ? ''
+                        : `<span><strong>Sisa slot:</strong> ${availableSlots}</span>`;
+                    const skillsLabel = tech.skill_tags
+                        ? `<span><strong>Keahlian:</strong> ${escapeHtml(tech.skill_tags)}</span>`
+                        : '';
+                    const contactParts = [tech.phone, tech.email]
+                        .map((value) => (value ? escapeHtml(value) : ''))
+                        .filter(Boolean);
+                    const contactLabel = contactParts.length
+                        ? `<span>${contactParts.join(' • ')}</span>`
+                        : '';
+
+                    return `
+                        <div class="roster-item">
+                            <div class="roster-header">
+                                <span class="roster-name">${escapeHtml(employeeName)}</span>
+                                <span class="roster-status ${statusClass}">${statusLabel}</span>
+                            </div>
+                            <div class="roster-meta">
+                                <span>${escapeHtml(assignmentsLabel)}</span>
+                                ${availabilityLabel}
+                                ${skillsLabel}
+                                ${contactLabel}
+                            </div>
+                        </div>
+                    `;
+                })
+                .join('');
+        }
+
+        function updateTechnicianLoad(previousId, nextId) {
+            if (previousId) {
+                const previous = findTechnicianById(previousId);
+                if (previous) {
+                    previous.active_task_count = Math.max(0, Number(previous.active_task_count ?? 0) - 1);
+                    previous.available_capacity = computeAvailableCapacity(previous);
+                    previous.is_available = computeIsAvailable(previous);
+                }
+            }
+
+            if (nextId) {
+                const next = findTechnicianById(nextId);
+                if (next) {
+                    next.active_task_count = Number(next.active_task_count ?? 0) + 1;
+                    next.available_capacity = computeAvailableCapacity(next);
+                    next.is_available = computeIsAvailable(next);
+                }
+            }
+
+            renderTechnicianRoster();
+        }
+
+        function chooseAvailableTechnician() {
+            if (!Array.isArray(technicianRoster) || technicianRoster.length === 0) {
+                return '';
+            }
+            const candidates = technicianRoster
+                .filter((tech) => canTechnicianTakeNewTask(tech))
+                .map((tech) => ({
+                    id: tech.employee || tech.name || '',
+                    load: Number(tech.active_task_count ?? 0),
+                    name: tech.employee_name || tech.employee || '',
+                }))
+                .filter((candidate) => candidate.id);
+
+            if (candidates.length === 0) {
+                return '';
+            }
+
+            candidates.sort((a, b) => {
+                if (a.load !== b.load) {
+                    return a.load - b.load;
+                }
+                return a.name.localeCompare(b.name, 'id-ID', { sensitivity: 'base' });
+            });
+
+            return candidates[0].id;
+        }
+
+        function buildTechnicianOptions(selectedId) {
+            const options = ['<option value="">— Pilih teknisi —</option>'];
+            if (!Array.isArray(technicianRoster) || technicianRoster.length === 0) {
+                return options.join('');
+            }
+
+            technicianRoster.forEach((tech) => {
+                const employeeId = tech.employee || tech.name;
+                if (!employeeId) {
+                    return;
+                }
+                const isSelected = employeeId === selectedId;
+                const load = Number(tech.active_task_count ?? 0);
+                const maxJobs = Number(tech.max_active_jobs ?? 0);
+                const availableSlots = computeAvailableCapacity(tech);
+                const disabled = !isSelected && !canTechnicianTakeNewTask(tech);
+                const labelParts = [tech.employee_name || employeeId];
+                if (maxJobs) {
+                    labelParts.push(`${load}/${maxJobs} aktif`);
+                } else if (load) {
+                    labelParts.push(`${load} aktif`);
+                }
+                if (tech.status && tech.status !== 'Active') {
+                    labelParts.push(tech.status);
+                } else if (maxJobs && availableSlots !== null) {
+                    labelParts.push(`${availableSlots} slot tersisa`);
+                }
+
+                options.push(`
+                    <option value="${escapeHtml(employeeId)}" ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''}>
+                        ${escapeHtml(labelParts.join(' • '))}
+                    </option>
+                `);
+            });
+
+            return options.join('');
         }
 
         function wireFormMirrors() {
@@ -1449,6 +1839,8 @@ a:hover {
         function populateOrderInfo(order) {
             const customerDetails = order.customer_details || {};
             const vehicleDetails = order.vehicle_details || {};
+
+            technicianRoster = normalizeTechnicianRoster(order.available_technicians || order.technician_roster || []);
 
             document.getElementById('display_order_id').textContent = order.name || order.order_id || '-';
 
@@ -1556,11 +1948,18 @@ a:hover {
                     task: task.task || task.name || '',
                     description: task.description || '',
                     estimated_hours: task.estimated_hours ?? task.estimated_time ?? 1,
-                    technician: task.technician || task.assigned_to || ''
+                    technician: task.technician || task.assigned_to || '',
+                    technician_name: task.technician_name || task.technician_full_name || '',
+                    status: task.status || 'Pending',
+                    actual_hours: task.actual_hours ?? 0,
+                    completion_date: task.completion_date || null
                 }));
             } else {
                 serviceTasks = [];
             }
+
+            syncRosterWithAssignments();
+            renderTechnicianRoster();
             renderServiceTasks();
 
             const availableCatalog = Array.isArray(order.available_spare_parts) ? order.available_spare_parts : [];
@@ -1612,12 +2011,24 @@ a:hover {
         }
 
         window.addServiceTask = function() {
-            serviceTasks.push({ task: '', description: '', estimated_hours: 1, technician: '' });
+            serviceTasks.push({
+                task: '',
+                description: '',
+                estimated_hours: 1,
+                technician: '',
+                technician_name: '',
+                status: 'Pending',
+                actual_hours: 0,
+                completion_date: null
+            });
             renderServiceTasks();
         };
 
         window.removeServiceTask = function(index) {
-            serviceTasks.splice(index, 1);
+            const removed = serviceTasks.splice(index, 1)[0];
+            if (removed && removed.technician) {
+                updateTechnicianLoad(removed.technician, null);
+            }
             renderServiceTasks();
         };
 
@@ -1635,7 +2046,33 @@ a:hover {
                 `;
                 return;
             }
-            container.innerHTML = serviceTasks.map((task, i) => `
+            const hasAvailableTechnicians = Array.isArray(technicianRoster) && technicianRoster.some((tech) => canTechnicianTakeNewTask(tech));
+            container.innerHTML = serviceTasks.map((task, i) => {
+                const technicianLabel = resolveTechnicianLabel(task.technician, task.technician_name || '');
+                const technicianEntry = findTechnicianById(task.technician);
+                let technicianNote;
+                if (task.technician && technicianEntry) {
+                    const load = Number(technicianEntry.active_task_count ?? 0);
+                    const maxJobs = Number(technicianEntry.max_active_jobs ?? 0);
+                    const slots = computeAvailableCapacity(technicianEntry);
+                    const statusLabel = technicianEntry.status && technicianEntry.status !== 'Active'
+                        ? `Status: ${technicianEntry.status}`
+                        : maxJobs
+                            ? `Sisa slot: ${slots}`
+                            : `Pekerjaan aktif: ${load}`;
+                    technicianNote = `${technicianLabel} • ${statusLabel}`;
+                } else if (task.technician) {
+                    technicianNote = `${technicianLabel} (di luar roster)`;
+                } else {
+                    technicianNote = 'Belum ada teknisi yang ditugaskan.';
+                }
+
+                const safeTaskName = escapeHtml(task.task || '');
+                const safeDescription = escapeHtml(task.description || '');
+                const estimatedHoursValue = Number(task.estimated_hours ?? 0);
+                const normalizedHours = Number.isNaN(estimatedHoursValue) ? '' : estimatedHoursValue;
+
+                return `
                 <div class="repeating-item">
                     <div class="item-header">
                         <span class="item-number">Pekerjaan #${i + 1}</span>
@@ -1644,24 +2081,83 @@ a:hover {
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Nama Pekerjaan *</label>
-                            <input type="text" value="${task.task}" onchange="serviceTasks[${i}].task = this.value" required>
+                            <input type="text" value="${safeTaskName}" onchange="serviceTasks[${i}].task = this.value" required>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group technician-field">
                             <label>Teknisi</label>
-                            <input type="text" value="${task.technician}" onchange="serviceTasks[${i}].technician = this.value">
+                            <select onchange="updateTaskTechnician(${i}, this.value)">${buildTechnicianOptions(task.technician)}</select>
+                            <div class="technician-status-note">${escapeHtml(technicianNote)}</div>
+                            <button type="button" class="btn btn-secondary btn-compact" onclick="autoAssignTechnician(${i})" ${hasAvailableTechnicians ? '' : 'disabled'}>Pilih Otomatis</button>
                         </div>
                         <div class="form-group">
                             <label>Estimasi Jam</label>
-                            <input type="number" value="${task.estimated_hours}" onchange="serviceTasks[${i}].estimated_hours = parseFloat(this.value)" step="0.5">
+                            <input type="number" value="${normalizedHours}" onchange="serviceTasks[${i}].estimated_hours = parseFloat(this.value)" step="0.5">
                         </div>
                         <div class="form-group" style="grid-column: 1 / -1;">
                             <label>Deskripsi</label>
-                            <textarea onchange="serviceTasks[${i}].description = this.value" rows="2">${task.description}</textarea>
+                            <textarea onchange="serviceTasks[${i}].description = this.value" rows="2">${safeDescription}</textarea>
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
+
+        window.updateTaskTechnician = function(index, value) {
+            const task = serviceTasks[index];
+            if (!task) {
+                return;
+            }
+            const previous = task.technician || '';
+            const nextValue = value || '';
+            if (previous === nextValue) {
+                task.technician = nextValue;
+                task.technician_name = resolveTechnicianLabel(nextValue, task.technician_name || '');
+                return;
+            }
+            task.technician = nextValue;
+            task.technician_name = resolveTechnicianLabel(nextValue, task.technician_name || '');
+            updateTechnicianLoad(previous, nextValue);
+            renderServiceTasks();
+        };
+
+        window.autoAssignTechnician = function(index) {
+            const task = serviceTasks[index];
+            if (!task) {
+                return;
+            }
+
+            if (!Array.isArray(technicianRoster) || technicianRoster.length === 0) {
+                frappe.show_alert({
+                    message: 'Belum ada data teknisi. Tambahkan teknisi terlebih dahulu.',
+                    indicator: 'orange'
+                }, 5);
+                return;
+            }
+
+            const chosen = chooseAvailableTechnician();
+            if (!chosen) {
+                frappe.show_alert({
+                    message: 'Semua teknisi sedang sibuk. Silakan atur ulang jadwal atau tunggu slot kosong.',
+                    indicator: 'orange'
+                }, 5);
+                return;
+            }
+
+            const previous = task.technician || '';
+            if (previous === chosen) {
+                frappe.show_alert({
+                    message: 'Teknisi ini sudah ditugaskan.',
+                    indicator: 'green'
+                }, 3);
+                return;
+            }
+
+            task.technician = chosen;
+            task.technician_name = resolveTechnicianLabel(chosen, task.technician_name || '');
+            updateTechnicianLoad(previous, chosen);
+            renderServiceTasks();
+        };
 
         window.addRequiredPart = function() {
             requiredParts.push({
@@ -1965,6 +2461,14 @@ a:hover {
                 warehouse: part.warehouse || ''
             }));
 
+            const sanitizedTasks = serviceTasks.map((task) => ({
+                task: task.task,
+                description: task.description,
+                technician: task.technician || '',
+                estimated_hours: Number(task.estimated_hours) || 0,
+                status: task.status || 'Pending'
+            }));
+
             const data = {
                 order_id: orderId,
                 service_order_type: document.getElementById('service_order_type').value,
@@ -1974,7 +2478,7 @@ a:hover {
                 total_estimated_amount: parseFloat(document.getElementById('total_estimated_amount').value),
                 inspection_summary: document.getElementById('inspection_summary').value,
                 service_notes: document.getElementById('service_notes').value,
-                service_tasks: serviceTasks,
+                service_tasks: sanitizedTasks,
                 required_parts: sanitizedParts,
                 payment_schedule: paymentSchedule,
                 status: 'Work In Progress'
