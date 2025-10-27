@@ -32,7 +32,7 @@
       "fieldname": "status",
       "fieldtype": "Select",
       "label": "Status",
-      "options": "Started\nIn Progress\nAwaiting Parts\nCompleted\nPaused",
+      "options": "Started\nIn Progress\nWork In Progress\nAwaiting Parts\nAwaiting QC\nCompleted\nCancelled\nPaused",
       "in_list_view": 1
     },
     {
