@@ -144,10 +144,9 @@
                 this.setupIntakeTypeWatcher();
                 this.forms.intake.addEventListener('submit', (event) => {
                     event.preventDefault();
-                    const intakeTypeInput = this.forms.intake.querySelector('[name="intake_type"]');
                     const bookingDateInput = this.forms.intake.querySelector('[name="service_booking_date"]');
                     const bookingChannelInput = this.forms.intake.querySelector('[name="booking_channel"]');
-                    const intakeType = (intakeTypeInput?.value || 'Walk-In');
+                    const intakeType = this.getIntakeTypeValue();
 
                     if (intakeType === 'Booking') {
                         if (bookingChannelInput && !bookingChannelInput.value) {
@@ -897,11 +896,13 @@
             if (!form) {
                 return;
             }
-            const typeSelect = form.querySelector('[name="intake_type"]');
-            if (!typeSelect) {
+            const typeInputs = form.querySelectorAll('[name="intake_type"]');
+            if (!typeInputs.length) {
                 return;
             }
-            typeSelect.addEventListener('change', () => this.handleIntakeTypeChange());
+            typeInputs.forEach((input) => {
+                input.addEventListener('change', () => this.handleIntakeTypeChange());
+            });
             this.handleIntakeTypeChange();
         }
 
@@ -910,9 +911,13 @@
             if (!form) {
                 return;
             }
-            const typeSelect = form.querySelector('[name="intake_type"]');
-            const intakeType = (typeSelect?.value || 'Walk-In');
+            const intakeType = this.getIntakeTypeValue();
             const isBooking = intakeType === 'Booking';
+            const intakeOptions = form.querySelectorAll('.option-toggle__item');
+            intakeOptions.forEach((option) => {
+                const input = option.querySelector('input[name="intake_type"]');
+                option.classList.toggle('is-active', Boolean(input?.checked));
+            });
             const bookingFields = form.querySelectorAll('[data-intake-booking]');
             bookingFields.forEach((field) => {
                 field.classList.toggle('is-hidden', !isBooking);
@@ -935,6 +940,26 @@
             if (hint) {
                 hint.classList.toggle('is-visible', isBooking);
             }
+        }
+
+        getIntakeTypeValue() {
+            const form = this.forms.intake;
+            if (!form) {
+                return 'Walk-In';
+            }
+            const select = form.querySelector('select[name="intake_type"]');
+            if (select && !select.disabled) {
+                return select.value || 'Walk-In';
+            }
+            const checkedRadio = form.querySelector('input[name="intake_type"]:checked');
+            if (checkedRadio && !checkedRadio.disabled) {
+                return checkedRadio.value || 'Walk-In';
+            }
+            const fallbackRadio = form.querySelector('input[name="intake_type"]');
+            if (fallbackRadio && !fallbackRadio.disabled) {
+                return fallbackRadio.value || 'Walk-In';
+            }
+            return 'Walk-In';
         }
 
         normalizeLicensePlate(value) {
@@ -2340,7 +2365,22 @@
         collectFormData(form, fields) {
             const data = {};
             fields.forEach((fieldname) => {
-                const input = form.querySelector(`[name="${fieldname}"]`);
+                const inputs = form.querySelectorAll(`[name="${fieldname}"]`);
+                if (!inputs.length) {
+                    return;
+                }
+                const primary = inputs[0];
+                if (primary instanceof HTMLInputElement && primary.type === 'radio') {
+                    const checked = form.querySelector(`input[name="${fieldname}"]:checked`);
+                    if (checked && !checked.disabled) {
+                        const value = this.readInputValue(checked);
+                        if (value !== null && value !== '') {
+                            data[fieldname] = value;
+                        }
+                    }
+                    return;
+                }
+                const input = primary;
                 if (!input || input.disabled) {
                     return;
                 }
