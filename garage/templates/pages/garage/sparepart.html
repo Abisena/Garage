@@ -1542,6 +1542,7 @@ button:disabled {
     // State
     let state = {
         spareParts: [],
+        spareRequests: [],
         currentSpare: null,
         searchQuery: '',
     };
@@ -1585,9 +1586,11 @@ button:disabled {
 
             const data = response.message || {};
             state.spareParts = data.spare_parts || [];
+            state.spareRequests = data.spare_part_requests || [];
 
             updateMetrics(data);
             renderInventoryTable(state.spareParts);
+            renderSpareRequests(state.spareRequests);
 
             console.log('[Sparepart] Loaded:', state.spareParts.length, 'parts');
         } catch (error) {
@@ -1598,10 +1601,92 @@ button:disabled {
 
     // Update Metrics
     function updateMetrics(data) {
-        ['spare-count', 'spare-request-count', 'spare-low-stock'].forEach((key, idx) => {
+        const metrics = {
+            'spare-count': data.total_count,
+            'spare-request-count': data.request_count,
+            'spare-low-stock': data.low_stock_count,
+        };
+        Object.entries(metrics).forEach(([key, value]) => {
             const el = document.querySelector(`[data-metric="${key}"]`);
-            if (el) el.textContent = [data.total_count, data.active_count, data.low_stock_count][idx] || 0;
+            if (el) el.textContent = value || 0;
         });
+    }
+
+    function getRequestStatusBadge(status) {
+        const normalized = (status || '').toLowerCase();
+        const badges = {
+            'pending': '<span class="badge warning">Pending</span>',
+            'ordered': '<span class="badge info">Ordered</span>',
+            'in transit': '<span class="badge info">In Transit</span>',
+            'backordered': '<span class="badge danger">Backordered</span>',
+            'received': '<span class="badge success">Received</span>',
+            'issued': '<span class="badge success">Issued</span>',
+        };
+        return badges[normalized] || '<span class="badge subtle">Draft</span>';
+    }
+
+    function renderSpareRequests(requests) {
+        const tbody = document.querySelector('[data-role="spare-request-table"]');
+        const emptyState = document.querySelector('[data-empty="spare-requests"]');
+
+        if (!tbody) {
+            return;
+        }
+
+        if (!requests || requests.length === 0) {
+            tbody.innerHTML = '';
+            if (emptyState) emptyState.style.display = 'block';
+            return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+
+        tbody.innerHTML = requests.map(request => {
+            const technicians = (request.technicians || [])
+                .map(tech => tech.technician_name || tech.technician)
+                .filter(Boolean);
+            const managerLines = [];
+            if (request.service_advisor) {
+                managerLines.push(`SA: ${request.service_advisor}`);
+            }
+            if (technicians.length) {
+                managerLines.push(technicians.join(', '));
+            }
+            const qty = parseFloat(request.qty) || 0;
+            const uom = request.uom ? ` ${request.uom}` : '';
+            const metaParts = [request.source, request.warehouse].filter(Boolean);
+            if (request.service_priority) {
+                metaParts.push(`Prioritas: ${request.service_priority}`);
+            }
+
+            return `
+                <tr class="spare-request-row">
+                    <td class="spare-request-cell spare-request-cell--order">
+                        <div class="table-cell-primary">
+                            <a href="/app/garage-service-order/${request.parent || ''}" target="_blank">${request.parent || '-'}</a>
+                        </div>
+                        <div class="table-meta">${request.service_customer || '-'}</div>
+                    </td>
+                    <td class="spare-request-cell spare-request-cell--part">
+                        <div class="table-cell-primary">
+                            <strong>${request.item_name || request.item_code || '-'}</strong>
+                        </div>
+                        <div class="table-meta">${request.item_code || 'Manual'}</div>
+                        ${request.description ? `<div class="table-note">${request.description}</div>` : ''}
+                    </td>
+                    <td class="spare-request-cell spare-request-cell--qty">
+                        <div class="metric-text">${qty}${uom}</div>
+                    </td>
+                    <td class="spare-request-cell spare-request-cell--status">
+                        ${getRequestStatusBadge(request.stock_status)}
+                        <div class="table-meta">${metaParts.join(' • ') || '-'}</div>
+                    </td>
+                    <td class="spare-request-cell spare-request-cell--manager">
+                        ${managerLines.length ? managerLines.map(line => `<div class="table-meta">${line}</div>`).join('') : '<div class="table-meta">-</div>'}
+                    </td>
+                </tr>
+            `;
+        }).join('');
     }
 
     // Render Table
