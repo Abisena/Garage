@@ -2,6 +2,9 @@
 
 {% block title %}Penagihan & Pembayaran{% endblock %}
 
+{% set required_roles = ['Finance', 'Keuangan', 'Accountant', 'Cashier'] %}
+{% include "garage/templates/includes/role_guard.html" %}
+
 {% block head_include %}
 <style>
 /* ============================================================================

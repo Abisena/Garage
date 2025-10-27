@@ -2,6 +2,9 @@
 
 {% block title %}Insight & Monitoring{% endblock %}
 
+{% set required_roles = [] %}
+{% include "garage/templates/includes/role_guard.html" %}
+
 {% block head_include %}
 <style>
 :root {
