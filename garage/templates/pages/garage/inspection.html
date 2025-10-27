@@ -1086,20 +1086,33 @@ a:hover {
         return numeric.toLocaleString('id-ID', { maximumFractionDigits: 2 });
     }
 
+
+    // ========== GLOBAL VARIABLES (MOVED HERE FOR SCOPE ACCESS) ==========
+    let sparePartCatalog = [];
+    let sparePartIndex = new Map();
+    let catalogLoadedFromOrder = false;
+    // ====================================================================
+
     function setSparePartCatalog(parts) {
+        console.log('🔧 === setSparePartCatalog CALLED ===');
+        console.log('📦 Parts received:', parts);
+        console.log('📊 Is array?', Array.isArray(parts));
+        console.log('📊 Length:', parts?.length || 0);
+        
         sparePartCatalog = Array.isArray(parts) ? parts : [];
-        sparePartIndex = new Map();
-        sparePartCatalog.forEach((part) => {
-            if (part?.name) {
-                sparePartIndex.set(part.name, part);
-            }
-            if (part?.part_code) {
-                sparePartIndex.set(part.part_code, part);
-            }
-            if (part?.part_name) {
-                sparePartIndex.set(part.part_name, part);
-            }
-        });
+        
+        console.log('✅ sparePartCatalog set to:', sparePartCatalog);
+        console.log('✅ Final length:', sparePartCatalog.length);
+        
+        sparePartIndex.clear();
+        for (const part of sparePartCatalog) {
+            console.log('  → Adding to index:', part.part_code, part.part_name);
+            if (part.name) sparePartIndex.set(part.name, part);
+            if (part.part_code) sparePartIndex.set(part.part_code.toLowerCase(), part);
+            if (part.part_name) sparePartIndex.set(part.part_name.toLowerCase(), part);
+        }
+        
+        console.log('✅ Index size:', sparePartIndex.size);
     }
 
     function lookupSparePart(identifier) {
@@ -1296,8 +1309,8 @@ a:hover {
         let serviceTasks = [];
         let requiredParts = [];
         let paymentSchedule = [];
-        let sparePartCatalog = [];
-        let sparePartIndex = new Map();
+        // NOTE: sparePartCatalog & sparePartIndex sudah dideklarasi di atas (global scope)
+        // JANGAN declare ulang di sini!
         let catalogLoadedFromOrder = false;
         const stockStatusOptions = [
             'Pending Check',
