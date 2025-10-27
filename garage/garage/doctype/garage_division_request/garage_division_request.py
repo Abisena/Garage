@@ -5,8 +5,9 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import now_datetime, nowdate
-from frappe.utils.user import get_fullname
+from frappe.utils import get_fullname
 
+    
 
 class GarageDivisionRequest(Document):
     """Manage validation and defaults for inter-division approval documents."""

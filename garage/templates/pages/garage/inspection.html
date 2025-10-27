@@ -1375,7 +1375,7 @@ a:hover {
             return meta.content;
         }
 
-        const cookieMatch = document.cookie.match(/csrftoken=([^;]+)/);
+        const cookieMatch = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
         if (cookieMatch) {
             return decodeURIComponent(cookieMatch[1]);
         }
