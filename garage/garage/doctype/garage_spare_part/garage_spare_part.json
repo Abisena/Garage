@@ -48,8 +48,10 @@
     },
     {
       "fieldname": "category",
-      "fieldtype": "Data",
+      "fieldtype": "Select",
       "label": "Category",
+      "options": "Spare Part\nGudang Bahan",
+      "default": "Spare Part",
       "in_list_view": 1
     },
     {

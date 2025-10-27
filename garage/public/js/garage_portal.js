@@ -1171,6 +1171,9 @@
 
                 const tr = document.createElement('tr');
                 tr.className = 'spare-request-row';
+                if (request?.name) {
+                    tr.setAttribute('data-request-name', request.name);
+                }
 
                 const orderCell = document.createElement('td');
                 orderCell.className = 'spare-request-cell spare-request-cell--order';
@@ -1191,6 +1194,12 @@
                 codeMeta.className = 'table-meta';
                 codeMeta.textContent = request.item_code || part.part_code || __('Manual');
                 partCell.appendChild(codeMeta);
+                if (part.category) {
+                    const categoryMeta = document.createElement('div');
+                    categoryMeta.className = 'table-meta';
+                    categoryMeta.textContent = part.category;
+                    partCell.appendChild(categoryMeta);
+                }
                 if (request.description) {
                     const desc = document.createElement('div');
                     desc.className = 'table-note';
@@ -1209,6 +1218,7 @@
                 qtyCell.appendChild(qtyValue);
                 const stockMeta = document.createElement('div');
                 stockMeta.className = 'table-meta';
+                const availableNumeric = parseFloat(part.stock_qty);
                 const available = this.formatStockValue(part.stock_qty);
                 stockMeta.textContent = available ? `${__('Stok')}: ${available}` : __('Stok tidak diketahui');
                 qtyCell.appendChild(stockMeta);
@@ -1280,8 +1290,90 @@
                 }
                 tr.appendChild(managerCell);
 
+                const actionsCell = document.createElement('td');
+                actionsCell.className = 'spare-request-cell spare-request-cell--actions';
+                const actionsWrapper = document.createElement('div');
+                actionsWrapper.className = 'request-actions';
+
+                const approveDisabled = !Number.isFinite(availableNumeric) || availableNumeric < qty;
+                const actionConfigs = [
+                    { action: 'approve', label: __('Approve'), className: 'primary small', disabled: approveDisabled },
+                    { action: 'reject', label: __('Reject'), className: 'danger small' },
+                    { action: 'cancel', label: __('Cancel'), className: 'ghost small' },
+                ];
+
+                actionConfigs.forEach((config) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = config.className;
+                    button.textContent = config.label;
+                    button.dataset.requestAction = config.action;
+                    if (config.disabled) {
+                        button.disabled = true;
+                        button.title = __('Sparepart belum tersedia atau stok tidak mencukupi');
+                    }
+                    button.addEventListener('click', () => this.handleSpareRequestAction(request, config.action, button));
+                    actionsWrapper.appendChild(button);
+                });
+
+                actionsCell.appendChild(actionsWrapper);
+                tr.appendChild(actionsCell);
+
                 table.appendChild(tr);
             });
+        }
+
+        handleSpareRequestAction(request, action, button) {
+            const requestName = request?.name;
+            if (!requestName) {
+                frappe.show_alert({ message: __('Permintaan tidak valid.'), indicator: 'orange' }, 5);
+                return;
+            }
+
+            const confirmMessages = {
+                approve: __('Setujui permintaan ini? Stok gudang akan berkurang otomatis.'),
+                reject: __('Tolak permintaan sparepart ini?'),
+                cancel: __('Batalkan permintaan sparepart ini?'),
+                default: __('Lanjutkan aksi ini?'),
+            };
+
+            const executeAction = async () => {
+                try {
+                    if (button) {
+                        button.disabled = true;
+                    }
+                    const response = await frappe.call({
+                        method: 'garage.api.portal.update_spare_part_request_status',
+                        args: { name: requestName, action },
+                        freeze: true,
+                        freeze_message: __('Memproses permintaan...'),
+                    });
+                    const payload = response?.message || {};
+                    const indicatorMap = { approve: 'green', reject: 'red', cancel: 'orange' };
+                    frappe.show_alert(
+                        {
+                            message: payload.message || __('Permintaan diperbarui.'),
+                            indicator: indicatorMap[action] || 'green',
+                        },
+                        5,
+                    );
+                    this.fetchBootstrap(false);
+                } catch (error) {
+                    frappe.show_alert({ message: __('Gagal memproses: {0}', [error.message || error]), indicator: 'red' }, 5);
+                } finally {
+                    if (button) {
+                        button.disabled = false;
+                        button.blur();
+                    }
+                }
+            };
+
+            const confirmation = confirmMessages[action] || confirmMessages.default;
+            if (frappe.confirm) {
+                frappe.confirm(confirmation, () => executeAction());
+            } else if (window.confirm(confirmation)) {
+                executeAction();
+            }
         }
 
         applySpareSearch(query = '', preserveSelection = true) {
@@ -1740,11 +1832,25 @@
             const label = status || __('Tidak diketahui');
             badge.textContent = label;
             const normalized = label.toString().toLowerCase();
-            if (normalized.includes('available') || normalized.includes('received')) {
+            if (
+                normalized.includes('available') ||
+                normalized.includes('received') ||
+                normalized.includes('issued') ||
+                normalized.includes('approve')
+            ) {
                 badge.classList.add('status-pill--success');
-            } else if (normalized.includes('order') || normalized.includes('pending')) {
+            } else if (
+                normalized.includes('order') ||
+                normalized.includes('pending') ||
+                normalized.includes('transit')
+            ) {
                 badge.classList.add('status-pill--warning');
-            } else if (normalized.includes('cancel') || normalized.includes('stop')) {
+            } else if (
+                normalized.includes('cancel') ||
+                normalized.includes('stop') ||
+                normalized.includes('reject') ||
+                normalized.includes('backorder')
+            ) {
                 badge.classList.add('status-pill--danger');
             }
             return badge;

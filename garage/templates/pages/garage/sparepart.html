@@ -688,6 +688,35 @@ button.secondary:hover {
     transform: translateY(-1px);
 }
 
+button.danger {
+    background: linear-gradient(135deg, var(--accent-danger), #ff7043) !important;
+    color: var(--text-inverse) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+button.danger:hover {
+    box-shadow: var(--shadow-md) !important;
+    transform: translateY(-1px);
+}
+
+button.ghost {
+    background: transparent !important;
+    color: var(--text-primary) !important;
+    border: 1.5px solid var(--border-base) !important;
+    box-shadow: none !important;
+}
+
+button.ghost:hover {
+    background: var(--gray-50) !important;
+    border-color: var(--border-strong) !important;
+}
+
+button.small {
+    padding: var(--space-2) var(--space-3) !important;
+    font-size: var(--font-size-xs) !important;
+    line-height: 1.2;
+}
+
 button:disabled {
     opacity: 0.5 !important;
     cursor: not-allowed !important;
@@ -1148,6 +1177,22 @@ button:disabled {
     color: var(--text-muted);
 }
 
+.spare-request-cell--actions {
+    min-width: 180px;
+    text-align: right;
+}
+
+.request-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.request-actions button {
+    flex: 0 1 auto;
+}
+
 .inventory-row {
     transition: background var(--transition-base);
     cursor: pointer;
@@ -1396,6 +1441,7 @@ button:disabled {
                                 <th>Kuantitas</th>
                                 <th>Status</th>
                                 <th>Penanggung Jawab</th>
+                                <th>Tindakan</th>
                             </tr>
                         </thead>
                         <tbody data-role="spare-request-table"></tbody>
@@ -1460,7 +1506,10 @@ button:disabled {
                             </div>
                             <div class="form-field">
                                 <label>Kategori</label>
-                                <input name="category" placeholder="Kategori" />
+                                <select name="category">
+                                    <option value="Spare Part">Spare Part</option>
+                                    <option value="Gudang Bahan">Gudang Bahan</option>
+                                </select>
                             </div>
                             <div class="form-field">
                                 <label>Brand / OEM</label>
@@ -1540,6 +1589,7 @@ button:disabled {
         listSpareParts: 'garage.api.portal.list_spare_parts',
         createSparePart: 'garage.api.portal.create_spare_part',
         updateSparePart: 'garage.api.portal.update_spare_part',
+        updateSpareRequest: 'garage.api.portal.update_spare_part_request_status',
     };
 
     // State
@@ -1548,6 +1598,7 @@ button:disabled {
         spareRequests: [],
         currentSpare: null,
         searchQuery: '',
+        partIndex: new Map(),
     };
 
     // Utility Functions
@@ -1590,6 +1641,11 @@ button:disabled {
             const data = response.message || {};
             state.spareParts = data.spare_parts || [];
             state.spareRequests = data.spare_part_requests || [];
+            state.partIndex = new Map();
+            state.spareParts.forEach(part => {
+                if (part?.name) state.partIndex.set(part.name, part);
+                if (part?.part_code) state.partIndex.set(part.part_code, part);
+            });
 
             updateMetrics(data);
             renderInventoryTable(state.spareParts);
@@ -1618,12 +1674,18 @@ button:disabled {
     function getRequestStatusBadge(status) {
         const normalized = (status || '').toLowerCase();
         const badges = {
+            'pending check': '<span class="badge warning">Pending Check</span>',
             'pending': '<span class="badge warning">Pending</span>',
+            'available': '<span class="badge success">Available</span>',
+            'to order': '<span class="badge warning">To Order</span>',
             'ordered': '<span class="badge info">Ordered</span>',
             'in transit': '<span class="badge info">In Transit</span>',
             'backordered': '<span class="badge danger">Backordered</span>',
             'received': '<span class="badge success">Received</span>',
             'issued': '<span class="badge success">Issued</span>',
+            'approved': '<span class="badge success">Approved</span>',
+            'rejected': '<span class="badge danger">Rejected</span>',
+            'cancelled': '<span class="badge muted">Cancelled</span>',
         };
         return badges[normalized] || '<span class="badge subtle">Draft</span>';
     }
@@ -1645,6 +1707,7 @@ button:disabled {
         if (emptyState) emptyState.style.display = 'none';
 
         tbody.innerHTML = requests.map(request => {
+            const requestName = request.name || '';
             const technicians = (request.technicians || [])
                 .map(tech => tech.technician_name || tech.technician)
                 .filter(Boolean);
@@ -1655,15 +1718,37 @@ button:disabled {
             if (technicians.length) {
                 managerLines.push(technicians.join(', '));
             }
+
+            const part = state.partIndex.get(request.item_code) || state.partIndex.get(request.item_name) || null;
+            const partCategory = part?.category || '';
             const qty = parseFloat(request.qty) || 0;
             const uom = request.uom ? ` ${request.uom}` : '';
+            const availableRaw = part ? parseFloat(part.stock_qty) : NaN;
+            const availableStock = Number.isFinite(availableRaw) ? availableRaw : null;
+            const stockLabel = Number.isFinite(availableRaw) ? availableRaw.toLocaleString('id-ID') : null;
+
             const metaParts = [request.source, request.warehouse].filter(Boolean);
+            if (!request.warehouse && part?.warehouse_location) {
+                metaParts.push(part.warehouse_location);
+            }
             if (request.service_priority) {
                 metaParts.push(`Prioritas: ${request.service_priority}`);
             }
+            if (stockLabel) {
+                metaParts.push(`Stok: ${stockLabel}`);
+            }
+
+            const approveDisabled = availableStock === null || availableStock < qty;
+            const approveAttrs = approveDisabled
+                ? ' disabled title="Sparepart belum tersedia atau stok tidak mencukupi"'
+                : '';
+
+            const managerHtml = managerLines.length
+                ? managerLines.map(line => `<div class="table-meta">${line}</div>`).join('')
+                : '<div class="table-meta">-</div>';
 
             return `
-                <tr class="spare-request-row">
+                <tr class="spare-request-row" data-request-name="${requestName}">
                     <td class="spare-request-cell spare-request-cell--order">
                         <div class="table-cell-primary">
                             <a href="/app/garage-service-order/${request.parent || ''}" target="_blank">${request.parent || '-'}</a>
@@ -1674,7 +1759,8 @@ button:disabled {
                         <div class="table-cell-primary">
                             <strong>${request.item_name || request.item_code || '-'}</strong>
                         </div>
-                        <div class="table-meta">${request.item_code || 'Manual'}</div>
+                        <div class="table-meta">${request.item_code || part?.part_code || 'Manual'}</div>
+                        ${partCategory ? `<div class="table-meta">${partCategory}</div>` : ''}
                         ${request.description ? `<div class="table-note">${request.description}</div>` : ''}
                     </td>
                     <td class="spare-request-cell spare-request-cell--qty">
@@ -1685,11 +1771,73 @@ button:disabled {
                         <div class="table-meta">${metaParts.join(' • ') || '-'}</div>
                     </td>
                     <td class="spare-request-cell spare-request-cell--manager">
-                        ${managerLines.length ? managerLines.map(line => `<div class="table-meta">${line}</div>`).join('') : '<div class="table-meta">-</div>'}
+                        ${managerHtml}
+                    </td>
+                    <td class="spare-request-cell spare-request-cell--actions">
+                        <div class="request-actions">
+                            <button class="primary small" type="button" data-request-action="approve"${approveAttrs}>Approve</button>
+                            <button class="danger small" type="button" data-request-action="reject">Reject</button>
+                            <button class="ghost small" type="button" data-request-action="cancel">Cancel</button>
+                        </div>
                     </td>
                 </tr>
             `;
         }).join('');
+    }
+
+    function handleRequestAction(event) {
+        const button = event.target.closest('button[data-request-action]');
+        if (!button) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const action = button.dataset.requestAction;
+        const row = button.closest('tr[data-request-name]');
+        const requestName = row?.dataset?.requestName;
+        if (!action || !requestName) {
+            return;
+        }
+
+        const confirmMessages = {
+            approve: 'Setujui permintaan ini? Stok gudang akan berkurang otomatis.',
+            reject: 'Tolak permintaan sparepart ini?',
+            cancel: 'Batalkan permintaan sparepart ini?',
+            default: 'Lanjutkan aksi ini?',
+        };
+
+        const executeAction = async () => {
+            try {
+                button.disabled = true;
+                const response = await frappe.call({
+                    method: API.updateSpareRequest,
+                    args: { name: requestName, action },
+                    freeze: true,
+                    freeze_message: 'Memproses permintaan...',
+                });
+                const payload = response.message || {};
+                const indicatorMap = { approve: 'green', reject: 'red', cancel: 'orange' };
+                const indicator = indicatorMap[action] || 'green';
+                frappe.show_alert({
+                    message: payload.message || 'Permintaan diperbarui.',
+                    indicator,
+                }, 5);
+                await loadSpareParts();
+            } catch (error) {
+                frappe.show_alert({ message: 'Gagal memproses: ' + error.message, indicator: 'red' }, 5);
+            } finally {
+                button.disabled = false;
+                button.blur();
+            }
+        };
+
+        const confirmation = confirmMessages[action] || confirmMessages.default;
+        if (frappe.confirm) {
+            frappe.confirm(confirmation, () => executeAction());
+        } else if (window.confirm(confirmation)) {
+            executeAction();
+        }
     }
 
     // Render Table
@@ -1774,6 +1922,10 @@ button:disabled {
         document.querySelector('[data-role="spare-preview"]').style.backgroundImage = '';
         document.querySelector('[data-role="spare-preview"]').classList.add('is-empty');
         document.getElementById('spare-detail-form').reset();
+        const categoryField = document.querySelector('#spare-detail-form [name="category"]');
+        if (categoryField) {
+            categoryField.value = 'Spare Part';
+        }
     }
 
     // Form Submit
@@ -1822,7 +1974,8 @@ button:disabled {
         document.getElementById('spare-detail-form')?.addEventListener('submit', handleFormSubmit);
         document.querySelector('[data-action="create-spare-part"]')?.addEventListener('click', resetForm);
         document.querySelector('[data-role="spare-search"]')?.addEventListener('input', handleSearch);
-        
+        document.querySelector('[data-role="spare-request-table"]')?.addEventListener('click', handleRequestAction);
+
         document.querySelectorAll('[data-desk-link]').forEach(link => {
             link.href = `/app/${link.dataset.deskLink.toLowerCase().replace(/ /g, '-')}`;
         });
