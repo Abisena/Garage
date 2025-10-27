@@ -1297,64 +1297,49 @@ def get_spare_part_stats() -> Dict[str, Any]:
 
 @frappe.whitelist()
 def get_service_order_details(order_id: str) -> Dict[str, Any]:
-    """Get complete details of a service order including all child tables."""
+    '''
+    Get detailed information about a service order including:
+    - Order details
+    - Customer details  
+    - Vehicle details
+    - Service tasks
+    - Required parts
+    - Available spare parts catalog
+    '''
     
     _require_login()
     
     if not order_id:
         frappe.throw(_("Service Order ID diperlukan."))
     
-    try:
-        # Get main document
-        order = frappe.get_doc("Garage Service Order", order_id)
-    except Exception as e:
-        frappe.throw(_("Service Order tidak ditemukan: {0}").format(str(e)))
+    # Get service order document
+    doc = _get_doc("Garage Service Order", order_id)
     
-    # Build response
+    # Build result
     result = {
-        # Main fields
-        "name": order.name,
-        "status": order.status,
-        "service_order_type": order.service_order_type,
-        "order_category": order.order_category,
-        "priority": order.priority,
-        "service_booking_date": order.service_booking_date,
-        "estimated_delivery_date": order.estimated_delivery_date,
-        "actual_delivery_date": order.actual_delivery_date,
-        "total_estimated_amount": order.total_estimated_amount,
-        "total_approved_amount": order.total_approved_amount,
-        "approval_date": order.approval_date,
-        "customer_confirmation": order.customer_confirmation,
-        "rejection_reason": order.rejection_reason,
-        "inspection_summary": order.inspection_summary,
-        "service_notes": order.service_notes,
-        "job_card_status": order.job_card_status,
-        "work_order_status": order.work_order_status,
-        "qc_status": order.qc_status,
-        
-        # Customer info
-        "customer": order.customer,
-        "vehicle": order.vehicle,
-        "service_advisor": order.service_advisor,
-        "primary_contact": order.primary_contact,
-        
-        # Child tables (will be populated if they exist)
-        "inspection_items": [],
-        "service_tasks": [],
-        "required_parts": [],
-        "progress_logs": [],
-        "quality_checks": [],
-        "payment_schedule": [],
-        
-        # Timestamps
-        "creation": order.creation,
-        "modified": order.modified
+        "name": doc.name,
+        "status": doc.status,
+        "customer": doc.customer,
+        "vehicle": doc.vehicle,
+        "service_order_type": doc.service_order_type,
+        "order_category": doc.order_category,
+        "priority": doc.priority,
+        "service_booking_date": doc.service_booking_date,
+        "estimated_delivery_date": doc.estimated_delivery_date,
+        "actual_delivery_date": doc.actual_delivery_date,
+        "total_estimated_amount": doc.total_estimated_amount,
+        "total_approved_amount": doc.total_approved_amount,
+        "inspection_summary": doc.inspection_summary,
+        "service_notes": doc.service_notes,
+        "job_card_status": doc.job_card_status,
+        "work_order_status": doc.work_order_status,
+        "qc_status": doc.qc_status,
     }
     
     # Get customer details
-    if order.customer:
+    if doc.customer:
         try:
-            customer = frappe.get_doc("Garage Customer", order.customer)
+            customer = frappe.get_doc("Garage Customer", doc.customer)
             result["customer_details"] = {
                 "name": customer.name,
                 "customer_name": customer.customer_name,
@@ -1367,9 +1352,9 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
             pass
     
     # Get vehicle details
-    if order.vehicle:
+    if doc.vehicle:
         try:
-            vehicle = frappe.get_doc("Garage Vehicle", order.vehicle)
+            vehicle = frappe.get_doc("Garage Vehicle", doc.vehicle)
             result["vehicle_details"] = {
                 "name": vehicle.name,
                 "license_plate": vehicle.license_plate,
@@ -1384,43 +1369,27 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
         except Exception:
             pass
     
-    # Get child table data - with error handling
+    # Get child table data
     try:
-        if hasattr(order, "inspection_items") and order.inspection_items:
-            result["inspection_items"] = [item.as_dict() for item in order.inspection_items]
+        if hasattr(doc, "service_tasks") and doc.service_tasks:
+            result["service_tasks"] = [task.as_dict() for task in doc.service_tasks]
     except Exception:
         pass
     
     try:
-        if hasattr(order, "service_tasks") and order.service_tasks:
-            result["service_tasks"] = [task.as_dict() for task in order.service_tasks]
+        if hasattr(doc, "required_parts") and doc.required_parts:
+            result["required_parts"] = [part.as_dict() for part in doc.required_parts]
     except Exception:
         pass
     
     try:
-        if hasattr(order, "required_parts") and order.required_parts:
-            result["required_parts"] = [part.as_dict() for part in order.required_parts]
+        if hasattr(doc, "payment_schedule") and doc.payment_schedule:
+            result["payment_schedule"] = [payment.as_dict() for payment in doc.payment_schedule]
     except Exception:
         pass
     
-    try:
-        if hasattr(order, "progress_logs") and order.progress_logs:
-            result["progress_logs"] = [log.as_dict() for log in order.progress_logs]
-    except Exception:
-        pass
-    
-    try:
-        if hasattr(order, "quality_checks") and order.quality_checks:
-            result["quality_checks"] = [qc.as_dict() for qc in order.quality_checks]
-    except Exception:
-        pass
-    
-    try:
-        if hasattr(order, "payment_schedule") and order.payment_schedule:
-            result["payment_schedule"] = [payment.as_dict() for payment in order.payment_schedule]
-    except Exception:
-        pass
-
+    # ========== CRITICAL: GET AVAILABLE SPARE PARTS ==========
+    # This is needed for the dropdown in inspection page
     result["available_spare_parts"] = _list_dicts(
         "Garage Spare Part",
         [
@@ -1441,11 +1410,12 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
             "image",
             "notes",
         ],
+        filters=[["status", "=", "Active"]],
         limit=200,
     )
+    # =========================================================
 
     return result
-
 
 @frappe.whitelist(allow_guest=True)
 def update_service_order_inspection(order_id: str, inspection_data: Optional[Any] = None) -> Dict[str, Any]:
