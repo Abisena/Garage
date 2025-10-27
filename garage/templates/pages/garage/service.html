@@ -1437,6 +1437,53 @@ body {
                     </div>
                 </div>
             </div>
+            <button id="status-update-close" class="modal-close" type="button" aria-label="Tutup">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-section">
+                <span class="section-badge info">Ringkasan Order</span>
+                <div class="order-info-display">
+                    <div class="info-item">
+                        <div class="label">Service Order</div>
+                        <div class="value" id="status-update-order-id">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">Status Saat Ini</div>
+                        <div class="value" id="status-update-current-status">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">Customer</div>
+                        <div class="value" id="status-update-customer">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">Kendaraan</div>
+                        <div class="value" id="status-update-vehicle">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <span class="section-badge warning">Update Status</span>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="status-update-select">Status Baru <span class="required">*</span></label>
+                        <select id="status-update-select">
+                            <option value="Awaiting QC">Awaiting QC</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Work In Progress">Work In Progress</option>
+                        </select>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="status-update-note">Catatan Progress</label>
+                        <textarea id="status-update-note" rows="4" placeholder="Catatan singkat mengenai progress pengerjaan..." maxlength="500"></textarea>
+                        <span class="helper-text">Catatan akan tersimpan ke log progress service order.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" type="button" id="status-update-cancel">Batal</button>
+            <button class="btn btn-primary" type="button" id="status-update-submit">💾 Simpan Update</button>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" type="button" id="status-update-cancel">Batal</button>
