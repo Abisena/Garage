@@ -109,7 +109,7 @@
       "fieldname": "job_card_status",
       "fieldtype": "Select",
       "label": "Job Card Status",
-      "options": "Not Created\nOpen\nOn Hold\nCompleted\nCancelled",
+      "options": "Not Created\nOpen\nWork In Progress\nOn Hold\nCompleted\nCancelled",
       "default": "Not Created"
     },
     {
