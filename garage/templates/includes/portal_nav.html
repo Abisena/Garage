@@ -1,23 +1,86 @@
-{% set user_roles = frappe.get_roles(frappe.session.user) if frappe.session.user != 'Guest' else [] %}
-{% set can_access = frappe.get_attr('garage.config.role_map.user_has_access') %}
-{% set nav_items = [
-    {'route': '/garage', 'key': 'overview', 'label': '🏠 Overview', 'roles': []},
-    {'route': '/garage/intake', 'key': 'intake', 'label': '📋 Registrasi', 'roles': ['Admin', 'Registrasi', 'Customer Service', 'Front Desk']},
-    {'route': '/garage/service', 'key': 'service', 'label': '🔧 Servis', 'roles': ['Service', 'Servis', 'Service Advisor', 'Technician', 'Teknisi']},
-    {'route': '/garage/sparepart', 'key': 'sparepart', 'label': '📦 Sparepart', 'roles': ['Sparepart', 'Spare Part', 'Inventory', 'Inventory Controller']},
-    {'route': '/garage/procurement', 'key': 'procurement', 'label': '🛒 Pengadaan', 'roles': ['Pengadaan', 'Procurement', 'Buying']},
-    {'route': '/garage/finance', 'key': 'finance', 'label': '💰 Keuangan', 'roles': ['Finance', 'Keuangan', 'Accountant', 'Cashier']},
-    {'route': '/garage/insight', 'key': 'insight', 'label': '📊 Insight', 'roles': []},
-] %}
+{% set nav_items = frappe.get_attr('garage.api.auth.PORTAL_NAV_ITEMS') %}
 
 <div class="portal-nav-wrapper">
     <div class="container">
         <nav class="portal-nav">
             {% for item in nav_items %}
-                {% if can_access(user_roles, item.roles) %}
-                    <a href="{{ item.route }}" class="{{ 'active' if active_page == item.key else '' }}">{{ item.label }}</a>
-                {% endif %}
+                <a
+                    href="{{ item.route }}"
+                    class="portal-nav__link {{ 'is-hidden' if item.roles else '' }} {{ 'active' if active_page == item.key else '' }}"
+                    data-nav-key="{{ item.key }}"
+                    data-requires-role="{{ 1 if item.roles else 0 }}"
+                    {% if item.roles %}aria-hidden="true"{% endif %}
+                >
+                    {{ item.label }}
+                </a>
             {% endfor %}
         </nav>
     </div>
 </div>
+
+<style>
+    .portal-nav__link.is-hidden {
+        display: none;
+    }
+
+    .portal-nav-wrapper.portal-nav-disabled {
+        pointer-events: none;
+    }
+
+    .portal-nav-wrapper.portal-nav-disabled .portal-nav__link {
+        cursor: not-allowed;
+        opacity: 0.45;
+        pointer-events: none;
+    }
+
+    .portal-nav__link.is-disabled {
+        cursor: not-allowed;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var navWrapper = document.querySelector('.portal-nav-wrapper');
+        if (!navWrapper) {
+            return;
+        }
+
+        var navLinks = navWrapper.querySelectorAll('[data-nav-key]');
+        if (!navLinks.length) {
+            return;
+        }
+
+        function toggleLinks(allowedMap) {
+            navLinks.forEach(function (link) {
+                var key = link.getAttribute('data-nav-key');
+                var requiresRole = link.getAttribute('data-requires-role') === '1';
+                var hasAllowedEntry = allowedMap && Object.prototype.hasOwnProperty.call(allowedMap, key);
+                var isAllowed = requiresRole ? !!(hasAllowedEntry && allowedMap[key]) : true;
+
+                if (isAllowed) {
+                    link.classList.remove('is-hidden');
+                    link.removeAttribute('aria-hidden');
+                } else {
+                    link.classList.add('is-hidden');
+                    link.setAttribute('aria-hidden', 'true');
+                }
+            });
+        }
+
+        fetch('/api/method/garage.api.auth.get_portal_navigation')
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                var allowedMap = {};
+                var items = data && data.message && data.message.items ? data.message.items : [];
+
+                items.forEach(function (item) {
+                    allowedMap[item.key] = !!item.allowed;
+                });
+
+                toggleLinks(allowedMap);
+            })
+            .catch(function () {
+                toggleLinks({});
+            });
+    });
+</script>
