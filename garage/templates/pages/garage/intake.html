@@ -686,6 +686,22 @@ header .navbar-nav li button {
     height: 16px;
 }
 
+.datetime-group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.datetime-group input[type="date"],
+.datetime-group input[type="time"] {
+    flex: 1;
+}
+
+.datetime-group__separator {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
 .form-field input::placeholder,
 .form-field textarea::placeholder {
     color: var(--text-muted);
@@ -1321,8 +1337,26 @@ button:disabled {
                                     </select>
                                 </div>
                                 <div class="form-field" data-intake-booking>
-                                    <label for="service_booking_date">Jadwal Booking</label>
-                                    <input id="service_booking_date" name="service_booking_date" type="datetime-local" disabled />
+                                    <label for="service_booking_date_date">Jadwal Booking</label>
+                                    <div class="datetime-group" data-role="booking-datetime">
+                                        <input
+                                            id="service_booking_date_date"
+                                            name="service_booking_date_date"
+                                            type="date"
+                                            data-role="booking-date"
+                                            disabled
+                                        />
+                                        <span class="datetime-group__separator">pukul</span>
+                                        <input
+                                            id="service_booking_date_time"
+                                            name="service_booking_date_time"
+                                            type="time"
+                                            step="900"
+                                            data-role="booking-time"
+                                            disabled
+                                        />
+                                    </div>
+                                    <input id="service_booking_date" name="service_booking_date" type="hidden" disabled />
                                     <p class="form-hint">Tanggal &amp; jam kedatangan yang disepakati dengan customer.</p>
                                 </div>
                                 <div class="booking-guidance" data-role="booking-hint">
