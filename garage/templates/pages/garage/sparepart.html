@@ -1590,6 +1590,7 @@ button:disabled {
         createSparePart: 'garage.api.portal.create_spare_part',
         updateSparePart: 'garage.api.portal.update_spare_part',
         updateSpareRequest: 'garage.api.portal.update_spare_part_request_status',
+        generateApprovalDocument: 'garage.api.portal.generate_spare_part_approval_document',
     };
 
     // State
@@ -1748,7 +1749,7 @@ button:disabled {
                 : '<div class="table-meta">-</div>';
 
             return `
-                <tr class="spare-request-row" data-request-name="${requestName}">
+                <tr class="spare-request-row" data-request-name="${requestName}" data-service-order="${request.parent || ''}">
                     <td class="spare-request-cell spare-request-cell--order">
                         <div class="table-cell-primary">
                             <a href="/app/garage-service-order/${request.parent || ''}" target="_blank">${request.parent || '-'}</a>
@@ -1777,6 +1778,7 @@ button:disabled {
                         <div class="request-actions">
                             <button class="primary small" type="button" data-request-action="approve"${approveAttrs}>Approve</button>
                             <button class="danger small" type="button" data-request-action="reject">Reject</button>
+                            <button class="ghost small" type="button" data-request-action="document">Dokumen</button>
                             <button class="ghost small" type="button" data-request-action="cancel">Cancel</button>
                         </div>
                     </td>
@@ -1796,7 +1798,13 @@ button:disabled {
         const action = button.dataset.requestAction;
         const row = button.closest('tr[data-request-name]');
         const requestName = row?.dataset?.requestName;
+        const serviceOrder = row?.dataset?.serviceOrder || '';
         if (!action || !requestName) {
+            return;
+        }
+
+        if (action === 'document') {
+            generateApprovalDocument(requestName, serviceOrder, button);
             return;
         }
 
@@ -1886,6 +1894,42 @@ button:disabled {
                 if (spare) selectSpare(spare);
             });
         });
+    }
+
+    async function generateApprovalDocument(requestName, serviceOrder, button) {
+        if (!serviceOrder) {
+            frappe.show_alert({ message: 'Order servis tidak ditemukan untuk permintaan ini.', indicator: 'orange' }, 5);
+            return;
+        }
+
+        try {
+            if (button) {
+                button.disabled = true;
+            }
+
+            const response = await frappe.call({
+                method: API.generateApprovalDocument,
+                args: { service_order: serviceOrder, request_name: requestName },
+                freeze: true,
+                freeze_message: 'Menyiapkan dokumen persetujuan...'
+            });
+
+            const payload = response.message || {};
+            const url = payload.print_url || payload.print_format_url;
+            if (url) {
+                window.open(url, '_blank');
+            }
+
+            const message = payload.message || 'Dokumen persetujuan siap diunduh.';
+            frappe.show_alert({ message, indicator: 'green' }, 5);
+        } catch (error) {
+            frappe.show_alert({ message: 'Gagal menyiapkan dokumen: ' + (error.message || error), indicator: 'red' }, 7);
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.blur();
+            }
+        }
     }
 
     // Select Spare

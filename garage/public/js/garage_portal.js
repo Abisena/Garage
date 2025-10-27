@@ -1299,6 +1299,7 @@
                 const actionConfigs = [
                     { action: 'approve', label: __('Approve'), className: 'primary small', disabled: approveDisabled },
                     { action: 'reject', label: __('Reject'), className: 'danger small' },
+                    { action: 'document', label: __('Dokumen'), className: 'ghost small' },
                     { action: 'cancel', label: __('Cancel'), className: 'ghost small' },
                 ];
 
@@ -1327,6 +1328,11 @@
             const requestName = request?.name;
             if (!requestName) {
                 frappe.show_alert({ message: __('Permintaan tidak valid.'), indicator: 'orange' }, 5);
+                return;
+            }
+
+            if (action === 'document') {
+                this.generateSpareRequestDocument(request, button);
                 return;
             }
 
@@ -1373,6 +1379,46 @@
                 frappe.confirm(confirmation, () => executeAction());
             } else if (window.confirm(confirmation)) {
                 executeAction();
+            }
+        }
+
+        async generateSpareRequestDocument(request, button) {
+            const serviceOrder = request?.parent;
+            if (!serviceOrder) {
+                frappe.show_alert({ message: __('Order servis tidak ditemukan untuk permintaan ini.'), indicator: 'orange' }, 5);
+                return;
+            }
+
+            try {
+                if (button) {
+                    button.disabled = true;
+                }
+
+                const response = await frappe.call({
+                    method: 'garage.api.portal.generate_spare_part_approval_document',
+                    args: { service_order: serviceOrder, request_name: request?.name },
+                    freeze: true,
+                    freeze_message: __('Menyiapkan dokumen persetujuan...'),
+                });
+
+                const payload = response?.message || {};
+                const url = payload.print_url || payload.print_format_url;
+                if (url) {
+                    window.open(url, '_blank');
+                }
+
+                const message = payload.message || __('Dokumen persetujuan siap diunduh.');
+                frappe.show_alert({ message, indicator: payload.indicator || 'green' }, 5);
+            } catch (error) {
+                frappe.show_alert(
+                    { message: __('Gagal menyiapkan dokumen: {0}', [error.message || error]), indicator: 'red' },
+                    7,
+                );
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.blur();
+                }
             }
         }
 

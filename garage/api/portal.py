@@ -3,12 +3,13 @@ from __future__ import annotations
 
 from collections import defaultdict
 from contextlib import contextmanager
+from urllib.parse import quote
 import re
 from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Set
 
 import frappe
 from frappe import _
-from frappe.utils import cint, flt, now_datetime, nowdate
+from frappe.utils import cint, flt, get_url, now_datetime, nowdate
 
 # Whitelisted DocTypes that can be created/updated from the public portal along with
 # the permitted fields. The definition intentionally mirrors the JSON DocType schema
@@ -421,6 +422,53 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "receipt_number",
             "delivery_method",
             "issued_by",
+            "notes",
+        },
+    },
+    "Garage Division Request": {
+        "fields": {
+            "request_title",
+            "request_date",
+            "reference_type",
+            "reference_name",
+            "request_scope",
+            "requesting_division",
+            "target_division",
+            "request_purpose",
+            "approval_status",
+            "requested_by",
+            "requested_by_full_name",
+            "requesting_head",
+            "requesting_head_signature",
+            "requesting_head_signed_on",
+            "target_head",
+            "target_head_signature",
+            "target_head_signed_on",
+            "source_request_names",
+            "notes",
+        },
+        "children": {
+            "items": {
+                "fields": {
+                    "source_row",
+                    "item_code",
+                    "item_name",
+                    "description",
+                    "qty",
+                    "uom",
+                    "source",
+                    "requested_warehouse",
+                    "remarks",
+                }
+            }
+        },
+        "update_fields": {
+            "request_purpose",
+            "approval_status",
+            "requesting_head",
+            "requesting_head_signature",
+            "target_head",
+            "target_head_signature",
             "notes",
         },
     },
@@ -2139,6 +2187,119 @@ def update_spare_part_request_status(name: str, action: str) -> Dict[str, Any]:
         )
 
     return response
+
+
+@frappe.whitelist()
+def generate_spare_part_approval_document(
+    service_order: str, request_name: Optional[str] = None
+) -> Dict[str, Any]:
+    """Prepare or refresh a division approval document for spare part requests."""
+
+    _require_login()
+
+    if not service_order:
+        frappe.throw(_("Order servis wajib dipilih."))
+
+    service_order = service_order.strip()
+    service_doc = _get_doc("Garage Service Order", service_order)
+
+    parts = []
+    for row in service_doc.get("required_parts", []) or []:
+        if request_name and row.name != request_name:
+            continue
+        status = (row.stock_status or "").strip()
+        if status == "Cancelled":
+            continue
+        parts.append(row)
+
+    if request_name and not parts:
+        frappe.throw(_("Permintaan sparepart {0} tidak ditemukan.").format(request_name))
+
+    if not parts:
+        frappe.throw(_("Tidak ada permintaan sparepart aktif pada order {0}.").format(service_order))
+
+    existing = frappe.db.get_all(
+        "Garage Division Request",
+        filters=[
+            ["Garage Division Request", "reference_type", "=", "Garage Service Order"],
+            ["Garage Division Request", "reference_name", "=", service_order],
+            ["Garage Division Request", "docstatus", "!=", 2],
+        ],
+        fields=["name", "approval_status"],
+        order_by="creation desc",
+        limit=1,
+    )
+
+    division_doc = None
+    if existing:
+        candidate = existing[0]
+        if candidate.get("approval_status") not in {"Approved", "Rejected"}:
+            division_doc = _get_doc("Garage Division Request", candidate["name"])
+
+    if division_doc:
+        division_doc.set("items", [])
+    else:
+        division_doc = frappe.new_doc("Garage Division Request")
+        division_doc.reference_type = "Garage Service Order"
+        division_doc.reference_name = service_order
+        division_doc.requesting_division = division_doc.requesting_division or "Service"
+        division_doc.target_division = division_doc.target_division or "Spare Part"
+
+    division_doc.request_scope = _("Service Order {0}").format(service_order)
+    division_doc.request_date = nowdate()
+    if frappe.session.user != "Guest":
+        division_doc.requested_by = division_doc.requested_by or frappe.session.user
+    division_doc.approval_status = (
+        division_doc.approval_status
+        if division_doc.approval_status in {"Approved", "Rejected"}
+        else "Pending Approval"
+    )
+
+    if not division_doc.request_title:
+        division_doc.request_title = _("Persetujuan Sparepart {0}").format(service_order)
+    if not division_doc.request_purpose:
+        division_doc.request_purpose = _(
+            "Pemenuhan kebutuhan sparepart untuk service order {0}."
+        ).format(service_order)
+
+    for row in parts:
+        division_doc.append(
+            "items",
+            {
+                "source_row": row.name,
+                "item_code": row.item_code,
+                "item_name": row.item_name or row.item_code,
+                "description": row.description,
+                "qty": row.qty,
+                "uom": row.uom,
+                "source": row.source,
+                "requested_warehouse": row.warehouse,
+            },
+        )
+
+    source_names = sorted({row.name for row in parts if row.name})
+    division_doc.source_request_names = ", ".join(source_names)
+
+    if division_doc.is_new():
+        division_doc = _insert_doc(division_doc)
+    else:
+        division_doc = _save_doc(division_doc)
+
+    base_url = get_url()
+    doctype = "Garage Division Request"
+    print_format = "Standard"
+    print_url = (
+        f"{base_url}/printview?doctype={quote(doctype)}&name={quote(division_doc.name)}"
+        f"&format={quote(print_format)}&no_letterhead=1"
+    )
+    form_url = f"{base_url}/app/garage-division-request/{quote(division_doc.name)}"
+
+    return {
+        "name": division_doc.name,
+        "form_url": form_url,
+        "print_url": print_url,
+        "message": _("Dokumen persetujuan lintas divisi siap digunakan."),
+    }
 
 
 @frappe.whitelist()
