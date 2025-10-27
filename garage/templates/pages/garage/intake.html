@@ -665,6 +665,27 @@ header .navbar-nav li button {
     appearance: none;
 }
 
+.form-field input[type="checkbox"],
+.form-field input[type="radio"] {
+    width: auto;
+    min-width: 16px;
+    height: auto;
+    margin: 0;
+    appearance: auto !important;
+    cursor: pointer;
+}
+
+.form-field input[type="datetime-local"],
+.form-field input[type="date"],
+.form-field input[type="time"] {
+    appearance: auto !important;
+}
+
+.option-toggle__item input {
+    width: 16px;
+    height: 16px;
+}
+
 .form-field input::placeholder,
 .form-field textarea::placeholder {
     color: var(--text-muted);
