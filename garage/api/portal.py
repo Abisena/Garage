@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional,
 
 import frappe
 from frappe import _
-from frappe.utils import cint, flt, get_url, now_datetime, nowdate
+from frappe.utils import cint, flt, get_datetime, get_url, now_datetime, nowdate
 
 TECHNICIAN_ACTIVE_TASK_STATUSES = {"Pending", "In Progress"}
 SERVICE_ORDER_ACTIVE_STATUSES = {
@@ -103,6 +103,9 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "order_category",
             "status",
             "priority",
+            "intake_type",
+            "booking_channel",
+            "booking_reference",
             "service_booking_date",
             "customer",
             "vehicle",
@@ -193,6 +196,9 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "job_card_status",
             "work_order_status",
             "qc_status",
+            "intake_type",
+            "booking_channel",
+            "booking_reference",
             "estimated_delivery_date",
             "actual_delivery_date",
             "total_estimated_amount",
@@ -619,6 +625,11 @@ def _apply_defaults(doctype: str, doc: frappe.Document) -> None:
             doc.service_booking_date = now_datetime()
         if not doc.status or doc.status in {"", "Draft"}:
             doc.status = "Inspection"
+        if not doc.intake_type:
+            doc.intake_type = "Walk-In"
+        if doc.intake_type != "Booking":
+            doc.booking_channel = doc.booking_channel or None
+            doc.booking_reference = doc.booking_reference or None
     elif doctype == "Garage Spare Part Order" and not doc.order_date:
         doc.order_date = nowdate()
     elif doctype == "Garage Procurement Order" and not doc.order_date:
@@ -1406,6 +1417,9 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
         "service_order_type",
         "order_category",
         "priority",
+        "intake_type",
+        "booking_channel",
+        "booking_reference",
         "customer",
         "vehicle",
         "service_booking_date",
@@ -1462,7 +1476,36 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
     # Enrich with related data
     enriched_orders = []
     
+    current_timestamp = now_datetime()
+
     for order in orders:
+        intake_type = (order.get("intake_type") or "Walk-In").strip() or "Walk-In"
+        if intake_type not in {"Walk-In", "Booking"}:
+            intake_type = "Walk-In"
+        order["intake_type"] = intake_type
+        if intake_type != "Booking":
+            order["booking_channel"] = order.get("booking_channel") or None
+            order["booking_reference"] = order.get("booking_reference") or None
+        booking_dt = None
+        if intake_type == "Booking" and order.get("service_booking_date"):
+            try:
+                booking_dt = get_datetime(order.get("service_booking_date"))
+            except Exception:
+                booking_dt = None
+        if booking_dt:
+            delta_hours = (booking_dt - current_timestamp).total_seconds() / 3600.0
+            if delta_hours < -2:
+                order["booking_window"] = "overdue"
+            elif delta_hours < 0:
+                order["booking_window"] = "arriving"
+            elif delta_hours <= 2:
+                order["booking_window"] = "due"
+            elif delta_hours <= 24:
+                order["booking_window"] = "upcoming"
+            else:
+                order["booking_window"] = "scheduled"
+            order["hours_until_booking"] = delta_hours
+
         # Get customer info
         if order.get("customer"):
             try:
@@ -1828,6 +1871,9 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
         "service_order_type": doc.service_order_type,
         "order_category": doc.order_category,
         "priority": doc.priority,
+        "intake_type": doc.intake_type,
+        "booking_channel": doc.booking_channel,
+        "booking_reference": doc.booking_reference,
         "service_booking_date": doc.service_booking_date,
         "estimated_delivery_date": doc.estimated_delivery_date,
         "actual_delivery_date": doc.actual_delivery_date,
@@ -2346,6 +2392,22 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
             "vehicle": vehicle_name,
             "status": "Inspection",
         }
+        intake_type = (data.get("intake_type") or "Walk-In").strip() or "Walk-In"
+        if intake_type not in {"Walk-In", "Booking"}:
+            intake_type = "Walk-In"
+        service_payload["intake_type"] = intake_type
+        booking_channel = (data.get("booking_channel") or "").strip()
+        booking_reference = (data.get("booking_reference") or "").strip()
+        booking_datetime = (data.get("service_booking_date") or "").strip()
+        if intake_type == "Booking":
+            if booking_channel:
+                service_payload["booking_channel"] = booking_channel
+            if booking_reference:
+                service_payload["booking_reference"] = booking_reference
+            if booking_datetime:
+                service_payload["service_booking_date"] = booking_datetime
+        elif booking_datetime:
+            service_payload["service_booking_date"] = booking_datetime
         if intake_notes:
             service_payload["service_notes"] = intake_notes
             service_payload["inspection_summary"] = intake_notes

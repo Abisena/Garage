@@ -229,6 +229,10 @@ a:hover {
     min-width: 180px;
 }
 
+.meta-item.is-hidden {
+    display: none !important;
+}
+
 .meta-label {
     display: block;
     font-size: 12px;
@@ -894,6 +898,18 @@ a:hover {
                 <p>Lengkapi hasil pemeriksaan kendaraan dan bagikan update terbaru untuk tim bengkel.</p>
             </div>
             <div class="hero-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Jenis Registrasi</span>
+                    <span class="meta-value" id="display_intake_type">-</span>
+                </div>
+                <div class="meta-item is-hidden" id="meta_booking_channel">
+                    <span class="meta-label">Channel Booking</span>
+                    <span class="meta-value" id="display_booking_channel">-</span>
+                </div>
+                <div class="meta-item is-hidden" id="meta_booking_reference">
+                    <span class="meta-label">Referensi Booking</span>
+                    <span class="meta-value" id="display_booking_reference">-</span>
+                </div>
                 <div class="meta-item">
                     <span class="meta-label">Tanggal Booking</span>
                     <span class="meta-value" id="display_booking_date">-</span>
@@ -1846,6 +1862,35 @@ a:hover {
 
             const statusValue = order.status || order.workflow_state || order.job_card_status || 'Draft';
             applyStatusBadge(statusValue);
+
+            const intakeType = (order.intake_type || 'Walk-In').toLowerCase() === 'booking' ? 'Booking' : 'Walk-In';
+            document.getElementById('display_intake_type').textContent = intakeType;
+
+            const channelMeta = document.getElementById('meta_booking_channel');
+            const channelValue = document.getElementById('display_booking_channel');
+            const referenceMeta = document.getElementById('meta_booking_reference');
+            const referenceValue = document.getElementById('display_booking_reference');
+            const isBooking = intakeType === 'Booking';
+
+            if (channelMeta && channelValue) {
+                if (isBooking) {
+                    channelMeta.classList.remove('is-hidden');
+                    channelValue.textContent = order.booking_channel || '-';
+                } else {
+                    channelMeta.classList.add('is-hidden');
+                    channelValue.textContent = '-';
+                }
+            }
+
+            if (referenceMeta && referenceValue) {
+                if (isBooking) {
+                    referenceMeta.classList.remove('is-hidden');
+                    referenceValue.textContent = order.booking_reference || '-';
+                } else {
+                    referenceMeta.classList.add('is-hidden');
+                    referenceValue.textContent = '-';
+                }
+            }
 
             document.getElementById('display_booking_date').textContent = formatDisplayDate(order.service_booking_date);
 
