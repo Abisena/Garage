@@ -426,6 +426,8 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
     },
 }
 
+SPARE_REQUEST_CLOSED_STATUSES = ["Received", "Issued", "Rejected", "Cancelled"]
+
 DOC_TYPES = tuple(ALLOWED_DOCS.keys())
 DEFAULT_LIMIT = 20
 
@@ -832,7 +834,7 @@ def portal_bootstrap() -> Dict[str, Any]:
         ],
         filters=[
             ["parenttype", "=", "Garage Service Order"],
-            ["stock_status", "not in", ["Received", "Issued"]],
+            ["stock_status", "not in", SPARE_REQUEST_CLOSED_STATUSES],
         ],
         limit=200,
     )
@@ -1282,7 +1284,7 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
         ],
         filters=[
             ["parenttype", "=", "Garage Service Order"],
-            ["stock_status", "not in", ["Received", "Issued"]],
+            ["stock_status", "not in", SPARE_REQUEST_CLOSED_STATUSES],
         ],
         limit=200,
     )
@@ -2019,6 +2021,124 @@ def update_spare_part_order(name: str, updates: Optional[Any] = None) -> Dict[st
     data = _ensure_dict(updates or {})
     doc = _update_document("Garage Spare Part Order", name, data)
     return {"name": doc.name, "status": doc.status}
+
+
+@frappe.whitelist()
+def update_spare_part_request_status(name: str, action: str) -> Dict[str, Any]:
+    """Approve, reject, or cancel a spare part request from a service order."""
+
+    _require_login()
+
+    if not name:
+        frappe.throw(_("ID permintaan tidak boleh kosong."))
+
+    normalized_action = (action or "").strip().lower()
+    status_map = {
+        "approve": "Issued",
+        "approved": "Issued",  # alias in case the UI sends a descriptive label
+        "reject": "Rejected",
+        "rejected": "Rejected",
+        "cancel": "Cancelled",
+        "cancelled": "Cancelled",
+    }
+
+    if normalized_action not in status_map:
+        frappe.throw(_("Aksi {0} tidak dikenali.").format(action))
+
+    request = frappe.db.get_value(
+        "Garage Service Order Part",
+        name,
+        ["name", "parent", "item_code", "item_name", "qty", "stock_status", "uom", "source"],
+        as_dict=True,
+    )
+
+    if not request:
+        frappe.throw(_("Permintaan sparepart tidak ditemukan."))
+
+    current_status = (request.get("stock_status") or "").strip()
+    new_status = status_map[normalized_action]
+
+    if current_status == new_status:
+        return {
+            "name": name,
+            "parent": request.get("parent"),
+            "stock_status": new_status,
+            "message": _("Permintaan sudah berada pada status {0}.").format(new_status),
+        }
+
+    if current_status in SPARE_REQUEST_CLOSED_STATUSES:
+        frappe.throw(
+            _("Permintaan sudah diproses dengan status {0}.").format(current_status or _("tidak diketahui"))
+        )
+
+    response: Dict[str, Any] = {
+        "name": name,
+        "parent": request.get("parent"),
+        "stock_status": new_status,
+    }
+
+    if new_status == "Issued":
+        qty = flt(request.get("qty") or 0)
+        if qty <= 0:
+            frappe.throw(_("Jumlah permintaan tidak valid."))
+
+        part_code = (request.get("item_code") or "").strip()
+        if not part_code:
+            frappe.throw(_("Kode sparepart belum diisi pada permintaan."))
+
+        try:
+            part_doc = _get_doc("Garage Spare Part", part_code)
+        except Exception:
+            part_name = frappe.db.get_value("Garage Spare Part", {"part_code": part_code}, "name")
+            if not part_name:
+                frappe.throw(_("Sparepart {0} tidak ditemukan di master.").format(part_code))
+            part_doc = _get_doc("Garage Spare Part", part_name)
+
+        available = flt(part_doc.stock_qty or 0)
+        if qty > available:
+            frappe.throw(
+                _(
+                    "Stok {0} tidak mencukupi. Permintaan {1} {2}, stok tersedia {3}."
+                ).format(
+                    part_doc.part_name or part_code,
+                    "{:g}".format(flt(qty)),
+                    request.get("uom") or "",
+                    "{:g}".format(flt(available)),
+                )
+            )
+
+        part_doc.stock_qty = available - qty
+        if flt(part_doc.reserved_qty):
+            part_doc.reserved_qty = max(flt(part_doc.reserved_qty) - qty, 0)
+
+        _save_doc(part_doc)
+
+        updated_fields = {"stock_status": new_status}
+        if not request.get("source"):
+            updated_fields["source"] = "On Hand"
+
+        frappe.db.set_value("Garage Service Order Part", name, updated_fields)
+
+        response.update(
+            {
+                "message": _("Permintaan sparepart disetujui. Stok tersisa {0}.").format(
+                    "{:g}".format(flt(part_doc.stock_qty or 0))
+                ),
+                "part": {
+                    "name": part_doc.name,
+                    "part_code": part_doc.part_code,
+                    "stock_qty": part_doc.stock_qty,
+                    "reserved_qty": part_doc.reserved_qty,
+                },
+            }
+        )
+    else:
+        frappe.db.set_value("Garage Service Order Part", name, {"stock_status": new_status})
+        response["message"] = (
+            _("Permintaan sparepart ditolak.") if new_status == "Rejected" else _("Permintaan sparepart dibatalkan.")
+        )
+
+    return response
 
 
 @frappe.whitelist()
