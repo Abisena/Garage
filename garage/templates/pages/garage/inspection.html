@@ -2,6 +2,9 @@
 
 {% block title %}Inspeksi Service Order - Garage{% endblock %}
 
+{% set required_roles = ['Service', 'Servis', 'Service Advisor', 'Technician', 'Teknisi'] %}
+{% include "garage/templates/includes/role_guard.html" %}
+
 {% block head_include %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

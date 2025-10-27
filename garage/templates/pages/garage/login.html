@@ -1,0 +1,242 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Masuk Portal Bengkel{% endblock %}
+
+{% if frappe.session.user != "Guest" %}
+    {% set get_portal_home = frappe.get_attr("garage.config.role_map.get_portal_home_for_user") %}
+    {% set target_route = get_portal_home(frappe.session.user) %}
+    <script>
+        window.location.href = "{{ target_route }}";
+    </script>
+{% endif %}
+
+{% block head_include %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+    body {
+        background: #f0f4ff !important;
+        font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+    }
+
+    .portal-login {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 48px 16px;
+    }
+
+    .portal-login__card {
+        width: 100%;
+        max-width: 420px;
+        background: #ffffff;
+        border-radius: 20px;
+        box-shadow: 0 24px 48px rgba(0, 41, 120, 0.18);
+        padding: 40px;
+        border: 1px solid rgba(0, 102, 255, 0.08);
+    }
+
+    .portal-login__logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 32px;
+        color: #0052cc;
+        font-weight: 700;
+        font-size: 1.5rem;
+    }
+
+    .portal-login__heading {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+
+    .portal-login__heading h1 {
+        font-size: 1.625rem;
+        margin-bottom: 8px;
+        font-weight: 700;
+        color: #002978;
+    }
+
+    .portal-login__heading p {
+        color: #5e6c84;
+        font-size: 0.95rem;
+    }
+
+    .portal-login__form label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #002978;
+        font-size: 0.9rem;
+    }
+
+    .portal-login__form input {
+        width: 100%;
+        padding: 14px 16px;
+        border-radius: 12px;
+        border: 1px solid rgba(0, 41, 120, 0.15);
+        background: #f7f9ff;
+        font-size: 0.95rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .portal-login__form input:focus {
+        border-color: #0066ff;
+        box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
+        outline: none;
+        background: #ffffff;
+    }
+
+    .portal-login__button {
+        width: 100%;
+        margin-top: 12px;
+        padding: 14px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #0066ff, #003d99);
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 1rem;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .portal-login__button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .portal-login__button:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 24px rgba(0, 41, 120, 0.22);
+    }
+
+    .portal-login__status {
+        margin-top: 16px;
+        font-size: 0.9rem;
+        text-align: center;
+    }
+
+    .portal-login__status--error {
+        color: #c62828;
+    }
+
+    .portal-login__status--success {
+        color: #1b5e20;
+    }
+
+    .portal-login__status--info {
+        color: #0052cc;
+    }
+
+    @media (max-width: 480px) {
+        .portal-login__card {
+            padding: 32px 24px;
+            border-radius: 16px;
+        }
+
+        .portal-login__heading h1 {
+            font-size: 1.4rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<section class="portal-login">
+    <div class="portal-login__card">
+        <div class="portal-login__logo">
+            <span>🚗</span>
+            <span>Garage Portal</span>
+        </div>
+        <div class="portal-login__heading">
+            <h1>Masuk ke Portal Bengkel</h1>
+            <p>Pilih peran Anda untuk mengakses modul yang sesuai.</p>
+        </div>
+        <form id="portal-login-form" class="portal-login__form">
+            <div class="form-group">
+                <label for="login-username">Email atau Username</label>
+                <input type="text" id="login-username" name="usr" placeholder="nama@contoh.com" required>
+            </div>
+            <div class="form-group" style="margin-top: 20px;">
+                <label for="login-password">Kata Sandi</label>
+                <input type="password" id="login-password" name="pwd" placeholder="Masukkan kata sandi" required>
+            </div>
+            <button type="submit" class="portal-login__button">Masuk</button>
+            <div class="portal-login__status" id="login-status" hidden></div>
+        </form>
+    </div>
+</section>
+{% endblock %}
+
+{% block script %}
+<script>
+    (function () {
+        const form = document.getElementById('portal-login-form');
+        if (!form) {
+            return;
+        }
+
+        const status = document.getElementById('login-status');
+        const button = form.querySelector('button[type="submit"]');
+
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.hidden = false;
+            status.className = 'portal-login__status portal-login__status--' + type;
+        }
+
+        async function fetchPortalHome() {
+            try {
+                const response = await fetch('/api/method/garage.api.auth.get_portal_home');
+                const data = await response.json();
+                const route = (data.message && (data.message.route || data.message)) || '/garage';
+                window.location.href = route;
+            } catch (error) {
+                window.location.href = '/garage';
+            }
+        }
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const formData = new FormData(form);
+            const redirect = new URLSearchParams(window.location.search).get('redirect');
+            if (redirect) {
+                formData.set('redirect-to', redirect);
+            }
+
+            button.disabled = true;
+            showStatus('Memproses login...', 'info');
+
+            try {
+                const response = await fetch('/api/method/login', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.message) {
+                    showStatus('Login berhasil. Mengalihkan...', 'success');
+                    await fetchPortalHome();
+                } else {
+                    const message = data.message || 'Login gagal. Periksa kembali data Anda.';
+                    showStatus(message, 'error');
+                }
+            } catch (error) {
+                showStatus('Terjadi kesalahan saat menghubungkan ke server.', 'error');
+            } finally {
+                button.disabled = false;
+            }
+        });
+    })();
+</script>
+{% endblock %}

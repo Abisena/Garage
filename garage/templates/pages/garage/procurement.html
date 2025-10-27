@@ -2,6 +2,9 @@
 
 {% block title %}Pengadaan & Pergerakan Stok{% endblock %}
 
+{% set required_roles = ['Pengadaan', 'Procurement', 'Buying'] %}
+{% include "garage/templates/includes/role_guard.html" %}
+
 {% block head_include %}
 <style>
     /* ============================================================================

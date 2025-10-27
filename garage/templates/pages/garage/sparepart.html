@@ -2,6 +2,9 @@
 
 {% block title %}Penjualan Sparepart{% endblock %}
 
+{% set required_roles = ['Sparepart', 'Spare Part', 'Inventory', 'Inventory Controller'] %}
+{% include "garage/templates/includes/role_guard.html" %}
+
 {% block head_include %}
 <style>
 /* ============================================================================

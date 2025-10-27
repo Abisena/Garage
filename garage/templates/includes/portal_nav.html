@@ -1,13 +1,23 @@
+{% set user_roles = frappe.get_roles(frappe.session.user) if frappe.session.user != 'Guest' else [] %}
+{% set can_access = frappe.get_attr('garage.config.role_map.user_has_access') %}
+{% set nav_items = [
+    {'route': '/garage', 'key': 'overview', 'label': '🏠 Overview', 'roles': []},
+    {'route': '/garage/intake', 'key': 'intake', 'label': '📋 Registrasi', 'roles': ['Admin', 'Registrasi', 'Customer Service', 'Front Desk']},
+    {'route': '/garage/service', 'key': 'service', 'label': '🔧 Servis', 'roles': ['Service', 'Servis', 'Service Advisor', 'Technician', 'Teknisi']},
+    {'route': '/garage/sparepart', 'key': 'sparepart', 'label': '📦 Sparepart', 'roles': ['Sparepart', 'Spare Part', 'Inventory', 'Inventory Controller']},
+    {'route': '/garage/procurement', 'key': 'procurement', 'label': '🛒 Pengadaan', 'roles': ['Pengadaan', 'Procurement', 'Buying']},
+    {'route': '/garage/finance', 'key': 'finance', 'label': '💰 Keuangan', 'roles': ['Finance', 'Keuangan', 'Accountant', 'Cashier']},
+    {'route': '/garage/insight', 'key': 'insight', 'label': '📊 Insight', 'roles': []},
+] %}
+
 <div class="portal-nav-wrapper">
     <div class="container">
         <nav class="portal-nav">
-            <a href="/garage" class="{{ 'active' if active_page == 'overview' else '' }}">🏠 Overview</a>
-            <a href="/garage/intake" class="{{ 'active' if active_page == 'intake' else '' }}">📋 Registrasi</a>
-            <a href="/garage/service" class="{{ 'active' if active_page == 'service' else '' }}">🔧 Servis</a>
-            <a href="/garage/sparepart" class="{{ 'active' if active_page == 'sparepart' else '' }}">📦 Sparepart</a>
-            <a href="/garage/procurement" class="{{ 'active' if active_page == 'procurement' else '' }}">🛒 Pengadaan</a>
-            <a href="/garage/finance" class="{{ 'active' if active_page == 'finance' else '' }}">💰 Keuangan</a>
-            <a href="/garage/insight" class="{{ 'active' if active_page == 'insight' else '' }}">📊 Insight</a>
+            {% for item in nav_items %}
+                {% if can_access(user_roles, item.roles) %}
+                    <a href="{{ item.route }}" class="{{ 'active' if active_page == item.key else '' }}">{{ item.label }}</a>
+                {% endif %}
+            {% endfor %}
         </nav>
     </div>
 </div>

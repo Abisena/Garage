@@ -1,0 +1,30 @@
+{% set privileged_roles = ['Administrator', 'System Manager', 'Manager Bengkel', 'Garage Manager'] %}
+{% set allowed_roles = (required_roles or []) + privileged_roles %}
+{% if frappe.session.user == "Guest" %}
+    <script>
+        window.location.href = "/garage/login?redirect={{ frappe.request.path | urlencode }}";
+    </script>
+{% else %}
+    {% set ns = namespace(has_access=False) %}
+    {% for role in frappe.get_roles(frappe.session.user) %}
+        {% if role in allowed_roles %}
+            {% set ns.has_access = True %}
+        {% endif %}
+    {% endfor %}
+    {% if not ns.has_access %}
+        <script>
+            window.addEventListener('DOMContentLoaded', function () {
+                alert('Anda tidak memiliki akses');
+                fetch('/api/method/garage.api.auth.get_portal_home')
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        var route = (data.message && (data.message.route || data.message)) || '/garage/login';
+                        window.location.href = route || '/garage/login';
+                    })
+                    .catch(function () {
+                        window.location.href = '/garage/login';
+                    });
+            });
+        </script>
+    {% endif %}
+{% endif %}
