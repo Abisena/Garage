@@ -2322,7 +2322,7 @@ def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> 
     if not identifier:
         return {}
 
-    normalized_identifier = re.sub(r"\s+", "", identifier).upper()
+    normalized_identifier = _normalize_license_plate(identifier)
 
     customer_fields = [
         "name",
@@ -2341,11 +2341,12 @@ def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> 
     with _ignoring_permissions():
         if normalized_identifier:
             fields_sql = ", ".join(f"`{field}`" for field in VEHICLE_LOOKUP_FIELDS)
+            normalized_expr = _normalized_plate_expression("`license_plate`")
             vehicle_rows = frappe.db.sql(
                 f"""
                 SELECT {fields_sql}
                 FROM `tabGarage Vehicle`
-                WHERE REPLACE(upper(`license_plate`), ' ', '') = %s
+                WHERE {normalized_expr} = %s
                 ORDER BY modified DESC
                 LIMIT 1
                 """,
@@ -2362,6 +2363,9 @@ def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> 
                         customer_fields,
                         as_dict=True,
                     )
+                    if customer_doc:
+                        customer_doc = dict(customer_doc)
+                        customer_doc.setdefault("name", matched_vehicle["customer"])
 
         if not customer_doc:
             customer_doc = frappe.db.get_value(
@@ -2370,6 +2374,9 @@ def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> 
                 customer_fields,
                 as_dict=True,
             )
+            if customer_doc:
+                customer_doc = dict(customer_doc)
+                customer_doc.setdefault("name", identifier)
 
         if not customer_doc:
             customer_doc = frappe.db.get_value(
@@ -2378,6 +2385,8 @@ def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> 
                 customer_fields,
                 as_dict=True,
             )
+            if customer_doc:
+                customer_doc = dict(customer_doc)
 
         if not customer_doc:
             like_pattern = f"%{identifier}%"
@@ -2389,7 +2398,7 @@ def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> 
                 limit=1,
             )
             if matches:
-                customer_doc = matches[0]
+                customer_doc = dict(matches[0])
 
     if not customer_doc and not matched_vehicle:
         return {}
