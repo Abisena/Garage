@@ -1434,51 +1434,17 @@ button:disabled {
                             </header>
                             <div class="form-section__grid">
                                 <div class="form-field">
-                                    <label for="notes">Catatan Tambahan</label>
-                                    <textarea id="notes" name="notes" placeholder="Informasi penting mengenai customer atau kendaraan (contoh: riwayat servis, keluhan khusus, permintaan customer)"></textarea>
+                                    <label for="notes">Keluhan Customer</label>
+                                    <textarea id="notes" name="notes" placeholder="Catat keluhan utama customer, detail kondisi kendaraan, atau permintaan khusus"></textarea>
                                     <p class="form-hint">Gunakan catatan untuk riwayat servis, permintaan khusus, atau peringatan teknis.</p>
                                 </div>
                             </div>
                             <div class="form-actions">
-                                <button class="primary" type="submit">💾 Simpan Data Intake</button>
+                                <button class="primary" type="submit">💾 Save</button>
                                 <button class="secondary" type="reset">🔄 Reset Form</button>
                             </div>
                         </div>
                     </form>
-                </article>
-                <article class="portal-card">
-                    <div class="portal-card__header">
-                        <h2>Master Data Aktif</h2>
-                        <p class="lead">
-                            Ringkasan customer dan kendaraan terbaru. Klik nama dokumen untuk membuka detailnya di Desk.
-                        </p>
-                    </div>
-                    <div class="table-links table-links--flush">
-                        <a href="#" data-desk-link="Garage Customer" target="_blank">📁 Buka List Customer</a>
-                        <a href="#" data-desk-link="Garage Vehicle" target="_blank">🚗 Buka List Kendaraan</a>
-                    </div>
-                    <h3>Customer & Kendaraan Terbaru</h3>
-                    <table class="simple-table">
-                        <thead>
-                            <tr>
-                                <th>Customer</th>
-                                <th>Tipe</th>
-                                <th>Kontak</th>
-                                <th>VIP</th>
-                                <th>No. Polisi</th>
-                                <th>Merk</th>
-                                <th>Terakhir Servis</th>
-                            </tr>
-                        </thead>
-                        <tbody data-role="customer-vehicle-table">
-                            <tr>
-                                <td colspan="11" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                                    ⏳ Loading data customer & kendaraan...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div class="list-empty" data-empty="customer-vehicle">Belum ada data customer atau kendaraan yang terdaftar.</div>
                 </article>
             </div>
         </div>
