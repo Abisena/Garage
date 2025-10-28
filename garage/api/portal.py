@@ -72,6 +72,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "brand",
             "type_model",
             "model",
+            "model_variant",
             "vehicle_year",
             "color",
             "transmission",
@@ -88,6 +89,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "brand",
             "type_model",
             "model",
+            "model_variant",
             "vehicle_year",
             "color",
             "transmission",
@@ -1107,6 +1109,7 @@ def portal_bootstrap() -> Dict[str, Any]:
         "brand",
         "type_model",
         "model",
+        "model_variant",
         "vehicle_year",
         "color",
         "transmission",
@@ -1350,6 +1353,7 @@ def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, An
         "brand",
         "type_model",
         "model",
+        "model_variant",
         "vehicle_year",
         "color",
         "transmission",
@@ -1552,6 +1556,7 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
                     order["vehicle_brand"] = vehicle.get("brand")
                     order["vehicle_type_model"] = vehicle.get("type_model")
                     order["vehicle_model"] = vehicle.get("model")
+                    order["vehicle_model_variant"] = vehicle.get("model_variant")
                     order["vehicle_year"] = vehicle.get("vehicle_year")
                     order["vehicle_vin"] = vehicle.get("vin")
                     order["vehicle_engine_number"] = vehicle.get("engine_number")

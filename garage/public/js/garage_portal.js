@@ -1,27 +1,223 @@
 const VEHICLE_BRAND_MODELS = {
-    Toyota: ['Agya', 'Avanza', 'Calya', 'Camry', 'Fortuner', 'Hilux', 'Innova', 'Kijang Innova Zenix', 'Raize', 'Rush', 'Veloz', 'Yaris', 'Model Lainnya'],
-    Honda: ['Accord', 'BR-V', 'Brio', 'Civic', 'City', 'CR-V', 'HR-V', 'Jazz', 'Mobilio', 'WR-V', 'Model Lainnya'],
-    Suzuki: ['APV', 'Baleno', 'Carry', 'Ertiga', 'Ignis', 'Jimny', 'Karimun', 'S-Presso', 'XL7', 'Model Lainnya'],
-    Mitsubishi: ['Colt L300', 'Eclipse Cross', 'Outlander', 'Pajero Sport', 'Triton', 'Xpander', 'Xpander Cross', 'Model Lainnya'],
-    Nissan: ['Elgrand', 'Juke', 'Livina', 'Magnite', 'Serena', 'Terra', 'X-Trail', 'Model Lainnya'],
-    Daihatsu: ['Ayla', 'Grand Max', 'Rocky', 'Sigra', 'Sirion', 'Terios', 'Xenia', 'Model Lainnya'],
-    Mazda: ['2', '3', '6', 'CX-3', 'CX-30', 'CX-5', 'CX-8', 'CX-9', 'BT-50', 'Model Lainnya'],
-    Hyundai: ['Creta', 'Ioniq 5', 'Palisade', 'Santa Fe', 'Stargazer', 'Staria', 'Venue', 'Model Lainnya'],
-    Kia: ['Carens', 'Carnival', 'EV6', 'Seltos', 'Sonet', 'Sorento', 'Sportage', 'Model Lainnya'],
-    Wuling: ['Air EV', 'Almaz', 'Confero', 'Cortez', 'Formo', 'Model Lainnya'],
-    BMW: ['1 Series', '3 Series', '5 Series', '7 Series', 'X1', 'X3', 'X5', 'X6', 'Z4', 'Model Lainnya'],
-    'Mercedes-Benz': ['A-Class', 'C-Class', 'E-Class', 'S-Class', 'GLA', 'GLC', 'GLE', 'GLS', 'V-Class', 'Model Lainnya'],
-    Lexus: ['ES', 'GX', 'IS', 'LX', 'NX', 'RX', 'UX', 'Model Lainnya'],
-    Ford: ['Everest', 'Explorer', 'Fiesta', 'Focus', 'Mustang', 'Ranger', 'Model Lainnya'],
-    Chevrolet: ['Captiva', 'Colorado', 'Spark', 'Spin', 'Trailblazer', 'Trax', 'Model Lainnya'],
-    Isuzu: ['D-Max', 'Elf', 'Giga', 'Mu-X', 'Panther', 'Traga', 'Model Lainnya'],
-    Hino: ['300 Series', '500 Series', '700 Series', 'Dutro', 'Ranger', 'Model Lainnya'],
-    Lamborghini: ['Aventador', 'Countach', 'Diablo', 'Gallardo', 'Huracán', 'Murciélago', 'Urus'],
-    Ferrari: ['296 GTB', '812 Superfast', 'F8 Tributo', 'Portofino', 'Roma', 'SF90 Stradale'],
-    'Land Rover': ['Defender', 'Discovery', 'Discovery Sport', 'Range Rover', 'Range Rover Evoque', 'Range Rover Sport'],
-    'Range Rover': ['Evoque', 'Range Rover', 'Range Rover Sport', 'Velar'],
-    Tesla: ['Model 3', 'Model S', 'Model X', 'Model Y'],
-    'Lainnya': ['Model Lainnya'],
+    Toyota: [
+        { name: 'Agya', variants: ['Agya 1.2 G M/T', 'Agya GR-S CVT', 'Agya Varian Lainnya'] },
+        { name: 'Avanza', variants: ['Avanza 1.3 E M/T', 'Avanza 1.5 G CVT', 'Avanza Varian Lainnya'] },
+        { name: 'Calya', variants: ['Calya E M/T', 'Calya G A/T', 'Calya Varian Lainnya'] },
+        { name: 'Camry', variants: ['Camry 2.5 V A/T', 'Camry Hybrid', 'Camry Varian Lainnya'] },
+        { name: 'Fortuner', variants: ['Fortuner 2.4 G 4x2', 'Fortuner 2.8 GR Sport 4x4', 'Fortuner Varian Lainnya'] },
+        { name: 'Hilux', variants: ['Hilux Single Cabin 4x4', 'Hilux Double Cabin V', 'Hilux Varian Lainnya'] },
+        { name: 'Innova', variants: ['Innova 2.0 V A/T', 'Innova Venturer', 'Innova Varian Lainnya'] },
+        { name: 'Kijang Innova Zenix', variants: ['Zenix G HEV', 'Zenix V HEV', 'Zenix Varian Lainnya'] },
+        { name: 'Raize', variants: ['Raize 1.0T G M/T', 'Raize 1.0T GR Sport CVT', 'Raize Varian Lainnya'] },
+        { name: 'Rush', variants: ['Rush G M/T', 'Rush TRD Sportivo A/T', 'Rush Varian Lainnya'] },
+        { name: 'Veloz', variants: ['Veloz Q CVT', 'Veloz Q CVT TSS', 'Veloz Varian Lainnya'] },
+        { name: 'Yaris', variants: ['Yaris G CVT', 'Yaris GR Sport', 'Yaris Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'CVT', 'Varian Lainnya'] },
+    ],
+    Honda: [
+        { name: 'Accord', variants: ['Accord Turbo ES', 'Accord Turbo VTi-L', 'Accord Varian Lainnya'] },
+        { name: 'BR-V', variants: ['BR-V S M/T', 'BR-V Prestige CVT', 'BR-V Varian Lainnya'] },
+        { name: 'Brio', variants: ['Brio Satya E M/T', 'Brio RS CVT', 'Brio Varian Lainnya'] },
+        { name: 'Civic', variants: ['Civic RS', 'Civic Type R', 'Civic Varian Lainnya'] },
+        { name: 'City', variants: ['City E CVT', 'City RS Hatchback', 'City Varian Lainnya'] },
+        { name: 'CR-V', variants: ['CR-V 1.5 Turbo', 'CR-V 2.0 Hybrid', 'CR-V Varian Lainnya'] },
+        { name: 'HR-V', variants: ['HR-V S CVT', 'HR-V RS Turbo', 'HR-V Varian Lainnya'] },
+        { name: 'Jazz', variants: ['Jazz RS CVT', 'Jazz RS M/T', 'Jazz Varian Lainnya'] },
+        { name: 'Mobilio', variants: ['Mobilio S M/T', 'Mobilio RS CVT', 'Mobilio Varian Lainnya'] },
+        { name: 'WR-V', variants: ['WR-V E CVT', 'WR-V RS CVT', 'WR-V Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'CVT', 'Varian Lainnya'] },
+    ],
+    Suzuki: [
+        { name: 'APV', variants: ['APV Arena GA M/T', 'APV Luxury A/T', 'APV Varian Lainnya'] },
+        { name: 'Baleno', variants: ['Baleno Hatchback M/T', 'Baleno Hatchback A/T', 'Baleno Varian Lainnya'] },
+        { name: 'Carry', variants: ['Carry Flat Deck', 'Carry Wide Deck', 'Carry Varian Lainnya'] },
+        { name: 'Ertiga', variants: ['Ertiga GA M/T', 'Ertiga Hybrid GX', 'Ertiga Varian Lainnya'] },
+        { name: 'Ignis', variants: ['Ignis GL M/T', 'Ignis GX AGS', 'Ignis Varian Lainnya'] },
+        { name: 'Jimny', variants: ['Jimny 3 Door AT', 'Jimny 5 Door AT', 'Jimny Varian Lainnya'] },
+        { name: 'Karimun', variants: ['Karimun Wagon R GA', 'Karimun Wagon R GS', 'Karimun Varian Lainnya'] },
+        { name: 'S-Presso', variants: ['S-Presso GL M/T', 'S-Presso GL AGS', 'S-Presso Varian Lainnya'] },
+        { name: 'XL7', variants: ['XL7 Beta M/T', 'XL7 Alpha A/T', 'XL7 Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'CVT', 'Varian Lainnya'] },
+    ],
+    Mitsubishi: [
+        { name: 'Colt L300', variants: ['Colt L300 Pick Up', 'Colt L300 Cab Chassis', 'Colt L300 Varian Lainnya'] },
+        { name: 'Eclipse Cross', variants: ['Eclipse Cross Ultimate', 'Eclipse Cross PHEV', 'Eclipse Cross Varian Lainnya'] },
+        { name: 'Outlander', variants: ['Outlander Sport GLS', 'Outlander PHEV', 'Outlander Varian Lainnya'] },
+        { name: 'Pajero Sport', variants: ['Pajero Sport Exceed 4x2', 'Pajero Sport Dakar Ultimate 4x4', 'Pajero Sport Varian Lainnya'] },
+        { name: 'Triton', variants: ['Triton HDX 4x4', 'Triton Athlete 4x4 AT', 'Triton Varian Lainnya'] },
+        { name: 'Xpander', variants: ['Xpander GLS M/T', 'Xpander Ultimate CVT', 'Xpander Varian Lainnya'] },
+        { name: 'Xpander Cross', variants: ['Xpander Cross MT', 'Xpander Cross Premium CVT', 'Xpander Cross Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'CVT', 'Varian Lainnya'] },
+    ],
+    Nissan: [
+        { name: 'Elgrand', variants: ['Elgrand Highway Star', 'Elgrand VIP', 'Elgrand Varian Lainnya'] },
+        { name: 'Juke', variants: ['Juke RX', 'Juke Red Edition', 'Juke Varian Lainnya'] },
+        { name: 'Livina', variants: ['Livina EL M/T', 'Livina VE CVT', 'Livina Varian Lainnya'] },
+        { name: 'Magnite', variants: ['Magnite Upper MT', 'Magnite Premium CVT', 'Magnite Varian Lainnya'] },
+        { name: 'Serena', variants: ['Serena HWS Autech', 'Serena e-POWER', 'Serena Varian Lainnya'] },
+        { name: 'Terra', variants: ['Terra VL 4x2', 'Terra VL 4x4', 'Terra Varian Lainnya'] },
+        { name: 'X-Trail', variants: ['X-Trail 2.5 CVT', 'X-Trail Hybrid', 'X-Trail Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'CVT', 'Varian Lainnya'] },
+    ],
+    Daihatsu: [
+        { name: 'Ayla', variants: ['Ayla X M/T', 'Ayla R CVT', 'Ayla Varian Lainnya'] },
+        { name: 'Grand Max', variants: ['Gran Max Pick Up', 'Gran Max Blind Van', 'Gran Max Varian Lainnya'] },
+        { name: 'Rocky', variants: ['Rocky 1.0T R M/T', 'Rocky 1.0T GR CVT', 'Rocky Varian Lainnya'] },
+        { name: 'Sigra', variants: ['Sigra 1.0 D M/T', 'Sigra 1.2 R AT', 'Sigra Varian Lainnya'] },
+        { name: 'Sirion', variants: ['Sirion X M/T', 'Sirion R CVT', 'Sirion Varian Lainnya'] },
+        { name: 'Terios', variants: ['Terios X M/T', 'Terios R Custom A/T', 'Terios Varian Lainnya'] },
+        { name: 'Xenia', variants: ['Xenia 1.3 X MT', 'Xenia 1.5 R CVT', 'Xenia Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'CVT', 'Varian Lainnya'] },
+    ],
+    Mazda: [
+        { name: '2', variants: ['Mazda2 Hatchback', 'Mazda2 Sedan', 'Mazda2 Varian Lainnya'] },
+        { name: '3', variants: ['Mazda3 Hatchback', 'Mazda3 Sedan', 'Mazda3 Varian Lainnya'] },
+        { name: '6', variants: ['Mazda6 Sedan Elite', 'Mazda6 Estate Elite', 'Mazda6 Varian Lainnya'] },
+        { name: 'CX-3', variants: ['CX-3 Sport 1.5', 'CX-3 Pro 2.0', 'CX-3 Varian Lainnya'] },
+        { name: 'CX-30', variants: ['CX-30 Touring', 'CX-30 GT', 'CX-30 Varian Lainnya'] },
+        { name: 'CX-5', variants: ['CX-5 Elite', 'CX-5 Kuro', 'CX-5 Varian Lainnya'] },
+        { name: 'CX-8', variants: ['CX-8 Touring', 'CX-8 Elite', 'CX-8 Varian Lainnya'] },
+        { name: 'CX-9', variants: ['CX-9 AWD', 'CX-9 FWD', 'CX-9 Varian Lainnya'] },
+        { name: 'BT-50', variants: ['BT-50 4x2', 'BT-50 4x4', 'BT-50 Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'Varian Lainnya'] },
+    ],
+    Hyundai: [
+        { name: 'Creta', variants: ['Creta Active MT', 'Creta Prime IVT', 'Creta Varian Lainnya'] },
+        { name: 'Ioniq 5', variants: ['Ioniq 5 Prime', 'Ioniq 5 Signature', 'Ioniq 5 Varian Lainnya'] },
+        { name: 'Palisade', variants: ['Palisade Prime', 'Palisade Signature AWD', 'Palisade Varian Lainnya'] },
+        { name: 'Santa Fe', variants: ['Santa Fe GLS', 'Santa Fe Signature', 'Santa Fe Varian Lainnya'] },
+        { name: 'Stargazer', variants: ['Stargazer Active MT', 'Stargazer Prime IVT', 'Stargazer Varian Lainnya'] },
+        { name: 'Staria', variants: ['Staria Signature 7', 'Staria Signature 9', 'Staria Varian Lainnya'] },
+        { name: 'Venue', variants: ['Venue MT', 'Venue IVT', 'Venue Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'CVT', 'Varian Lainnya'] },
+    ],
+    Kia: [
+        { name: 'Carens', variants: ['Carens 1.5 MPI', 'Carens 1.4T DCT', 'Carens Varian Lainnya'] },
+        { name: 'Carnival', variants: ['Carnival Dynamic', 'Carnival Premiere', 'Carnival Varian Lainnya'] },
+        { name: 'EV6', variants: ['EV6 GT-Line', 'EV6 GT', 'EV6 Varian Lainnya'] },
+        { name: 'Seltos', variants: ['Seltos EX', 'Seltos GT Line', 'Seltos Varian Lainnya'] },
+        { name: 'Sonet', variants: ['Sonet Smart MT', 'Sonet Premiere IVT', 'Sonet Varian Lainnya'] },
+        { name: 'Sorento', variants: ['Sorento HEV', 'Sorento Diesel', 'Sorento Varian Lainnya'] },
+        { name: 'Sportage', variants: ['Sportage Hybrid', 'Sportage GT-Line', 'Sportage Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'Varian Lainnya'] },
+    ],
+    Wuling: [
+        { name: 'Air EV', variants: ['Air EV Standard Range', 'Air EV Long Range', 'Air EV Varian Lainnya'] },
+        { name: 'Almaz', variants: ['Almaz Smart Enjoy', 'Almaz RS Pro', 'Almaz Varian Lainnya'] },
+        { name: 'Confero', variants: ['Confero S MT', 'Confero S ACT', 'Confero Varian Lainnya'] },
+        { name: 'Cortez', variants: ['Cortez CE', 'Cortez EX', 'Cortez Varian Lainnya'] },
+        { name: 'Formo', variants: ['Formo Blind Van', 'Formo Max Pick Up', 'Formo Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'Varian Lainnya'] },
+    ],
+    BMW: [
+        { name: '1 Series', variants: ['118i Sport Line', '128ti', '1 Series Varian Lainnya'] },
+        { name: '3 Series', variants: ['320i Sport', '330i M Sport', '3 Series Varian Lainnya'] },
+        { name: '5 Series', variants: ['520i M Sport', '530i Opulence', '5 Series Varian Lainnya'] },
+        { name: '7 Series', variants: ['730Li M Sport', '740Li Opulence', '7 Series Varian Lainnya'] },
+        { name: 'X1', variants: ['X1 sDrive18i', 'X1 sDrive20i', 'X1 Varian Lainnya'] },
+        { name: 'X3', variants: ['X3 sDrive20i', 'X3 xDrive30i', 'X3 Varian Lainnya'] },
+        { name: 'X5', variants: ['X5 xDrive40i', 'X5 xDrive45e', 'X5 Varian Lainnya'] },
+        { name: 'X6', variants: ['X6 xDrive40i', 'X6 M Competition', 'X6 Varian Lainnya'] },
+        { name: 'Z4', variants: ['Z4 sDrive30i', 'Z4 M40i', 'Z4 Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'Varian Lainnya'] },
+    ],
+    'Mercedes-Benz': [
+        { name: 'A-Class', variants: ['A 200 Progressive Line', 'AMG A 35 4MATIC', 'A-Class Varian Lainnya'] },
+        { name: 'C-Class', variants: ['C 200 Avantgarde', 'C 300 AMG Line', 'C-Class Varian Lainnya'] },
+        { name: 'E-Class', variants: ['E 200 Avantgarde', 'E 300 AMG Line', 'E-Class Varian Lainnya'] },
+        { name: 'S-Class', variants: ['S 450 Luxury', 'S 580 4MATIC', 'S-Class Varian Lainnya'] },
+        { name: 'GLA', variants: ['GLA 200 Progressive', 'AMG GLA 35 4MATIC', 'GLA Varian Lainnya'] },
+        { name: 'GLC', variants: ['GLC 200 AMG Line', 'GLC 300 Coupe', 'GLC Varian Lainnya'] },
+        { name: 'GLE', variants: ['GLE 450 AMG Line', 'GLE 53 Coupe', 'GLE Varian Lainnya'] },
+        { name: 'GLS', variants: ['GLS 450 AMG Line', 'Maybach GLS 600', 'GLS Varian Lainnya'] },
+        { name: 'V-Class', variants: ['V 260 Long', 'V 300 AMG Line', 'V-Class Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'Varian Lainnya'] },
+    ],
+    Lexus: [
+        { name: 'ES', variants: ['ES 300h', 'ES 250 Luxury', 'ES Varian Lainnya'] },
+        { name: 'GX', variants: ['GX 460 Luxury', 'GX 550 Overtrail', 'GX Varian Lainnya'] },
+        { name: 'IS', variants: ['IS 300h', 'IS 350 F Sport', 'IS Varian Lainnya'] },
+        { name: 'LX', variants: ['LX 600', 'LX 600 F Sport', 'LX Varian Lainnya'] },
+        { name: 'NX', variants: ['NX 250 Luxury', 'NX 350h Luxury', 'NX Varian Lainnya'] },
+        { name: 'RX', variants: ['RX 350 Luxury', 'RX 450h+', 'RX Varian Lainnya'] },
+        { name: 'UX', variants: ['UX 200 Luxury', 'UX 300e', 'UX Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'Varian Lainnya'] },
+    ],
+    Ford: [
+        { name: 'Everest', variants: ['Everest Trend 4x2', 'Everest Titanium 4x4', 'Everest Varian Lainnya'] },
+        { name: 'Explorer', variants: ['Explorer Limited', 'Explorer ST-Line', 'Explorer Varian Lainnya'] },
+        { name: 'Fiesta', variants: ['Fiesta Trend M/T', 'Fiesta Titanium A/T', 'Fiesta Varian Lainnya'] },
+        { name: 'Focus', variants: ['Focus Trend', 'Focus Titanium', 'Focus Varian Lainnya'] },
+        { name: 'Mustang', variants: ['Mustang EcoBoost', 'Mustang GT', 'Mustang Varian Lainnya'] },
+        { name: 'Ranger', variants: ['Ranger XL 4x4', 'Ranger Raptor', 'Ranger Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'Varian Lainnya'] },
+    ],
+    Chevrolet: [
+        { name: 'Captiva', variants: ['Captiva LTZ', 'Captiva Premier', 'Captiva Varian Lainnya'] },
+        { name: 'Colorado', variants: ['Colorado LTZ 4x4', 'Colorado High Country', 'Colorado Varian Lainnya'] },
+        { name: 'Spark', variants: ['Spark LT M/T', 'Spark LTZ A/T', 'Spark Varian Lainnya'] },
+        { name: 'Spin', variants: ['Spin LTZ', 'Spin Activ', 'Spin Varian Lainnya'] },
+        { name: 'Trailblazer', variants: ['Trailblazer LT 4x2', 'Trailblazer Z71 4x4', 'Trailblazer Varian Lainnya'] },
+        { name: 'Trax', variants: ['Trax LS', 'Trax Premier', 'Trax Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'Varian Lainnya'] },
+    ],
+    Isuzu: [
+        { name: 'D-Max', variants: ['D-Max Single Cabin', 'D-Max Double Cabin V-Cross', 'D-Max Varian Lainnya'] },
+        { name: 'Elf', variants: ['Elf NKR 71', 'Elf NLR 55', 'Elf Varian Lainnya'] },
+        { name: 'Giga', variants: ['Giga FVR 34', 'Giga FVM 34', 'Giga Varian Lainnya'] },
+        { name: 'Mu-X', variants: ['Mu-X LS 4x2', 'Mu-X Royale 4x4', 'Mu-X Varian Lainnya'] },
+        { name: 'Panther', variants: ['Panther Smart', 'Panther Grand Touring', 'Panther Varian Lainnya'] },
+        { name: 'Traga', variants: ['Traga Pick Up', 'Traga Box', 'Traga Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'Varian Lainnya'] },
+    ],
+    Hino: [
+        { name: '300 Series', variants: ['300 Series Dutro 130 HD', '300 Series Dutro 136 HD', '300 Series Varian Lainnya'] },
+        { name: '500 Series', variants: ['500 Series FM 260 JD', '500 Series FG 235 JP', '500 Series Varian Lainnya'] },
+        { name: '700 Series', variants: ['700 Series SH 1EER', '700 Series SS 1EK', '700 Series Varian Lainnya'] },
+        { name: 'Dutro', variants: ['Dutro 110 LD', 'Dutro 130 HD', 'Dutro Varian Lainnya'] },
+        { name: 'Ranger', variants: ['Ranger FG 235 JJ', 'Ranger FM 260 TI', 'Ranger Varian Lainnya'] },
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'Varian Lainnya'] },
+    ],
+    Lamborghini: [
+        { name: 'Aventador', variants: ['Aventador S', 'Aventador SVJ', 'Aventador Varian Lainnya'] },
+        { name: 'Countach', variants: ['Countach LPI 800-4', 'Countach 25th Anniversary', 'Countach Varian Lainnya'] },
+        { name: 'Diablo', variants: ['Diablo VT', 'Diablo GT', 'Diablo Varian Lainnya'] },
+        { name: 'Gallardo', variants: ['Gallardo LP560-4', 'Gallardo Superleggera', 'Gallardo Varian Lainnya'] },
+        { name: 'Huracán', variants: ['Huracán EVO', 'Huracán STO', 'Huracán Varian Lainnya'] },
+        { name: 'Murciélago', variants: ['Murciélago LP640', 'Murciélago LP670-4 SV', 'Murciélago Varian Lainnya'] },
+        { name: 'Urus', variants: ['Urus S', 'Urus Performante', 'Urus Varian Lainnya'] },
+    ],
+    Ferrari: [
+        { name: '296 GTB', variants: ['296 GTB', '296 GTS', '296 Series Varian Lainnya'] },
+        { name: '812 Superfast', variants: ['812 Superfast', '812 GTS', '812 Series Varian Lainnya'] },
+        { name: 'F8 Tributo', variants: ['F8 Tributo', 'F8 Spider', 'F8 Series Varian Lainnya'] },
+        { name: 'Portofino', variants: ['Portofino M', 'Portofino Varian Lainnya', 'Portofino Speciale'] },
+        { name: 'Roma', variants: ['Roma', 'Roma Spider', 'Roma Varian Lainnya'] },
+        { name: 'SF90 Stradale', variants: ['SF90 Stradale', 'SF90 Spider', 'SF90 Varian Lainnya'] },
+    ],
+    'Land Rover': [
+        { name: 'Defender', variants: ['Defender 90', 'Defender 110', 'Defender Varian Lainnya'] },
+        { name: 'Discovery', variants: ['Discovery SE', 'Discovery HSE', 'Discovery Varian Lainnya'] },
+        { name: 'Discovery Sport', variants: ['Discovery Sport S', 'Discovery Sport R-Dynamic', 'Discovery Sport Varian Lainnya'] },
+        { name: 'Range Rover', variants: ['Range Rover SE', 'Range Rover Autobiography', 'Range Rover Varian Lainnya'] },
+        { name: 'Range Rover Evoque', variants: ['Evoque R-Dynamic SE', 'Evoque Autobiography', 'Evoque Varian Lainnya'] },
+        { name: 'Range Rover Sport', variants: ['Range Rover Sport SE', 'Range Rover Sport Autobiography', 'Range Rover Sport Varian Lainnya'] },
+    ],
+    'Range Rover': [
+        { name: 'Evoque', variants: ['Evoque R-Dynamic', 'Evoque Autobiography', 'Evoque Varian Lainnya'] },
+        { name: 'Range Rover', variants: ['Range Rover SE', 'Range Rover SV', 'Range Rover Varian Lainnya'] },
+        { name: 'Range Rover Sport', variants: ['Range Rover Sport Dynamic SE', 'Range Rover Sport Autobiography', 'Range Rover Sport Varian Lainnya'] },
+        { name: 'Velar', variants: ['Velar S', 'Velar Dynamic HSE', 'Velar Varian Lainnya'] },
+    ],
+    Tesla: [
+        { name: 'Model 3', variants: ['Model 3 RWD', 'Model 3 Performance', 'Model 3 Varian Lainnya'] },
+        { name: 'Model S', variants: ['Model S Dual Motor', 'Model S Plaid', 'Model S Varian Lainnya'] },
+        { name: 'Model X', variants: ['Model X Dual Motor', 'Model X Plaid', 'Model X Varian Lainnya'] },
+        { name: 'Model Y', variants: ['Model Y RWD', 'Model Y Performance', 'Model Y Varian Lainnya'] },
+    ],
+    Lainnya: [
+        { name: 'Model Lainnya', variants: ['Manual', 'Automatic', 'CVT', 'Varian Lainnya'] },
+    ],
 };
 
 (() => {
@@ -92,6 +288,7 @@ const VEHICLE_BRAND_MODELS = {
                 receiptPaymentEntry: document.getElementById('receipt_payment_entry'),
                 brand: document.getElementById('brand'),
                 model: document.getElementById('model'),
+                modelVariant: document.getElementById('model_variant'),
             };
 
             this.tables = {
@@ -187,6 +384,7 @@ const VEHICLE_BRAND_MODELS = {
                         'brand',
                         'type_model',
                         'model',
+                        'model_variant',
                         'vehicle_year',
                         'color',
                         'transmission',
@@ -557,13 +755,14 @@ const VEHICLE_BRAND_MODELS = {
             }
             const brandSelect = this.selects.brand;
             const modelSelect = this.selects.model;
+            const variantValue = vehicle.model_variant || '';
             if (brandSelect) {
                 const brandValue = vehicle.brand || '';
                 this.populateBrandOptions(brandValue);
                 this.setSelectValue(brandSelect, brandValue);
-                this.populateModelOptions(brandValue, vehicle.model || '');
+                this.populateModelOptions(brandValue, vehicle.model || '', variantValue);
             } else if (modelSelect) {
-                this.populateModelOptions('', vehicle.model || '');
+                this.populateModelOptions('', vehicle.model || '', variantValue);
             }
             const mapping = {
                 type_model: 'type_model',
@@ -912,24 +1111,38 @@ const VEHICLE_BRAND_MODELS = {
         setupBrandModelControls() {
             const brandSelect = this.selects.brand;
             const modelSelect = this.selects.model;
+            const variantSelect = this.selects.modelVariant;
             if (!brandSelect || !modelSelect) {
                 return;
             }
             const currentBrand = brandSelect.value || '';
             const currentModel = modelSelect.value || '';
+            const currentVariant = variantSelect?.value || '';
             this.populateBrandOptions(currentBrand);
-            this.populateModelOptions(currentBrand, currentModel);
+            this.populateModelOptions(currentBrand, currentModel, currentVariant);
             if (this.brandModelInitialized) {
                 return;
             }
             brandSelect.addEventListener('change', () => {
                 const selectedBrand = brandSelect.value || '';
-                this.populateModelOptions(selectedBrand);
+                if (variantSelect) {
+                    variantSelect.value = '';
+                    variantSelect.removeAttribute('data-pending-value');
+                }
+                this.populateModelOptions(selectedBrand, '', '');
                 this.scheduleBootstrapRefresh();
             });
             modelSelect.addEventListener('change', () => {
+                const selectedBrand = brandSelect.value || '';
+                const selectedModel = modelSelect.value || '';
+                this.populateVariantOptions(selectedBrand, selectedModel);
                 this.scheduleBootstrapRefresh();
             });
+            if (variantSelect) {
+                variantSelect.addEventListener('change', () => {
+                    this.scheduleBootstrapRefresh();
+                });
+            }
             this.brandModelInitialized = true;
         }
 
@@ -968,13 +1181,13 @@ const VEHICLE_BRAND_MODELS = {
             brandSelect.removeAttribute('data-pending-value');
         }
 
-        populateModelOptions(brand, selectedModel = '') {
+        populateModelOptions(brand, selectedModel = '', selectedVariant = undefined) {
             const modelSelect = this.selects.model;
             if (!modelSelect) {
                 return;
             }
             const normalizedBrand = brand || '';
-            const models = this.brandModelMap?.[normalizedBrand] || [];
+            const models = this.getModelsForBrand(normalizedBrand);
             let previousSelection = selectedModel || modelSelect.value || '';
             const pendingValue = modelSelect.getAttribute('data-pending-value');
             if (!previousSelection && pendingValue) {
@@ -987,12 +1200,12 @@ const VEHICLE_BRAND_MODELS = {
             modelSelect.appendChild(placeholder);
             models.forEach((model) => {
                 const option = document.createElement('option');
-                option.value = model;
-                option.textContent = model;
+                option.value = model.name;
+                option.textContent = model.name;
                 modelSelect.appendChild(option);
             });
             if (previousSelection) {
-                const hasModel = models.includes(previousSelection);
+                const hasModel = models.some((model) => model.name === previousSelection);
                 if (!hasModel) {
                     const option = document.createElement('option');
                     option.value = previousSelection;
@@ -1005,6 +1218,104 @@ const VEHICLE_BRAND_MODELS = {
             }
             modelSelect.disabled = !models.length && !previousSelection;
             modelSelect.removeAttribute('data-pending-value');
+            const variantSelect = this.selects.modelVariant;
+            if (variantSelect) {
+                const effectiveModel = modelSelect.value || previousSelection || '';
+                this.populateVariantOptions(normalizedBrand, effectiveModel, selectedVariant);
+            }
+        }
+
+        getModelsForBrand(brand) {
+            const entries = this.brandModelMap?.[brand];
+            if (!Array.isArray(entries)) {
+                return [];
+            }
+            return entries
+                .map((entry) => {
+                    if (typeof entry === 'string') {
+                        return { name: entry, variants: undefined };
+                    }
+                    if (entry && typeof entry === 'object') {
+                        const name = entry.name || '';
+                        if (!name) {
+                            return null;
+                        }
+                        const variants = Array.isArray(entry.variants) ? entry.variants.filter((variant) => !!variant) : undefined;
+                        return { name, variants };
+                    }
+                    return null;
+                })
+                .filter((entry) => entry && entry.name);
+        }
+
+        getModelEntry(brand, model) {
+            if (!model) {
+                return null;
+            }
+            const models = this.getModelsForBrand(brand);
+            return models.find((entry) => entry.name === model) || null;
+        }
+
+        generateModelVariants(model) {
+            const base = (model || '').trim();
+            if (!base) {
+                return [];
+            }
+            if (/lainnya/i.test(base)) {
+                return ['Manual', 'Automatic', 'CVT', 'Varian Lainnya'];
+            }
+            return [
+                `${base} Manual`,
+                `${base} Automatic`,
+                `${base} CVT`,
+                `${base} Varian Lainnya`,
+            ];
+        }
+
+        populateVariantOptions(brand, model, selectedVariant = undefined) {
+            const variantSelect = this.selects.modelVariant;
+            if (!variantSelect) {
+                return;
+            }
+            let previousSelection = selectedVariant !== undefined ? selectedVariant : variantSelect.value || '';
+            const pendingValue = variantSelect.getAttribute('data-pending-value');
+            if (!previousSelection && pendingValue) {
+                previousSelection = pendingValue;
+            }
+            variantSelect.innerHTML = '';
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = '— Pilih Tipe Model —';
+            variantSelect.appendChild(placeholder);
+            let variants = [];
+            if (model) {
+                const entry = this.getModelEntry(brand, model);
+                if (entry && Array.isArray(entry.variants) && entry.variants.length) {
+                    variants = entry.variants;
+                } else {
+                    variants = this.generateModelVariants(model);
+                }
+            }
+            variants.forEach((variant) => {
+                const option = document.createElement('option');
+                option.value = variant;
+                option.textContent = variant;
+                variantSelect.appendChild(option);
+            });
+            if (previousSelection) {
+                const hasVariant = variants.includes(previousSelection);
+                if (!hasVariant) {
+                    const option = document.createElement('option');
+                    option.value = previousSelection;
+                    option.textContent = previousSelection;
+                    variantSelect.appendChild(option);
+                }
+                variantSelect.value = previousSelection;
+            } else {
+                variantSelect.value = '';
+            }
+            variantSelect.disabled = !variants.length && !previousSelection;
+            variantSelect.removeAttribute('data-pending-value');
         }
 
         normalizeLicensePlate(value) {

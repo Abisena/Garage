@@ -1936,7 +1936,11 @@ a:hover {
             document.getElementById('display_primary_contact').textContent = order.primary_contact || '-';
 
             const licensePlate = order.vehicle_plate || vehicleDetails.license_plate || '';
-            const brandModel = [order.vehicle_brand || vehicleDetails.brand, order.vehicle_model || vehicleDetails.model]
+            const brandModel = [
+                order.vehicle_brand || vehicleDetails.brand,
+                order.vehicle_model || vehicleDetails.model,
+                order.vehicle_model_variant || vehicleDetails.model_variant,
+            ]
                 .filter(Boolean)
                 .join(' ')
                 .trim();
