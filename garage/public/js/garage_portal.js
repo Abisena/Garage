@@ -383,7 +383,9 @@ const VEHICLE_BRAND_MODELS = {
                     }
                     const payload = this.collectFormData(this.forms.intake, [
                         'existing_customer',
+                        'existing_customer_search',
                         'customer_type',
+                        'new_customer_name',
                         'customer_name',
                         'phone',
                         'email',

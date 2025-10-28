@@ -2368,11 +2368,30 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
     data = _ensure_dict(payload or {})
 
     created: Dict[str, Any] = {}
-    existing_customer = data.get("existing_customer")
+    existing_customer = (data.get("existing_customer") or "").strip()
     customer_name = existing_customer
+
+    manual_customer_name = (
+        (data.get("customer_name") or "").strip()
+        or (data.get("new_customer_name") or "").strip()
+        or (data.get("existing_customer_search") or "").strip()
+    )
+
+    if not existing_customer and manual_customer_name:
+        with _ignoring_permissions():
+            matched_customer = frappe.db.get_value(
+                "Garage Customer",
+                {"customer_name": manual_customer_name},
+                "name",
+            )
+        if matched_customer:
+            existing_customer = matched_customer
+            customer_name = matched_customer
 
     if not existing_customer:
         customer_payload = _filter_fields(data, ALLOWED_DOCS["Garage Customer"]["fields"])
+        if manual_customer_name and not customer_payload.get("customer_name"):
+            customer_payload["customer_name"] = manual_customer_name
         if not customer_payload.get("customer_name"):
             frappe.throw(_("Nama customer wajib diisi."))
         customer_doc = _insert_document("Garage Customer", customer_payload)
