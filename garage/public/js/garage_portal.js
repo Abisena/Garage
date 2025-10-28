@@ -374,6 +374,13 @@ const VEHICLE_BRAND_MODELS = {
                 this.setupBrandModelControls();
                 this.forms.intake.addEventListener('submit', (event) => {
                     event.preventDefault();
+                    const nameField = this.forms.intake?.querySelector('[name="customer_name"]');
+                    if (nameField && this.inputs?.newCustomerName) {
+                        const manualName = (this.inputs.newCustomerName.value || '').trim();
+                        if (manualName && !nameField.value) {
+                            nameField.value = manualName;
+                        }
+                    }
                     const payload = this.collectFormData(this.forms.intake, [
                         'existing_customer',
                         'customer_type',
