@@ -1372,31 +1372,72 @@ a:hover {
         }
     }
 
+    let cachedCSRFToken = null;
+
+    function cacheCSRFToken(token) {
+        if (!token) {
+            return null;
+        }
+
+        cachedCSRFToken = token;
+
+        if (typeof window !== 'undefined') {
+            window.csrf_token = token;
+
+            if (window.frappe) {
+                window.frappe.csrf_token = token;
+            }
+        }
+
+        return token;
+    }
+
     function resolveCSRFToken() {
+        if (cachedCSRFToken) {
+            return cachedCSRFToken;
+        }
+
         if (window.frappe) {
             if (window.frappe.csrf_token) {
-                return window.frappe.csrf_token;
+                return cacheCSRFToken(window.frappe.csrf_token);
             }
             if (window.csrf_token) {
-                return window.csrf_token;
+                return cacheCSRFToken(window.csrf_token);
             }
             if (window.frappe.boot && window.frappe.boot.csrf_token) {
-                window.frappe.csrf_token = window.frappe.boot.csrf_token;
-                return window.frappe.csrf_token;
+                return cacheCSRFToken(window.frappe.boot.csrf_token);
             }
         }
 
         const meta = document.querySelector('meta[name="csrf-token"], meta[name="csrf_token"]');
         if (meta && meta.content) {
-            return meta.content;
+            return cacheCSRFToken(meta.content);
         }
 
         const cookieMatch = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
         if (cookieMatch) {
-            return decodeURIComponent(cookieMatch[1]);
+            return cacheCSRFToken(decodeURIComponent(cookieMatch[1]));
         }
 
         return null;
+    }
+
+    async function ensureCSRFToken(maxAttempts = 10, delay = 200) {
+        let token = resolveCSRFToken();
+
+        if (token) {
+            return token;
+        }
+
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            token = resolveCSRFToken();
+            if (token) {
+                return token;
+            }
+        }
+
+        throw new Error('CSRF token not available');
     }
 
     function withCSRF(options = {}) {
@@ -1806,6 +1847,7 @@ a:hover {
 
         async function fetchSparePartCatalog() {
             try {
+                await ensureCSRFToken();
                 const response = await frappe.call(withCSRF({
                     method: 'garage.api.portal.list_spare_parts',
                     args: { filters: { status: 'Active' } },
@@ -1820,9 +1862,12 @@ a:hover {
             } catch (error) {
                 console.error('Error loading spare part catalog:', error);
                 if (window.frappe && typeof frappe.show_alert === 'function') {
+                    const isCSRFError = error && error.message === 'CSRF token not available';
                     frappe.show_alert({
-                        message: '⚠️ Gagal memuat katalog sparepart.',
-                        indicator: 'orange'
+                        message: isCSRFError
+                            ? '❌ Sesi berakhir. Silakan muat ulang halaman dan coba lagi.'
+                            : '⚠️ Gagal memuat katalog sparepart.',
+                        indicator: isCSRFError ? 'red' : 'orange'
                     }, 5);
                 }
             }
@@ -1830,6 +1875,7 @@ a:hover {
 
         async function loadOrderData() {
             try {
+                await ensureCSRFToken();
                 const response = await frappe.call(withCSRF({
                     method: 'garage.api.portal.get_service_order_details',
                     args: { order_id: orderId },
@@ -1841,8 +1887,11 @@ a:hover {
                 }
             } catch (error) {
                 console.error('Error:', error);
+                const message = error && error.message === 'CSRF token not available'
+                    ? '❌ Sesi berakhir. Silakan muat ulang halaman.'
+                    : '❌ Gagal load data order';
                 frappe.show_alert({
-                    message: '❌ Gagal load data order',
+                    message,
                     indicator: 'red'
                 }, 5);
             } finally {
@@ -2534,6 +2583,7 @@ a:hover {
             };
 
             try {
+                await ensureCSRFToken();
                 await frappe.call(withCSRF({
                     method: 'garage.api.portal.update_service_order_inspection',
                     args: { order_id: orderId, inspection_data: data },
@@ -2544,7 +2594,10 @@ a:hover {
                 setTimeout(() => window.location.href = '/garage/service', 1000);
             } catch (error) {
                 console.error('Error:', error);
-                frappe.show_alert({ message: '❌ Error: ' + (error.message || 'Gagal menyimpan'), indicator: 'red' }, 5);
+                const message = error && error.message === 'CSRF token not available'
+                    ? '❌ Sesi berakhir. Silakan muat ulang halaman dan coba lagi.'
+                    : '❌ Error: ' + (error.message || 'Gagal menyimpan');
+                frappe.show_alert({ message, indicator: 'red' }, 5);
             }
         };
 
