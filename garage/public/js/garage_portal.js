@@ -1,3 +1,29 @@
+const VEHICLE_BRAND_MODELS = {
+    Toyota: ['Agya', 'Avanza', 'Calya', 'Camry', 'Fortuner', 'Hilux', 'Innova', 'Kijang Innova Zenix', 'Raize', 'Rush', 'Veloz', 'Yaris', 'Model Lainnya'],
+    Honda: ['Accord', 'BR-V', 'Brio', 'Civic', 'City', 'CR-V', 'HR-V', 'Jazz', 'Mobilio', 'WR-V', 'Model Lainnya'],
+    Suzuki: ['APV', 'Baleno', 'Carry', 'Ertiga', 'Ignis', 'Jimny', 'Karimun', 'S-Presso', 'XL7', 'Model Lainnya'],
+    Mitsubishi: ['Colt L300', 'Eclipse Cross', 'Outlander', 'Pajero Sport', 'Triton', 'Xpander', 'Xpander Cross', 'Model Lainnya'],
+    Nissan: ['Elgrand', 'Juke', 'Livina', 'Magnite', 'Serena', 'Terra', 'X-Trail', 'Model Lainnya'],
+    Daihatsu: ['Ayla', 'Grand Max', 'Rocky', 'Sigra', 'Sirion', 'Terios', 'Xenia', 'Model Lainnya'],
+    Mazda: ['2', '3', '6', 'CX-3', 'CX-30', 'CX-5', 'CX-8', 'CX-9', 'BT-50', 'Model Lainnya'],
+    Hyundai: ['Creta', 'Ioniq 5', 'Palisade', 'Santa Fe', 'Stargazer', 'Staria', 'Venue', 'Model Lainnya'],
+    Kia: ['Carens', 'Carnival', 'EV6', 'Seltos', 'Sonet', 'Sorento', 'Sportage', 'Model Lainnya'],
+    Wuling: ['Air EV', 'Almaz', 'Confero', 'Cortez', 'Formo', 'Model Lainnya'],
+    BMW: ['1 Series', '3 Series', '5 Series', '7 Series', 'X1', 'X3', 'X5', 'X6', 'Z4', 'Model Lainnya'],
+    'Mercedes-Benz': ['A-Class', 'C-Class', 'E-Class', 'S-Class', 'GLA', 'GLC', 'GLE', 'GLS', 'V-Class', 'Model Lainnya'],
+    Lexus: ['ES', 'GX', 'IS', 'LX', 'NX', 'RX', 'UX', 'Model Lainnya'],
+    Ford: ['Everest', 'Explorer', 'Fiesta', 'Focus', 'Mustang', 'Ranger', 'Model Lainnya'],
+    Chevrolet: ['Captiva', 'Colorado', 'Spark', 'Spin', 'Trailblazer', 'Trax', 'Model Lainnya'],
+    Isuzu: ['D-Max', 'Elf', 'Giga', 'Mu-X', 'Panther', 'Traga', 'Model Lainnya'],
+    Hino: ['300 Series', '500 Series', '700 Series', 'Dutro', 'Ranger', 'Model Lainnya'],
+    Lamborghini: ['Aventador', 'Countach', 'Diablo', 'Gallardo', 'Huracán', 'Murciélago', 'Urus'],
+    Ferrari: ['296 GTB', '812 Superfast', 'F8 Tributo', 'Portofino', 'Roma', 'SF90 Stradale'],
+    'Land Rover': ['Defender', 'Discovery', 'Discovery Sport', 'Range Rover', 'Range Rover Evoque', 'Range Rover Sport'],
+    'Range Rover': ['Evoque', 'Range Rover', 'Range Rover Sport', 'Velar'],
+    Tesla: ['Model 3', 'Model S', 'Model X', 'Model Y'],
+    'Lainnya': ['Model Lainnya'],
+};
+
 (() => {
     class GaragePortal {
         constructor() {
@@ -19,6 +45,9 @@
             this.currentSparePart = null;
             this.creatingSparePart = false;
             this.bookingDateField = null;
+            this.brandModelMap = VEHICLE_BRAND_MODELS;
+            this.brandModelInitialized = false;
+            this.bootstrapRefreshHandle = null;
         }
 
         init() {
@@ -55,7 +84,6 @@
 
             this.selects = {
                 existingCustomer: document.getElementById('existing_customer'),
-                vehicleCustomer: document.getElementById('vehicle_customer'),
                 serviceCustomer: document.getElementById('service_customer'),
                 serviceVehicle: document.getElementById('service_vehicle'),
                 progressServiceOrder: document.getElementById('progress_service_order'),
@@ -63,6 +91,8 @@
                 invoiceCustomer: document.getElementById('invoice_customer'),
                 paymentCustomer: document.getElementById('payment_customer'),
                 receiptPaymentEntry: document.getElementById('receipt_payment_entry'),
+                brand: document.getElementById('brand'),
+                model: document.getElementById('model'),
             };
 
             this.tables = {
@@ -144,6 +174,7 @@
             if (this.forms.intake) {
                 this.setupBookingDateField();
                 this.setupIntakeTypeWatcher();
+                this.setupBrandModelControls();
                 this.forms.intake.addEventListener('submit', (event) => {
                     event.preventDefault();
                     const bookingDateInput = this.forms.intake.querySelector('[name="service_booking_date"]');
@@ -169,7 +200,6 @@
                         'preferred_contact_method',
                         'is_vip',
                         'marketing_source',
-                        'vehicle_customer',
                         'license_plate',
                         'brand',
                         'model',
@@ -184,6 +214,9 @@
                     ]);
                     this.submitForm(this.forms.intake, 'garage.api.portal.register_customer_vehicle', { payload }, 'Data intake tersimpan.');
                 });
+                const scheduleRefresh = () => this.scheduleBootstrapRefresh();
+                this.forms.intake.addEventListener('change', scheduleRefresh);
+                this.forms.intake.addEventListener('input', scheduleRefresh);
             }
 
             if (this.forms.serviceOrder) {
@@ -411,9 +444,6 @@
             const value = select.value;
             if (!value) {
                 this.updateCustomerSearchInput(null);
-                if (this.selects.vehicleCustomer) {
-                    this.setSelectValue(this.selects.vehicleCustomer, '');
-                }
                 return;
             }
             const customer = this.customerIndex.get(value);
@@ -422,9 +452,6 @@
                 this.updateCustomerSearchInput(customer);
             } else {
                 this.fetchCustomerDetailsByName(value);
-            }
-            if (this.selects.vehicleCustomer) {
-                this.setSelectValue(this.selects.vehicleCustomer, value);
             }
         }
 
@@ -436,7 +463,6 @@
             const normalized = this.normalizeLicensePlate(rawValue);
             if (!normalized) {
                 this.lastPrefilledPlate = null;
-                this.clearVehicleCustomerSelection();
                 return;
             }
             const vehicle = this.vehicleIndex.get(normalized);
@@ -461,9 +487,6 @@
                 }
             } else if (this.selects.existingCustomer) {
                 this.setSelectValue(this.selects.existingCustomer, '');
-            }
-            if (this.selects.vehicleCustomer) {
-                this.setSelectValue(this.selects.vehicleCustomer, vehicle.customer || '');
             }
             if (window.frappe && frappe.show_alert && previousPrefilled !== normalized) {
                 frappe.show_alert({
@@ -491,7 +514,6 @@
                     const vehicle = data.vehicle;
                     if (!vehicle) {
                         this.lastPrefilledPlate = null;
-                        this.clearVehicleCustomerSelection();
                         this.notifyPlateNotFound();
                         return;
                     }
@@ -515,14 +537,10 @@
                                 this.applyExistingCustomerSelection();
                             }
                         }
-                        if (this.selects.vehicleCustomer) {
-                            this.setSelectValue(this.selects.vehicleCustomer, customerName);
-                        }
                     } else {
                         if (this.selects.existingCustomer) {
                             this.setSelectValue(this.selects.existingCustomer, '');
                         }
-                        this.clearVehicleCustomerSelection();
                     }
                     if (window.frappe && frappe.show_alert && previousPrefilled !== normalized) {
                         frappe.show_alert({
@@ -533,16 +551,9 @@
                 },
                 error: () => {
                     this.lastPrefilledPlate = null;
-                    this.clearVehicleCustomerSelection();
                     this.notifyPlateNotFound();
                 },
             });
-        }
-
-        clearVehicleCustomerSelection() {
-            if (this.selects.vehicleCustomer) {
-                this.setSelectValue(this.selects.vehicleCustomer, '');
-            }
         }
 
         prefillVehicleFields(vehicle) {
@@ -553,9 +564,17 @@
             if (this.inputs.licensePlate && vehicle.license_plate) {
                 this.inputs.licensePlate.value = vehicle.license_plate;
             }
+            const brandSelect = this.selects.brand;
+            const modelSelect = this.selects.model;
+            if (brandSelect) {
+                const brandValue = vehicle.brand || '';
+                this.populateBrandOptions(brandValue);
+                this.setSelectValue(brandSelect, brandValue);
+                this.populateModelOptions(brandValue, vehicle.model || '');
+            } else if (modelSelect) {
+                this.populateModelOptions('', vehicle.model || '');
+            }
             const mapping = {
-                brand: 'brand',
-                model: 'model',
                 vehicle_year: 'vehicle_year',
                 color: 'color',
                 transmission: 'transmission',
@@ -823,9 +842,6 @@
                     }
                     this.applyExistingCustomerSelection();
                 }
-                if (this.selects.vehicleCustomer) {
-                    this.setSelectValue(this.selects.vehicleCustomer, docname);
-                }
                 return;
             }
             this.lookupCustomerByName(query);
@@ -862,9 +878,6 @@
                         this.applyExistingCustomerSelection();
                     } else {
                         this.updateCustomerSearchInput(customer);
-                    }
-                    if (this.selects.vehicleCustomer) {
-                        this.setSelectValue(this.selects.vehicleCustomer, customer.name);
                     }
                     if (window.frappe && frappe.show_alert) {
                         frappe.show_alert({
@@ -941,6 +954,104 @@
             if (hint) {
                 hint.classList.toggle('is-visible', isBooking);
             }
+        }
+
+        setupBrandModelControls() {
+            const brandSelect = this.selects.brand;
+            const modelSelect = this.selects.model;
+            if (!brandSelect || !modelSelect) {
+                return;
+            }
+            const currentBrand = brandSelect.value || '';
+            const currentModel = modelSelect.value || '';
+            this.populateBrandOptions(currentBrand);
+            this.populateModelOptions(currentBrand, currentModel);
+            if (this.brandModelInitialized) {
+                return;
+            }
+            brandSelect.addEventListener('change', () => {
+                const selectedBrand = brandSelect.value || '';
+                this.populateModelOptions(selectedBrand);
+                this.scheduleBootstrapRefresh();
+            });
+            modelSelect.addEventListener('change', () => {
+                this.scheduleBootstrapRefresh();
+            });
+            this.brandModelInitialized = true;
+        }
+
+        populateBrandOptions(selectedBrand = '') {
+            const brandSelect = this.selects.brand;
+            if (!brandSelect) {
+                return;
+            }
+            let previousSelection = selectedBrand || brandSelect.value || '';
+            const pendingValue = brandSelect.getAttribute('data-pending-value');
+            if (!previousSelection && pendingValue) {
+                previousSelection = pendingValue;
+            }
+            brandSelect.innerHTML = '';
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = '— Pilih Merek —';
+            brandSelect.appendChild(placeholder);
+            const brandMap = this.brandModelMap || {};
+            const brands = Object.keys(brandMap).sort((a, b) => a.localeCompare(b));
+            brands.forEach((brand) => {
+                const option = document.createElement('option');
+                option.value = brand;
+                option.textContent = brand;
+                brandSelect.appendChild(option);
+            });
+            if (previousSelection && !brands.includes(previousSelection)) {
+                const option = document.createElement('option');
+                option.value = previousSelection;
+                option.textContent = previousSelection;
+                brandSelect.appendChild(option);
+            }
+            brandSelect.value = previousSelection && Array.from(brandSelect.options).some((option) => option.value === previousSelection)
+                ? previousSelection
+                : '';
+            brandSelect.removeAttribute('data-pending-value');
+        }
+
+        populateModelOptions(brand, selectedModel = '') {
+            const modelSelect = this.selects.model;
+            if (!modelSelect) {
+                return;
+            }
+            const normalizedBrand = brand || '';
+            const models = this.brandModelMap?.[normalizedBrand] || [];
+            let previousSelection = selectedModel || modelSelect.value || '';
+            const pendingValue = modelSelect.getAttribute('data-pending-value');
+            if (!previousSelection && pendingValue) {
+                previousSelection = pendingValue;
+            }
+            modelSelect.innerHTML = '';
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = '— Pilih Model —';
+            modelSelect.appendChild(placeholder);
+            models.forEach((model) => {
+                const option = document.createElement('option');
+                option.value = model;
+                option.textContent = model;
+                modelSelect.appendChild(option);
+            });
+            if (previousSelection) {
+                const hasModel = models.includes(previousSelection);
+                if (!hasModel) {
+                    const option = document.createElement('option');
+                    option.value = previousSelection;
+                    option.textContent = previousSelection;
+                    modelSelect.appendChild(option);
+                }
+                modelSelect.value = previousSelection;
+            } else {
+                modelSelect.value = '';
+            }
+            modelSelect.disabled = !models.length && !previousSelection;
+            modelSelect.removeAttribute('data-pending-value');
         }
 
         setupBookingDateField() {
@@ -1061,10 +1172,10 @@
             });
         }
 
-        fetchBootstrap(showNotification = true) {
+        fetchBootstrap(showNotification = true, freezeRequest = true) {
             frappe.call({
                 method: 'garage.api.portal.portal_bootstrap',
-                freeze: true,
+                freeze: freezeRequest,
                 callback: (response) => {
                     if (response?.exc || response?.exception) {
                         this.handleBootstrapFailure(response);
@@ -1119,11 +1230,6 @@
                 valueKey: 'name',
                 labelKey: 'customer_name',
                 blankLabel: '— Customer Baru —',
-            });
-            this.populateSelect(this.selects.vehicleCustomer, customers, {
-                valueKey: 'name',
-                labelKey: 'customer_name',
-                blankLabel: 'Otomatis sesuai customer di atas',
             });
 
             this.populateSelect(this.selects.serviceCustomer, customers, {
@@ -2498,6 +2604,16 @@
             return raw;
         }
 
+        scheduleBootstrapRefresh(delay = 800) {
+            if (this.bootstrapRefreshHandle) {
+                clearTimeout(this.bootstrapRefreshHandle);
+            }
+            this.bootstrapRefreshHandle = setTimeout(() => {
+                this.bootstrapRefreshHandle = null;
+                this.fetchBootstrap(false, false);
+            }, delay);
+        }
+
         submitForm(form, method, args, successMessage) {
             const primaryButton = form.querySelector('button.primary');
             if (primaryButton) {
@@ -2593,7 +2709,6 @@
             const normalizedValue = String(value);
             const displayLabel = label || normalizedValue;
             this.addOptionIfMissing(this.selects.existingCustomer, normalizedValue, displayLabel);
-            this.addOptionIfMissing(this.selects.vehicleCustomer, normalizedValue, displayLabel);
         }
 
         notifyPlateNotFound() {
