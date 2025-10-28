@@ -19,6 +19,7 @@
     "vin",
     "brand",
     "model",
+    "model_variant",
     "vehicle_year",
     "color",
     "transmission",
@@ -59,6 +60,11 @@
       "fieldname": "model",
       "fieldtype": "Data",
       "label": "Model"
+    },
+    {
+      "fieldname": "model_variant",
+      "fieldtype": "Data",
+      "label": "Model Variant"
     },
     {
       "fieldname": "vehicle_year",

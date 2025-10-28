@@ -71,6 +71,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "vin",
             "brand",
             "model",
+            "model_variant",
             "vehicle_year",
             "color",
             "transmission",
@@ -86,6 +87,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "vin",
             "brand",
             "model",
+            "model_variant",
             "vehicle_year",
             "color",
             "transmission",
@@ -1103,6 +1105,7 @@ def portal_bootstrap() -> Dict[str, Any]:
         "license_plate",
         "brand",
         "model",
+        "model_variant",
         "vehicle_year",
         "color",
         "transmission",
@@ -1343,6 +1346,7 @@ def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, An
         "license_plate",
         "brand",
         "model",
+        "model_variant",
         "vehicle_year",
         "color",
         "transmission",
@@ -1528,13 +1532,14 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
                 vehicle = frappe.db.get_value(
                     "Garage Vehicle",
                     order["vehicle"],
-                    ["license_plate", "brand", "model", "vehicle_year"],
+                    ["license_plate", "brand", "model", "model_variant", "vehicle_year"],
                     as_dict=True
                 )
                 if vehicle:
                     order["vehicle_plate"] = vehicle.get("license_plate")
                     order["vehicle_brand"] = vehicle.get("brand")
                     order["vehicle_model"] = vehicle.get("model")
+                    order["vehicle_model_variant"] = vehicle.get("model_variant")
                     order["vehicle_year"] = vehicle.get("vehicle_year")
             except Exception:
                 pass  # Skip if vehicle not found

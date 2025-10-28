@@ -165,6 +165,7 @@ class Vehicle:
     registration: str
     make: Optional[str] = None
     model: Optional[str] = None
+    variant: Optional[str] = None
     year: Optional[int] = None
     vin: Optional[str] = None
     color: Optional[str] = None
