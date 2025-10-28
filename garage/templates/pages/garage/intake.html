@@ -1350,10 +1350,10 @@ button:disabled {
                                         <input
                                             id="existing_customer_search"
                                             name="existing_customer_search"
-                                            placeholder="Cari atau ketik nama customer"
+                                            placeholder="Cari customer eksisting"
                                             list="existing_customer_options"
                                             autocomplete="off"
-                                            aria-label="Pilih atau ketik nama customer"
+                                            aria-label="Cari dan pilih customer eksisting"
                                         />
                                         <select
                                             id="existing_customer"
@@ -1365,10 +1365,21 @@ button:disabled {
                                         >
                                             <option value="">— Customer Baru —</option>
                                         </select>
-                                        <input type="hidden" id="customer_name" name="customer_name" />
                                     </div>
                                     <datalist id="existing_customer_options"></datalist>
-                                    <p class="form-hint">Pilih customer eksisting atau ketik nama baru sesuai kebutuhan.</p>
+                                    <p class="form-hint">Pilih customer eksisting yang sudah ada di sistem.</p>
+                                </div>
+                                <div class="form-field form-field--full">
+                                    <label for="new_customer_name">Customer Baru</label>
+                                    <input
+                                        type="text"
+                                        id="new_customer_name"
+                                        placeholder="Masukkan nama customer baru"
+                                        autocomplete="off"
+                                        aria-label="Nama customer baru"
+                                    />
+                                    <input type="hidden" id="customer_name" name="customer_name" />
+                                    <p class="form-hint">Isi nama customer baru jika belum terdaftar. Biarkan kosong bila memilih customer eksisting.</p>
                                 </div>
                                 <div class="form-field">
                                     <label for="customer_type">Tipe Customer</label>

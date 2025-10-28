@@ -271,6 +271,7 @@ const VEHICLE_BRAND_MODELS = {
             this.inputs = {
                 licensePlate: document.getElementById('license_plate'),
                 existingCustomerSearch: document.getElementById('existing_customer_search'),
+                newCustomerName: document.getElementById('new_customer_name'),
                 spareSearch: document.querySelector('[data-role="spare-search"]'),
             };
 
@@ -563,15 +564,44 @@ const VEHICLE_BRAND_MODELS = {
                 });
                 this.inputs.existingCustomerSearch.addEventListener('input', (event) => {
                     const rawValue = event.target.value || '';
+                    const nameField = this.forms.intake?.querySelector('[name="customer_name"]');
+                    if (rawValue) {
+                        this.manualCustomerQuery = '';
+                        if (nameField) {
+                            nameField.value = '';
+                        }
+                        if (this.inputs.newCustomerName) {
+                            this.inputs.newCustomerName.value = '';
+                        }
+                    } else {
+                        if (nameField) {
+                            nameField.value = this.manualCustomerQuery || '';
+                        }
+                        if (this.inputs.newCustomerName) {
+                            this.inputs.newCustomerName.value = this.manualCustomerQuery || '';
+                        }
+                        if (this.selects.existingCustomer) {
+                            this.setSelectValue(this.selects.existingCustomer, '');
+                            this.applyExistingCustomerSelection();
+                        }
+                    }
+                });
+            }
+
+            if (this.inputs.newCustomerName) {
+                this.inputs.newCustomerName.addEventListener('input', (event) => {
+                    const rawValue = event.target.value || '';
                     const trimmed = rawValue.trim();
                     this.manualCustomerQuery = trimmed;
                     const nameField = this.forms.intake?.querySelector('[name="customer_name"]');
                     if (nameField) {
                         nameField.value = trimmed;
                     }
-                    if (!rawValue && this.selects.existingCustomer) {
+                    if (this.inputs.existingCustomerSearch) {
+                        this.inputs.existingCustomerSearch.value = '';
+                    }
+                    if (this.selects.existingCustomer) {
                         this.setSelectValue(this.selects.existingCustomer, '');
-                        this.applyExistingCustomerSelection();
                     }
                 });
             }
@@ -635,29 +665,15 @@ const VEHICLE_BRAND_MODELS = {
             }
             const value = select.value;
             if (!value) {
-                const input = this.inputs.existingCustomerSearch;
-                if (input) {
-                    const raw = input.value || '';
-                    const trimmed = raw.trim();
-                    const matchesKnownCustomer =
-                        !trimmed ||
-                        this.customerSearchIndex.has(raw) ||
-                        this.customerNameMap.has(trimmed.toLowerCase());
-                    if (matchesKnownCustomer) {
-                        this.updateCustomerSearchInput(null);
-                    } else {
-                        const nameField = this.forms.intake?.querySelector('[name="customer_name"]');
-                        if (nameField) {
-                            nameField.value = trimmed;
-                        }
-                    }
-                } else {
-                    this.updateCustomerSearchInput(null);
-                }
+                this.updateCustomerSearchInput(null);
                 return;
             }
             const customer = this.customerIndex.get(value);
             if (customer && !this.isCustomerProfileIncomplete(customer)) {
+                this.manualCustomerQuery = '';
+                if (this.inputs.newCustomerName) {
+                    this.inputs.newCustomerName.value = '';
+                }
                 this.prefillCustomerFields(customer);
                 this.updateCustomerSearchInput(customer);
             } else {
@@ -1093,15 +1109,22 @@ const VEHICLE_BRAND_MODELS = {
         }
 
         updateCustomerSearchInput(customer) {
-            if (!this.inputs.existingCustomerSearch) {
-                return;
-            }
             if (customer) {
-                this.inputs.existingCustomerSearch.value = this.formatCustomerSearchLabel(customer);
                 this.manualCustomerQuery = '';
-            } else {
-                const manualValue = (this.manualCustomerQuery || '').trim();
-                this.inputs.existingCustomerSearch.value = manualValue;
+            }
+            if (this.inputs.existingCustomerSearch) {
+                if (customer) {
+                    this.inputs.existingCustomerSearch.value = this.formatCustomerSearchLabel(customer);
+                } else {
+                    this.inputs.existingCustomerSearch.value = '';
+                }
+            }
+            if (this.inputs.newCustomerName) {
+                if (customer) {
+                    this.inputs.newCustomerName.value = '';
+                } else {
+                    this.inputs.newCustomerName.value = this.manualCustomerQuery || '';
+                }
             }
             const nameField = this.forms.intake?.querySelector('[name="customer_name"]');
             if (nameField) {
@@ -1122,8 +1145,21 @@ const VEHICLE_BRAND_MODELS = {
             const query = raw.trim();
             this.manualCustomerQuery = query;
             const nameField = this.forms.intake?.querySelector('[name="customer_name"]');
-            if (nameField) {
-                nameField.value = query;
+            if (query) {
+                this.manualCustomerQuery = '';
+                if (nameField) {
+                    nameField.value = '';
+                }
+                if (this.inputs.newCustomerName) {
+                    this.inputs.newCustomerName.value = '';
+                }
+            } else {
+                if (nameField) {
+                    nameField.value = this.manualCustomerQuery || '';
+                }
+                if (this.inputs.newCustomerName) {
+                    this.inputs.newCustomerName.value = this.manualCustomerQuery || '';
+                }
             }
             if (!query) {
                 if (this.selects.existingCustomer) {
