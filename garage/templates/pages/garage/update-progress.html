@@ -545,7 +545,7 @@ body {
         if (details.license_plate) {
             parts.push(details.license_plate);
         }
-        const brandModel = [details.brand, details.model].filter(Boolean).join(' ').trim();
+        const brandModel = [details.brand, details.model, details.model_variant].filter(Boolean).join(' ').trim();
         if (brandModel) {
             parts.push(brandModel);
         }

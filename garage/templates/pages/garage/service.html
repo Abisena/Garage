@@ -1821,7 +1821,7 @@ body {
                 <td>
                     <div class="vehicle-info">
                         <div class="vehicle-plate">${order.vehicle_plate || '-'}</div>
-                        <div class="vehicle-model">${order.vehicle_brand || ''} ${order.vehicle_model || ''}</div>
+                        <div class="vehicle-model">${[order.vehicle_brand, order.vehicle_model, order.vehicle_model_variant].filter(Boolean).join(' ')}</div>
                     </div>
                 </td>
                 <td>
@@ -1879,7 +1879,7 @@ body {
                 <td>
                     <div class="vehicle-info">
                         <div class="vehicle-plate">${order.vehicle_plate || '-'}</div>
-                        <div class="vehicle-model">${order.vehicle_brand || ''} ${order.vehicle_model || ''}</div>
+                        <div class="vehicle-model">${[order.vehicle_brand, order.vehicle_model, order.vehicle_model_variant].filter(Boolean).join(' ')}</div>
                     </div>
                 </td>
                 <td>
@@ -1936,7 +1936,7 @@ body {
                 <td>
                     <div class="vehicle-info">
                         <div class="vehicle-plate">${order.vehicle_plate || '-'}</div>
-                        <div class="vehicle-model">${order.vehicle_brand || ''} ${order.vehicle_model || ''}</div>
+                        <div class="vehicle-model">${[order.vehicle_brand, order.vehicle_model, order.vehicle_model_variant].filter(Boolean).join(' ')}</div>
                     </div>
                 </td>
                 <td>
@@ -1995,7 +1995,7 @@ body {
                 const customer = order.customer_name || order.customer || '-';
                 const vehicleParts = [
                     order.vehicle_plate,
-                    [order.vehicle_brand, order.vehicle_model].filter(Boolean).join(' ')
+                    [order.vehicle_brand, order.vehicle_model, order.vehicle_model_variant].filter(Boolean).join(' ')
                 ].filter(Boolean);
                 const vehicleInfo = vehicleParts.join(' • ');
                 const channelInfo = order.booking_channel ? ` • ${escapeHtml(order.booking_channel)}` : '';
