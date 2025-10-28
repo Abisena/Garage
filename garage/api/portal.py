@@ -1406,6 +1406,13 @@ def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, An
                 customer_fields,
                 as_dict=True,
             )
+        if customer_doc:
+            # ``frappe.db.get_value`` may omit the primary key when ``as_dict`` is
+            # used.  The client-side helpers rely on ``customer.name`` to register
+            # and prefill the customer details, so make sure the identifier is
+            # always present.
+            customer_doc = dict(customer_doc)
+            customer_doc.setdefault("name", customer_name)
 
     return {"vehicle": vehicle, "customer": customer_doc}
 
