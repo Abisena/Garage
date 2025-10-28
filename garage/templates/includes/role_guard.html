@@ -54,8 +54,50 @@
                 });
             }
 
+            function showAccessDeniedMessage() {
+                var message = 'Kamu tidak memiliki otorisasi untuk mengakses halaman ini.';
+
+                if (window.frappe && frappe.msgprint) {
+                    frappe.msgprint({
+                        message: message,
+                        title: 'Akses ditolak',
+                        indicator: 'red',
+                    });
+                } else {
+                    window.alert(message);
+                }
+            }
+
+            function redirectToHome() {
+                fetch('/api/method/garage.api.auth.get_portal_home')
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        var route = data && data.message && data.message.route;
+                        if (!route) {
+                            return;
+                        }
+
+                        try {
+                            var currentUrl = new URL(window.location.href);
+                            var targetUrl = new URL(route, window.location.origin);
+
+                            if (currentUrl.pathname !== targetUrl.pathname || currentUrl.search !== targetUrl.search) {
+                                window.location.href = targetUrl.toString();
+                            }
+                        } catch (error) {
+                            window.location.href = route;
+                        }
+                    })
+                    .catch(function () {
+                        // Fall back to a hard refresh so the server can decide what to do.
+                        window.location.reload();
+                    });
+            }
+
             function handleDeniedAccess() {
                 disablePortalNav();
+                showAccessDeniedMessage();
+                redirectToHome();
             }
 
             fetch('/api/method/garage.api.auth.check_portal_access', {
