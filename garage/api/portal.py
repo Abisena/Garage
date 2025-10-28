@@ -70,6 +70,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "license_plate",
             "vin",
             "brand",
+            "type_model",
             "model",
             "model_variant",
             "vehicle_year",
@@ -86,6 +87,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "license_plate",
             "vin",
             "brand",
+            "type_model",
             "model",
             "model_variant",
             "vehicle_year",
@@ -1103,7 +1105,9 @@ def portal_bootstrap() -> Dict[str, Any]:
         "name",
         "customer",
         "license_plate",
+        "vin",
         "brand",
+        "type_model",
         "model",
         "model_variant",
         "vehicle_year",
@@ -1111,6 +1115,7 @@ def portal_bootstrap() -> Dict[str, Any]:
         "transmission",
         "fuel_type",
         "mileage",
+        "engine_number",
         "last_service_date",
         "creation",
     ]
@@ -1344,7 +1349,9 @@ def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, An
         "name",
         "customer",
         "license_plate",
+        "vin",
         "brand",
+        "type_model",
         "model",
         "model_variant",
         "vehicle_year",
@@ -1352,6 +1359,7 @@ def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, An
         "transmission",
         "fuel_type",
         "mileage",
+        "engine_number",
         "last_service_date",
     ]
     if frappe.db.has_column("Garage Vehicle", "last_service_logged_at"):
@@ -1532,15 +1540,26 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
                 vehicle = frappe.db.get_value(
                     "Garage Vehicle",
                     order["vehicle"],
-                    ["license_plate", "brand", "model", "model_variant", "vehicle_year"],
+                    [
+                        "license_plate",
+                        "brand",
+                        "type_model",
+                        "model",
+                        "vehicle_year",
+                        "vin",
+                        "engine_number",
+                    ],
                     as_dict=True
                 )
                 if vehicle:
                     order["vehicle_plate"] = vehicle.get("license_plate")
                     order["vehicle_brand"] = vehicle.get("brand")
+                    order["vehicle_type_model"] = vehicle.get("type_model")
                     order["vehicle_model"] = vehicle.get("model")
                     order["vehicle_model_variant"] = vehicle.get("model_variant")
                     order["vehicle_year"] = vehicle.get("vehicle_year")
+                    order["vehicle_vin"] = vehicle.get("vin")
+                    order["vehicle_engine_number"] = vehicle.get("engine_number")
             except Exception:
                 pass  # Skip if vehicle not found
         
@@ -1914,12 +1933,15 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
                 "name": vehicle.name,
                 "license_plate": vehicle.license_plate,
                 "brand": vehicle.brand,
+                "type_model": vehicle.type_model,
                 "model": vehicle.model,
                 "vehicle_year": vehicle.vehicle_year,
                 "color": vehicle.color,
                 "transmission": vehicle.transmission,
                 "fuel_type": vehicle.fuel_type,
-                "mileage": vehicle.mileage
+                "mileage": vehicle.mileage,
+                "vin": vehicle.vin,
+                "engine_number": vehicle.engine_number,
             }
         except Exception:
             pass
@@ -2319,13 +2341,16 @@ def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> 
             "name",
             "customer",
             "license_plate",
+            "vin",
             "brand",
+            "type_model",
             "model",
             "vehicle_year",
             "color",
             "transmission",
             "fuel_type",
             "mileage",
+            "engine_number",
             "last_service_date",
         ],
         order_by="modified desc",
