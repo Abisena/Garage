@@ -633,7 +633,25 @@ const VEHICLE_BRAND_MODELS = {
             }
             const value = select.value;
             if (!value) {
-                this.updateCustomerSearchInput(null);
+                const input = this.inputs.existingCustomerSearch;
+                if (input) {
+                    const raw = input.value || '';
+                    const trimmed = raw.trim();
+                    const matchesKnownCustomer =
+                        !trimmed ||
+                        this.customerSearchIndex.has(raw) ||
+                        this.customerNameMap.has(trimmed.toLowerCase());
+                    if (matchesKnownCustomer) {
+                        this.updateCustomerSearchInput(null);
+                    } else {
+                        const nameField = this.forms.intake?.querySelector('[name="customer_name"]');
+                        if (nameField) {
+                            nameField.value = trimmed;
+                        }
+                    }
+                } else {
+                    this.updateCustomerSearchInput(null);
+                }
                 return;
             }
             const customer = this.customerIndex.get(value);
