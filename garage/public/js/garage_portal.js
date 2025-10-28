@@ -372,15 +372,57 @@ const VEHICLE_BRAND_MODELS = {
         bindEvents() {
             if (this.forms.intake) {
                 this.setupBrandModelControls();
+                
+                // PATCH: Improved submit handler
                 this.forms.intake.addEventListener('submit', (event) => {
                     event.preventDefault();
-                    const nameField = this.forms.intake?.querySelector('[name="customer_name"]');
-                    if (nameField && this.inputs?.newCustomerName) {
-                        const manualName = (this.inputs.newCustomerName.value || '').trim();
-                        if (manualName && !nameField.value) {
-                            nameField.value = manualName;
+                    
+                    // Get all required fields
+                    const customerNameField = this.forms.intake.querySelector('[name="customer_name"]');
+                    const newCustomerNameField = this.inputs.newCustomerName;
+                    const existingCustomerSelect = this.selects.existingCustomer;
+                    
+                    // Ensure customer_name is populated
+                    if (customerNameField) {
+                        const selectedExisting = existingCustomerSelect?.value?.trim();
+                        
+                        if (selectedExisting) {
+                            // Use existing customer
+                            const selectedOption = existingCustomerSelect.options[existingCustomerSelect.selectedIndex];
+                            customerNameField.value = selectedOption?.text || selectedExisting;
+                        } else if (newCustomerNameField) {
+                            // Use new customer name
+                            const newName = (newCustomerNameField.value || '').trim();
+                            if (newName) {
+                                customerNameField.value = newName;
+                            }
+                        }
+                        
+                        // Validate customer_name is not empty
+                        if (!customerNameField.value || !customerNameField.value.trim()) {
+                            frappe.show_alert({
+                                message: 'Mohon isi nama customer atau pilih customer eksisting.',
+                                indicator: 'red'
+                            });
+                            
+                            if (newCustomerNameField) {
+                                newCustomerNameField.focus();
+                            }
+                            
+                            return; // Stop submission
                         }
                     }
+
+                    if (this.inputs.newCustomerName && this.forms.intake) {
+                        this.inputs.newCustomerName.addEventListener('input', (event) => {
+                            const customerNameField = this.forms.intake.querySelector('[name="customer_name"]');
+                            if (customerNameField) {
+                                customerNameField.value = event.target.value.trim();
+                            }
+                        });
+                    }
+                    
+                    // Collect form data
                     const payload = this.collectFormData(this.forms.intake, [
                         'existing_customer',
                         'existing_customer_search',
@@ -407,8 +449,15 @@ const VEHICLE_BRAND_MODELS = {
                         'notes',
                         'intake_type',
                     ]);
-                    this.submitForm(this.forms.intake, 'garage.api.portal.register_customer_vehicle', { payload }, 'Data intake tersimpan.');
+                    
+                    this.submitForm(
+                        this.forms.intake, 
+                        'garage.api.portal.register_customer_vehicle', 
+                        { payload }, 
+                        'Data intake tersimpan.'
+                    );
                 });
+                
                 const scheduleRefresh = () => this.scheduleBootstrapRefresh();
                 this.forms.intake.addEventListener('change', scheduleRefresh);
                 this.forms.intake.addEventListener('input', scheduleRefresh);

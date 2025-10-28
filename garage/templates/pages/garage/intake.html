@@ -1344,7 +1344,7 @@ button:disabled {
                             </header>
                             <div class="form-section__grid two-column">
                                 <input type="hidden" name="intake_type" value="Walk-In" />
-                                <div class="form-field form-field--full">
+                                <!-- <div class="form-field form-field--full">
                                     <label for="existing_customer_search">Customer</label>
                                     <div class="combo-control combo-control--search">
                                         <input
@@ -1368,7 +1368,7 @@ button:disabled {
                                     </div>
                                     <datalist id="existing_customer_options"></datalist>
                                     <p class="form-hint">Pilih customer eksisting yang sudah ada di sistem.</p>
-                                </div>
+                                </div> -->
                                 <div class="form-field form-field--full">
                                     <label for="new_customer_name">Customer Baru</label>
                                     <input
@@ -1872,6 +1872,161 @@ button:disabled {
         fillVehicleData
     };
 
+})();
+</script>
+<script>
+(function() {
+    'use strict';
+    
+    // Tunggu DOM siap
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCustomerNameSync);
+    } else {
+        initCustomerNameSync();
+    }
+    
+    function initCustomerNameSync() {
+        const newCustomerNameInput = document.getElementById('new_customer_name');
+        const customerNameHidden = document.getElementById('customer_name');
+        const existingCustomerSelect = document.getElementById('existing_customer');
+        const form = document.getElementById('customer-vehicle-form');
+        
+        if (!newCustomerNameInput || !customerNameHidden || !form) {
+            console.warn('Customer name sync: Required elements not found');
+            return;
+        }
+        
+        // SYNC 1: Ketika user mengetik nama customer baru
+        newCustomerNameInput.addEventListener('input', function(e) {
+            const value = (e.target.value || '').trim();
+            customerNameHidden.value = value;
+            console.log('Customer name synced (input):', value);
+        });
+        
+        // SYNC 2: Ketika user blur dari field
+        newCustomerNameInput.addEventListener('blur', function(e) {
+            const value = (e.target.value || '').trim();
+            customerNameHidden.value = value;
+            console.log('Customer name synced (blur):', value);
+        });
+        
+        // SYNC 3: Ketika user memilih customer eksisting
+        if (existingCustomerSelect) {
+            existingCustomerSelect.addEventListener('change', function(e) {
+                const selectedValue = e.target.value;
+                if (selectedValue) {
+                    // Jika memilih customer eksisting, kosongkan new customer name
+                    newCustomerNameInput.value = '';
+                    // Dan isi customer_name dengan nama dari option yang dipilih
+                    const selectedOption = e.target.options[e.target.selectedIndex];
+                    customerNameHidden.value = selectedOption.text || selectedValue;
+                    console.log('Customer selected:', customerNameHidden.value);
+                } else {
+                    // Jika kembali ke "Customer Baru", kosongkan customer_name
+                    customerNameHidden.value = '';
+                }
+            });
+        }
+        
+        // VALIDASI SEBELUM SUBMIT
+        form.addEventListener('submit', function(e) {
+            const customerNameValue = customerNameHidden.value?.trim();
+            const existingCustomerValue = existingCustomerSelect?.value?.trim();
+            
+            // Cek apakah salah satu terisi
+            if (!customerNameValue && !existingCustomerValue) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (typeof frappe !== 'undefined' && frappe.show_alert) {
+                    frappe.show_alert({
+                        message: 'Mohon isi nama customer baru atau pilih customer eksisting!',
+                        indicator: 'red'
+                    });
+                } else {
+                    alert('Mohon isi nama customer baru atau pilih customer eksisting!');
+                }
+                
+                // Fokus ke field nama customer baru
+                newCustomerNameInput.focus();
+                return false;
+            }
+            
+            console.log('Form validation passed. Customer name:', customerNameValue);
+        }, true); // Use capture phase untuk menangkap event lebih awal
+        
+        console.log('Customer name sync initialized successfully');
+    }
+})();
+
+(function() {
+    'use strict';
+    
+    function initFix() {
+        const newCustomerInput = document.getElementById('new_customer_name');
+        const hiddenCustomerName = document.getElementById('customer_name');
+        const existingSelect = document.getElementById('existing_customer');
+        const form = document.getElementById('customer-vehicle-form');
+        
+        if (!newCustomerInput || !hiddenCustomerName) {
+            console.warn('[FIX] Customer name fields not found');
+            return;
+        }
+        
+        // Sync on input
+        newCustomerInput.addEventListener('input', (e) => {
+            hiddenCustomerName.value = e.target.value.trim();
+        });
+        
+        // Sync on blur
+        newCustomerInput.addEventListener('blur', (e) => {
+            hiddenCustomerName.value = e.target.value.trim();
+        });
+        
+        // Handle existing customer selection
+        if (existingSelect) {
+            existingSelect.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    newCustomerInput.value = '';
+                    const opt = e.target.options[e.target.selectedIndex];
+                    hiddenCustomerName.value = opt.text;
+                }
+            });
+        }
+        
+        // Pre-submit validation
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                const name = hiddenCustomerName.value?.trim();
+                const existing = existingSelect?.value?.trim();
+                
+                if (!name && !existing) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    if (typeof frappe !== 'undefined' && frappe.show_alert) {
+                        frappe.show_alert({
+                            message: 'Mohon isi nama customer atau pilih customer eksisting!',
+                            indicator: 'red'
+                        });
+                    } else {
+                        alert('Mohon isi nama customer atau pilih customer eksisting!');
+                    }
+                    
+                    newCustomerInput.focus();
+                    return false;
+                }
+            }, true);
+        }
+        
+        console.log('[FIX] Customer name sync initialized');
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initFix);
+    } else {
+        initFix();
+    }
 })();
 </script>
 {% endblock %}
