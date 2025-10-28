@@ -2494,6 +2494,9 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
             "vehicle": vehicle_name,
             "status": "Inspection",
         }
+        service_type = (data.get("service_order_type") or "").strip()
+        if service_type:
+            service_payload["service_order_type"] = service_type
         intake_type = (data.get("intake_type") or "Walk-In").strip() or "Walk-In"
         if intake_type not in {"Walk-In", "Booking"}:
             intake_type = "Walk-In"

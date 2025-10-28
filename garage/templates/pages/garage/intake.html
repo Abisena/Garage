@@ -1434,6 +1434,16 @@ button:disabled {
                             </header>
                             <div class="form-section__grid">
                                 <div class="form-field">
+                                    <label for="service_order_type">Jenis Service</label>
+                                    <select id="service_order_type" name="service_order_type" required>
+                                        <option value="">— Pilih Jenis Service —</option>
+                                        <option value="Service/Repair">Service/Repair</option>
+                                        <option value="Body Repair">Body Repair</option>
+                                        <option value="Warranty">Warranty</option>
+                                    </select>
+                                    <p class="form-hint">Pilih jenis layanan utama yang akan dikerjakan.</p>
+                                </div>
+                                <div class="form-field">
                                     <label for="notes">Keluhan Customer</label>
                                     <textarea id="notes" name="notes" placeholder="Catat keluhan utama customer, detail kondisi kendaraan, atau permintaan khusus"></textarea>
                                     <p class="form-hint">Gunakan catatan untuk riwayat servis, permintaan khusus, atau peringatan teknis.</p>

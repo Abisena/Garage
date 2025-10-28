@@ -290,7 +290,7 @@ a:hover {
 
 .content-grid {
     display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 28px;
     align-items: start;
 }
@@ -432,6 +432,120 @@ a:hover {
     border-radius: var(--radius-lg);
     padding: 22px;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.parts-table-wrapper {
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    overflow-x: auto;
+    background: var(--gray-25);
+}
+
+.parts-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 760px;
+}
+
+.parts-table thead {
+    background: var(--gray-100);
+}
+
+.parts-table th,
+.parts-table td {
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    vertical-align: top;
+}
+
+.parts-table th {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gray-700);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.parts-table td {
+    background: white;
+}
+
+.parts-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.parts-table select,
+.parts-table input,
+.parts-table textarea {
+    width: 100%;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    font-size: 14px;
+    background: var(--gray-50);
+    font-family: var(--font-sans);
+}
+
+.parts-table textarea {
+    resize: vertical;
+    min-height: 72px;
+}
+
+.parts-table .numeric {
+    font-weight: 600;
+    color: var(--gray-900);
+    white-space: nowrap;
+}
+
+.part-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.part-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.part-summary strong {
+    font-size: 15px;
+    color: var(--gray-900);
+}
+
+.part-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.part-meta-row span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.part-select {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.part-select select {
+    background: #fff;
+}
+
+.parts-table .actions {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.parts-table .actions .btn-remove {
+    padding: 8px 12px;
 }
 
 .item-header {
@@ -936,7 +1050,7 @@ a:hover {
             <article class="summary-card">
                 <h3>Total Estimasi</h3>
                 <p id="display_total_estimate">Rp 0</p>
-                <small class="summary-subtext" id="display_estimate_breakdown">Jasa Rp 0 + Sparepart Rp 0</small>
+                <small class="summary-subtext" id="display_estimate_breakdown">Jasa Rp 0 + Sparepart &amp; Bahan Rp 0</small>
             </article>
         </div>
     </header>
@@ -952,32 +1066,11 @@ a:hover {
                         </div>
                         <div class="section-tags">
                             <span class="tag" id="display_service_type">-</span>
-                            <span class="tag" id="display_order_category">-</span>
                             <span class="tag priority-badge" id="display_priority">-</span>
                         </div>
                     </div>
 
                     <div class="form-grid">
-                        <div class="form-group">
-                            <label>Jenis Service *</label>
-                            <select id="service_order_type" required>
-                                <option value="">-- Pilih --</option>
-                                <option value="Service/Repair">Service/Repair</option>
-                                <option value="Body Repair">Body Repair</option>
-                                <option value="Warranty">Warranty</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Kategori *</label>
-                            <select id="order_category" required>
-                                <option value="">-- Pilih --</option>
-                                <option value="Workshop Service">Workshop Service</option>
-                                <option value="Body Repair">Body Repair</option>
-                                <option value="Quick Service">Quick Service</option>
-                            </select>
-                        </div>
-
                         <div class="form-group">
                             <label>Prioritas *</label>
                             <select id="priority" required>
@@ -996,7 +1089,7 @@ a:hover {
                         <div class="form-group">
                             <label>Total Estimasi (Rp) *</label>
                             <input type="number" id="total_estimated_amount" min="0" step="1000" required readonly>
-                            <p class="form-hint" id="total_estimate_hint">Termasuk biaya jasa dasar Rp 0 dan total sparepart Rp 0.</p>
+                            <p class="form-hint" id="total_estimate_hint">Termasuk biaya jasa dasar Rp 0 dan total Sparepart &amp; Bahan Rp 0.</p>
                         </div>
                     </div>
 
@@ -1031,16 +1124,16 @@ a:hover {
                 <section class="section-card">
                     <div class="section-header">
                         <div>
-                            <h2>🔩 Sparepart Diperlukan</h2>
-                            <p>Catat kebutuhan part agar tim procurement siap menyediakan.</p>
+                            <h2>🔩 Sparepart &amp; Bahan</h2>
+                            <p>Catat kebutuhan part atau bahan agar tim procurement siap menyediakan.</p>
                         </div>
                         <button type="button" class="btn btn-add" onclick="addRequiredPart()">+ Tambah Part</button>
                     </div>
 
                     <div class="repeating-list" id="requiredPartsList">
                         <div class="empty-state">
-                            <strong>Belum ada sparepart.</strong>
-                            <span>Tambahkan part yang dibutuhkan untuk perbaikan.</span>
+                            <strong>Belum ada sparepart atau bahan.</strong>
+                            <span>Tambahkan kebutuhan untuk perbaikan.</span>
                         </div>
                     </div>
                 </section>
@@ -1064,91 +1157,6 @@ a:hover {
             </form>
         </main>
 
-        <aside class="side-column">
-            <section class="detail-card">
-                <h3>👤 Informasi Customer</h3>
-                <dl class="detail-list">
-                    <div>
-                        <dt>Nama Customer</dt>
-                        <dd id="display_customer_name">-</dd>
-                    </div>
-                    <div>
-                        <dt>Tipe</dt>
-                        <dd id="display_customer_type">-</dd>
-                    </div>
-                    <div>
-                        <dt>No. Telepon</dt>
-                        <dd><a id="display_customer_phone" class="detail-link" href="#">-</a></dd>
-                    </div>
-                    <div>
-                        <dt>Email</dt>
-                        <dd><a id="display_customer_email" class="detail-link" href="#">-</a></dd>
-                    </div>
-                </dl>
-                <div class="vip-pill" id="display_customer_vip">VIP Customer</div>
-            </section>
-
-            <section class="detail-card">
-                <h3>🚗 Detail Kendaraan</h3>
-                <dl class="detail-list">
-                    <div>
-                        <dt>Nomor Polisi</dt>
-                        <dd id="display_vehicle_plate">-</dd>
-                    </div>
-                    <div>
-                        <dt>Brand &amp; Model</dt>
-                        <dd id="display_vehicle_brand_model">-</dd>
-                    </div>
-                    <div>
-                        <dt>Tahun</dt>
-                        <dd id="display_vehicle_year">-</dd>
-                    </div>
-                    <div>
-                        <dt>Warna</dt>
-                        <dd id="display_vehicle_color">-</dd>
-                    </div>
-                    <div>
-                        <dt>Transmisi</dt>
-                        <dd id="display_vehicle_transmission">-</dd>
-                    </div>
-                    <div>
-                        <dt>Jenis BBM</dt>
-                        <dd id="display_vehicle_fuel">-</dd>
-                    </div>
-                    <div>
-                        <dt>Kilometer</dt>
-                        <dd id="display_vehicle_mileage">-</dd>
-                    </div>
-                </dl>
-            </section>
-
-            <section class="detail-card" id="technicianRosterCard">
-                <h3>🛠️ Status Teknisi</h3>
-                <p class="roster-summary" id="technicianRosterSummary">Memuat data teknisi...</p>
-                <div class="roster-list" id="technicianRosterList">
-                    <div class="roster-empty">Data teknisi belum dimuat.</div>
-                </div>
-            </section>
-
-            <section class="detail-card">
-                <h3>📝 Catatan Intake</h3>
-                <p id="display_intake_notes" style="color: var(--text-secondary); line-height: 1.6;">-</p>
-            </section>
-
-            <section class="detail-card">
-                <h3>📞 Kontak Utama</h3>
-                <dl class="detail-list">
-                    <div>
-                        <dt>Nama PIC</dt>
-                        <dd id="display_primary_contact">-</dd>
-                    </div>
-                    <div>
-                        <dt>Prioritas</dt>
-                        <dd><span class="tag priority-badge" id="display_priority_secondary">-</span></dd>
-                    </div>
-                </dl>
-            </section>
-        </aside>
     </div>
 
     <div class="action-bar">
@@ -1531,11 +1539,11 @@ a:hover {
             const normalizedPartsTotal = Math.max(0, Math.round(partsTotal || 0));
             const breakdown = document.getElementById('display_estimate_breakdown');
             if (breakdown) {
-                breakdown.textContent = `Jasa ${formatCurrency(normalizedServiceFee)} + Sparepart ${formatCurrency(normalizedPartsTotal)}`;
+                breakdown.textContent = `Jasa ${formatCurrency(normalizedServiceFee)} + Sparepart & Bahan ${formatCurrency(normalizedPartsTotal)}`;
             }
             const hint = document.getElementById('total_estimate_hint');
             if (hint) {
-                hint.textContent = `Termasuk biaya jasa dasar ${formatCurrency(normalizedServiceFee)} dan total sparepart ${formatCurrency(normalizedPartsTotal)}.`;
+                hint.textContent = `Termasuk biaya jasa dasar ${formatCurrency(normalizedServiceFee)} dan total Sparepart & Bahan ${formatCurrency(normalizedPartsTotal)}.`;
             }
         }
 
@@ -1849,23 +1857,7 @@ a:hover {
         }
 
         function wireFormMirrors() {
-            const serviceTypeInput = document.getElementById('service_order_type');
-            const orderCategoryInput = document.getElementById('order_category');
             const priorityInput = document.getElementById('priority');
-
-            serviceTypeInput?.addEventListener('change', () => {
-                const display = document.getElementById('display_service_type');
-                if (display) {
-                    display.textContent = serviceTypeInput.value || '-';
-                }
-            });
-
-            orderCategoryInput?.addEventListener('change', () => {
-                const display = document.getElementById('display_order_category');
-                if (display) {
-                    display.textContent = orderCategoryInput.value || '-';
-                }
-            });
 
             priorityInput?.addEventListener('change', () => {
                 applyPriorityBadge(priorityInput.value);
@@ -1989,9 +1981,15 @@ a:hover {
                 || order.customer
                 || '-';
             document.getElementById('display_customer').textContent = customerName;
-            document.getElementById('display_customer_name').textContent = customerName;
+            const customerNameDisplay = document.getElementById('display_customer_name');
+            if (customerNameDisplay) {
+                customerNameDisplay.textContent = customerName;
+            }
 
-            document.getElementById('display_customer_type').textContent = customerDetails.customer_type || '-';
+            const customerTypeDisplay = document.getElementById('display_customer_type');
+            if (customerTypeDisplay) {
+                customerTypeDisplay.textContent = customerDetails.customer_type || '-';
+            }
 
             const vipPill = document.getElementById('display_customer_vip');
             if (vipPill) {
@@ -2022,7 +2020,10 @@ a:hover {
                 }
             }
 
-            document.getElementById('display_primary_contact').textContent = order.primary_contact || '-';
+            const primaryContactDisplay = document.getElementById('display_primary_contact');
+            if (primaryContactDisplay) {
+                primaryContactDisplay.textContent = order.primary_contact || '-';
+            }
 
             const licensePlate = order.vehicle_plate || vehicleDetails.license_plate || '';
             const brandModel = [
@@ -2040,24 +2041,52 @@ a:hover {
             const vehicleDisplay = vehicleParts.join(' • ');
 
             document.getElementById('display_vehicle').textContent = vehicleDisplay || '-';
-            document.getElementById('display_vehicle_plate').textContent = licensePlate || '-';
-            document.getElementById('display_vehicle_brand_model').textContent = brandModel || '-';
-            document.getElementById('display_vehicle_year').textContent = vehicleDetails.vehicle_year || order.vehicle_year || '-';
-            document.getElementById('display_vehicle_color').textContent = vehicleDetails.color || order.vehicle_color || '-';
-            document.getElementById('display_vehicle_transmission').textContent = vehicleDetails.transmission || order.vehicle_transmission || '-';
-            document.getElementById('display_vehicle_fuel').textContent = vehicleDetails.fuel_type || order.vehicle_fuel_type || '-';
-            document.getElementById('display_vehicle_mileage').textContent = formatMileage(vehicleDetails.mileage || order.vehicle_mileage);
+
+            const vehiclePlateDisplay = document.getElementById('display_vehicle_plate');
+            if (vehiclePlateDisplay) {
+                vehiclePlateDisplay.textContent = licensePlate || '-';
+            }
+
+            const vehicleBrandModelDisplay = document.getElementById('display_vehicle_brand_model');
+            if (vehicleBrandModelDisplay) {
+                vehicleBrandModelDisplay.textContent = brandModel || '-';
+            }
+
+            const vehicleYearDisplay = document.getElementById('display_vehicle_year');
+            if (vehicleYearDisplay) {
+                vehicleYearDisplay.textContent = vehicleDetails.vehicle_year || order.vehicle_year || '-';
+            }
+
+            const vehicleColorDisplay = document.getElementById('display_vehicle_color');
+            if (vehicleColorDisplay) {
+                vehicleColorDisplay.textContent = vehicleDetails.color || order.vehicle_color || '-';
+            }
+
+            const vehicleTransmissionDisplay = document.getElementById('display_vehicle_transmission');
+            if (vehicleTransmissionDisplay) {
+                vehicleTransmissionDisplay.textContent = vehicleDetails.transmission || order.vehicle_transmission || '-';
+            }
+
+            const vehicleFuelDisplay = document.getElementById('display_vehicle_fuel');
+            if (vehicleFuelDisplay) {
+                vehicleFuelDisplay.textContent = vehicleDetails.fuel_type || order.vehicle_fuel_type || '-';
+            }
+
+            const vehicleMileageDisplay = document.getElementById('display_vehicle_mileage');
+            if (vehicleMileageDisplay) {
+                vehicleMileageDisplay.textContent = formatMileage(vehicleDetails.mileage || order.vehicle_mileage);
+            }
 
             const intakeNotes = order.intake_notes || order.inspection_summary || order.service_notes;
-            document.getElementById('display_intake_notes').textContent = intakeNotes || 'Belum ada catatan tambahan dari intake.';
-
-            if (order.service_order_type) {
-                document.getElementById('service_order_type').value = order.service_order_type;
-                document.getElementById('display_service_type').textContent = order.service_order_type;
+            const intakeNotesDisplay = document.getElementById('display_intake_notes');
+            if (intakeNotesDisplay) {
+                intakeNotesDisplay.textContent = intakeNotes || 'Belum ada catatan tambahan dari intake.';
             }
-            if (order.order_category) {
-                document.getElementById('order_category').value = order.order_category;
-                document.getElementById('display_order_category').textContent = order.order_category;
+            if (order.service_order_type) {
+                const serviceTypeTag = document.getElementById('display_service_type');
+                if (serviceTypeTag) {
+                    serviceTypeTag.textContent = order.service_order_type;
+                }
             }
             if (order.priority) {
                 document.getElementById('priority').value = order.priority;
@@ -2412,8 +2441,8 @@ a:hover {
             if (requiredParts.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
-                        <strong>Belum ada sparepart.</strong>
-                        <span>Tambahkan part yang dibutuhkan untuk perbaikan.</span>
+                        <strong>Belum ada sparepart atau bahan.</strong>
+                        <span>Tambahkan kebutuhan untuk perbaikan.</span>
                     </div>
                 `;
                 recalculateTotals();
@@ -2435,95 +2464,84 @@ a:hover {
                 };
             });
 
-            container.innerHTML = requiredParts
-                .map((part, i) => {
-                    const catalogOptions = sparePartCatalog
-                        .map((catalog) => `
-                            <option value="${escapeHtml(catalog.name)}" ${catalog.name === part.catalog_name ? 'selected' : ''}>
-                                ${escapeHtml(catalog.part_code || catalog.part_name || catalog.name)} — ${escapeHtml(catalog.part_name || '')}
-                            </option>
-                        `)
-                        .join('');
-                    const catalogRef = lookupSparePart(part.catalog_name || part.item_code);
-                    const manualOption = !part.catalog_name && part.item_code
-                        ? `<option value="__manual__${i}" selected>Manual: ${escapeHtml(part.item_code)}${part.item_name ? ` – ${escapeHtml(part.item_name)}` : ''}</option>`
-                        : '';
-                    const statusOptions = stockStatusOptions
-                        .map((status) => `<option value="${escapeHtml(status)}" ${status === (part.stock_status || 'Pending Check') ? 'selected' : ''}>${escapeHtml(status)}</option>`)
-                        .join('');
-                    const stockDisplay = part.catalog_name ? `${formatNumber(part.catalog_stock_qty ?? catalogRef?.stock_qty ?? 0)} unit` : 'Tidak diketahui';
-                    const managedBy = part.catalog_managed_by || catalogRef?.managed_by || '-';
-                    const warehouseDisplay = part.warehouse || catalogRef?.warehouse_location || '-';
-                    const previewImage = part.catalog_image || catalogRef?.image;
-                    const imageStyle = previewImage ? `background-image: url('${encodeURI(previewImage)}')` : '';
-                    const thumbnail = previewImage
-                        ? `<div class="part-thumbnail" style="${imageStyle}"></div>`
-                        : '<div class="part-thumbnail is-empty">🔧</div>';
-                    const catalogHint = sparePartCatalog.length ? '' : '<p class="sparepart-hint">Katalog sparepart masih kosong. Tambahkan data di halaman Sparepart.</p>';
+            const rows = requiredParts.map((part, i) => {
+                const catalogOptions = sparePartCatalog
+                    .map((catalog) => `
+                        <option value="${escapeHtml(catalog.name)}" ${catalog.name === part.catalog_name ? 'selected' : ''}>
+                            ${escapeHtml(catalog.part_code || catalog.part_name || catalog.name)} — ${escapeHtml(catalog.part_name || '')}
+                        </option>
+                    `)
+                    .join('');
+                const catalogRef = lookupSparePart(part.catalog_name || part.item_code);
+                const manualOption = !part.catalog_name && part.item_code
+                    ? `<option value="__manual__${i}" selected>Manual: ${escapeHtml(part.item_code)}${part.item_name ? ` – ${escapeHtml(part.item_name)}` : ''}</option>`
+                    : '';
+                const currentStatus = part.stock_status || 'Pending Check';
+                const statusOptions = stockStatusOptions
+                    .map((status) => `<option value="${escapeHtml(status)}" ${status === currentStatus ? 'selected' : ''}>${escapeHtml(status)}</option>`)
+                    .join('');
+                const stockDisplay = part.catalog_name
+                    ? `${formatNumber(part.catalog_stock_qty ?? catalogRef?.stock_qty ?? 0)} unit`
+                    : 'Tidak diketahui';
+                const managedBy = part.catalog_managed_by || catalogRef?.managed_by || '-';
+                const catalogWarehouse = catalogRef?.warehouse_location || '';
+                const catalogHint = sparePartCatalog.length ? '' : '<p class="sparepart-hint">Katalog sparepart masih kosong. Tambahkan data di halaman Sparepart.</p>';
 
-                    return `
-                        <div class="repeating-item sparepart-item">
-                            <div class="item-header">
-                                <span class="item-number">Part #${i + 1}</span>
-                                <button type="button" class="btn-remove" onclick="removeRequiredPart(${i})">🗑️ Hapus</button>
-                            </div>
-                            <div class="sparepart-selection">
-                                <label>Pilih Sparepart *</label>
-                                <select onchange="selectRequiredPart(${i}, this.value)" ${part.catalog_name || part.item_code ? '' : 'required'}>
-                                    <option value="">— Pilih sparepart —</option>
-                                    ${manualOption}
-                                    ${catalogOptions}
-                                </select>
-                                ${catalogHint}
-                            </div>
-                            <div class="sparepart-body">
-                                <div class="sparepart-summary">
-                                    ${thumbnail}
-                                        <div class="sparepart-summary__text">
-                                            <div class="sparepart-title">${escapeHtml(part.item_name || 'Sparepart belum dipilih')}</div>
-                                            <div class="sparepart-meta">
-                                                <span>${escapeHtml(part.item_code || '-')}</span>
-                                                <span>Stok: ${stockDisplay}</span>
-                                                <span>Gudang: ${escapeHtml(warehouseDisplay)}</span>
-                                                <span>Penjaga: ${escapeHtml(managedBy)}</span>
-                                            </div>
+                return `
+                    <tr>
+                        <td>
+                            <div class="part-details">
+                                <div class="part-select">
+                                    <select onchange="selectRequiredPart(${i}, this.value)" ${part.catalog_name || part.item_code ? '' : 'required'}>
+                                        <option value="">— Pilih sparepart atau bahan —</option>
+                                        ${manualOption}
+                                        ${catalogOptions}
+                                    </select>
+                                    ${catalogHint}
+                                </div>
+                                <div class="part-summary">
+                                    <strong>${escapeHtml(part.item_name || 'Belum dipilih')}</strong>
+                                    <div class="part-meta-row">
+                                        <span>Kode: ${escapeHtml(part.item_code || '-')}</span>
+                                        <span>Stok: ${stockDisplay}</span>
+                                        <span>Gudang Katalog: ${escapeHtml(catalogWarehouse || '-')}</span>
+                                        <span>Penjaga: ${escapeHtml(managedBy)}</span>
                                     </div>
                                 </div>
-                                <div class="form-grid compact">
-                                    <div class="form-group">
-                                        <label>Qty *</label>
-                                        <input type="number" value="${part.qty}" min="0" step="0.01" onchange="updateRequiredPartQty(${i}, this.value)" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Harga Satuan *</label>
-                                        <input type="number" value="${part.rate}" min="0" step="0.01" onchange="updateRequiredPartRate(${i}, this.value)" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>UOM</label>
-                                        <input type="text" value="${escapeHtml(part.uom || '')}" onchange="updateRequiredPartUom(${i}, this.value)">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Status</label>
-                                        <select onchange="updateRequiredPartStatus(${i}, this.value)">${statusOptions}</select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Gudang</label>
-                                        <input type="text" value="${escapeHtml(part.warehouse || '')}" onchange="updateRequiredPartWarehouse(${i}, this.value)">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Total</label>
-                                        <div class="calculated-value">${formatCurrency(part.amount || 0)}</div>
-                                    </div>
-                                </div>
-                                <div class="form-group" style="grid-column: 1 / -1;">
-                                    <label>Catatan</label>
-                                    <textarea rows="2" onchange="updateRequiredPartDescription(${i}, this.value)">${escapeHtml(part.description || '')}</textarea>
-                                </div>
                             </div>
-                        </div>
-                    `;
-                })
-                .join('');
+                        </td>
+                        <td><input type="number" value="${part.qty}" min="0" step="0.01" onchange="updateRequiredPartQty(${i}, this.value)" required></td>
+                        <td><input type="text" value="${escapeHtml(part.uom || '')}" onchange="updateRequiredPartUom(${i}, this.value)"></td>
+                        <td><input type="number" value="${part.rate}" min="0" step="0.01" onchange="updateRequiredPartRate(${i}, this.value)" required></td>
+                        <td class="numeric">${formatCurrency(part.amount || 0)}</td>
+                        <td><select onchange="updateRequiredPartStatus(${i}, this.value)">${statusOptions}</select></td>
+                        <td><input type="text" value="${escapeHtml(part.warehouse || '')}" onchange="updateRequiredPartWarehouse(${i}, this.value)"></td>
+                        <td><textarea rows="2" onchange="updateRequiredPartDescription(${i}, this.value)">${escapeHtml(part.description || '')}</textarea></td>
+                        <td class="actions"><button type="button" class="btn-remove" onclick="removeRequiredPart(${i})">🗑️ Hapus</button></td>
+                    </tr>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="parts-table-wrapper">
+                    <table class="parts-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Qty</th>
+                                <th>UOM</th>
+                                <th>Harga Satuan</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Gudang</th>
+                                <th>Catatan</th>
+                                <th class="actions">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
             recalculateTotals();
         }
 
@@ -2618,8 +2636,6 @@ a:hover {
 
             const data = {
                 order_id: orderId,
-                service_order_type: document.getElementById('service_order_type').value,
-                order_category: document.getElementById('order_category').value,
                 priority: document.getElementById('priority').value,
                 estimated_delivery_date: document.getElementById('estimated_delivery_date').value,
                 total_estimated_amount: parseFloat(document.getElementById('total_estimated_amount').value),
