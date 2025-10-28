@@ -44,7 +44,6 @@ const VEHICLE_BRAND_MODELS = {
             this.filteredSpareParts = [];
             this.currentSparePart = null;
             this.creatingSparePart = false;
-            this.bookingDateField = null;
             this.brandModelMap = VEHICLE_BRAND_MODELS;
             this.brandModelInitialized = false;
             this.bootstrapRefreshHandle = null;
@@ -172,25 +171,9 @@ const VEHICLE_BRAND_MODELS = {
 
         bindEvents() {
             if (this.forms.intake) {
-                this.setupBookingDateField();
-                this.setupIntakeTypeWatcher();
                 this.setupBrandModelControls();
                 this.forms.intake.addEventListener('submit', (event) => {
                     event.preventDefault();
-                    const bookingDateInput = this.forms.intake.querySelector('[name="service_booking_date"]');
-                    const bookingDateField = this.forms.intake.querySelector('[data-role="booking-date"]');
-                    const bookingTimeField = this.forms.intake.querySelector('[data-role="booking-time"]');
-                    const intakeType = this.getIntakeTypeValue();
-
-                    if (intakeType === 'Booking') {
-                        if (bookingDateInput && !bookingDateInput.value) {
-                            frappe.msgprint(__('Tanggal & jam booking wajib diisi untuk registrasi booking.'));
-                            const focusTarget = bookingDateField || bookingTimeField || bookingDateInput;
-                            focusTarget?.focus();
-                            return;
-                        }
-                    }
-
                     const payload = this.collectFormData(this.forms.intake, [
                         'existing_customer',
                         'customer_type',
@@ -210,7 +193,6 @@ const VEHICLE_BRAND_MODELS = {
                         'mileage',
                         'notes',
                         'intake_type',
-                        'service_booking_date',
                     ]);
                     this.submitForm(this.forms.intake, 'garage.api.portal.register_customer_vehicle', { payload }, 'Data intake tersimpan.');
                 });
@@ -377,7 +359,13 @@ const VEHICLE_BRAND_MODELS = {
                     this.handleExistingCustomerSearch();
                 });
                 this.inputs.existingCustomerSearch.addEventListener('input', (event) => {
-                    if (!event.target.value && this.selects.existingCustomer) {
+                    const rawValue = event.target.value || '';
+                    const trimmed = rawValue.trim();
+                    const nameField = this.forms.intake?.querySelector('[name="customer_name"]');
+                    if (nameField) {
+                        nameField.value = trimmed;
+                    }
+                    if (!rawValue && this.selects.existingCustomer) {
                         this.setSelectValue(this.selects.existingCustomer, '');
                         this.applyExistingCustomerSelection();
                     }
@@ -622,6 +610,9 @@ const VEHICLE_BRAND_MODELS = {
                     }
                 } else {
                     field.value = value ?? '';
+                    if (fieldName === 'customer_name' && this.inputs.existingCustomerSearch) {
+                        this.inputs.existingCustomerSearch.value = this.formatCustomerSearchLabel(customer);
+                    }
                 }
             });
             const vipField = form.querySelector('[name="is_vip"]');
@@ -812,6 +803,10 @@ const VEHICLE_BRAND_MODELS = {
             } else {
                 this.inputs.existingCustomerSearch.value = '';
             }
+            const nameField = this.forms.intake?.querySelector('[name="customer_name"]');
+            if (nameField) {
+                nameField.value = customer ? customer.customer_name || customer.name || '' : '';
+            }
         }
 
         handleExistingCustomerSearch() {
@@ -821,6 +816,10 @@ const VEHICLE_BRAND_MODELS = {
             }
             const raw = input.value || '';
             const query = raw.trim();
+            const nameField = this.forms.intake?.querySelector('[name="customer_name"]');
+            if (nameField) {
+                nameField.value = query;
+            }
             if (!query) {
                 if (this.selects.existingCustomer) {
                     this.setSelectValue(this.selects.existingCustomer, '');
@@ -843,6 +842,9 @@ const VEHICLE_BRAND_MODELS = {
                     this.applyExistingCustomerSelection();
                 }
                 return;
+            }
+            if (this.selects.existingCustomer) {
+                this.setSelectValue(this.selects.existingCustomer, '');
             }
             this.lookupCustomerByName(query);
         }
@@ -898,61 +900,6 @@ const VEHICLE_BRAND_MODELS = {
                     message: __('Customer tidak ditemukan. Periksa kembali nama yang dimasukkan.'),
                     indicator: 'yellow',
                 });
-            }
-        }
-
-        setupIntakeTypeWatcher() {
-            const form = this.forms.intake;
-            if (!form) {
-                return;
-            }
-            const bookingToggle = form.querySelector('[data-role="booking-toggle"]');
-            if (bookingToggle) {
-                bookingToggle.addEventListener('change', () => this.handleIntakeTypeChange());
-            }
-            this.handleIntakeTypeChange();
-        }
-
-        handleIntakeTypeChange() {
-            const form = this.forms.intake;
-            if (!form) {
-                return;
-            }
-            const bookingToggle = form.querySelector('[data-role="booking-toggle"]');
-            const hiddenIntakeType = form.querySelector('input[name="intake_type"]');
-            const isBooking = Boolean(bookingToggle?.checked);
-            if (hiddenIntakeType) {
-                hiddenIntakeType.value = isBooking ? 'Booking' : 'Walk-In';
-            }
-            const toggleWrapper = bookingToggle?.closest('.option-toggle__item');
-            if (toggleWrapper) {
-                toggleWrapper.classList.toggle('is-active', isBooking);
-            }
-            const bookingFields = form.querySelectorAll('[data-intake-booking]');
-            bookingFields.forEach((field) => {
-                field.classList.toggle('is-hidden', !isBooking);
-                field.setAttribute('aria-hidden', (!isBooking).toString());
-            });
-            const bookingInputs = form.querySelectorAll('[data-intake-booking] [name]');
-            bookingInputs.forEach((input) => {
-                if (
-                    input instanceof HTMLInputElement ||
-                    input instanceof HTMLSelectElement ||
-                    input instanceof HTMLTextAreaElement
-                ) {
-                    input.toggleAttribute('disabled', !isBooking);
-                    input.disabled = !isBooking;
-                    if (!isBooking) {
-                        input.value = '';
-                    }
-                }
-            });
-            if (this.bookingDateField?.update) {
-                this.bookingDateField.update();
-            }
-            const hint = form.querySelector('[data-role="booking-hint"]');
-            if (hint) {
-                hint.classList.toggle('is-visible', isBooking);
             }
         }
 
@@ -1052,84 +999,6 @@ const VEHICLE_BRAND_MODELS = {
             }
             modelSelect.disabled = !models.length && !previousSelection;
             modelSelect.removeAttribute('data-pending-value');
-        }
-
-        setupBookingDateField() {
-            const form = this.forms.intake;
-            if (!form) {
-                return;
-            }
-            const dateInput = form.querySelector('[data-role="booking-date"]');
-            const timeInput = form.querySelector('[data-role="booking-time"]');
-            const hiddenInput = form.querySelector('input[name="service_booking_date"]');
-            if (!dateInput || !timeInput || !hiddenInput) {
-                return;
-            }
-
-            const update = () => {
-                const dateValue = dateInput.value;
-                const timeValue = timeInput.value;
-                if (dateValue && timeValue) {
-                    const normalizedTime = timeValue.length === 5 ? `${timeValue}:00` : timeValue;
-                    hiddenInput.value = `${dateValue} ${normalizedTime}`;
-                } else {
-                    hiddenInput.value = '';
-                }
-            };
-
-            const applyExistingValue = () => {
-                const rawValue = hiddenInput.value || '';
-                if (!rawValue) {
-                    dateInput.value = '';
-                    timeInput.value = '';
-                    return;
-                }
-                const [datePart, timePartRaw] = rawValue.split(' ');
-                if (datePart) {
-                    dateInput.value = datePart;
-                }
-                if (timePartRaw) {
-                    const normalizedTime = timePartRaw.trim().slice(0, 5);
-                    timeInput.value = normalizedTime;
-                }
-            };
-
-            dateInput.addEventListener('change', update);
-            timeInput.addEventListener('change', update);
-            dateInput.addEventListener('input', update);
-            timeInput.addEventListener('input', update);
-
-            this.bookingDateField = {
-                update,
-                applyExistingValue,
-            };
-
-            applyExistingValue();
-            update();
-        }
-
-        getIntakeTypeValue() {
-            const form = this.forms.intake;
-            if (!form) {
-                return 'Walk-In';
-            }
-            const hiddenInput = form.querySelector('input[name="intake_type"]');
-            if (hiddenInput && !hiddenInput.disabled) {
-                return hiddenInput.value || 'Walk-In';
-            }
-            const select = form.querySelector('select[name="intake_type"]');
-            if (select && !select.disabled) {
-                return select.value || 'Walk-In';
-            }
-            const checkedRadio = form.querySelector('input[name="intake_type"]:checked');
-            if (checkedRadio && !checkedRadio.disabled) {
-                return checkedRadio.value || 'Walk-In';
-            }
-            const fallbackRadio = form.querySelector('input[name="intake_type"]');
-            if (fallbackRadio && !fallbackRadio.disabled) {
-                return fallbackRadio.value || 'Walk-In';
-            }
-            return 'Walk-In';
         }
 
         normalizeLicensePlate(value) {
@@ -2646,7 +2515,13 @@ const VEHICLE_BRAND_MODELS = {
             });
             if (form === this.forms.intake) {
                 this.updateCustomerSearchInput(null);
-                this.handleIntakeTypeChange();
+                if (this.selects.existingCustomer) {
+                    this.setSelectValue(this.selects.existingCustomer, '');
+                }
+                const intakeTypeField = form.querySelector('input[name="intake_type"]');
+                if (intakeTypeField) {
+                    intakeTypeField.value = 'Walk-In';
+                }
             }
         }
 
