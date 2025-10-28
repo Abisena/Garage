@@ -10,6 +10,9 @@ import frappe
 # section of the portal. These users land on the overview page by default.
 PRIVILEGED_ROLES: Set[str] = {
     "Administrator",
+    "System Manager",
+    "Manager Bengkel",
+    "Garage Manager",
     "Head Manager Bengkel",
 }
 
