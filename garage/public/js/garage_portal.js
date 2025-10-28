@@ -244,6 +244,7 @@ const VEHICLE_BRAND_MODELS = {
             this.brandModelInitialized = false;
             this.bootstrapRefreshHandle = null;
             this.isPrefilling = false; // ← TAMBAHKAN BARIS INI
+            this.manualCustomerQuery = '';
         }
 
         init() {
@@ -563,6 +564,7 @@ const VEHICLE_BRAND_MODELS = {
                 this.inputs.existingCustomerSearch.addEventListener('input', (event) => {
                     const rawValue = event.target.value || '';
                     const trimmed = rawValue.trim();
+                    this.manualCustomerQuery = trimmed;
                     const nameField = this.forms.intake?.querySelector('[name="customer_name"]');
                     if (nameField) {
                         nameField.value = trimmed;
@@ -1096,12 +1098,18 @@ const VEHICLE_BRAND_MODELS = {
             }
             if (customer) {
                 this.inputs.existingCustomerSearch.value = this.formatCustomerSearchLabel(customer);
+                this.manualCustomerQuery = '';
             } else {
-                this.inputs.existingCustomerSearch.value = '';
+                const manualValue = (this.manualCustomerQuery || '').trim();
+                this.inputs.existingCustomerSearch.value = manualValue;
             }
             const nameField = this.forms.intake?.querySelector('[name="customer_name"]');
             if (nameField) {
-                nameField.value = customer ? customer.customer_name || customer.name || '' : '';
+                if (customer) {
+                    nameField.value = customer.customer_name || customer.name || '';
+                } else {
+                    nameField.value = this.manualCustomerQuery || '';
+                }
             }
         }
 
@@ -1112,6 +1120,7 @@ const VEHICLE_BRAND_MODELS = {
             }
             const raw = input.value || '';
             const query = raw.trim();
+            this.manualCustomerQuery = query;
             const nameField = this.forms.intake?.querySelector('[name="customer_name"]');
             if (nameField) {
                 nameField.value = query;
@@ -1127,6 +1136,7 @@ const VEHICLE_BRAND_MODELS = {
             const normalizedMatch = this.customerNameMap.get(query.toLowerCase());
             const docname = exactMatch || normalizedMatch;
             if (docname) {
+                this.manualCustomerQuery = '';
                 if (this.selects.existingCustomer) {
                     const set = this.setSelectValue(this.selects.existingCustomer, docname);
                     if (!set) {
@@ -3007,6 +3017,7 @@ const VEHICLE_BRAND_MODELS = {
                 }
             });
             if (form === this.forms.intake) {
+                this.manualCustomerQuery = '';
                 this.updateCustomerSearchInput(null);
                 if (this.selects.existingCustomer) {
                     this.setSelectValue(this.selects.existingCustomer, '');
