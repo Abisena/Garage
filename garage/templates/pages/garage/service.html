@@ -1478,10 +1478,10 @@ body {
                         <th>Service Order</th>
                         <th>Kendaraan</th>
                         <th>Customer</th>
-                        <th>Status</th>
                         <th>Keluhan Customer</th>
                         <th>Tgl. Masuk</th>
                         <th>Action</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody id="table-inspection">
@@ -1856,7 +1856,6 @@ body {
                         <div class="customer-contact">${order.customer_phone || '-'}</div>
                     </div>
                 </td>
-                <td>${getStatusBadge(order.status)}</td>
                 <td>
                     <div class="notes-preview" title="${order.service_notes || '-'}">${order.service_notes || '-'}</div>
                 </td>
@@ -1868,6 +1867,7 @@ body {
                         🔍 Inspeksi
                     </button>
                 </td>
+                <td>${getStatusBadge(order.status)}</td>
             </tr>
         `; }).join('');
     }
