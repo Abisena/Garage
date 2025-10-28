@@ -1209,6 +1209,32 @@ a:hover {
         return numeric.toLocaleString('id-ID', { maximumFractionDigits: 2 });
     }
 
+    function formatServiceOrderId(value) {
+        if (value === undefined || value === null) {
+            return '-';
+        }
+
+        const raw = String(value).trim();
+        if (!raw) {
+            return '-';
+        }
+
+        if (/^SO-\d{5,}$/i.test(raw)) {
+            const [, digits] = raw.split('-');
+            return `SO-${digits}`;
+        }
+
+        const numericMatch = raw.match(/\d+/);
+        if (numericMatch) {
+            const numeric = Number(numericMatch[0]);
+            if (!Number.isNaN(numeric)) {
+                return `SO-${numeric.toString().padStart(5, '0')}`;
+            }
+        }
+
+        return raw;
+    }
+
 
     // ========== GLOBAL VARIABLES (MOVED HERE FOR SCOPE ACCESS) ==========
     let sparePartCatalog = [];
@@ -1474,6 +1500,7 @@ a:hover {
         let requiredParts = [];
         let paymentSchedule = [];
         let technicianRoster = [];
+        let preserveServerEstimate = false;
         // NOTE: sparePartCatalog & sparePartIndex sudah dideklarasi di atas (global scope)
         // JANGAN declare ulang di sini!
         let catalogLoadedFromOrder = false;
@@ -1499,28 +1526,41 @@ a:hover {
             }, 0);
         }
 
-        function updateEstimateBreakdown(partsTotal) {
-            const serviceFee = Math.max(0, Math.round(DEFAULT_SERVICE_FEE));
-            const normalizedPartsTotal = Math.max(0, Math.round(partsTotal));
+        function updateEstimateBreakdown(partsTotal, serviceFee) {
+            const normalizedServiceFee = Math.max(0, Math.round(serviceFee || 0));
+            const normalizedPartsTotal = Math.max(0, Math.round(partsTotal || 0));
             const breakdown = document.getElementById('display_estimate_breakdown');
             if (breakdown) {
-                breakdown.textContent = `Jasa ${formatCurrency(serviceFee)} + Sparepart ${formatCurrency(normalizedPartsTotal)}`;
+                breakdown.textContent = `Jasa ${formatCurrency(normalizedServiceFee)} + Sparepart ${formatCurrency(normalizedPartsTotal)}`;
             }
             const hint = document.getElementById('total_estimate_hint');
             if (hint) {
-                hint.textContent = `Termasuk biaya jasa dasar ${formatCurrency(serviceFee)} dan total sparepart ${formatCurrency(normalizedPartsTotal)}.`;
+                hint.textContent = `Termasuk biaya jasa dasar ${formatCurrency(normalizedServiceFee)} dan total sparepart ${formatCurrency(normalizedPartsTotal)}.`;
             }
         }
 
         function recalculateTotals() {
-            const serviceFee = Math.max(0, Math.round(DEFAULT_SERVICE_FEE));
             const partsTotal = Math.max(0, Math.round(calculateRequiredPartsTotal()));
-            const total = serviceFee + partsTotal;
-            if (totalEstimateInput) {
-                totalEstimateInput.value = total;
+            const hasServiceItems = partsTotal > 0 || (Array.isArray(serviceTasks) && serviceTasks.length > 0);
+            const serviceFee = hasServiceItems ? Math.max(0, Math.round(DEFAULT_SERVICE_FEE)) : 0;
+            const computedTotal = serviceFee + partsTotal;
+            const currentValue = totalEstimateInput ? Number(totalEstimateInput.value || 0) : 0;
+
+            if (hasServiceItems) {
+                preserveServerEstimate = false;
             }
-            updateTotalEstimateDisplay(total);
-            updateEstimateBreakdown(partsTotal);
+
+            if (preserveServerEstimate && !hasServiceItems && currentValue > 0 && computedTotal === 0) {
+                updateTotalEstimateDisplay(currentValue);
+                updateEstimateBreakdown(partsTotal, serviceFee);
+                return;
+            }
+
+            if (totalEstimateInput) {
+                totalEstimateInput.value = computedTotal;
+            }
+            updateTotalEstimateDisplay(computedTotal);
+            updateEstimateBreakdown(partsTotal, serviceFee);
         }
 
         function computeAvailableCapacity(technician) {
@@ -1907,7 +1947,7 @@ a:hover {
 
             technicianRoster = normalizeTechnicianRoster(order.available_technicians || order.technician_roster || []);
 
-            document.getElementById('display_order_id').textContent = order.name || order.order_id || '-';
+            document.getElementById('display_order_id').textContent = formatServiceOrderId(order.name || order.order_id);
 
             const statusValue = order.status || order.workflow_state || order.job_card_status || 'Draft';
             applyStatusBadge(statusValue);
@@ -2041,8 +2081,14 @@ a:hover {
             document.getElementById('inspection_summary').value = order.inspection_summary || '';
             document.getElementById('service_notes').value = order.service_notes || '';
 
-            if (Array.isArray(order.service_tasks)) {
-                serviceTasks = order.service_tasks.map((task) => ({
+            const rawServiceTasks = Array.isArray(order.service_tasks) ? order.service_tasks : [];
+            const rawRequiredParts = Array.isArray(order.required_parts) ? order.required_parts : [];
+            const totalEstimateFromServer = Number(order.total_estimated_amount);
+
+            preserveServerEstimate = !rawServiceTasks.length && !rawRequiredParts.length && !Number.isNaN(totalEstimateFromServer) && totalEstimateFromServer > 0;
+
+            if (rawServiceTasks.length) {
+                serviceTasks = rawServiceTasks.map((task) => ({
                     task: task.task || task.name || '',
                     description: task.description || '',
                     estimated_hours: task.estimated_hours ?? task.estimated_time ?? 1,
@@ -2066,8 +2112,8 @@ a:hover {
                 catalogLoadedFromOrder = true;
             }
 
-            if (Array.isArray(order.required_parts)) {
-                requiredParts = order.required_parts.map((part) => {
+            if (rawRequiredParts.length) {
+                requiredParts = rawRequiredParts.map((part) => {
                     const base = {
                         item_code: part.item_code || part.part_code || '',
                         item_name: part.item_name || part.part_name || '',
@@ -2142,6 +2188,7 @@ a:hover {
                         <span>Mulai dengan menambahkan pekerjaan service pertama.</span>
                     </div>
                 `;
+                recalculateTotals();
                 return;
             }
             const hasAvailableTechnicians = Array.isArray(technicianRoster) && technicianRoster.some((tech) => canTechnicianTakeNewTask(tech));
@@ -2199,6 +2246,8 @@ a:hover {
                 </div>
             `;
             }).join('');
+
+            recalculateTotals();
         }
 
         window.updateTaskTechnician = function(index, value) {

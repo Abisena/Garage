@@ -1664,6 +1664,32 @@ body {
             .replace(/'/g, '&#39;');
     }
 
+    function formatServiceOrderId(value) {
+        if (value === undefined || value === null) {
+            return '-';
+        }
+
+        const raw = String(value).trim();
+        if (!raw) {
+            return '-';
+        }
+
+        if (/^SO-\d{5,}$/i.test(raw)) {
+            const [, digits] = raw.split('-');
+            return `SO-${digits}`;
+        }
+
+        const numericMatch = raw.match(/\d+/);
+        if (numericMatch) {
+            const numeric = Number(numericMatch[0]);
+            if (!Number.isNaN(numeric)) {
+                return `SO-${numeric.toString().padStart(5, '0')}`;
+            }
+        }
+
+        return raw;
+    }
+
     function getRowClass(order) {
         if (!order || !order.intake_type) {
             return '';
@@ -1813,7 +1839,7 @@ body {
             return `
             <tr${classAttr}>
                 <td>
-                    <div class="cell-strong">${order.name || '-'}</div>
+                    <div class="cell-strong">${escapeHtml(formatServiceOrderId(order.name))}</div>
                     <div class="cell-secondary">${order.service_order_type || '-'}</div>
                     ${order.priority ? getPriorityBadge(order.priority) : ''}
                     ${renderIntakeBadge(order)}
@@ -1871,7 +1897,7 @@ body {
             return `
             <tr${classAttr}>
                 <td>
-                    <div class="cell-strong">${order.name || '-'}</div>
+                    <div class="cell-strong">${escapeHtml(formatServiceOrderId(order.name))}</div>
                     <div class="cell-secondary">${order.service_order_type || '-'}</div>
                     ${order.priority ? getPriorityBadge(order.priority) : ''}
                     ${renderIntakeBadge(order)}
@@ -1929,7 +1955,7 @@ body {
             return `
             <tr${classAttr}>
                 <td>
-                    <div class="cell-strong">${order.name || '-'}</div>
+                    <div class="cell-strong">${escapeHtml(formatServiceOrderId(order.name))}</div>
                     <div class="cell-secondary">${order.service_order_type || '-'}</div>
                     ${renderIntakeBadge(order)}
                 </td>
@@ -2009,7 +2035,7 @@ body {
                     <li class="booking-alert__item${itemClass}">
                         <div class="booking-alert__time">${escapeHtml(schedule)}</div>
                         <div class="booking-alert__meta">
-                            <div class="booking-alert__order">${escapeHtml(order.name || '-')} • ${escapeHtml(customer)}</div>
+                            <div class="booking-alert__order">${escapeHtml(formatServiceOrderId(order.name))} • ${escapeHtml(customer)}</div>
                             <div class="booking-alert__info">${escapeHtml(vehicleInfo || 'Tanpa detail kendaraan')}${channelInfo}</div>
                             ${referenceLine}
                         </div>
