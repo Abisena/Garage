@@ -243,6 +243,7 @@ const VEHICLE_BRAND_MODELS = {
             this.brandModelMap = VEHICLE_BRAND_MODELS;
             this.brandModelInitialized = false;
             this.bootstrapRefreshHandle = null;
+            this.isPrefilling = false; // ← TAMBAHKAN BARIS INI
         }
 
         init() {
@@ -750,42 +751,114 @@ const VEHICLE_BRAND_MODELS = {
             if (!form) {
                 return;
             }
-            if (this.inputs.licensePlate && vehicle.license_plate) {
-                this.inputs.licensePlate.value = vehicle.license_plate;
-            }
-            const brandSelect = this.selects.brand;
-            const modelSelect = this.selects.model;
-            const variantValue = vehicle.model_variant || '';
-            if (brandSelect) {
-                const brandValue = vehicle.brand || '';
-                this.populateBrandOptions(brandValue);
-                this.setSelectValue(brandSelect, brandValue);
-                this.populateModelOptions(brandValue, vehicle.model || '', variantValue);
-            } else if (modelSelect) {
-                this.populateModelOptions('', vehicle.model || '', variantValue);
-            }
-            const mapping = {
-                type_model: 'type_model',
-                vehicle_year: 'vehicle_year',
-                color: 'color',
-                transmission: 'transmission',
-                fuel_type: 'fuel_type',
-                mileage: 'mileage',
-                vin: 'vin',
-                engine_number: 'engine_number',
-            };
-            Object.entries(mapping).forEach(([fieldName, sourceKey]) => {
-                const field = form.querySelector(`[name="${fieldName}"]`);
-                if (!field) {
-                    return;
+            
+            // ✅ SET FLAG: Sedang melakukan prefill
+            this.isPrefilling = true;
+            
+            try {
+                // 1. Prefill license plate
+                if (this.inputs.licensePlate && vehicle.license_plate) {
+                    this.inputs.licensePlate.value = vehicle.license_plate;
                 }
-                const value = vehicle[sourceKey];
-                if (field.tagName === 'SELECT') {
-                    this.setSelectValue(field, value);
-                } else {
-                    field.value = value !== undefined && value !== null ? value : '';
+                
+                // 2. Prefill brand, model, dan variant
+                const brandSelect = this.selects.brand;
+                const modelSelect = this.selects.model;
+                const variantSelect = this.selects.modelVariant;
+                const variantValue = vehicle.model_variant || '';
+                
+                if (brandSelect) {
+                    const brandValue = vehicle.brand || '';
+                    const modelValue = vehicle.model || '';
+                    
+                    // Step 1: Populate brand options dan set value
+                    this.populateBrandOptions(brandValue);
+                    this.setSelectValue(brandSelect, brandValue);
+                    
+                    // Step 2: Populate model options (ini akan otomatis populate variant juga)
+                    this.populateModelOptions(brandValue, modelValue, variantValue);
+                    
+                    // ✅ PERBAIKAN: Explicitly set model value lagi untuk memastikan
+                    if (modelValue) {
+                        const modelSet = this.setSelectValue(modelSelect, modelValue);
+                        if (!modelSet) {
+                            // Jika gagal set, tambahkan option dulu
+                            this.addOptionIfMissing(modelSelect, modelValue, modelValue);
+                            this.setSelectValue(modelSelect, modelValue);
+                        }
+                    }
+                    
+                    // ✅ PERBAIKAN: Explicitly set variant value juga
+                    if (variantSelect && variantValue) {
+                        const variantSet = this.setSelectValue(variantSelect, variantValue);
+                        if (!variantSet) {
+                            // Jika gagal set, tambahkan option dulu
+                            this.addOptionIfMissing(variantSelect, variantValue, variantValue);
+                            this.setSelectValue(variantSelect, variantValue);
+                        }
+                    }
+                    
+                } else if (modelSelect) {
+                    // Jika tidak ada brandSelect, langsung populate model
+                    this.populateModelOptions('', vehicle.model || '', variantValue);
                 }
-            });
+                
+                // 3. Pastikan type_model juga di-set
+                const typeModelField = form.querySelector('[name="type_model"]');
+                if (typeModelField && vehicle.type_model) {
+                    if (typeModelField.tagName === 'SELECT') {
+                        this.addOptionIfMissing(typeModelField, vehicle.type_model, vehicle.type_model);
+                        this.setSelectValue(typeModelField, vehicle.type_model);
+                    } else {
+                        typeModelField.value = vehicle.type_model;
+                    }
+                }
+                
+                // 4. Prefill field-field lainnya
+                const mapping = {
+                    vehicle_year: 'vehicle_year',
+                    color: 'color',
+                    transmission: 'transmission',
+                    fuel_type: 'fuel_type',
+                    mileage: 'mileage',
+                    vin: 'vin',
+                    engine_number: 'engine_number',
+                };
+                
+                Object.entries(mapping).forEach(([fieldName, sourceKey]) => {
+                    const field = form.querySelector(`[name="${fieldName}"]`);
+                    if (!field) {
+                        return;
+                    }
+                    const value = vehicle[sourceKey];
+                    if (field.tagName === 'SELECT') {
+                        this.setSelectValue(field, value);
+                    } else {
+                        field.value = value !== undefined && value !== null ? value : '';
+                    }
+                });
+                
+            } finally {
+                // ✅ RESET FLAG: Selesai melakukan prefill
+                setTimeout(() => {
+                    this.isPrefilling = false;
+                    
+                    // Debug logging (optional, bisa dihapus di production)
+                    if (typeof console !== 'undefined') {
+                        const brandSelect = this.selects.brand;
+                        const modelSelect = this.selects.model;
+                        const variantSelect = this.selects.modelVariant;
+                        
+                        console.log('✓ Prefill completed:', {
+                            brand: brandSelect?.value || 'EMPTY',
+                            model: modelSelect?.value || 'EMPTY',
+                            modelOptions: modelSelect ? Array.from(modelSelect.options).map(o => o.value) : [],
+                            variant: variantSelect?.value || 'EMPTY',
+                            variantOptions: variantSelect ? Array.from(variantSelect.options).map(o => o.value) : []
+                        });
+                    }
+                }, 100);
+            }
         }
 
         prefillCustomerFields(customer) {
@@ -1112,18 +1185,29 @@ const VEHICLE_BRAND_MODELS = {
             const brandSelect = this.selects.brand;
             const modelSelect = this.selects.model;
             const variantSelect = this.selects.modelVariant;
+            
             if (!brandSelect || !modelSelect) {
                 return;
             }
+            
             const currentBrand = brandSelect.value || '';
             const currentModel = modelSelect.value || '';
             const currentVariant = variantSelect?.value || '';
+            
             this.populateBrandOptions(currentBrand);
             this.populateModelOptions(currentBrand, currentModel, currentVariant);
+            
             if (this.brandModelInitialized) {
                 return;
             }
+            
+            // ✅ PERBAIKAN: Tambahkan check isPrefilling
             brandSelect.addEventListener('change', () => {
+                // Skip jika sedang dalam proses prefilling
+                if (this.isPrefilling) {
+                    return;
+                }
+                
                 const selectedBrand = brandSelect.value || '';
                 if (variantSelect) {
                     variantSelect.value = '';
@@ -1132,18 +1216,65 @@ const VEHICLE_BRAND_MODELS = {
                 this.populateModelOptions(selectedBrand, '', '');
                 this.scheduleBootstrapRefresh();
             });
+            
+            // ✅ PERBAIKAN: Tambahkan check isPrefilling dan call updateTypeModelField
             modelSelect.addEventListener('change', () => {
+                // Skip jika sedang dalam proses prefilling
+                if (this.isPrefilling) {
+                    return;
+                }
+                
                 const selectedBrand = brandSelect.value || '';
                 const selectedModel = modelSelect.value || '';
                 this.populateVariantOptions(selectedBrand, selectedModel);
+                
+                // Update field type_model
+                this.updateTypeModelField(selectedBrand, selectedModel);
+                
                 this.scheduleBootstrapRefresh();
             });
+            
+            // ✅ PERBAIKAN: Update variant listener
             if (variantSelect) {
                 variantSelect.addEventListener('change', () => {
+                    if (this.isPrefilling) {
+                        return;
+                    }
+                    
+                    const selectedBrand = brandSelect.value || '';
+                    const selectedModel = modelSelect.value || '';
+                    this.updateTypeModelField(selectedBrand, selectedModel);
+                    
                     this.scheduleBootstrapRefresh();
                 });
             }
+            
             this.brandModelInitialized = true;
+        }
+
+        updateTypeModelField(brand, model) {
+            const form = this.forms.intake;
+            if (!form) {
+                return;
+            }
+            
+            const typeModelField = form.querySelector('[name="type_model"]');
+            if (!typeModelField) {
+                return;
+            }
+            
+            if (brand && model) {
+                const typeModelValue = `${brand} ${model}`;
+                
+                if (typeModelField.tagName === 'SELECT') {
+                    this.addOptionIfMissing(typeModelField, typeModelValue, typeModelValue);
+                    typeModelField.value = typeModelValue;
+                } else {
+                    typeModelField.value = typeModelValue;
+                }
+            } else {
+                typeModelField.value = '';
+            }
         }
 
         populateBrandOptions(selectedBrand = '') {
@@ -1186,24 +1317,31 @@ const VEHICLE_BRAND_MODELS = {
             if (!modelSelect) {
                 return;
             }
+            
             const normalizedBrand = brand || '';
             const models = this.getModelsForBrand(normalizedBrand);
+            
             let previousSelection = selectedModel || modelSelect.value || '';
             const pendingValue = modelSelect.getAttribute('data-pending-value');
             if (!previousSelection && pendingValue) {
                 previousSelection = pendingValue;
             }
+            
+            // Clear and rebuild options
             modelSelect.innerHTML = '';
             const placeholder = document.createElement('option');
             placeholder.value = '';
             placeholder.textContent = '— Pilih Model —';
             modelSelect.appendChild(placeholder);
+            
             models.forEach((model) => {
                 const option = document.createElement('option');
                 option.value = model.name;
                 option.textContent = model.name;
                 modelSelect.appendChild(option);
             });
+            
+            // Add custom model if not in list
             if (previousSelection) {
                 const hasModel = models.some((model) => model.name === previousSelection);
                 if (!hasModel) {
@@ -1216,12 +1354,20 @@ const VEHICLE_BRAND_MODELS = {
             } else {
                 modelSelect.value = '';
             }
+            
             modelSelect.disabled = !models.length && !previousSelection;
             modelSelect.removeAttribute('data-pending-value');
+            
+            // ✅ PERBAIKAN 1: Populate variant options setelah set model
             const variantSelect = this.selects.modelVariant;
             if (variantSelect) {
                 const effectiveModel = modelSelect.value || previousSelection || '';
                 this.populateVariantOptions(normalizedBrand, effectiveModel, selectedVariant);
+            }
+            
+            // ✅ PERBAIKAN 2: Update type_model field (skip saat prefilling)
+            if (!this.isPrefilling && normalizedBrand && modelSelect.value) {
+                this.updateTypeModelField(normalizedBrand, modelSelect.value);
             }
         }
 
