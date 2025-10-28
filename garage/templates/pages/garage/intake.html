@@ -1432,7 +1432,7 @@ button:disabled {
                                     Tambahkan catatan penting sebelum menyimpan intake untuk memastikan tim service siap menangani unit.
                                 </p>
                             </header>
-                            <div class="form-section__grid">
+                            <div class="form-section__grid two-column">
                                 <div class="form-field">
                                     <label for="service_order_type">Jenis Service</label>
                                     <select id="service_order_type" name="service_order_type" required>
@@ -1444,6 +1444,33 @@ button:disabled {
                                     <p class="form-hint">Pilih jenis layanan utama yang akan dikerjakan.</p>
                                 </div>
                                 <div class="form-field">
+                                    <label for="priority">Prioritas Servis</label>
+                                    <select id="priority" name="priority">
+                                        <option value="">— Pilih Prioritas —</option>
+                                        <option value="Normal">Normal</option>
+                                        <option value="High">High</option>
+                                        <option value="Urgent">Urgent</option>
+                                    </select>
+                                    <p class="form-hint">Gunakan prioritas tinggi bila unit membutuhkan penanganan segera.</p>
+                                </div>
+                                <div class="form-field">
+                                    <label for="estimated_delivery_date">Estimasi Selesai</label>
+                                    <input type="date" id="estimated_delivery_date" name="estimated_delivery_date" />
+                                    <p class="form-hint">Tanggal target unit selesai dan siap diserahkan ke customer.</p>
+                                </div>
+                                <div class="form-field">
+                                    <label for="total_estimated_amount">Total Estimasi (Rp)</label>
+                                    <input
+                                        type="number"
+                                        id="total_estimated_amount"
+                                        name="total_estimated_amount"
+                                        min="0"
+                                        step="1000"
+                                        placeholder="0"
+                                    />
+                                    <p class="form-hint">Masukkan estimasi biaya awal termasuk jasa dan sparepart jika sudah diketahui.</p>
+                                </div>
+                                <div class="form-field form-field--full">
                                     <label for="notes">Keluhan Customer</label>
                                     <textarea id="notes" name="notes" placeholder="Catat keluhan utama customer, detail kondisi kendaraan, atau permintaan khusus"></textarea>
                                     <p class="form-hint">Gunakan catatan untuk riwayat servis, permintaan khusus, atau peringatan teknis.</p>
