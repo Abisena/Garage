@@ -2283,14 +2283,39 @@ def get_service_statistics() -> Dict[str, Any]:
     }
 
 
+VEHICLE_LOOKUP_FIELDS = [
+    "name",
+    "customer",
+    "license_plate",
+    "vin",
+    "brand",
+    "type_model",
+    "model",
+    "model_variant",
+    "vehicle_year",
+    "color",
+    "transmission",
+    "fuel_type",
+    "mileage",
+    "engine_number",
+    "last_service_date",
+]
+
+
 @frappe.whitelist()
 def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> Dict[str, Any]:
-    """Fetch a customer (and their vehicles) by identifier or partial name."""
+    """Fetch a customer (and their vehicles) by identifier or partial name.
+
+    The lookup now prioritises matching a license plate so the associated
+    customer can be autofilled when the intake form searches by nomor polisi.
+    """
 
     _require_login()
     identifier = (name or query or "").strip()
     if not identifier:
         return {}
+
+    normalized_identifier = re.sub(r"\s+", "", identifier).upper()
 
     customer_fields = [
         "name",
@@ -2303,13 +2328,41 @@ def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> 
         "is_vip",
     ]
 
+    customer_doc: Optional[Dict[str, Any]] = None
+    matched_vehicle: Optional[Dict[str, Any]] = None
+
     with _ignoring_permissions():
-        customer_doc = frappe.db.get_value(
-            "Garage Customer",
-            identifier,
-            customer_fields,
-            as_dict=True,
-        )
+        if normalized_identifier:
+            fields_sql = ", ".join(f"`{field}`" for field in VEHICLE_LOOKUP_FIELDS)
+            vehicle_rows = frappe.db.sql(
+                f"""
+                SELECT {fields_sql}
+                FROM `tabGarage Vehicle`
+                WHERE REPLACE(upper(`license_plate`), ' ', '') = %s
+                ORDER BY modified DESC
+                LIMIT 1
+                """,
+                normalized_identifier,
+                as_dict=True,
+            )
+
+            if vehicle_rows:
+                matched_vehicle = vehicle_rows[0]
+                if matched_vehicle.get("customer"):
+                    customer_doc = frappe.db.get_value(
+                        "Garage Customer",
+                        matched_vehicle["customer"],
+                        customer_fields,
+                        as_dict=True,
+                    )
+
+        if not customer_doc:
+            customer_doc = frappe.db.get_value(
+                "Garage Customer",
+                identifier,
+                customer_fields,
+                as_dict=True,
+            )
 
         if not customer_doc:
             customer_doc = frappe.db.get_value(
@@ -2331,31 +2384,20 @@ def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> 
             if matches:
                 customer_doc = matches[0]
 
-    if not customer_doc:
+    if not customer_doc and not matched_vehicle:
         return {}
 
-    vehicles = frappe.get_all(
-        "Garage Vehicle",
-        filters={"customer": customer_doc["name"]},
-        fields=[
-            "name",
-            "customer",
-            "license_plate",
-            "vin",
-            "brand",
-            "type_model",
-            "model",
-            "vehicle_year",
-            "color",
-            "transmission",
-            "fuel_type",
-            "mileage",
-            "engine_number",
-            "last_service_date",
-        ],
-        order_by="modified desc",
-        limit=20,
-    )
+    vehicles: List[Dict[str, Any]] = []
+    if customer_doc:
+        vehicles = frappe.get_all(
+            "Garage Vehicle",
+            filters={"customer": customer_doc["name"]},
+            fields=VEHICLE_LOOKUP_FIELDS,
+            order_by="modified desc",
+            limit=20,
+        )
+    elif matched_vehicle:
+        vehicles = [matched_vehicle]
 
     return {"customer": customer_doc, "vehicles": vehicles}
 
