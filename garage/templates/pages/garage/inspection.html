@@ -328,6 +328,16 @@ a:hover {
     color: var(--text-secondary);
 }
 
+.section-actions {
+    margin-top: 24px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.section-actions .btn {
+    min-width: 180px;
+}
+
 .section-tags {
     display: flex;
     flex-wrap: wrap;
@@ -844,102 +854,6 @@ a:hover {
     gap: 12px;
 }
 
-.roster-summary {
-    margin: 0 0 12px;
-    font-size: 13px;
-    color: var(--text-muted);
-}
-
-.roster-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.roster-item {
-    border: 1px solid var(--gray-200);
-    border-radius: 12px;
-    padding: 12px 14px;
-    background: var(--gray-50);
-}
-
-.roster-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-}
-
-.roster-name {
-    font-weight: 600;
-    color: var(--gray-900);
-}
-
-.roster-status {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    padding: 3px 8px;
-    border-radius: 999px;
-    background: var(--gray-200);
-    color: var(--gray-700);
-}
-
-.roster-status.available {
-    background: rgba(34, 197, 94, 0.16);
-    color: #15803d;
-}
-
-.roster-status.busy {
-    background: rgba(234, 179, 8, 0.18);
-    color: #92400e;
-}
-
-.roster-status.inactive {
-    background: rgba(148, 163, 184, 0.32);
-    color: #475569;
-}
-
-.roster-meta {
-    margin-top: 6px;
-    font-size: 13px;
-    color: var(--gray-600);
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.roster-meta span strong {
-    font-weight: 600;
-    color: var(--gray-800);
-}
-
-.roster-empty {
-    font-size: 13px;
-    color: var(--gray-600);
-    background: var(--gray-100);
-    border-radius: 10px;
-    padding: 12px;
-}
-
-.btn-compact {
-    padding: 6px 12px;
-    font-size: 13px;
-    line-height: 1.3;
-}
-
-.technician-status-note {
-    font-size: 12px;
-    color: var(--text-muted);
-}
-
-.technician-field {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
 @media (max-width: 1024px) {
     .content-grid {
         grid-template-columns: 1fr;
@@ -993,6 +907,14 @@ a:hover {
     }
 
     .action-buttons .btn {
+        width: 100%;
+    }
+
+    .section-actions {
+        justify-content: center;
+    }
+
+    .section-actions .btn {
         width: 100%;
     }
 }
@@ -1061,73 +983,9 @@ a:hover {
                 <section class="section-card">
                     <div class="section-header">
                         <div>
-                            <h2>📋 Detail Service</h2>
-                            <p>Lengkapi informasi utama untuk service order ini.</p>
-                        </div>
-                        <div class="section-tags">
-                            <span class="tag" id="display_service_type">-</span>
-                            <span class="tag priority-badge" id="display_priority">-</span>
-                        </div>
-                    </div>
-
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Prioritas *</label>
-                            <select id="priority" required>
-                                <option value="">-- Pilih --</option>
-                                <option value="Normal">Normal</option>
-                                <option value="High">High</option>
-                                <option value="Urgent">Urgent</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Estimasi Selesai *</label>
-                            <input type="date" id="estimated_delivery_date" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Total Estimasi (Rp) *</label>
-                            <input type="number" id="total_estimated_amount" min="0" step="1000" required readonly>
-                            <p class="form-hint" id="total_estimate_hint">Termasuk biaya jasa dasar Rp 0 dan total Sparepart &amp; Bahan Rp 0.</p>
-                        </div>
-                    </div>
-
-                    <div class="form-group" style="margin-top: 20px;">
-                        <label>Ringkasan Inspeksi *</label>
-                        <textarea id="inspection_summary" rows="3" required placeholder="Tulis hasil inspeksi singkat..."></textarea>
-                    </div>
-
-                    <div class="form-group" style="margin-top: 20px;">
-                        <label>Catatan Service</label>
-                        <textarea id="service_notes" rows="3" placeholder="Catatan tambahan (opsional)"></textarea>
-                    </div>
-                </section>
-
-                <section class="section-card">
-                    <div class="section-header">
-                        <div>
-                            <h2>🔧 Pekerjaan Service</h2>
-                            <p>Daftar pekerjaan yang perlu dilakukan oleh tim bengkel.</p>
-                        </div>
-                        <button type="button" class="btn btn-add" onclick="addServiceTask()">+ Tambah Pekerjaan</button>
-                    </div>
-
-                    <div class="repeating-list" id="serviceTasksList">
-                        <div class="empty-state">
-                            <strong>Belum ada pekerjaan.</strong>
-                            <span>Mulai dengan menambahkan pekerjaan service pertama.</span>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="section-card">
-                    <div class="section-header">
-                        <div>
                             <h2>🔩 Sparepart &amp; Bahan</h2>
                             <p>Catat kebutuhan part atau bahan agar tim procurement siap menyediakan.</p>
                         </div>
-                        <button type="button" class="btn btn-add" onclick="addRequiredPart()">+ Tambah Part</button>
                     </div>
 
                     <div class="repeating-list" id="requiredPartsList">
@@ -1136,22 +994,9 @@ a:hover {
                             <span>Tambahkan kebutuhan untuk perbaikan.</span>
                         </div>
                     </div>
-                </section>
 
-                <section class="section-card">
-                    <div class="section-header">
-                        <div>
-                            <h2>💰 Jadwal Pembayaran</h2>
-                            <p>Atur jadwal pembayaran agar pelanggan tetap terinformasi.</p>
-                        </div>
-                        <button type="button" class="btn btn-add" onclick="addPaymentSchedule()">+ Tambah Pembayaran</button>
-                    </div>
-
-                    <div class="repeating-list" id="paymentScheduleList">
-                        <div class="empty-state">
-                            <strong>Belum ada jadwal pembayaran.</strong>
-                            <span>Atur termin pembayaran sesuai kesepakatan.</span>
-                        </div>
+                    <div class="section-actions">
+                        <button type="button" class="btn btn-add" onclick="addRequiredPart()">+ Tambah Part</button>
                     </div>
                 </section>
             </form>
@@ -1504,29 +1349,17 @@ a:hover {
             return;
         }
 
-        let serviceTasks = [];
         let requiredParts = [];
-        let paymentSchedule = [];
-        let technicianRoster = [];
         let preserveServerEstimate = false;
-        // NOTE: sparePartCatalog & sparePartIndex sudah dideklarasi di atas (global scope)
-        // JANGAN declare ulang di sini!
         let catalogLoadedFromOrder = false;
-        const stockStatusOptions = [
-            'Pending Check',
-            'Available',
-            'To Order',
-            'Ordered',
-            'Received',
-            'Issued'
-        ];
-
-        const totalEstimateInput = document.getElementById('total_estimated_amount');
-        const estimatedDateInput = document.getElementById('estimated_delivery_date');
+        let totalEstimatedAmount = 0;
+        let latestOrder = null;
 
         function calculateRequiredPartsTotal() {
             return requiredParts.reduce((sum, part) => {
-                const amount = Number(part?.amount ?? ((Number(part?.qty) || 0) * (Number(part?.rate) || 0)));
+                const qty = Number(part?.qty) || 0;
+                const rate = Number(part?.rate) || 0;
+                const amount = Number(part?.amount ?? qty * rate);
                 if (Number.isNaN(amount)) {
                     return sum;
                 }
@@ -1541,341 +1374,228 @@ a:hover {
             if (breakdown) {
                 breakdown.textContent = `Jasa ${formatCurrency(normalizedServiceFee)} + Sparepart & Bahan ${formatCurrency(normalizedPartsTotal)}`;
             }
-            const hint = document.getElementById('total_estimate_hint');
-            if (hint) {
-                hint.textContent = `Termasuk biaya jasa dasar ${formatCurrency(normalizedServiceFee)} dan total Sparepart & Bahan ${formatCurrency(normalizedPartsTotal)}.`;
-            }
         }
 
         function recalculateTotals() {
             const partsTotal = Math.max(0, Math.round(calculateRequiredPartsTotal()));
-            const hasServiceItems = partsTotal > 0 || (Array.isArray(serviceTasks) && serviceTasks.length > 0);
-            const serviceFee = hasServiceItems ? Math.max(0, Math.round(DEFAULT_SERVICE_FEE)) : 0;
-            const computedTotal = serviceFee + partsTotal;
-            const currentValue = totalEstimateInput ? Number(totalEstimateInput.value || 0) : 0;
+            const baseServiceFee = partsTotal > 0 ? Math.max(0, Math.round(DEFAULT_SERVICE_FEE)) : 0;
+            totalEstimatedAmount = baseServiceFee + partsTotal;
 
-            if (hasServiceItems) {
-                preserveServerEstimate = false;
+            if (preserveServerEstimate && partsTotal === 0 && totalEstimatedAmount === 0) {
+                const fallback = Math.max(0, Math.round(Number(latestOrder?.total_estimated_amount || 0)));
+                totalEstimatedAmount = fallback;
             }
 
-            if (preserveServerEstimate && !hasServiceItems && currentValue > 0 && computedTotal === 0) {
-                updateTotalEstimateDisplay(currentValue);
-                updateEstimateBreakdown(partsTotal, serviceFee);
+            updateTotalEstimateDisplay(totalEstimatedAmount);
+            const appliedServiceFee = Math.max(0, totalEstimatedAmount - partsTotal);
+            updateEstimateBreakdown(partsTotal, appliedServiceFee);
+        }
+
+        function normaliseCurrencyInput(value) {
+            if (value === undefined || value === null) {
+                return 0;
+            }
+            if (typeof value === 'number') {
+                return Math.max(0, value);
+            }
+            const sanitized = value
+                .toString()
+                .replace(/[^0-9,.-]/g, '')
+                .replace(/\./g, '')
+                .replace(',', '.');
+            const numeric = Number(sanitized);
+            if (Number.isNaN(numeric)) {
+                return 0;
+            }
+            return Math.max(0, numeric);
+        }
+
+        function renderRequiredParts() {
+            const container = document.getElementById('requiredPartsList');
+            if (!container) {
                 return;
             }
-
-            if (totalEstimateInput) {
-                totalEstimateInput.value = computedTotal;
-            }
-            updateTotalEstimateDisplay(computedTotal);
-            updateEstimateBreakdown(partsTotal, serviceFee);
-        }
-
-        function computeAvailableCapacity(technician) {
-            if (!technician) {
-                return null;
-            }
-            const maxJobs = Number(technician.max_active_jobs ?? 0);
-            const load = Number(technician.active_task_count ?? 0);
-            if (!maxJobs) {
-                return null;
-            }
-            return Math.max(maxJobs - load, 0);
-        }
-
-        function computeIsAvailable(technician) {
-            if (!technician) {
-                return false;
-            }
-            if ((technician.status || 'Active') !== 'Active') {
-                return false;
-            }
-            const maxJobs = Number(technician.max_active_jobs ?? 0);
-            const load = Number(technician.active_task_count ?? 0);
-            return !maxJobs || load < maxJobs;
-        }
-
-        function canTechnicianTakeNewTask(technician) {
-            return computeIsAvailable(technician);
-        }
-
-        function findTechnicianById(identifier) {
-            if (!identifier || !Array.isArray(technicianRoster)) {
-                return undefined;
-            }
-            return technicianRoster.find((tech) => {
-                const employeeId = tech?.employee || tech?.name || tech?.technician;
-                return employeeId === identifier;
-            });
-        }
-
-        function normalizeTechnicianRoster(roster) {
-            if (!Array.isArray(roster)) {
-                return [];
-            }
-            return roster
-                .map((raw) => {
-                    const employeeId = raw?.employee || raw?.name || raw?.technician || '';
-                    if (!employeeId) {
-                        return null;
-                    }
-                    const normalized = {
-                        ...raw,
-                        employee: employeeId,
-                        employee_name: raw.employee_name || raw.technician_name || raw.name || employeeId,
-                        active_task_count: Number(raw.active_task_count ?? 0),
-                        max_active_jobs: Number(raw.max_active_jobs ?? 0),
-                        status: raw.status || 'Active',
-                        skill_tags: raw.skill_tags || '',
-                        phone: raw.phone || '',
-                        email: raw.email || '',
-                    };
-                    const availableCapacity = raw.available_capacity;
-                    if (availableCapacity === undefined || availableCapacity === null || Number.isNaN(Number(availableCapacity))) {
-                        normalized.available_capacity = computeAvailableCapacity(normalized);
-                    } else {
-                        normalized.available_capacity = Number(availableCapacity);
-                    }
-                    normalized.is_available = computeIsAvailable(normalized);
-                    return normalized;
-                })
-                .filter(Boolean);
-        }
-
-        function syncRosterWithAssignments() {
-            if (!Array.isArray(technicianRoster) || technicianRoster.length === 0) {
-                return;
-            }
-            const assignmentCounts = serviceTasks.reduce((map, task) => {
-                if (!task || !task.technician) {
-                    return map;
-                }
-                map[task.technician] = (map[task.technician] || 0) + 1;
-                return map;
-            }, {});
-
-            technicianRoster = technicianRoster.map((tech) => {
-                if (!tech || !tech.employee) {
-                    return tech;
-                }
-                const updated = { ...tech };
-                const existingLoad = Number(updated.active_task_count ?? 0);
-                const assignmentLoad = Number(assignmentCounts[updated.employee] ?? 0);
-                if (assignmentLoad > existingLoad) {
-                    updated.active_task_count = assignmentLoad;
-                }
-                updated.available_capacity = computeAvailableCapacity(updated);
-                updated.is_available = computeIsAvailable(updated);
-                return updated;
-            });
-        }
-
-        function resolveTechnicianLabel(identifier, fallback = '') {
-            if (!identifier) {
-                return 'Belum ditugaskan';
-            }
-            const match = findTechnicianById(identifier);
-            if (match) {
-                return match.employee_name || match.employee || fallback || identifier;
-            }
-            return fallback || identifier;
-        }
-
-        function renderTechnicianRoster() {
-            const listElement = document.getElementById('technicianRosterList');
-            const summaryElement = document.getElementById('technicianRosterSummary');
-            if (!listElement) {
-                return;
-            }
-
-            if (!Array.isArray(technicianRoster) || technicianRoster.length === 0) {
-                if (summaryElement) {
-                    summaryElement.textContent = 'Belum ada teknisi terdaftar.';
-                }
-                listElement.innerHTML = `
-                    <div class="roster-empty">
-                        Belum ada teknisi terdaftar. Tambahkan teknisi melalui Desk untuk mengaktifkan penugasan otomatis.
+            if (requiredParts.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <strong>Belum ada sparepart atau bahan.</strong>
+                        <span>Tambahkan kebutuhan untuk perbaikan.</span>
                     </div>
                 `;
+                recalculateTotals();
                 return;
             }
 
-            technicianRoster = technicianRoster.map((tech) => {
-                if (!tech) {
-                    return tech;
-                }
-                const updated = { ...tech };
-                updated.available_capacity = computeAvailableCapacity(updated);
-                updated.is_available = computeIsAvailable(updated);
-                return updated;
+            requiredParts = requiredParts.map((part) => {
+                const catalogRef = lookupSparePart(part.catalog_name || part.catalog_part_code || part.item_code || part.item_name);
+                const merged = catalogRef ? mergeRequiredPartWithCatalog(part, catalogRef) : { ...part };
+                const qty = Number(merged.qty);
+                const rate = Number(merged.rate);
+                const normalizedQty = Number.isNaN(qty) ? 0 : qty;
+                const normalizedRate = Number.isNaN(rate) ? 0 : rate;
+                return {
+                    ...merged,
+                    qty: normalizedQty,
+                    rate: normalizedRate,
+                    amount: normalizedQty * normalizedRate
+                };
             });
 
-            const availableCount = technicianRoster.filter((tech) => computeIsAvailable(tech)).length;
-            const busyCount = technicianRoster.length - availableCount;
-            if (summaryElement) {
-                summaryElement.textContent = `${availableCount} siap • ${busyCount} sibuk`;
-            }
+            const rows = requiredParts.map((part, i) => {
+                const catalogOptions = sparePartCatalog
+                    .map((catalog) => `
+                        <option value="${escapeHtml(catalog.name)}" ${catalog.name === part.catalog_name ? 'selected' : ''}>
+                            ${escapeHtml(catalog.part_code || catalog.part_name || catalog.name)} — ${escapeHtml(catalog.part_name || '')}
+                        </option>
+                    `)
+                    .join('');
+                const catalogRef = lookupSparePart(part.catalog_name || part.item_code);
+                const manualOption = !part.catalog_name && part.item_code
+                    ? `<option value="__manual__${i}" selected>Manual: ${escapeHtml(part.item_code)}${part.item_name ? ` – ${escapeHtml(part.item_name)}` : ''}</option>`
+                    : '';
+                const stockDisplay = part.catalog_name
+                    ? `${formatNumber(part.catalog_stock_qty ?? catalogRef?.stock_qty ?? 0)} unit`
+                    : 'Tidak diketahui';
+                const managedBy = part.catalog_managed_by || catalogRef?.managed_by || '-';
+                const catalogWarehouse = catalogRef?.warehouse_location || '';
+                const catalogHint = sparePartCatalog.length ? '' : '<p class="sparepart-hint">Katalog sparepart masih kosong. Tambahkan data di halaman Sparepart.</p>';
 
-            listElement.innerHTML = technicianRoster
-                .map((tech) => {
-                    const employeeName = tech.employee_name || tech.employee || '-';
-                    const load = Number(tech.active_task_count ?? 0);
-                    const maxJobs = Number(tech.max_active_jobs ?? 0);
-                    const availableSlots = computeAvailableCapacity(tech);
-                    const status = tech.status || 'Active';
-                    let statusClass = 'available';
-                    let statusLabel = 'Siap';
-                    if (status !== 'Active') {
-                        statusClass = 'inactive';
-                        statusLabel = status === 'On Leave' ? 'Cuti' : 'Nonaktif';
-                    } else if (maxJobs && availableSlots === 0) {
-                        statusClass = 'busy';
-                        statusLabel = 'Penuh';
-                    } else if (load > 0) {
-                        statusClass = 'busy';
-                        statusLabel = 'Sedang kerja';
-                    }
-                    const assignmentsLabel = maxJobs
-                        ? `${load}/${maxJobs} pekerjaan aktif`
-                        : `${load} pekerjaan aktif`;
-                    const availabilityLabel = availableSlots === null
-                        ? ''
-                        : `<span><strong>Sisa slot:</strong> ${availableSlots}</span>`;
-                    const skillsLabel = tech.skill_tags
-                        ? `<span><strong>Keahlian:</strong> ${escapeHtml(tech.skill_tags)}</span>`
-                        : '';
-                    const contactParts = [tech.phone, tech.email]
-                        .map((value) => (value ? escapeHtml(value) : ''))
-                        .filter(Boolean);
-                    const contactLabel = contactParts.length
-                        ? `<span>${contactParts.join(' • ')}</span>`
-                        : '';
-
-                    return `
-                        <div class="roster-item">
-                            <div class="roster-header">
-                                <span class="roster-name">${escapeHtml(employeeName)}</span>
-                                <span class="roster-status ${statusClass}">${statusLabel}</span>
+                return `
+                    <tr>
+                        <td>
+                            <div class="part-details">
+                                <div class="part-select">
+                                    <select onchange="selectRequiredPart(${i}, this.value)" ${part.catalog_name || part.item_code ? '' : 'required'}>
+                                        <option value="">— Pilih sparepart atau bahan —</option>
+                                        ${manualOption}
+                                        ${catalogOptions}
+                                    </select>
+                                    ${catalogHint}
+                                </div>
+                                <div class="part-summary">
+                                    <strong>${escapeHtml(part.item_name || 'Belum dipilih')}</strong>
+                                    <div class="part-meta-row">
+                                        <span>Kode: ${escapeHtml(part.item_code || '-')}</span>
+                                        <span>Stok: ${stockDisplay}</span>
+                                        <span>Gudang Katalog: ${escapeHtml(catalogWarehouse || '-')}</span>
+                                        <span>Penjaga: ${escapeHtml(managedBy)}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="roster-meta">
-                                <span>${escapeHtml(assignmentsLabel)}</span>
-                                ${availabilityLabel}
-                                ${skillsLabel}
-                                ${contactLabel}
-                            </div>
-                        </div>
-                    `;
-                })
-                .join('');
+                        </td>
+                        <td><input type="number" value="${part.qty}" min="0" step="0.01" onchange="updateRequiredPartQty(${i}, this.value)" required></td>
+                        <td><input type="text" value="${escapeHtml(part.uom || '')}" onchange="updateRequiredPartUom(${i}, this.value)"></td>
+                        <td><input type="text" value="${escapeHtml(formatCurrency(part.rate || 0))}" inputmode="numeric" onchange="updateRequiredPartRate(${i}, this.value)"></td>
+                        <td class="numeric">${formatCurrency(part.amount || 0)}</td>
+                        <td><input type="text" value="${escapeHtml(part.warehouse || '')}" onchange="updateRequiredPartWarehouse(${i}, this.value)"></td>
+                        <td class="actions"><button type="button" class="btn-remove" onclick="removeRequiredPart(${i})">🗑️ Hapus</button></td>
+                    </tr>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="parts-table-wrapper">
+                    <table class="parts-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Qty</th>
+                                <th>UOM</th>
+                                <th>Harga Satuan</th>
+                                <th>Total</th>
+                                <th>Gudang</th>
+                                <th class="actions">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
+            recalculateTotals();
         }
 
-        function updateTechnicianLoad(previousId, nextId) {
-            if (previousId) {
-                const previous = findTechnicianById(previousId);
-                if (previous) {
-                    previous.active_task_count = Math.max(0, Number(previous.active_task_count ?? 0) - 1);
-                    previous.available_capacity = computeAvailableCapacity(previous);
-                    previous.is_available = computeIsAvailable(previous);
-                }
+        window.addRequiredPart = function() {
+            requiredParts.push({
+                item_code: '',
+                item_name: '',
+                description: '',
+                qty: 1,
+                rate: 0,
+                uom: 'Unit',
+                stock_status: 'Pending Check',
+                source: 'On Hand',
+                warehouse: '',
+                catalog_name: null,
+                catalog_part_code: '',
+                catalog_stock_qty: null,
+                catalog_reserved_qty: null,
+                catalog_managed_by: '',
+                catalog_image: '',
+                catalog_unit_price: null,
+                amount: 0
+            });
+            renderRequiredParts();
+        };
+
+        window.removeRequiredPart = function(index) {
+            requiredParts.splice(index, 1);
+            renderRequiredParts();
+        };
+
+        window.selectRequiredPart = function(index, value) {
+            const part = requiredParts[index];
+            if (!part) {
+                return;
             }
-
-            if (nextId) {
-                const next = findTechnicianById(nextId);
-                if (next) {
-                    next.active_task_count = Number(next.active_task_count ?? 0) + 1;
-                    next.available_capacity = computeAvailableCapacity(next);
-                    next.is_available = computeIsAvailable(next);
-                }
+            if (!value || value.startsWith('__manual__')) {
+                return;
             }
-
-            renderTechnicianRoster();
-        }
-
-        function chooseAvailableTechnician() {
-            if (!Array.isArray(technicianRoster) || technicianRoster.length === 0) {
-                return '';
+            const catalog = lookupSparePart(value);
+            if (!catalog) {
+                return;
             }
-            const candidates = technicianRoster
-                .filter((tech) => canTechnicianTakeNewTask(tech))
-                .map((tech) => ({
-                    id: tech.employee || tech.name || '',
-                    load: Number(tech.active_task_count ?? 0),
-                    name: tech.employee_name || tech.employee || '',
-                }))
-                .filter((candidate) => candidate.id);
+            requiredParts[index] = mergeRequiredPartWithCatalog({
+                ...part,
+                catalog_name: catalog.name,
+                catalog_part_code: catalog.part_code,
+                source: part.source || 'On Hand'
+            }, catalog);
+            renderRequiredParts();
+        };
 
-            if (candidates.length === 0) {
-                return '';
+        window.updateRequiredPartQty = function(index, value) {
+            if (!requiredParts[index]) {
+                return;
             }
+            const qty = Number(value);
+            requiredParts[index].qty = Number.isNaN(qty) ? 0 : Math.max(0, qty);
+            requiredParts[index].amount = (requiredParts[index].qty || 0) * (requiredParts[index].rate || 0);
+            renderRequiredParts();
+        };
 
-            candidates.sort((a, b) => {
-                if (a.load !== b.load) {
-                    return a.load - b.load;
-                }
-                return a.name.localeCompare(b.name, 'id-ID', { sensitivity: 'base' });
-            });
-
-            return candidates[0].id;
-        }
-
-        function buildTechnicianOptions(selectedId) {
-            const options = ['<option value="">— Pilih teknisi —</option>'];
-            if (!Array.isArray(technicianRoster) || technicianRoster.length === 0) {
-                return options.join('');
+        window.updateRequiredPartRate = function(index, value) {
+            if (!requiredParts[index]) {
+                return;
             }
+            const rate = normaliseCurrencyInput(value);
+            requiredParts[index].rate = rate;
+            requiredParts[index].amount = (requiredParts[index].qty || 0) * (requiredParts[index].rate || 0);
+            renderRequiredParts();
+        };
 
-            technicianRoster.forEach((tech) => {
-                const employeeId = tech.employee || tech.name;
-                if (!employeeId) {
-                    return;
-                }
-                const isSelected = employeeId === selectedId;
-                const load = Number(tech.active_task_count ?? 0);
-                const maxJobs = Number(tech.max_active_jobs ?? 0);
-                const availableSlots = computeAvailableCapacity(tech);
-                const disabled = !isSelected && !canTechnicianTakeNewTask(tech);
-                const labelParts = [tech.employee_name || employeeId];
-                if (maxJobs) {
-                    labelParts.push(`${load}/${maxJobs} aktif`);
-                } else if (load) {
-                    labelParts.push(`${load} aktif`);
-                }
-                if (tech.status && tech.status !== 'Active') {
-                    labelParts.push(tech.status);
-                } else if (maxJobs && availableSlots !== null) {
-                    labelParts.push(`${availableSlots} slot tersisa`);
-                }
+        window.updateRequiredPartUom = function(index, value) {
+            if (!requiredParts[index]) {
+                return;
+            }
+            requiredParts[index].uom = value;
+        };
 
-                options.push(`
-                    <option value="${escapeHtml(employeeId)}" ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''}>
-                        ${escapeHtml(labelParts.join(' • '))}
-                    </option>
-                `);
-            });
-
-            return options.join('');
-        }
-
-        function wireFormMirrors() {
-            const priorityInput = document.getElementById('priority');
-
-            priorityInput?.addEventListener('change', () => {
-                applyPriorityBadge(priorityInput.value);
-            });
-
-            totalEstimateInput?.addEventListener('input', (event) => {
-                updateTotalEstimateDisplay(event.target.value);
-            });
-
-            estimatedDateInput?.addEventListener('input', () => {
-                updateEstimatedDeliveryDisplay();
-            });
-            estimatedDateInput?.addEventListener('change', () => {
-                updateEstimatedDeliveryDisplay();
-            });
-        }
-
-        wireFormMirrors();
+        window.updateRequiredPartWarehouse = function(index, value) {
+            if (!requiredParts[index]) {
+                return;
+            }
+            requiredParts[index].warehouse = value;
+        };
 
         async function fetchSparePartCatalog() {
             try {
@@ -1934,10 +1654,9 @@ a:hover {
         }
 
         function populateOrderInfo(order) {
+            latestOrder = order || null;
             const customerDetails = order.customer_details || {};
             const vehicleDetails = order.vehicle_details || {};
-
-            technicianRoster = normalizeTechnicianRoster(order.available_technicians || order.technician_roster || []);
 
             document.getElementById('display_order_id').textContent = formatServiceOrderId(order.name || order.order_id);
 
@@ -2020,11 +1739,6 @@ a:hover {
                 }
             }
 
-            const primaryContactDisplay = document.getElementById('display_primary_contact');
-            if (primaryContactDisplay) {
-                primaryContactDisplay.textContent = order.primary_contact || '-';
-            }
-
             const licensePlate = order.vehicle_plate || vehicleDetails.license_plate || '';
             const brandModel = [
                 order.vehicle_brand || vehicleDetails.brand,
@@ -2082,64 +1796,31 @@ a:hover {
             if (intakeNotesDisplay) {
                 intakeNotesDisplay.textContent = intakeNotes || 'Belum ada catatan tambahan dari intake.';
             }
+
             if (order.service_order_type) {
                 const serviceTypeTag = document.getElementById('display_service_type');
                 if (serviceTypeTag) {
                     serviceTypeTag.textContent = order.service_order_type;
                 }
             }
-            if (order.priority) {
-                document.getElementById('priority').value = order.priority;
-                applyPriorityBadge(order.priority);
+
+            updateEstimatedDeliveryDisplay(order.estimated_delivery_date || null);
+            applyPriorityBadge(order.priority || '-');
+
+            const summaryInput = document.getElementById('inspection_summary');
+            if (summaryInput) {
+                summaryInput.value = order.inspection_summary || '';
             }
 
-            if (order.estimated_delivery_date) {
-                const formattedDate = normaliseDateInput(order.estimated_delivery_date);
-                if (formattedDate) {
-                    estimatedDateInput.value = formattedDate;
-                    updateEstimatedDeliveryDisplay(formattedDate);
-                }
-            } else if (estimatedDateInput.value) {
-                updateEstimatedDeliveryDisplay(estimatedDateInput.value);
+            const notesInput = document.getElementById('service_notes');
+            if (notesInput) {
+                notesInput.value = order.service_notes || '';
             }
 
-            if (order.total_estimated_amount !== undefined && order.total_estimated_amount !== null) {
-                totalEstimateInput.value = Math.max(0, Math.round(order.total_estimated_amount));
-            }
-
-            document.getElementById('inspection_summary').value = order.inspection_summary || '';
-            document.getElementById('service_notes').value = order.service_notes || '';
-
-            const rawServiceTasks = Array.isArray(order.service_tasks) ? order.service_tasks : [];
             const rawRequiredParts = Array.isArray(order.required_parts) ? order.required_parts : [];
             const totalEstimateFromServer = Number(order.total_estimated_amount);
 
-            preserveServerEstimate = !rawServiceTasks.length && !rawRequiredParts.length && !Number.isNaN(totalEstimateFromServer) && totalEstimateFromServer > 0;
-
-            if (rawServiceTasks.length) {
-                serviceTasks = rawServiceTasks.map((task) => ({
-                    task: task.task || task.name || '',
-                    description: task.description || '',
-                    estimated_hours: task.estimated_hours ?? task.estimated_time ?? 1,
-                    technician: task.technician || task.assigned_to || '',
-                    technician_name: task.technician_name || task.technician_full_name || '',
-                    status: task.status || 'Pending',
-                    actual_hours: task.actual_hours ?? 0,
-                    completion_date: task.completion_date || null
-                }));
-            } else {
-                serviceTasks = [];
-            }
-
-            syncRosterWithAssignments();
-            renderTechnicianRoster();
-            renderServiceTasks();
-
-            const availableCatalog = Array.isArray(order.available_spare_parts) ? order.available_spare_parts : [];
-            setSparePartCatalog(availableCatalog);
-            if (availableCatalog.length > 0) {
-                catalogLoadedFromOrder = true;
-            }
+            preserveServerEstimate = !rawRequiredParts.length && !Number.isNaN(totalEstimateFromServer) && totalEstimateFromServer > 0;
 
             if (rawRequiredParts.length) {
                 requiredParts = rawRequiredParts.map((part) => {
@@ -2152,456 +1833,33 @@ a:hover {
                         uom: part.uom || part.unit || 'Unit',
                         stock_status: part.stock_status || 'Pending Check',
                         source: part.source || part.part_source || 'On Hand',
-                        warehouse: part.warehouse || '',
+                        warehouse: part.warehouse || ''
                     };
                     const catalogPart =
                         lookupSparePart(base.item_code) ||
                         lookupSparePart(part.catalog_name) ||
                         lookupSparePart(part.catalog_part_code) ||
-                        lookupSparePart(base.item_name);
-                    return mergeRequiredPartWithCatalog(base, catalogPart);
+                        lookupSparePart(part.item_name);
+                    return catalogPart ? mergeRequiredPartWithCatalog(base, catalogPart) : base;
                 });
             } else {
                 requiredParts = [];
             }
 
-            requiredParts = requiredParts.map((part) => ({
-                ...part,
-                amount: (part.qty || 0) * (part.rate || 0)
-            }));
+            const availableCatalog = Array.isArray(order.available_spare_parts) ? order.available_spare_parts : [];
+            if (availableCatalog.length > 0) {
+                setSparePartCatalog(availableCatalog);
+                catalogLoadedFromOrder = true;
+            }
+
             renderRequiredParts();
-
-            if (Array.isArray(order.payment_schedule)) {
-                paymentSchedule = order.payment_schedule.map((schedule) => ({
-                    description: schedule.description || '',
-                    percentage: schedule.percentage ?? 0,
-                    amount: schedule.amount ?? 0
-                }));
-            } else {
-                paymentSchedule = [];
-            }
-            renderPaymentSchedule();
-        }
-
-        window.addServiceTask = function() {
-            serviceTasks.push({
-                task: '',
-                description: '',
-                estimated_hours: 1,
-                technician: '',
-                technician_name: '',
-                status: 'Pending',
-                actual_hours: 0,
-                completion_date: null
-            });
-            renderServiceTasks();
-        };
-
-        window.removeServiceTask = function(index) {
-            const removed = serviceTasks.splice(index, 1)[0];
-            if (removed && removed.technician) {
-                updateTechnicianLoad(removed.technician, null);
-            }
-            renderServiceTasks();
-        };
-
-        function renderServiceTasks() {
-            const container = document.getElementById('serviceTasksList');
-            if (!container) {
-                return;
-            }
-            if (serviceTasks.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <strong>Belum ada pekerjaan.</strong>
-                        <span>Mulai dengan menambahkan pekerjaan service pertama.</span>
-                    </div>
-                `;
-                recalculateTotals();
-                return;
-            }
-            const hasAvailableTechnicians = Array.isArray(technicianRoster) && technicianRoster.some((tech) => canTechnicianTakeNewTask(tech));
-            container.innerHTML = serviceTasks.map((task, i) => {
-                const technicianLabel = resolveTechnicianLabel(task.technician, task.technician_name || '');
-                const technicianEntry = findTechnicianById(task.technician);
-                let technicianNote;
-                if (task.technician && technicianEntry) {
-                    const load = Number(technicianEntry.active_task_count ?? 0);
-                    const maxJobs = Number(technicianEntry.max_active_jobs ?? 0);
-                    const slots = computeAvailableCapacity(technicianEntry);
-                    const statusLabel = technicianEntry.status && technicianEntry.status !== 'Active'
-                        ? `Status: ${technicianEntry.status}`
-                        : maxJobs
-                            ? `Sisa slot: ${slots}`
-                            : `Pekerjaan aktif: ${load}`;
-                    technicianNote = `${technicianLabel} • ${statusLabel}`;
-                } else if (task.technician) {
-                    technicianNote = `${technicianLabel} (di luar roster)`;
-                } else {
-                    technicianNote = 'Belum ada teknisi yang ditugaskan.';
-                }
-
-                const safeTaskName = escapeHtml(task.task || '');
-                const safeDescription = escapeHtml(task.description || '');
-                const estimatedHoursValue = Number(task.estimated_hours ?? 0);
-                const normalizedHours = Number.isNaN(estimatedHoursValue) ? '' : estimatedHoursValue;
-
-                return `
-                <div class="repeating-item">
-                    <div class="item-header">
-                        <span class="item-number">Pekerjaan #${i + 1}</span>
-                        <button type="button" class="btn-remove" onclick="removeServiceTask(${i})">🗑️ Hapus</button>
-                    </div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Nama Pekerjaan *</label>
-                            <input type="text" value="${safeTaskName}" onchange="serviceTasks[${i}].task = this.value" required>
-                        </div>
-                        <div class="form-group technician-field">
-                            <label>Teknisi</label>
-                            <select onchange="updateTaskTechnician(${i}, this.value)">${buildTechnicianOptions(task.technician)}</select>
-                            <div class="technician-status-note">${escapeHtml(technicianNote)}</div>
-                            <button type="button" class="btn btn-secondary btn-compact" onclick="autoAssignTechnician(${i})" ${hasAvailableTechnicians ? '' : 'disabled'}>Pilih Otomatis</button>
-                        </div>
-                        <div class="form-group">
-                            <label>Estimasi Jam</label>
-                            <input type="number" value="${normalizedHours}" onchange="serviceTasks[${i}].estimated_hours = parseFloat(this.value)" step="0.5">
-                        </div>
-                        <div class="form-group" style="grid-column: 1 / -1;">
-                            <label>Deskripsi</label>
-                            <textarea onchange="serviceTasks[${i}].description = this.value" rows="2">${safeDescription}</textarea>
-                        </div>
-                    </div>
-                </div>
-            `;
-            }).join('');
-
             recalculateTotals();
-        }
-
-        window.updateTaskTechnician = function(index, value) {
-            const task = serviceTasks[index];
-            if (!task) {
-                return;
-            }
-            const previous = task.technician || '';
-            const nextValue = value || '';
-            if (previous === nextValue) {
-                task.technician = nextValue;
-                task.technician_name = resolveTechnicianLabel(nextValue, task.technician_name || '');
-                return;
-            }
-            task.technician = nextValue;
-            task.technician_name = resolveTechnicianLabel(nextValue, task.technician_name || '');
-            updateTechnicianLoad(previous, nextValue);
-            renderServiceTasks();
-        };
-
-        window.autoAssignTechnician = function(index) {
-            const task = serviceTasks[index];
-            if (!task) {
-                return;
-            }
-
-            if (!Array.isArray(technicianRoster) || technicianRoster.length === 0) {
-                frappe.show_alert({
-                    message: 'Belum ada data teknisi. Tambahkan teknisi terlebih dahulu.',
-                    indicator: 'orange'
-                }, 5);
-                return;
-            }
-
-            const chosen = chooseAvailableTechnician();
-            if (!chosen) {
-                frappe.show_alert({
-                    message: 'Semua teknisi sedang sibuk. Silakan atur ulang jadwal atau tunggu slot kosong.',
-                    indicator: 'orange'
-                }, 5);
-                return;
-            }
-
-            const previous = task.technician || '';
-            if (previous === chosen) {
-                frappe.show_alert({
-                    message: 'Teknisi ini sudah ditugaskan.',
-                    indicator: 'green'
-                }, 3);
-                return;
-            }
-
-            task.technician = chosen;
-            task.technician_name = resolveTechnicianLabel(chosen, task.technician_name || '');
-            updateTechnicianLoad(previous, chosen);
-            renderServiceTasks();
-        };
-
-        window.addRequiredPart = function() {
-            requiredParts.push({
-                item_code: '',
-                item_name: '',
-                description: '',
-                qty: 1,
-                rate: 0,
-                uom: 'Unit',
-                stock_status: 'Pending Check',
-                source: 'On Hand',
-                warehouse: '',
-                catalog_name: null,
-                catalog_part_code: '',
-                catalog_stock_qty: null,
-                catalog_reserved_qty: null,
-                catalog_managed_by: '',
-                catalog_image: '',
-                catalog_unit_price: null,
-                amount: 0
-            });
-            renderRequiredParts();
-        };
-
-        window.removeRequiredPart = function(index) {
-            requiredParts.splice(index, 1);
-            renderRequiredParts();
-        };
-
-        window.selectRequiredPart = function(index, value) {
-            const part = requiredParts[index];
-            if (!part) {
-                return;
-            }
-            if (!value || value.startsWith('__manual__')) {
-                return;
-            }
-            const catalog = lookupSparePart(value);
-            if (!catalog) {
-                return;
-            }
-            requiredParts[index] = mergeRequiredPartWithCatalog({
-                ...part,
-                catalog_name: catalog.name,
-                catalog_part_code: catalog.part_code,
-                source: part.source || 'On Hand'
-            }, catalog);
-            renderRequiredParts();
-        };
-
-        window.updateRequiredPartQty = function(index, value) {
-            if (!requiredParts[index]) {
-                return;
-            }
-            const qty = Number(value);
-            requiredParts[index].qty = Number.isNaN(qty) ? 0 : Math.max(0, qty);
-            requiredParts[index].amount = (requiredParts[index].qty || 0) * (requiredParts[index].rate || 0);
-            renderRequiredParts();
-        };
-
-        window.updateRequiredPartRate = function(index, value) {
-            if (!requiredParts[index]) {
-                return;
-            }
-            const rate = Number(value);
-            requiredParts[index].rate = Number.isNaN(rate) ? 0 : Math.max(0, rate);
-            requiredParts[index].amount = (requiredParts[index].qty || 0) * (requiredParts[index].rate || 0);
-            renderRequiredParts();
-        };
-
-        window.updateRequiredPartUom = function(index, value) {
-            if (!requiredParts[index]) {
-                return;
-            }
-            requiredParts[index].uom = value;
-        };
-
-        window.updateRequiredPartStatus = function(index, value) {
-            if (!requiredParts[index]) {
-                return;
-            }
-            requiredParts[index].stock_status = value;
-        };
-
-        window.updateRequiredPartWarehouse = function(index, value) {
-            if (!requiredParts[index]) {
-                return;
-            }
-            requiredParts[index].warehouse = value;
-            renderRequiredParts();
-        };
-
-        window.updateRequiredPartDescription = function(index, value) {
-            if (!requiredParts[index]) {
-                return;
-            }
-            requiredParts[index].description = value;
-        };
-
-        function renderRequiredParts() {
-            const container = document.getElementById('requiredPartsList');
-            if (!container) {
-                return;
-            }
-            if (requiredParts.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <strong>Belum ada sparepart atau bahan.</strong>
-                        <span>Tambahkan kebutuhan untuk perbaikan.</span>
-                    </div>
-                `;
-                recalculateTotals();
-                return;
-            }
-
-            requiredParts = requiredParts.map((part) => {
-                const catalogRef = lookupSparePart(part.catalog_name || part.catalog_part_code || part.item_code || part.item_name);
-                const merged = catalogRef ? mergeRequiredPartWithCatalog(part, catalogRef) : { ...part };
-                const qty = Number(merged.qty);
-                const rate = Number(merged.rate);
-                const normalizedQty = Number.isNaN(qty) ? 0 : qty;
-                const normalizedRate = Number.isNaN(rate) ? 0 : rate;
-                return {
-                    ...merged,
-                    qty: normalizedQty,
-                    rate: normalizedRate,
-                    amount: normalizedQty * normalizedRate
-                };
-            });
-
-            const rows = requiredParts.map((part, i) => {
-                const catalogOptions = sparePartCatalog
-                    .map((catalog) => `
-                        <option value="${escapeHtml(catalog.name)}" ${catalog.name === part.catalog_name ? 'selected' : ''}>
-                            ${escapeHtml(catalog.part_code || catalog.part_name || catalog.name)} — ${escapeHtml(catalog.part_name || '')}
-                        </option>
-                    `)
-                    .join('');
-                const catalogRef = lookupSparePart(part.catalog_name || part.item_code);
-                const manualOption = !part.catalog_name && part.item_code
-                    ? `<option value="__manual__${i}" selected>Manual: ${escapeHtml(part.item_code)}${part.item_name ? ` – ${escapeHtml(part.item_name)}` : ''}</option>`
-                    : '';
-                const currentStatus = part.stock_status || 'Pending Check';
-                const statusOptions = stockStatusOptions
-                    .map((status) => `<option value="${escapeHtml(status)}" ${status === currentStatus ? 'selected' : ''}>${escapeHtml(status)}</option>`)
-                    .join('');
-                const stockDisplay = part.catalog_name
-                    ? `${formatNumber(part.catalog_stock_qty ?? catalogRef?.stock_qty ?? 0)} unit`
-                    : 'Tidak diketahui';
-                const managedBy = part.catalog_managed_by || catalogRef?.managed_by || '-';
-                const catalogWarehouse = catalogRef?.warehouse_location || '';
-                const catalogHint = sparePartCatalog.length ? '' : '<p class="sparepart-hint">Katalog sparepart masih kosong. Tambahkan data di halaman Sparepart.</p>';
-
-                return `
-                    <tr>
-                        <td>
-                            <div class="part-details">
-                                <div class="part-select">
-                                    <select onchange="selectRequiredPart(${i}, this.value)" ${part.catalog_name || part.item_code ? '' : 'required'}>
-                                        <option value="">— Pilih sparepart atau bahan —</option>
-                                        ${manualOption}
-                                        ${catalogOptions}
-                                    </select>
-                                    ${catalogHint}
-                                </div>
-                                <div class="part-summary">
-                                    <strong>${escapeHtml(part.item_name || 'Belum dipilih')}</strong>
-                                    <div class="part-meta-row">
-                                        <span>Kode: ${escapeHtml(part.item_code || '-')}</span>
-                                        <span>Stok: ${stockDisplay}</span>
-                                        <span>Gudang Katalog: ${escapeHtml(catalogWarehouse || '-')}</span>
-                                        <span>Penjaga: ${escapeHtml(managedBy)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
-                        <td><input type="number" value="${part.qty}" min="0" step="0.01" onchange="updateRequiredPartQty(${i}, this.value)" required></td>
-                        <td><input type="text" value="${escapeHtml(part.uom || '')}" onchange="updateRequiredPartUom(${i}, this.value)"></td>
-                        <td><input type="number" value="${part.rate}" min="0" step="0.01" onchange="updateRequiredPartRate(${i}, this.value)" required></td>
-                        <td class="numeric">${formatCurrency(part.amount || 0)}</td>
-                        <td><select onchange="updateRequiredPartStatus(${i}, this.value)">${statusOptions}</select></td>
-                        <td><input type="text" value="${escapeHtml(part.warehouse || '')}" onchange="updateRequiredPartWarehouse(${i}, this.value)"></td>
-                        <td><textarea rows="2" onchange="updateRequiredPartDescription(${i}, this.value)">${escapeHtml(part.description || '')}</textarea></td>
-                        <td class="actions"><button type="button" class="btn-remove" onclick="removeRequiredPart(${i})">🗑️ Hapus</button></td>
-                    </tr>
-                `;
-            }).join('');
-
-            container.innerHTML = `
-                <div class="parts-table-wrapper">
-                    <table class="parts-table">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Qty</th>
-                                <th>UOM</th>
-                                <th>Harga Satuan</th>
-                                <th>Total</th>
-                                <th>Status</th>
-                                <th>Gudang</th>
-                                <th>Catatan</th>
-                                <th class="actions">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-                </div>
-            `;
-            recalculateTotals();
-        }
-
-        window.addPaymentSchedule = function() {
-            paymentSchedule.push({ description: '', percentage: 0, amount: 0 });
-            renderPaymentSchedule();
-        };
-
-        window.removePaymentSchedule = function(index) {
-            paymentSchedule.splice(index, 1);
-            renderPaymentSchedule();
-        };
-
-        function renderPaymentSchedule() {
-            const container = document.getElementById('paymentScheduleList');
-            if (!container) {
-                return;
-            }
-            if (paymentSchedule.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <strong>Belum ada jadwal pembayaran.</strong>
-                        <span>Atur termin pembayaran sesuai kesepakatan.</span>
-                    </div>
-                `;
-                return;
-            }
-            container.innerHTML = paymentSchedule.map((payment, i) => `
-                <div class="repeating-item">
-                    <div class="item-header">
-                        <span class="item-number">Pembayaran #${i + 1}</span>
-                        <button type="button" class="btn-remove" onclick="removePaymentSchedule(${i})">🗑️ Hapus</button>
-                    </div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Deskripsi *</label>
-                            <input type="text" value="${payment.description}" onchange="paymentSchedule[${i}].description = this.value" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Persentase (%)</label>
-                            <input type="number" value="${payment.percentage}" onchange="paymentSchedule[${i}].percentage = parseFloat(this.value) || 0">
-                        </div>
-                        <div class="form-group">
-                            <label>Jumlah (Rp) *</label>
-                            <input type="number" value="${payment.amount}" onchange="paymentSchedule[${i}].amount = parseFloat(this.value) || 0" required>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
         }
 
         window.submitInspection = async function() {
             const form = document.getElementById('inspectionForm');
-            if (!form.checkValidity()) {
+            if (form && !form.checkValidity()) {
                 form.reportValidity();
-                return;
-            }
-
-            if (serviceTasks.length === 0) {
-                frappe.show_alert({ message: '⚠️ Minimal harus ada 1 pekerjaan!', indicator: 'orange' }, 5);
                 return;
             }
 
@@ -2626,24 +1884,19 @@ a:hover {
                 warehouse: part.warehouse || ''
             }));
 
-            const sanitizedTasks = serviceTasks.map((task) => ({
-                task: task.task,
-                description: task.description,
-                technician: task.technician || '',
-                estimated_hours: Number(task.estimated_hours) || 0,
-                status: task.status || 'Pending'
-            }));
+            const priorityInput = document.getElementById('priority');
+            const estimatedDateInput = document.getElementById('estimated_delivery_date');
+            const summaryInput = document.getElementById('inspection_summary');
+            const notesInput = document.getElementById('service_notes');
 
             const data = {
                 order_id: orderId,
-                priority: document.getElementById('priority').value,
-                estimated_delivery_date: document.getElementById('estimated_delivery_date').value,
-                total_estimated_amount: parseFloat(document.getElementById('total_estimated_amount').value),
-                inspection_summary: document.getElementById('inspection_summary').value,
-                service_notes: document.getElementById('service_notes').value,
-                service_tasks: sanitizedTasks,
+                priority: priorityInput ? priorityInput.value : (latestOrder?.priority || null),
+                estimated_delivery_date: estimatedDateInput ? estimatedDateInput.value : (latestOrder?.estimated_delivery_date || null),
+                total_estimated_amount: totalEstimatedAmount,
+                inspection_summary: summaryInput ? summaryInput.value : (latestOrder?.inspection_summary || ''),
+                service_notes: notesInput ? notesInput.value : (latestOrder?.service_notes || ''),
                 required_parts: sanitizedParts,
-                payment_schedule: paymentSchedule,
                 status: 'Work In Progress'
             };
 
@@ -2669,17 +1922,8 @@ a:hover {
         loadOrderData();
         recalculateTotals();
 
-        const defaultDate = new Date();
-        defaultDate.setDate(defaultDate.getDate() + 3);
-        const defaultValue = defaultDate.toISOString().split('T')[0];
-        if (estimatedDateInput && !estimatedDateInput.value) {
-            estimatedDateInput.value = defaultValue;
-            updateEstimatedDeliveryDisplay(defaultValue);
-        }
-
         console.log('✅ Inspection page loaded!');
     }
-
     if (typeof frappe !== 'undefined' && typeof frappe.ready === 'function') {
         frappe.ready(boot);
     } else {
