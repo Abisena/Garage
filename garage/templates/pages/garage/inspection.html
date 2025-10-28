@@ -360,6 +360,26 @@ a:hover {
     border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
+.service-type-badge {
+    background: #FFEBEE;
+    color: #C62828;
+}
+
+.service-type-badge--service-repair {
+    background: #FFEBEE;
+    color: #C62828;
+}
+
+.service-type-badge--body-repair {
+    background: #E3F2FD;
+    color: #1565C0;
+}
+
+.service-type-badge--warranty {
+    background: #F3E5F5;
+    color: #7B1FA2;
+}
+
 .priority-badge {
     background: var(--primary-subtle);
     color: var(--primary-dark);
@@ -1228,6 +1248,31 @@ a:hover {
         if (secondary) {
             secondary.textContent = value;
             secondary.className = className;
+        }
+    }
+
+    function applyServiceTypeBadge(serviceType) {
+        const element = document.getElementById('display_service_type');
+        if (!element) {
+            return;
+        }
+
+        const baseClass = 'tag service-type-badge';
+        const value = (serviceType || '').trim();
+        element.textContent = value || '-';
+        element.className = baseClass;
+
+        if (!value) {
+            return;
+        }
+
+        const slug = value
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '');
+
+        if (slug) {
+            element.className = `${baseClass} service-type-badge--${slug}`;
         }
     }
 

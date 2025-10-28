@@ -2518,6 +2518,25 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
             service_payload["inspection_summary"] = intake_notes
         if data.get("phone"):
             service_payload["primary_contact"] = data.get("phone")
+        priority = (data.get("priority") or "").strip()
+        if priority:
+            normalized_priority = priority.lower()
+            priority_map = {
+                "normal": "Normal",
+                "high": "High",
+                "urgent": "Urgent",
+                "critical": "Critical",
+            }
+            service_payload["priority"] = priority_map.get(normalized_priority, priority)
+        estimated_delivery = (data.get("estimated_delivery_date") or "").strip()
+        if estimated_delivery:
+            service_payload["estimated_delivery_date"] = estimated_delivery
+        estimated_amount = data.get("total_estimated_amount")
+        if estimated_amount not in (None, ""):
+            amount_value = flt(estimated_amount)
+            if amount_value < 0:
+                amount_value = 0
+            service_payload["total_estimated_amount"] = amount_value
 
         service_doc = _insert_document("Garage Service Order", service_payload)
         created["service_order"] = service_doc.name

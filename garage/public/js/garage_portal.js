@@ -447,6 +447,9 @@ const VEHICLE_BRAND_MODELS = {
                         'vin',
                         'engine_number',
                         'service_order_type',
+                        'priority',
+                        'estimated_delivery_date',
+                        'total_estimated_amount',
                         'notes',
                         'intake_type',
                     ]);
