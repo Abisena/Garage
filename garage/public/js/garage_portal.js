@@ -1143,6 +1143,7 @@ const VEHICLE_BRAND_MODELS = {
             }
             const raw = input.value || '';
             const query = raw.trim();
+            this.manualCustomerQuery = query;
             const nameField = this.forms.intake?.querySelector('[name="customer_name"]');
             if (query) {
                 this.manualCustomerQuery = '';
@@ -1171,6 +1172,7 @@ const VEHICLE_BRAND_MODELS = {
             const normalizedMatch = this.customerNameMap.get(query.toLowerCase());
             const docname = exactMatch || normalizedMatch;
             if (docname) {
+                this.manualCustomerQuery = '';
                 if (this.selects.existingCustomer) {
                     const set = this.setSelectValue(this.selects.existingCustomer, docname);
                     if (!set) {
