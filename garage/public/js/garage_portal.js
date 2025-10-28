@@ -446,6 +446,7 @@ const VEHICLE_BRAND_MODELS = {
                         'mileage',
                         'vin',
                         'engine_number',
+                        'service_order_type',
                         'notes',
                         'intake_type',
                     ]);
