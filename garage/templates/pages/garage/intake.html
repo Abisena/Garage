@@ -1275,6 +1275,10 @@ button:disabled {
                                     </select>
                                 </div>
                                 <div class="form-field">
+                                    <label for="type_model">Tipe Model</label>
+                                    <input id="type_model" name="type_model" placeholder="Contoh: G, RS, Premium" />
+                                </div>
+                                <div class="form-field">
                                     <label for="model">Model</label>
                                     <select id="model" name="model">
                                         <option value="">— Pilih Model —</option>
@@ -1312,6 +1316,14 @@ button:disabled {
                                 <div class="form-field">
                                     <label for="mileage">Odometer (km)</label>
                                     <input id="mileage" name="mileage" type="number" min="0" step="100" placeholder="50000" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="vin">No. Rangka</label>
+                                    <input id="vin" name="vin" placeholder="Contoh: MH8XXXXXXXXXXXXX" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="engine_number">No. Mesin</label>
+                                    <input id="engine_number" name="engine_number" placeholder="Contoh: 1NZ-FE123456" />
                                 </div>
                                 <div class="form-field">
                                     <label>Terakhir Servis</label>
@@ -1441,13 +1453,17 @@ button:disabled {
                                 <th>Kontak</th>
                                 <th>VIP</th>
                                 <th>No. Polisi</th>
+                                <th>Merk</th>
+                                <th>Tipe Model</th>
                                 <th>Model</th>
+                                <th>No. Rangka</th>
+                                <th>No. Mesin</th>
                                 <th>Terakhir Servis</th>
                             </tr>
                         </thead>
                         <tbody data-role="customer-vehicle-table">
                             <tr>
-                                <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                <td colspan="11" style="text-align: center; padding: 2rem; color: var(--text-muted);">
                                     ⏳ Loading data customer & kendaraan...
                                 </td>
                             </tr>
@@ -1466,7 +1482,7 @@ button:disabled {
 </script>
 <script>
 /**
- * Auto-fill Customer Data from License Plate
+ * Auto-fill Customer Data from No. Polisi
  * Fitur untuk mengisi otomatis data customer dan kendaraan berdasarkan nomor polisi
  */
 

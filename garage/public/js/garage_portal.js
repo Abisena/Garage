@@ -185,12 +185,15 @@ const VEHICLE_BRAND_MODELS = {
                         'marketing_source',
                         'license_plate',
                         'brand',
+                        'type_model',
                         'model',
                         'vehicle_year',
                         'color',
                         'transmission',
                         'fuel_type',
                         'mileage',
+                        'vin',
+                        'engine_number',
                         'notes',
                         'intake_type',
                     ]);
@@ -563,11 +566,14 @@ const VEHICLE_BRAND_MODELS = {
                 this.populateModelOptions('', vehicle.model || '');
             }
             const mapping = {
+                type_model: 'type_model',
                 vehicle_year: 'vehicle_year',
                 color: 'color',
                 transmission: 'transmission',
                 fuel_type: 'fuel_type',
                 mileage: 'mileage',
+                vin: 'vin',
+                engine_number: 'engine_number',
             };
             Object.entries(mapping).forEach(([fieldName, sourceKey]) => {
                 const field = form.querySelector(`[name="${fieldName}"]`);
@@ -1140,7 +1146,11 @@ const VEHICLE_BRAND_MODELS = {
             const combinedRows = vehicles.slice(0, 8).map((vehicle) => {
                 const customer = customerMap.get(vehicle.customer);
                 const contact = customer ? [customer.phone, customer.email].filter(Boolean).join(' / ') : '';
-                const model = [vehicle.brand, vehicle.model].filter(Boolean).join(' ') || '-';
+                const model = vehicle.model || '-';
+                const brand = vehicle.brand || '-';
+                const typeModel = vehicle.type_model || '-';
+                const chassis = vehicle.vin || '-';
+                const engine = vehicle.engine_number || '-';
                 const serviceTimestamp = vehicle.last_service_logged_at || vehicle.last_service_date || vehicle.creation;
                 return [
                     this.renderLink(
@@ -1152,7 +1162,11 @@ const VEHICLE_BRAND_MODELS = {
                     contact || '-',
                     customer?.is_vip ? 'Ya' : 'Tidak',
                     this.renderLink('Garage Vehicle', vehicle.name, vehicle.license_plate || vehicle.name),
+                    brand,
+                    typeModel,
                     model,
+                    chassis,
+                    engine,
                     this.formatTimestamp(serviceTimestamp),
                 ];
             });
@@ -1165,6 +1179,10 @@ const VEHICLE_BRAND_MODELS = {
                         customer.customer_type || '-',
                         contact || '-',
                         customer.is_vip ? 'Ya' : 'Tidak',
+                        '—',
+                        '—',
+                        '—',
+                        '—',
                         '—',
                         '—',
                         '—',
@@ -2536,7 +2554,14 @@ const VEHICLE_BRAND_MODELS = {
                 .filter((vehicle) => !selectedCustomer || vehicle.customer === selectedCustomer)
                 .map((vehicle) => ({
                     value: vehicle.name,
-                    label: [vehicle.license_plate, vehicle.brand, vehicle.model].filter(Boolean).join(' – '),
+                    label: [
+                        vehicle.license_plate,
+                        vehicle.brand,
+                        vehicle.type_model,
+                        vehicle.model,
+                    ]
+                        .filter(Boolean)
+                        .join(' – '),
                 }));
             this.populateSelect(select, options, { blankLabel: '— Pilih kendaraan —' });
         }
