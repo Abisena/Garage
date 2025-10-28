@@ -2363,17 +2363,12 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         vehicle_doc.last_service_logged_at = timestamp
         if not vehicle_doc.last_service_date:
             vehicle_doc.last_service_date = nowdate()
-        vehicle_doc.customer = data.get("vehicle_customer") or customer_name
-        if not vehicle_doc.customer:
-            frappe.throw(_("Pilih customer untuk kendaraan."))
+        vehicle_doc.customer = customer_name
         if not vehicle_doc.license_plate:
             frappe.throw(_("Nomor polisi kendaraan wajib diisi."))
         _insert_doc(vehicle_doc)
         vehicle_name = vehicle_doc.name
         created["vehicle"] = vehicle_doc.name
-    elif data.get("vehicle_customer"):
-        # Vehicle fields empty but explicit request to attach? ignore gracefully.
-        created["vehicle"] = None
 
     if not vehicle_name and data.get("license_plate"):
         existing_vehicle = _find_vehicle_by_plate(data.get("license_plate"), fields=("name", "customer"))

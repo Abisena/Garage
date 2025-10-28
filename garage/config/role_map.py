@@ -52,7 +52,7 @@ ROLE_HOME_ROUTES: Mapping[str, str] = {
 }
 
 
-DEFAULT_PRIVILEGED_ROUTE = "/garage"
+DEFAULT_PRIVILEGED_ROUTE = "/garage/intake"
 DEFAULT_FALLBACK_ROUTE = "/garage/login"
 
 
