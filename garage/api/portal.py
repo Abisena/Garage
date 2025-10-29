@@ -2798,7 +2798,7 @@ def generate_spare_part_approval_document(
             },
         )
 
-    source_names = sorted({row.name for row in parts if row.name})
+    source_names = sorted({cstr(row.name) for row in parts if row.name})
     division_doc.source_request_names = ", ".join(source_names)
 
     if division_doc.is_new():
