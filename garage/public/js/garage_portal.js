@@ -1648,7 +1648,7 @@ const VEHICLE_BRAND_MODELS = {
                     this.state = message && typeof message === 'object' && !Array.isArray(message) ? message : {};
 
                     try {
-                        window.__garage_portal_state__ = this.state;
+                        window.garagePortalState = this.state;
                         document.dispatchEvent(
                             new CustomEvent('garage-portal:state-updated', {
                                 detail: { state: this.state },

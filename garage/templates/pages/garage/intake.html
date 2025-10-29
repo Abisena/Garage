@@ -1979,7 +1979,7 @@ button:disabled {
             return;
         }
 
-        const initialState = window.__garage_portal_state__;
+        const initialState = window.garagePortalState;
         if (initialState && Array.isArray(initialState.spare_parts)) {
             cachedSpareParts = initialState.spare_parts;
         }
