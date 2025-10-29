@@ -1288,6 +1288,11 @@ a:hover {
         merged.catalog_reserved_qty = catalogPart.reserved_qty;
         merged.catalog_managed_by = catalogPart.managed_by;
         merged.catalog_image = catalogPart.image;
+        const catalogDescription = catalogPart.description || catalogPart.notes || '';
+        merged.catalog_description = catalogDescription;
+        if (!merged.description || !merged.description.trim()) {
+            merged.description = catalogDescription;
+        }
         const unitPrice = Number(catalogPart.unit_price);
         const normalizedUnitPrice = Number.isNaN(unitPrice) ? Number(part?.rate ?? 0) || 0 : unitPrice;
         merged.catalog_unit_price = normalizedUnitPrice;
