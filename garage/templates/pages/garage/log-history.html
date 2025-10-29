@@ -368,6 +368,25 @@
     font-size: 0.9rem;
 }
 
+.log-entry__actor-name {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.log-entry__actor-username {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.log-entry__actor-separator {
+    margin: 0 0.35rem;
+    color: rgba(15, 23, 42, 0.35);
+}
+
+.log-entry__actor-unknown {
+    color: var(--text-muted);
+}
+
 .log-entry__title {
     display: flex;
     flex-direction: column;
@@ -767,6 +786,26 @@
             return String(value);
         }
 
+        function renderActor(entry) {
+            const name = (entry.user_name || '').trim();
+            const username = (entry.user_id || '').trim();
+
+            const sections = [];
+            if (name) {
+                sections.push(`<span class="log-entry__actor-name">${escapeHtml(name)}</span>`);
+            }
+
+            if (username && username !== name) {
+                sections.push(`<span class="log-entry__actor-username">${escapeHtml(username)}</span>`);
+            }
+
+            if (!sections.length) {
+                return '<span class="log-entry__actor-unknown">Tidak diketahui</span>';
+            }
+
+            return sections.join('<span class="log-entry__actor-separator">•</span>');
+        }
+
         function renderFieldChanges(changes) {
             if (!changes || !changes.length) {
                 return '';
@@ -835,7 +874,7 @@
         }
 
         function renderEntry(entry) {
-            const actor = escapeHtml(entry.user_name || entry.user_id || 'Tidak diketahui');
+            const actor = renderActor(entry);
             const timestamp = escapeHtml(formatTimestamp(entry.timestamp));
             const doctype = escapeHtml(entry.doctype || 'DocType');
             const docname = escapeHtml(entry.document || '—');
