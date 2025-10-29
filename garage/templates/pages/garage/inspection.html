@@ -1561,6 +1561,21 @@ a:hover {
         let catalogLoadedFromOrder = false;
         let totalEstimatedAmount = 0;
         let latestOrder = null;
+        let baseServiceFee = 0;
+
+        function resolveBaseServiceFee(partsTotal) {
+            const normalizedBase = Math.max(0, Math.round(baseServiceFee || 0));
+
+            if (normalizedBase > 0) {
+                return normalizedBase;
+            }
+
+            if (!latestOrder && partsTotal > 0) {
+                return Math.max(0, Math.round(DEFAULT_SERVICE_FEE));
+            }
+
+            return 0;
+        }
 
         function calculateRequiredPartsTotal() {
             return requiredParts.reduce((sum, part) => {
@@ -1585,12 +1600,13 @@ a:hover {
 
         function recalculateTotals() {
             const partsTotal = Math.max(0, Math.round(calculateRequiredPartsTotal()));
-            const baseServiceFee = partsTotal > 0 ? Math.max(0, Math.round(DEFAULT_SERVICE_FEE)) : 0;
-            totalEstimatedAmount = baseServiceFee + partsTotal;
+            let appliedServiceFee = resolveBaseServiceFee(partsTotal);
+            totalEstimatedAmount = appliedServiceFee + partsTotal;
 
             if (preserveServerEstimate && partsTotal === 0 && totalEstimatedAmount === 0) {
                 const fallback = Math.max(0, Math.round(Number(latestOrder?.total_estimated_amount || 0)));
                 totalEstimatedAmount = fallback;
+                appliedServiceFee = Math.max(0, totalEstimatedAmount - partsTotal);
             }
 
             const dpp = Math.max(0, Math.round(totalEstimatedAmount));
@@ -1604,7 +1620,6 @@ a:hover {
                 pph,
                 totalWithTax
             });
-            const appliedServiceFee = Math.max(0, totalEstimatedAmount - partsTotal);
             updateEstimateBreakdown(partsTotal, appliedServiceFee);
         }
 
@@ -2061,6 +2076,23 @@ a:hover {
                 });
             } else {
                 requiredParts = [];
+            }
+
+            const explicitServiceFee = Number(order.estimated_service_fee ?? order.service_fee ?? order.service_amount);
+            if (!Number.isNaN(explicitServiceFee) && explicitServiceFee > 0) {
+                baseServiceFee = Math.max(0, Math.round(explicitServiceFee));
+            } else {
+                const initialPartsTotal = requiredParts.reduce((sum, part) => {
+                    const qty = Number(part?.qty) || 0;
+                    const rate = Number(part?.rate) || 0;
+                    const amount = Number(part?.amount ?? qty * rate);
+                    if (Number.isNaN(amount)) {
+                        return sum;
+                    }
+                    return sum + amount;
+                }, 0);
+                const derivedServiceFee = Math.max(0, Math.round(Number(latestOrder?.total_estimated_amount || order.total_estimated_amount || 0) - initialPartsTotal));
+                baseServiceFee = derivedServiceFee > 0 ? derivedServiceFee : 0;
             }
 
             const availableCatalog = Array.isArray(order.available_spare_parts) ? order.available_spare_parts : [];
