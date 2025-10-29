@@ -558,6 +558,7 @@ def _serialize_bundle_part(row: Any, usage: str) -> Optional[Dict[str, Any]]:
     unit_price = flt(data.get("unit_price"))
     total = flt(data.get("amount")) or quantity * unit_price
     stock_qty = data.get("stock_qty")
+    warehouse = data.get("warehouse") or data.get("warehouse_location") or ""
 
     return {
         "usage": "material" if usage == "material" else "sparepart",
@@ -568,6 +569,82 @@ def _serialize_bundle_part(row: Any, usage: str) -> Optional[Dict[str, Any]]:
         "partCode": data.get("part_code") or "",
         "partName": data.get("item_name") or data.get("part_name") or "",
         "stockQty": stock_qty if stock_qty is not None else None,
+        "warehouse_location": warehouse,
+    }
+
+
+def _bundle_row_to_required_part(row: Any, usage: str = "sparepart") -> Optional[Dict[str, Any]]:
+    """Convert a service bundle line item into a required part row."""
+
+    if hasattr(row, "as_dict") and callable(row.as_dict):
+        data = row.as_dict()
+    elif isinstance(row, Mapping):
+        data = dict(row)
+    else:
+        data = {}
+
+    if not data:
+        return None
+
+    link_name = (
+        data.get("spare_part")
+        or data.get("material")
+        or data.get("item_code")
+        or data.get("item")
+    )
+    part_code = (data.get("part_code") or "").strip()
+    part_name = (data.get("item_name") or data.get("part_name") or "").strip()
+    description = (data.get("description") or "").strip()
+    uom = (data.get("uom") or "").strip()
+    qty = flt(data.get("quantity") or 0) or 0
+    rate = flt(data.get("unit_price") or 0) or 0
+    amount = flt(data.get("amount") or 0) or (qty * rate)
+    warehouse = (data.get("warehouse") or data.get("warehouse_location") or "").strip()
+
+    part_doc = None
+    if link_name:
+        try:
+            part_doc = _get_doc("Garage Spare Part", link_name)
+        except Exception:
+            try:
+                part_name_match = frappe.db.get_value(
+                    "Garage Spare Part", {"part_code": link_name}, "name"
+                )
+            except Exception:
+                part_name_match = None
+            if part_name_match:
+                part_doc = _get_doc("Garage Spare Part", part_name_match)
+
+    if part_doc:
+        part_code = part_code or (part_doc.part_code or part_doc.name)
+        part_name = part_name or (part_doc.part_name or part_doc.name)
+        description = description or (part_doc.notes or "")
+        uom = uom or (part_doc.uom or "")
+        rate = rate or flt(part_doc.unit_price or 0)
+        amount = amount or (qty * rate)
+        warehouse = warehouse or (part_doc.warehouse_location or "")
+
+    qty = qty if qty > 0 else 1.0
+    amount = amount if amount > 0 else qty * rate
+
+    if not part_code and not part_name:
+        return None
+
+    source = "On Hand"
+    if usage == "material" and not warehouse:
+        source = "Purchase"
+
+    return {
+        "item_code": part_code or part_name,
+        "item_name": part_name or part_code,
+        "description": description,
+        "qty": qty,
+        "uom": uom or "Unit",
+        "source": source,
+        "stock_status": "Pending Check",
+        "warehouse": warehouse,
+        "rate": rate,
+        "amount": amount,
     }
 
 
@@ -2829,6 +2906,31 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
             if amount_value < 0:
                 amount_value = 0
             service_payload["total_estimated_amount"] = amount_value
+
+        bundle_name = (data.get("service_bundle") or "").strip()
+        if bundle_name:
+            required_parts: List[Dict[str, Any]] = []
+            try:
+                bundle_doc = _get_doc("Garage Service Bundle", bundle_name)
+            except Exception:
+                bundle_doc = None
+
+            if bundle_doc:
+                for row in bundle_doc.get("spare_parts", []) or []:
+                    part_row = _bundle_row_to_required_part(row, "sparepart")
+                    if part_row:
+                        required_parts.append(part_row)
+                for row in bundle_doc.get("materials", []) or []:
+                    part_row = _bundle_row_to_required_part(row, "material")
+                    if part_row:
+                        required_parts.append(part_row)
+
+                if required_parts:
+                    service_payload["required_parts"] = required_parts
+
+                bundle_total = flt(getattr(bundle_doc, "grand_total", 0))
+                if bundle_total > 0 and not service_payload.get("total_estimated_amount"):
+                    service_payload["total_estimated_amount"] = bundle_total
 
         service_doc = _insert_document("Garage Service Order", service_payload)
         created["service_order"] = service_doc.name

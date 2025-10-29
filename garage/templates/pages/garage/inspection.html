@@ -1253,20 +1253,24 @@ a:hover {
         console.log('📦 Parts received:', parts);
         console.log('📊 Is array?', Array.isArray(parts));
         console.log('📊 Length:', parts?.length || 0);
-        
+
         sparePartCatalog = Array.isArray(parts) ? parts : [];
-        
+
         console.log('✅ sparePartCatalog set to:', sparePartCatalog);
         console.log('✅ Final length:', sparePartCatalog.length);
-        
+
         sparePartIndex.clear();
         for (const part of sparePartCatalog) {
             console.log('  → Adding to index:', part.part_code, part.part_name);
             if (part.name) sparePartIndex.set(part.name, part);
-            if (part.part_code) sparePartIndex.set(part.part_code.toLowerCase(), part);
+            if (part.part_code) {
+                const code = String(part.part_code);
+                sparePartIndex.set(code, part);
+                sparePartIndex.set(code.toLowerCase(), part);
+            }
             if (part.part_name) sparePartIndex.set(part.part_name.toLowerCase(), part);
         }
-        
+
         console.log('✅ Index size:', sparePartIndex.size);
     }
 
@@ -1274,7 +1278,16 @@ a:hover {
         if (!identifier) {
             return null;
         }
-        return sparePartIndex.get(identifier) || null;
+        const key = String(identifier).trim();
+        if (!key) {
+            return null;
+        }
+        return (
+            sparePartIndex.get(key)
+            || sparePartIndex.get(key.toLowerCase())
+            || sparePartIndex.get(key.toUpperCase())
+            || null
+        );
     }
 
     function mergeRequiredPartWithCatalog(part, catalogPart) {
