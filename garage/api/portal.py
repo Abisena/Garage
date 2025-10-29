@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional,
 
 import frappe
 from frappe import _
-from frappe.utils import cint, flt, get_datetime, get_url, now_datetime, nowdate
+from frappe.utils import cint, cstr, flt, get_datetime, get_url, now_datetime, nowdate
 
 TECHNICIAN_ACTIVE_TASK_STATUSES = {"Pending", "In Progress"}
 SERVICE_ORDER_ACTIVE_STATUSES = {
@@ -2721,11 +2721,12 @@ def generate_spare_part_approval_document(
         frappe.throw(_("Order servis wajib dipilih."))
 
     service_order = service_order.strip()
+    request_name = cstr(request_name).strip() if request_name is not None else ""
     service_doc = _get_doc("Garage Service Order", service_order)
 
     parts = []
     for row in service_doc.get("required_parts", []) or []:
-        if request_name and row.name != request_name:
+        if request_name and cstr(row.name) != request_name:
             continue
         status = (row.stock_status or "").strip()
         if status == "Cancelled":
