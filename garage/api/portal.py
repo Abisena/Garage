@@ -156,6 +156,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
                     "item_name",
                     "description",
                     "qty",
+                    "discount_amount",
                     "uom",
                     "source",
                     "stock_status",
