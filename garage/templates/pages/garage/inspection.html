@@ -290,7 +290,7 @@ a:hover {
 
 .content-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
     gap: 28px;
     align-items: start;
 }
@@ -299,6 +299,111 @@ a:hover {
     display: flex;
     flex-direction: column;
     gap: 24px;
+}
+
+.side-column {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    position: sticky;
+    top: 120px;
+}
+
+.intake-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.intake-summary-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.intake-summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.intake-summary-header strong {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.intake-summary-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.intake-summary-list li {
+    position: relative;
+    padding-left: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.intake-summary-list .item-label {
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+.intake-summary-list li::before {
+    content: '–';
+    position: absolute;
+    left: 0;
+    color: var(--text-muted);
+}
+
+.intake-summary-list li small {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.intake-summary-list .placeholder {
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+.intake-summary-footer {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.intake-summary-footer strong {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.intake-notes {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.action-tags {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+}
+
+.action-tags .tag {
+    margin-left: auto;
 }
 
 .section-card {
@@ -1078,6 +1183,14 @@ a:hover {
                     <span class="meta-label">Estimasi Selesai</span>
                     <span class="meta-value" id="display_estimated_delivery">-</span>
                 </div>
+                <div class="meta-item">
+                    <span class="meta-label">Jenis Servis</span>
+                    <span class="meta-value" id="display_service_type_value">-</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Prioritas</span>
+                    <span class="meta-value" id="display_priority_value">-</span>
+                </div>
             </div>
         </div>
         <div class="summary-cards">
@@ -1143,6 +1256,62 @@ a:hover {
                 </section>
             </form>
         </main>
+        <aside class="side-column">
+            <section class="section-card intake-summary-card">
+                <div class="section-header">
+                    <div>
+                        <h2>📦 Ringkasan Intake</h2>
+                        <p>Detail paket servis yang dipilih saat registrasi.</p>
+                    </div>
+                    <div class="section-tags">
+                        <span class="tag service-type-badge" id="display_service_type">-</span>
+                        <span class="tag priority-badge" id="display_priority">-</span>
+                    </div>
+                </div>
+                <div class="intake-summary">
+                    <div class="intake-summary-group">
+                        <div class="intake-summary-header">
+                            <span>Jasa</span>
+                            <strong id="intake_summary_service_total">Rp 0</strong>
+                        </div>
+                        <ul class="intake-summary-list" id="intake_summary_service_list">
+                            <li class="placeholder">Belum ada jasa terdaftar.</li>
+                        </ul>
+                    </div>
+                    <div class="intake-summary-group">
+                        <div class="intake-summary-header">
+                            <span>Sparepart</span>
+                            <strong id="intake_summary_spare_total">Rp 0</strong>
+                        </div>
+                        <ul class="intake-summary-list" id="intake_summary_spare_list">
+                            <li class="placeholder">Belum ada sparepart terdaftar.</li>
+                        </ul>
+                    </div>
+                    <div class="intake-summary-group">
+                        <div class="intake-summary-header">
+                            <span>Bahan</span>
+                            <strong id="intake_summary_material_total">Rp 0</strong>
+                        </div>
+                        <ul class="intake-summary-list" id="intake_summary_material_list">
+                            <li class="placeholder">Belum ada bahan terdaftar.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="intake-summary-footer">
+                    <span>Total Estimasi</span>
+                    <strong id="intake_summary_total">Rp 0</strong>
+                </div>
+            </section>
+            <section class="section-card intake-notes-card">
+                <div class="section-header">
+                    <div>
+                        <h2>📝 Catatan Intake</h2>
+                        <p>Masukan dari tim front desk saat registrasi.</p>
+                    </div>
+                </div>
+                <p class="intake-notes" id="display_intake_notes">Belum ada catatan tambahan dari intake.</p>
+            </section>
+        </aside>
 
     </div>
 
@@ -1152,6 +1321,9 @@ a:hover {
             <button type="button" class="btn btn-primary" onclick="submitInspection()">Save</button>
         </div>
         <div class="action-info">
+            <div class="action-tags">
+                <span class="tag priority-badge" id="display_priority_secondary">-</span>
+            </div>
             <div class="action-tax">
                 <div class="action-tax-row"><span>DPP</span><strong id="action_dpp">Rp 0</strong></div>
                 <div class="action-tax-row"><span>PPN (11%)</span><strong id="action_ppn">Rp 0</strong></div>
@@ -1388,6 +1560,7 @@ a:hover {
     function applyPriorityBadge(priority) {
         const primary = document.getElementById('display_priority');
         const secondary = document.getElementById('display_priority_secondary');
+        const valueDisplay = document.getElementById('display_priority_value');
         const value = priority || '-';
         const slug = (priority || '').toLowerCase();
         const className = slug ? `tag priority-badge priority-${slug}` : 'tag priority-badge';
@@ -1400,11 +1573,18 @@ a:hover {
             secondary.textContent = value;
             secondary.className = className;
         }
+        if (valueDisplay) {
+            valueDisplay.textContent = value;
+        }
     }
 
     function applyServiceTypeBadge(serviceType) {
         const element = document.getElementById('display_service_type');
+        const valueDisplay = document.getElementById('display_service_type_value');
         if (!element) {
+            if (valueDisplay) {
+                valueDisplay.textContent = (serviceType || '').trim() || '-';
+            }
             return;
         }
 
@@ -1412,6 +1592,10 @@ a:hover {
         const value = (serviceType || '').trim();
         element.textContent = value || '-';
         element.className = baseClass;
+
+        if (valueDisplay) {
+            valueDisplay.textContent = value || '-';
+        }
 
         if (!value) {
             return;
@@ -1586,6 +1770,7 @@ a:hover {
         let totalEstimatedAmount = 0;
         let latestOrder = null;
         let baseServiceFee = 0;
+        let serviceSummaryItems = [];
 
         function resolveBaseServiceFee(partsTotal) {
             const normalizedBase = Math.max(0, Math.round(baseServiceFee || 0));
@@ -1609,6 +1794,143 @@ a:hover {
                 }
                 return sum + amount;
             }, 0);
+        }
+
+        function renderSummaryList(elementId, items, placeholder) {
+            const element = document.getElementById(elementId);
+            if (!element) {
+                return;
+            }
+
+            if (!items || !items.length) {
+                element.innerHTML = `<li class="placeholder">${escapeHtml(placeholder)}</li>`;
+                return;
+            }
+
+            element.innerHTML = items
+                .map((item) => {
+                    const label = escapeHtml(item.label || '-');
+                    const meta = item.meta ? `<small>${escapeHtml(item.meta)}</small>` : '';
+                    return `<li><span class="item-label">${label}</span>${meta}</li>`;
+                })
+                .join('');
+        }
+
+        function updateIntakeSummaryDisplay(summary) {
+            const serviceItems = summary?.serviceItems || [];
+            const spareItems = summary?.spareItems || [];
+            const materialItems = summary?.materialItems || [];
+            const totals = summary?.totals || {};
+
+            renderSummaryList('intake_summary_service_list', serviceItems, 'Belum ada jasa terdaftar.');
+            renderSummaryList('intake_summary_spare_list', spareItems, 'Belum ada sparepart terdaftar.');
+            renderSummaryList('intake_summary_material_list', materialItems, 'Belum ada bahan terdaftar.');
+
+            const serviceTotalNode = document.getElementById('intake_summary_service_total');
+            if (serviceTotalNode) {
+                serviceTotalNode.textContent = formatCurrency(totals.service || 0);
+            }
+            const spareTotalNode = document.getElementById('intake_summary_spare_total');
+            if (spareTotalNode) {
+                spareTotalNode.textContent = formatCurrency(totals.spare || 0);
+            }
+            const materialTotalNode = document.getElementById('intake_summary_material_total');
+            if (materialTotalNode) {
+                materialTotalNode.textContent = formatCurrency(totals.material || 0);
+            }
+            const overallNode = document.getElementById('intake_summary_total');
+            if (overallNode) {
+                const overall = totals.overall || ((totals.service || 0) + (totals.spare || 0) + (totals.material || 0));
+                overallNode.textContent = formatCurrency(overall);
+            }
+        }
+
+        function deriveServiceSummaryItems(order) {
+            const items = [];
+            const tasks = Array.isArray(order?.service_tasks) ? order.service_tasks : [];
+
+            tasks.forEach((task) => {
+                const label = task.task || task.description;
+                if (!label) {
+                    return;
+                }
+                const metaPieces = [];
+                if (task.description && task.description !== label) {
+                    metaPieces.push(task.description);
+                }
+                if (task.technician_name) {
+                    metaPieces.push(`Teknisi: ${task.technician_name}`);
+                }
+                items.push({
+                    label,
+                    meta: metaPieces.join(' • '),
+                });
+            });
+
+            if (!items.length && order?.service_order_type) {
+                items.push({ label: order.service_order_type });
+            }
+
+            return items;
+        }
+
+        function categorizePartsForSummary(parts) {
+            const spareItems = [];
+            const materialItems = [];
+
+            (parts || []).forEach((part) => {
+                if (!part) {
+                    return;
+                }
+                const label = part.item_name || part.item_code || 'Item Servis';
+                const qty = Number(part.qty) || 0;
+                const uom = part.uom || '';
+                const warehouse = part.warehouse || '';
+                const metaPieces = [];
+                if (qty) {
+                    const qtyLabel = formatNumber(qty);
+                    metaPieces.push(`Qty: ${qtyLabel}${uom ? ` ${uom}` : ''}`);
+                }
+                if (warehouse) {
+                    metaPieces.push(`Gudang: ${warehouse}`);
+                }
+                const amount = Math.max(0, Math.round(Number(part.amount ?? computePartAmount(part) ?? 0)));
+                const payload = {
+                    label,
+                    meta: metaPieces.join(' • '),
+                    amount,
+                };
+                const source = (part.source || '').toLowerCase();
+                if (source.includes('purchase') || source.includes('material') || source.includes('bahan')) {
+                    materialItems.push(payload);
+                } else {
+                    spareItems.push(payload);
+                }
+            });
+
+            return { spareItems, materialItems };
+        }
+
+        function refreshIntakeSummary(serviceFeeOverride) {
+            const { spareItems, materialItems } = categorizePartsForSummary(requiredParts);
+            const serviceItems = (serviceSummaryItems && serviceSummaryItems.length)
+                ? serviceSummaryItems
+                : (latestOrder?.service_order_type ? [{ label: latestOrder.service_order_type }] : []);
+            const normalizedServiceFee = Math.max(0, Math.round(serviceFeeOverride ?? baseServiceFee ?? 0));
+            const spareTotal = spareItems.reduce((sum, item) => sum + Math.max(0, item.amount || 0), 0);
+            const materialTotal = materialItems.reduce((sum, item) => sum + Math.max(0, item.amount || 0), 0);
+
+            updateIntakeSummaryDisplay({
+                serviceItems,
+                spareItems,
+                materialItems,
+                totals: {
+                    service: normalizedServiceFee,
+                    spare: spareTotal,
+                    material: materialTotal,
+                    overall: normalizedServiceFee + spareTotal + materialTotal,
+                },
+            });
         }
 
         function updateEstimateBreakdown(partsTotal, serviceFee) {
@@ -1643,6 +1965,7 @@ a:hover {
                 totalWithTax
             });
             updateEstimateBreakdown(partsTotal, appliedServiceFee);
+            refreshIntakeSummary(appliedServiceFee);
         }
 
         function normaliseCurrencyInput(value) {
@@ -1964,6 +2287,7 @@ a:hover {
 
         function populateOrderInfo(order) {
             latestOrder = order || null;
+            serviceSummaryItems = deriveServiceSummaryItems(order || {});
             const customerDetails = order.customer_details || {};
             const vehicleDetails = order.vehicle_details || {};
 
@@ -2106,12 +2430,7 @@ a:hover {
                 intakeNotesDisplay.textContent = intakeNotes || 'Belum ada catatan tambahan dari intake.';
             }
 
-            if (order.service_order_type) {
-                const serviceTypeTag = document.getElementById('display_service_type');
-                if (serviceTypeTag) {
-                    serviceTypeTag.textContent = order.service_order_type;
-                }
-            }
+            applyServiceTypeBadge(order.service_order_type || '-');
 
             updateEstimatedDeliveryDisplay(order.estimated_delivery_date || null);
             applyPriorityBadge(order.priority || '-');
@@ -2177,6 +2496,7 @@ a:hover {
                 catalogLoadedFromOrder = true;
             }
 
+            refreshIntakeSummary(baseServiceFee);
             renderRequiredParts();
             recalculateTotals();
         }

@@ -1236,6 +1236,61 @@ button:disabled {
     flex-direction: column;
 }
 
+.estimate-breakdown__group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.estimate-breakdown__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: var(--text-sm, 14px);
+    font-weight: 600;
+    color: var(--portal-text-strong, #111827);
+}
+
+.estimate-breakdown__header strong {
+    font-size: var(--text-md, 16px);
+    font-weight: 700;
+    color: var(--portal-accent-strong, #111827);
+}
+
+.estimate-breakdown__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.estimate-breakdown__list li {
+    position: relative;
+    padding-left: 16px;
+    color: var(--portal-text-muted, #4b5563);
+    font-size: var(--text-sm, 14px);
+}
+
+.estimate-breakdown__list li::before {
+    content: '–';
+    position: absolute;
+    left: 0;
+    color: var(--portal-text-soft, #9ca3af);
+}
+
+.estimate-breakdown__list li small {
+    display: block;
+    font-size: 12px;
+    color: var(--portal-text-soft, #9ca3af);
+}
+
+.estimate-breakdown__list .placeholder {
+    font-style: italic;
+    color: var(--portal-text-soft, #9ca3af);
+}
+
 .estimate-summary-card:hover {
     transform: none;
     box-shadow: none;
@@ -1552,17 +1607,32 @@ button:disabled {
                                             <p class="estimate-card__subtitle">Pilih bundel estimasi untuk mengisi rincian biaya otomatis.</p>
                                         </header>
                                         <div class="estimate-breakdown">
-                                            <div class="estimate-breakdown__row">
-                                                <span>Jasa</span>
-                                                <strong id="estimate_service_amount">Rp 0</strong>
+                                            <div class="estimate-breakdown__group">
+                                                <div class="estimate-breakdown__header">
+                                                    <span>Jasa</span>
+                                                    <strong id="estimate_service_amount">Rp 0</strong>
+                                                </div>
+                                                <ul class="estimate-breakdown__list" id="estimate_service_list">
+                                                    <li class="placeholder">Belum ada jasa pada bundel ini.</li>
+                                                </ul>
                                             </div>
-                                            <div class="estimate-breakdown__row">
-                                                <span>Sparepart</span>
-                                                <strong id="estimate_spare_amount">Rp 0</strong>
+                                            <div class="estimate-breakdown__group">
+                                                <div class="estimate-breakdown__header">
+                                                    <span>Sparepart</span>
+                                                    <strong id="estimate_spare_amount">Rp 0</strong>
+                                                </div>
+                                                <ul class="estimate-breakdown__list" id="estimate_spare_list">
+                                                    <li class="placeholder">Belum ada sparepart pada bundel ini.</li>
+                                                </ul>
                                             </div>
-                                            <div class="estimate-breakdown__row">
-                                                <span>Bahan</span>
-                                                <strong id="estimate_material_amount">Rp 0</strong>
+                                            <div class="estimate-breakdown__group">
+                                                <div class="estimate-breakdown__header">
+                                                    <span>Bahan</span>
+                                                    <strong id="estimate_material_amount">Rp 0</strong>
+                                                </div>
+                                                <ul class="estimate-breakdown__list" id="estimate_material_list">
+                                                    <li class="placeholder">Belum ada bahan pada bundel ini.</li>
+                                                </ul>
                                             </div>
                                         </div>
                                         <div class="estimate-total">
@@ -1642,11 +1712,31 @@ button:disabled {
         totalNode.textContent = formatCurrency(value || 0);
     }
 
+    function renderList(target, items, placeholder) {
+        if (!target) {
+            return;
+        }
+
+        if (!items || !items.length) {
+            target.innerHTML = `<li class="placeholder">${escapeHtml(placeholder)}</li>`;
+            return;
+        }
+
+        const rows = items
+            .map((item) => {
+                const label = escapeHtml(item.label || '-');
+                const meta = item.meta ? `<small>${escapeHtml(item.meta)}</small>` : '';
+                return `<li><span class="item-label">${label}</span>${meta}</li>`;
+            })
+            .join('');
+        target.innerHTML = rows;
+    }
+
     function resetEstimateDisplay(targetNodes, targetInput) {
         if (!targetNodes) {
             return;
         }
-        const { service, spare, material, total, description } = targetNodes;
+        const { service, spare, material, total, description, serviceList, spareList, materialList } = targetNodes;
         if (service) service.textContent = formatCurrency(0);
         if (spare) spare.textContent = formatCurrency(0);
         if (material) material.textContent = formatCurrency(0);
@@ -1654,6 +1744,9 @@ button:disabled {
         if (description) {
             description.innerHTML = escapeHtml(DEFAULT_NOTE);
         }
+        renderList(serviceList, [], 'Belum ada jasa pada bundel ini.');
+        renderList(spareList, [], 'Belum ada sparepart pada bundel ini.');
+        renderList(materialList, [], 'Belum ada bahan pada bundel ini.');
     }
 
     
@@ -1716,6 +1809,7 @@ button:disabled {
                 stockQty = null;
             }
             const status = part.status === 'missing' ? 'missing' : 'available';
+            const warehouse = part.warehouse || part.warehouse_location || '';
             return {
                 status,
                 usage: part.usage === 'material' ? 'material' : 'sparepart',
@@ -1732,6 +1826,7 @@ button:disabled {
                     part.spare_part_name ||
                     'Item Servis',
                 stockQty,
+                warehouse,
             };
         });
 
@@ -1773,32 +1868,44 @@ button:disabled {
     }
 
     function renderBundleDescription(bundle) {
-        const stages = (bundle.stages || [])
-            .map((stage) => `<li>${escapeHtml(stage)}</li>`)
-            .join('');
+        const stageItems = (bundle.stages || []).map((stage) => ({
+            label: stage,
+            meta: '',
+        }));
 
-        const parts = (bundle.parts || [])
-            .map((part) => {
-                const label = `${escapeHtml(part.partName || '-')}${part.partCode ? ` (${escapeHtml(part.partCode)})` : ''}`;
-                const qty = formatQuantity(part.quantity || 0, part.uom || '');
-                if (part.status === 'available') {
-                    const cost = formatCurrency(part.total || 0);
-                    const stockInfo = part.stockQty !== null && part.stockQty !== undefined
-                        ? ` • Stok: ${formatQuantity(part.stockQty, part.uom || '')}`
-                        : '';
-                    return `<li>${label} — ${escapeHtml(qty)} • ${escapeHtml(cost)}${stockInfo}</li>`;
-                }
-                return `<li>${label} — ${escapeHtml(qty)} • <em>Perlu konfirmasi stok</em></li>`;
-            })
-            .join('');
+        const spareParts = (bundle.parts || [])
+            .filter((part) => part.usage !== 'material')
+            .map((part) => ({
+                label: `${part.partName || part.partCode || 'Item Servis'}`,
+                meta: [
+                    part.partCode ? `Kode: ${part.partCode}` : '',
+                    part.quantity ? `Qty: ${formatQuantity(part.quantity || 0, part.uom || '')}` : '',
+                ].filter(Boolean).join(' • '),
+            }));
+
+        const materialParts = (bundle.parts || [])
+            .filter((part) => part.usage === 'material')
+            .map((part) => ({
+                label: `${part.partName || part.partCode || 'Bahan'}`,
+                meta: [
+                    part.partCode ? `Kode: ${part.partCode}` : '',
+                    part.quantity ? `Qty: ${formatQuantity(part.quantity || 0, part.uom || '')}` : '',
+                    part.warehouse ? `Gudang: ${part.warehouse}` : '',
+                ].filter(Boolean).join(' • '),
+            }));
 
         const summary = `Jasa ${formatCurrency(bundle.service)} • Sparepart ${formatCurrency(bundle.spareparts)} • Bahan ${formatCurrency(bundle.materials)}`;
+
+        const renderItems = (items) => items
+            .map((item) => `<li>${escapeHtml(item.label)}${item.meta ? ` — ${escapeHtml(item.meta)}` : ''}</li>`)
+            .join('');
 
         return `
             <strong>${escapeHtml(bundle.name)}</strong>
             <p>${escapeHtml(bundle.notes || '')}</p>
-            ${stages ? `<p>Tahapan servis:</p><ul>${stages}</ul>` : ''}
-            ${parts ? `<p>Komponen yang disiapkan:</p><ul>${parts}</ul>` : ''}
+            ${stageItems.length ? `<p>Detail jasa:</p><ul>${renderItems(stageItems)}</ul>` : ''}
+            ${spareParts.length ? `<p>Sparepart yang disiapkan:</p><ul>${renderItems(spareParts)}</ul>` : ''}
+            ${materialParts.length ? `<p>Bahan pendukung:</p><ul>${renderItems(materialParts)}</ul>` : ''}
             <p class="estimate-summary">${escapeHtml(summary)}</p>
             <p class="estimate-reminder">Estimasi awal dapat diperbarui saat inspeksi jika ada sparepart tambahan.</p>
         `;
@@ -1810,7 +1917,7 @@ button:disabled {
             return;
         }
 
-        const { service, spare, material, total, description } = nodes;
+        const { service, spare, material, total, description, serviceList, spareList, materialList } = nodes;
         const serviceTotal = Math.max(0, bundle.service || 0);
         const spareTotal = Math.max(0, bundle.spareparts || 0);
         const materialTotal = Math.max(0, bundle.materials || 0);
@@ -1823,6 +1930,32 @@ button:disabled {
         if (description) {
             description.innerHTML = renderBundleDescription(bundle);
         }
+        renderList(
+            serviceList,
+            (bundle.stages && bundle.stages.length
+                ? bundle.stages.map((stage) => ({ label: stage }))
+                : [{ label: bundle.name }]
+            ),
+            'Belum ada jasa pada bundel ini.'
+        );
+        const bundleParts = Array.isArray(bundle.parts) ? bundle.parts : [];
+        const spareParts = bundleParts
+            .filter((part) => part.usage !== 'material')
+            .map((part) => ({
+                label: part.partName || part.partCode || 'Item Servis',
+                meta: part.partCode ? `Kode: ${part.partCode}` : '',
+            }));
+        const materialParts = bundleParts
+            .filter((part) => part.usage === 'material')
+            .map((part) => ({
+                label: part.partName || part.partCode || 'Bahan',
+                meta: [
+                    part.partCode ? `Kode: ${part.partCode}` : '',
+                    part.warehouse ? `Gudang: ${part.warehouse}` : '',
+                ].filter(Boolean).join(' • '),
+            }));
+        renderList(spareList, spareParts, 'Belum ada sparepart pada bundel ini.');
+        renderList(materialList, materialParts, 'Belum ada bahan pada bundel ini.');
         if (totalInput) {
             totalInput.value = overall;
             totalInput.dispatchEvent(new Event('input', { bubbles: true }));
@@ -1882,6 +2015,9 @@ button:disabled {
             material: document.getElementById('estimate_material_amount'),
             total: document.getElementById('estimate_total_amount'),
             description: document.getElementById('estimate_bundle_description'),
+            serviceList: document.getElementById('estimate_service_list'),
+            spareList: document.getElementById('estimate_spare_list'),
+            materialList: document.getElementById('estimate_material_list'),
         };
 
         if (!bundleSelect || !nodes.service || !nodes.spare || !nodes.material || !nodes.total) {
@@ -2033,7 +2169,7 @@ button:disabled {
         }
 
         if (customer.customer_name) {
-            setFieldValue('customer_name', customer.customer_name);
+            setFieldValue('customer_name', customer.customer_name, ['new_customer_name']);
         }
 
         if (customer.customer_type) {
@@ -2093,12 +2229,20 @@ button:disabled {
         }
 
         // Isi data kendaraan
+        if (vehicle.license_plate) {
+            setFieldValue('license_plate', vehicle.license_plate.toUpperCase());
+        }
+
         if (vehicle.brand) {
             setFieldValue('brand', vehicle.brand);
         }
 
         if (vehicle.model) {
             setFieldValue('model', vehicle.model);
+        }
+
+        if (vehicle.model_variant) {
+            setFieldValue('model_variant', vehicle.model_variant);
         }
 
         if (vehicle.vehicle_year) {
@@ -2117,39 +2261,66 @@ button:disabled {
             setFieldValue('fuel_type', vehicle.fuel_type);
         }
 
-        if (vehicle.mileage) {
+        if (vehicle.mileage !== undefined && vehicle.mileage !== null) {
             setFieldValue('mileage', vehicle.mileage);
+        }
+
+        if (vehicle.vin) {
+            setFieldValue('vin', vehicle.vin);
+        }
+
+        if (vehicle.engine_number) {
+            setFieldValue('engine_number', vehicle.engine_number);
         }
     }
 
     // Helper function untuk set nilai field
-    function setFieldValue(fieldId, value) {
-        const field = document.getElementById(fieldId);
-        if (field && value) {
-            field.value = value;
+    function setFieldValue(fieldId, value, mirrorIds = []) {
+        const ids = [fieldId]
+            .concat(Array.isArray(mirrorIds) ? mirrorIds : [])
+            .filter(Boolean);
+        const seen = new Set();
+
+        const shouldApply = !(value === undefined || value === null || (typeof value === 'string' && value.trim() === ''));
+
+        ids.forEach((id) => {
+            if (seen.has(id)) {
+                return;
+            }
+            seen.add(id);
+
+            const field = document.getElementById(id);
+            if (!field || !shouldApply) {
+                return;
+            }
+
+            const appliedValue = typeof value === 'number' ? value : String(value);
+            field.value = appliedValue;
+
             if (field.tagName === 'SELECT') {
-                const hasOption = Array.from(field.options || []).some(option => option.value === value);
+                const hasOption = Array.from(field.options || []).some(option => option.value === appliedValue);
                 if (!hasOption) {
-                    field.setAttribute('data-pending-value', value);
+                    field.setAttribute('data-pending-value', appliedValue);
+                } else {
+                    field.removeAttribute('data-pending-value');
                 }
             }
 
-            if (fieldId === 'customer_name') {
+            if (id === 'customer_name') {
                 const searchInput = document.getElementById('existing_customer_search');
                 if (searchInput) {
-                    searchInput.value = value;
+                    searchInput.value = appliedValue;
+                    searchInput.classList.add('auto-filled');
+                    setTimeout(() => searchInput.classList.remove('auto-filled'), 2000);
                 }
             }
 
-            // Trigger change event
             field.dispatchEvent(new Event('change', { bubbles: true }));
-
-            // Tambahkan visual indicator bahwa field telah diisi otomatis
             field.classList.add('auto-filled');
             setTimeout(() => {
                 field.classList.remove('auto-filled');
             }, 2000);
-        }
+        });
     }
 
     // Fungsi untuk menampilkan notifikasi
