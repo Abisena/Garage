@@ -1456,6 +1456,175 @@ def portal_bootstrap() -> Dict[str, Any]:
 
 
 @frappe.whitelist()
+def get_audit_log_entries(
+    doctype: Optional[str] = None,
+    docname: Optional[str] = None,
+    limit: int | str = 50,
+) -> Dict[str, Any]:
+    """Return structured timeline entries from the Frappe Version audit log."""
+
+    _require_login()
+
+    try:
+        limit_value = cint(limit)
+    except Exception:
+        limit_value = DEFAULT_LIMIT
+
+    limit_value = max(1, min(limit_value, 200))
+
+    filters: List[List[Any]] = []
+    if doctype:
+        filters.append(["ref_doctype", "=", doctype])
+    if docname:
+        filters.append(["docname", "=", docname])
+
+    try:
+        with _ignoring_permissions():
+            rows = frappe.db.get_all(
+                "Version",
+                fields=["name", "creation", "owner", "docname", "ref_doctype", "data"],
+                filters=filters,
+                order_by="creation desc",
+                limit=limit_value,
+            )
+    except Exception:
+        rows = []
+
+    owners = _user_display_map(row.get("owner") for row in rows if row.get("owner"))
+
+    def _normalise_child_row(payload: Any) -> Any:
+        if isinstance(payload, dict):
+            return {key: payload[key] for key in payload if not key.startswith("_")}
+        return payload
+
+    available_doctypes: Set[str] = set(filter(None, DOC_TYPES))
+    entries: List[Dict[str, Any]] = []
+
+    for row in rows:
+        serialised = dict(row)
+        entry_doctype = cstr(serialised.get("ref_doctype")) if serialised.get("ref_doctype") else None
+        entry_docname = cstr(serialised.get("docname")) if serialised.get("docname") else None
+
+        if entry_doctype:
+            available_doctypes.add(entry_doctype)
+
+        parsed_data: Dict[str, Any] = {}
+        raw_data = serialised.get("data")
+        if raw_data:
+            try:
+                parsed_candidate = frappe.parse_json(raw_data)
+                if isinstance(parsed_candidate, dict):
+                    parsed_data = parsed_candidate
+            except Exception:
+                parsed_data = {}
+
+        changed_fields: List[Dict[str, Any]] = []
+        for change in parsed_data.get("changed") or []:
+            if isinstance(change, (list, tuple)) and len(change) >= 3:
+                changed_fields.append(
+                    {
+                        "field": change[0],
+                        "before": change[1],
+                        "after": change[2],
+                    }
+                )
+
+        row_changes: List[Dict[str, Any]] = []
+        for change in parsed_data.get("row_changed") or []:
+            if isinstance(change, (list, tuple)) and len(change) >= 5:
+                row_changes.append(
+                    {
+                        "table": change[0],
+                        "row": change[1],
+                        "field": change[2],
+                        "before": change[3],
+                        "after": change[4],
+                    }
+                )
+
+        added_children: List[Dict[str, Any]] = []
+        for item in parsed_data.get("added") or []:
+            if isinstance(item, (list, tuple)) and len(item) >= 2:
+                added_children.append(
+                    {
+                        "table": item[0],
+                        "row": _normalise_child_row(item[1]),
+                    }
+                )
+
+        removed_children: List[Dict[str, Any]] = []
+        for item in parsed_data.get("removed") or []:
+            if isinstance(item, (list, tuple)) and len(item) >= 2:
+                removed_children.append(
+                    {
+                        "table": item[0],
+                        "row": _normalise_child_row(item[1]),
+                    }
+                )
+
+        comment = parsed_data.get("comment") or parsed_data.get("comments")
+
+        action = parsed_data.get("action") or parsed_data.get("operation")
+        if not action:
+            if comment:
+                action = "Menambahkan catatan"
+            elif row_changes and changed_fields:
+                action = "Memperbarui dokumen dan tabel anak"
+            elif row_changes:
+                action = "Memperbarui tabel anak"
+            elif added_children and removed_children:
+                action = "Memperbarui tabel anak"
+            elif added_children:
+                action = "Menambahkan baris tabel anak"
+            elif removed_children:
+                action = "Menghapus baris tabel anak"
+            elif changed_fields:
+                field_names = ", ".join(change.get("field") for change in changed_fields[:3] if change.get("field"))
+                action = f"Memperbarui {field_names}" if field_names else "Perubahan dokumen"
+            else:
+                action = "Perubahan dokumen"
+
+        desk_link: Optional[str] = None
+        if entry_doctype and entry_docname:
+            route = _desk_route(entry_doctype)
+            desk_link = route["form"].replace("{name}", quote(entry_docname, safe=""))
+
+        entry = {
+            "id": serialised.get("name"),
+            "timestamp": serialised.get("creation"),
+            "user_id": serialised.get("owner"),
+            "user_name": owners.get(serialised.get("owner")) or serialised.get("owner"),
+            "doctype": entry_doctype,
+            "document": entry_docname,
+            "action": action,
+            "changed_fields": changed_fields,
+            "row_changes": row_changes,
+            "added_children": added_children,
+            "removed_children": removed_children,
+            "comment": comment,
+            "data": parsed_data.get("data") if isinstance(parsed_data.get("data"), dict) else None,
+            "desk_link": desk_link,
+        }
+
+        entries.append(entry)
+
+    available_doctypes_list = sorted(
+        {cstr(value) for value in available_doctypes if value},
+        key=lambda value: value.lower(),
+    )
+
+    return {
+        "entries": entries,
+        "doctypes": available_doctypes_list,
+        "limit": limit_value,
+        "filters": {
+            "doctype": doctype,
+            "docname": docname,
+        },
+    }
+
+
+@frappe.whitelist()
 def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, Any]:
     """Look up a single vehicle (and its customer) by license plate."""
 

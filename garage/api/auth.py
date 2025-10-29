@@ -41,6 +41,19 @@ PORTAL_NAV_ITEMS: List[Dict[str, Any]] = [
         "label": "💰 Keuangan",
         "roles": ["Finance", "Keuangan", "Accountant", "Cashier"],
     },
+    {
+        "route": "/garage/log-history",
+        "key": "log-history",
+        "label": "🕒 Log History",
+        "roles": [
+            "Admin",
+            "Manager",
+            "System Manager",
+            "Garage Manager",
+            "Manager Bengkel",
+            "Head Manager Bengkel",
+        ],
+    },
     {"route": "/garage/insight", "key": "insight", "label": "📊 Insight", "roles": []},
 ]
 
