@@ -1872,6 +1872,8 @@ button:disabled {
     });
 
     function initializeBundleEstimator() {
+        console.log('🚀 Initializing bundle estimator...');
+        
         bundleSelect = document.getElementById('service_bundle');
         totalInput = document.getElementById('total_estimated_amount');
         nodes = {
@@ -1883,19 +1885,54 @@ button:disabled {
         };
 
         if (!bundleSelect || !nodes.service || !nodes.spare || !nodes.material || !nodes.total) {
+            console.warn('❌ Bundle estimator: Required elements not found');
+            console.log('   bundleSelect:', !!bundleSelect);
+            console.log('   nodes.service:', !!nodes.service);
+            console.log('   nodes.spare:', !!nodes.spare);
+            console.log('   nodes.material:', !!nodes.material);
+            console.log('   nodes.total:', !!nodes.total);
             return;
         }
 
-        const initialState = window.garagePortalState || {};
-        const initialRecords = getBundleRecordsFromState(initialState);
-        if (initialRecords !== undefined) {
-            updateBundles(initialRecords || []);
-        } else {
-            rebuildOptions();
-        }
+        console.log('✅ All required elements found');
+        console.log('📡 Loading service bundles from API...');
+        
+        // Load service bundles directly from API
+        frappe.call({
+            method: 'garage.api.portal.portal_bootstrap',
+            freeze: false,
+            callback: function(response) {
+                console.log('📥 API response received:', response);
+                
+                if (response && response.message) {
+                    console.log('✅ Portal state loaded successfully');
+                    const initialRecords = response.message.service_bundles || [];
+                    console.log('📦 Service bundles found:', initialRecords.length);
+                    console.log('📋 Service bundles data:', initialRecords);
+                    
+                    if (initialRecords.length > 0) {
+                        updateBundles(initialRecords);
+                        console.log('✅ Bundle dropdown populated with', computedBundles.length, 'bundles');
+                        console.log('🎯 Computed bundles:', computedBundles);
+                    } else {
+                        console.warn('⚠️ No service bundles available');
+                        rebuildOptions();
+                    }
+                } else {
+                    console.error('❌ Failed to load portal state - no response.message');
+                    rebuildOptions();
+                }
+            },
+            error: function(error) {
+                console.error('❌ Error loading service bundles:', error);
+                rebuildOptions();
+            }
+        });
 
         bundleSelect.addEventListener('change', (event) => {
+            console.log('📝 Bundle selected:', event.target.value);
             const selected = computedBundles.find((bundle) => bundle.id === event.target.value);
+            console.log('🎯 Selected bundle data:', selected);
             applyBundleToForm(selected || null);
         });
 
@@ -1906,6 +1943,7 @@ button:disabled {
         }
 
         renderCustomTotal(totalInput, nodes.total);
+        console.log('✅ Bundle estimator initialized');
     }
 
     if (document.readyState === 'loading') {
