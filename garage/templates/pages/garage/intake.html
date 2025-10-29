@@ -1801,6 +1801,16 @@ button:disabled {
         return bestMatch;
     }
 
+    function asArray(value) {
+        if (Array.isArray(value)) {
+            return value;
+        }
+        if (value && typeof value === 'object') {
+            return Object.values(value);
+        }
+        return [];
+    }
+
     function buildBundleFromBlueprint(blueprint, partsCatalog) {
         const bundle = {
             id: blueprint.id,
@@ -1954,10 +1964,15 @@ button:disabled {
     }
 
     function handleStateUpdate(state) {
-        if (state && Array.isArray(state.spare_parts)) {
-            cachedSpareParts = state.spare_parts;
-            recomputeBundles();
+        if (!state) {
+            return;
         }
+        const catalog = asArray(state.spare_parts);
+        if (!catalog.length) {
+            return;
+        }
+        cachedSpareParts = catalog.slice();
+        recomputeBundles();
     }
 
     document.addEventListener('garage-portal:state-updated', (event) => {
@@ -1980,8 +1995,11 @@ button:disabled {
         }
 
         const initialState = window.garagePortalState;
-        if (initialState && Array.isArray(initialState.spare_parts)) {
-            cachedSpareParts = initialState.spare_parts;
+        if (initialState) {
+            const initialCatalog = asArray(initialState.spare_parts);
+            if (initialCatalog.length) {
+                cachedSpareParts = initialCatalog.slice();
+            }
         }
         recomputeBundles();
 
