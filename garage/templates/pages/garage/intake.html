@@ -1873,29 +1873,6 @@ button:disabled {
             meta: '',
         }));
 
-        const spareParts = (bundle.parts || [])
-            .filter((part) => part.usage !== 'material')
-            .map((part) => ({
-                label: `${part.partName || part.partCode || 'Item Servis'}`,
-                meta: [
-                    part.partCode ? `Kode: ${part.partCode}` : '',
-                    part.quantity ? `Qty: ${formatQuantity(part.quantity || 0, part.uom || '')}` : '',
-                ].filter(Boolean).join(' • '),
-            }));
-
-        const materialParts = (bundle.parts || [])
-            .filter((part) => part.usage === 'material')
-            .map((part) => ({
-                label: `${part.partName || part.partCode || 'Bahan'}`,
-                meta: [
-                    part.partCode ? `Kode: ${part.partCode}` : '',
-                    part.quantity ? `Qty: ${formatQuantity(part.quantity || 0, part.uom || '')}` : '',
-                    part.warehouse ? `Gudang: ${part.warehouse}` : '',
-                ].filter(Boolean).join(' • '),
-            }));
-
-        const summary = `Jasa ${formatCurrency(bundle.service)} • Sparepart ${formatCurrency(bundle.spareparts)} • Bahan ${formatCurrency(bundle.materials)}`;
-
         const renderItems = (items) => items
             .map((item) => `<li>${escapeHtml(item.label)}${item.meta ? ` — ${escapeHtml(item.meta)}` : ''}</li>`)
             .join('');
@@ -1904,10 +1881,6 @@ button:disabled {
             <strong>${escapeHtml(bundle.name)}</strong>
             <p>${escapeHtml(bundle.notes || '')}</p>
             ${stageItems.length ? `<p>Detail jasa:</p><ul>${renderItems(stageItems)}</ul>` : ''}
-            ${spareParts.length ? `<p>Sparepart yang disiapkan:</p><ul>${renderItems(spareParts)}</ul>` : ''}
-            ${materialParts.length ? `<p>Bahan pendukung:</p><ul>${renderItems(materialParts)}</ul>` : ''}
-            <p class="estimate-summary">${escapeHtml(summary)}</p>
-            <p class="estimate-reminder">Estimasi awal dapat diperbarui saat inspeksi jika ada sparepart tambahan.</p>
         `;
     }
 
