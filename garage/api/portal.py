@@ -641,7 +641,8 @@ def _get_service_bundles() -> List[Dict[str, Any]]:
             continue
 
         try:
-            doc = frappe.get_doc("Garage Service Bundle", name)
+            with _ignoring_permissions():
+                doc = frappe.get_doc("Garage Service Bundle", name)
         except Exception:
             frappe.log_error(
                 title="Garage Service Bundle load failed",
