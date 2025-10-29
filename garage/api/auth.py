@@ -41,7 +41,7 @@ PORTAL_NAV_ITEMS: List[Dict[str, Any]] = [
         "label": "💰 Keuangan",
         "roles": ["Finance", "Keuangan", "Accountant", "Cashier"],
     },
-    {"route": "/garage/insight", "key": "insight", "label": "📊 Insight", "roles": []},
+    {"route": "/garage/insight", "key": "insight", "label": "📊 Report", "roles": []},
 ]
 
 

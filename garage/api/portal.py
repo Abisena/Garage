@@ -9,7 +9,16 @@ from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional,
 
 import frappe
 from frappe import _
-from frappe.utils import cint, cstr, flt, get_datetime, get_url, now_datetime, nowdate
+from frappe.utils import (
+    cint,
+    cstr,
+    flt,
+    get_datetime,
+    get_url,
+    now_datetime,
+    nowdate,
+    strip_html_tags,
+)
 
 TECHNICIAN_ACTIVE_TASK_STATUSES = {"Pending", "In Progress"}
 SERVICE_ORDER_ACTIVE_STATUSES = {
@@ -163,6 +172,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
                     "warehouse",
                     "rate",
                     "amount",
+                    "discount_amount",
                 },
                 "required_fields": {"item_code"},
             },
@@ -757,6 +767,41 @@ def _employee_display_map(employee_ids: Iterable[str]) -> Dict[str, str]:
         display_map.setdefault(emp, emp)
 
     return display_map
+
+
+def _get_activity_logs(doc: Any) -> List[Dict[str, Any]]:
+    try:
+        with _ignoring_permissions():
+            rows = frappe.db.get_all(
+                "Comment",
+                filters={
+                    "reference_doctype": doc.doctype,
+                    "reference_name": doc.name,
+                    "comment_type": ["in", ["Comment", "Info", "Edit"]],
+                },
+                fields=["name", "owner", "creation", "comment_type", "content"],
+                order_by="creation desc",
+                limit=50,
+            )
+    except Exception:
+        return []
+
+    user_map = _user_display_map(row.get("owner") for row in rows)
+    logs: List[Dict[str, Any]] = []
+
+    for row in rows:
+        logs.append(
+            {
+                "id": row.get("name"),
+                "owner": row.get("owner"),
+                "owner_name": user_map.get(row.get("owner"), row.get("owner")),
+                "timestamp": row.get("creation"),
+                "type": row.get("comment_type"),
+                "message": strip_html_tags(row.get("content") or ""),
+            }
+        )
+
+    return logs
 
 
 def _technician_load_map(exclude_order: Optional[str] = None) -> Dict[str, int]:
@@ -1993,7 +2038,9 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
             result["progress_logs"] = logs
     except Exception:
         pass
-    
+
+    result["activity_logs"] = _get_activity_logs(doc)
+
     # ========== CRITICAL: GET AVAILABLE SPARE PARTS ==========
     # This is needed for the dropdown in inspection page
     result["available_spare_parts"] = _list_dicts(

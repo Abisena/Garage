@@ -95,10 +95,10 @@ a:hover {
 
 .hero-section {
     background: linear-gradient(135deg, rgba(0, 102, 255, 0.08) 0%, rgba(255, 255, 255, 0.9) 100%);
-    padding: 32px;
+    padding: 24px;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-md);
-    margin-bottom: 28px;
+    margin-bottom: 24px;
 }
 
 .hero-top {
@@ -106,7 +106,7 @@ a:hover {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
 }
 
 .back-link {
@@ -199,20 +199,20 @@ a:hover {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 32px;
+    gap: 24px;
 }
 
 .hero-text h1 {
-    font-size: 32px;
+    font-size: 28px;
     font-weight: 700;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     color: var(--gray-900);
 }
 
 .hero-text p {
     color: var(--text-secondary);
-    max-width: 480px;
-    font-size: 15px;
+    max-width: 420px;
+    font-size: 14px;
 }
 
 .hero-meta {
@@ -222,11 +222,11 @@ a:hover {
 }
 
 .meta-item {
-    background: rgba(255, 255, 255, 0.8);
-    padding: 16px;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 12px 14px;
     border-radius: var(--radius-lg);
     border: 1px solid rgba(0, 102, 255, 0.12);
-    min-width: 180px;
+    min-width: 160px;
 }
 
 .meta-item.is-hidden {
@@ -474,49 +474,67 @@ a:hover {
 .parts-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 760px;
+    min-width: 980px;
 }
 
 .parts-table th:first-child,
 .parts-table td:first-child {
-    min-width: 320px;
-    width: 38%;
+    min-width: 240px;
+    width: 24%;
 }
 
 .parts-table th:nth-child(2),
 .parts-table td:nth-child(2) {
-    min-width: 96px;
+    min-width: 120px;
     width: 10%;
 }
 
 .parts-table th:nth-child(3),
 .parts-table td:nth-child(3) {
-    min-width: 120px;
-    width: 12%;
+    min-width: 180px;
+    width: 17%;
 }
 
 .parts-table th:nth-child(4),
 .parts-table td:nth-child(4) {
-    min-width: 160px;
-    width: 15%;
+    min-width: 90px;
+    width: 7%;
 }
 
 .parts-table th:nth-child(5),
 .parts-table td:nth-child(5) {
-    min-width: 150px;
-    width: 12%;
+    min-width: 110px;
+    width: 7%;
 }
 
 .parts-table th:nth-child(6),
 .parts-table td:nth-child(6) {
-    min-width: 160px;
-    width: 13%;
+    min-width: 150px;
+    width: 11%;
 }
 
 .parts-table th:nth-child(7),
 .parts-table td:nth-child(7) {
-    min-width: 120px;
+    min-width: 140px;
     width: 10%;
+}
+
+.parts-table th:nth-child(8),
+.parts-table td:nth-child(8) {
+    min-width: 150px;
+    width: 11%;
+}
+
+.parts-table th:nth-child(9),
+.parts-table td:nth-child(9) {
+    min-width: 140px;
+    width: 10%;
+}
+
+.parts-table th:nth-child(10),
+.parts-table td:nth-child(10) {
+    min-width: 100px;
+    width: 4%;
 }
 
 .parts-table thead {
@@ -561,7 +579,16 @@ a:hover {
 
 .parts-table textarea {
     resize: vertical;
-    min-height: 72px;
+    min-height: 56px;
+}
+
+.parts-table .description-input {
+    min-height: 48px;
+    resize: vertical;
+}
+
+.parts-table .currency-input {
+    text-align: right;
 }
 
 .parts-table .numeric {
@@ -618,6 +645,57 @@ a:hover {
 
 .parts-table .actions .btn-remove {
     padding: 8px 12px;
+    border-radius: var(--radius-md);
+    background: rgba(255, 77, 79, 0.12);
+    color: #d4380d;
+    font-weight: 600;
+}
+
+.activity-log {
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    background: white;
+    padding: 20px;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.activity-log__list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.activity-log__entry {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-left: 3px solid var(--primary);
+    padding-left: 12px;
+}
+
+.activity-log__meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.activity-log__type {
+    background: var(--gray-100);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.activity-log__message {
+    font-size: 14px;
+    color: var(--text-primary);
+    line-height: 1.5;
+    white-space: pre-wrap;
 }
 
 .item-header {
@@ -1135,6 +1213,22 @@ a:hover {
                         <button type="button" class="btn btn-add" onclick="addRequiredPart()">+ Tambah Part</button>
                     </div>
                 </section>
+
+                <section class="section-card">
+                    <div class="section-header">
+                        <div>
+                            <h2>🕑 Log Aktivitas</h2>
+                            <p>Pantau siapa yang melakukan perubahan pada service order ini.</p>
+                        </div>
+                    </div>
+                    <div class="activity-log" id="activityLogContainer">
+                        <div class="empty-state" id="activityLogEmpty">
+                            <strong>Belum ada aktivitas.</strong>
+                            <span>Perubahan akan tercatat secara otomatis.</span>
+                        </div>
+                        <div class="activity-log__list" id="activityLogList"></div>
+                    </div>
+                </section>
             </form>
         </main>
 
@@ -1293,6 +1387,9 @@ a:hover {
             merged.qty = 1;
         }
         merged.warehouse = merged.warehouse || catalogPart.warehouse_location || '';
+        const discountAmount = Number(part?.discount_amount ?? part?.discount ?? 0) || 0;
+        merged.discount_amount = Math.max(0, discountAmount);
+        recalculatePartAmount(merged);
         return merged;
     }
 
@@ -1577,15 +1674,28 @@ a:hover {
             return 0;
         }
 
+        function recalculatePartAmount(part) {
+            if (!part) {
+                return;
+            }
+            const qty = Number(part.qty) || 0;
+            const rate = Number(part.rate) || 0;
+            const subtotal = Math.max(0, qty * rate);
+            const discount = Number(part.discount_amount ?? part.discount ?? 0) || 0;
+            const normalizedDiscount = Math.min(Math.max(0, discount), subtotal);
+            part.qty = qty;
+            part.rate = rate;
+            part.discount_amount = normalizedDiscount;
+            part.amount = Math.max(0, subtotal - normalizedDiscount);
+        }
+
         function calculateRequiredPartsTotal() {
             return requiredParts.reduce((sum, part) => {
-                const qty = Number(part?.qty) || 0;
-                const rate = Number(part?.rate) || 0;
-                const amount = Number(part?.amount ?? qty * rate);
-                if (Number.isNaN(amount)) {
+                recalculatePartAmount(part);
+                if (Number.isNaN(Number(part.amount))) {
                     return sum;
                 }
-                return sum + amount;
+                return sum + Math.max(0, Number(part.amount));
             }, 0);
         }
 
@@ -1661,16 +1771,10 @@ a:hover {
             requiredParts = requiredParts.map((part) => {
                 const catalogRef = lookupSparePart(part.catalog_name || part.catalog_part_code || part.item_code || part.item_name);
                 const merged = catalogRef ? mergeRequiredPartWithCatalog(part, catalogRef) : { ...part };
-                const qty = Number(merged.qty);
-                const rate = Number(merged.rate);
-                const normalizedQty = Number.isNaN(qty) ? 0 : qty;
-                const normalizedRate = Number.isNaN(rate) ? 0 : rate;
-                return {
-                    ...merged,
-                    qty: normalizedQty,
-                    rate: normalizedRate,
-                    amount: normalizedQty * normalizedRate
-                };
+                const normalizedDiscount = normaliseCurrencyInput(merged.discount_amount ?? merged.discount ?? 0);
+                merged.discount_amount = normalizedDiscount;
+                recalculatePartAmount(merged);
+                return merged;
             });
 
             const rows = requiredParts.map((part, i) => {
@@ -1691,6 +1795,7 @@ a:hover {
                 const managedBy = part.catalog_managed_by || catalogRef?.managed_by || '-';
                 const catalogWarehouse = catalogRef?.warehouse_location || '';
                 const catalogHint = sparePartCatalog.length ? '' : '<p class="sparepart-hint">Katalog sparepart masih kosong. Tambahkan data di halaman Sparepart.</p>';
+                const discountValue = formatCurrency(part.discount_amount || 0);
 
                 return `
                     <tr>
@@ -1707,7 +1812,6 @@ a:hover {
                                 <div class="part-summary">
                                     <strong>${escapeHtml(part.item_name || 'Belum dipilih')}</strong>
                                     <div class="part-meta-row">
-                                        <span>Kode: ${escapeHtml(part.item_code || '-')}</span>
                                         <span>Stok: ${stockDisplay}</span>
                                         <span>Gudang Katalog: ${escapeHtml(catalogWarehouse || '-')}</span>
                                         <span>Penjaga: ${escapeHtml(managedBy)}</span>
@@ -1715,9 +1819,12 @@ a:hover {
                                 </div>
                             </div>
                         </td>
+                        <td><input type="text" class="code-input" value="${escapeHtml(part.item_code || '')}" onchange="updateRequiredPartCode(${i}, this.value)"></td>
+                        <td><textarea class="description-input" onchange="updateRequiredPartDescription(${i}, this.value)">${escapeHtml(part.description || '')}</textarea></td>
                         <td><input type="number" value="${part.qty}" min="0" step="0.01" onchange="updateRequiredPartQty(${i}, this.value)" required></td>
                         <td><input type="text" value="${escapeHtml(part.uom || '')}" onchange="updateRequiredPartUom(${i}, this.value)"></td>
-                        <td><input type="text" value="${escapeHtml(formatCurrency(part.rate || 0))}" inputmode="numeric" onchange="updateRequiredPartRate(${i}, this.value)"></td>
+                        <td><input type="text" class="currency-input" value="${escapeHtml(formatCurrency(part.rate || 0))}" inputmode="numeric" onchange="updateRequiredPartRate(${i}, this.value)"></td>
+                        <td><input type="text" class="currency-input" value="${escapeHtml(discountValue)}" inputmode="numeric" onchange="updateRequiredPartDiscount(${i}, this.value)"></td>
                         <td class="numeric">${formatCurrency(part.amount || 0)}</td>
                         <td><input type="text" value="${escapeHtml(part.warehouse || '')}" onchange="updateRequiredPartWarehouse(${i}, this.value)"></td>
                         <td class="actions"><button type="button" class="btn-remove" onclick="removeRequiredPart(${i})">🗑️ Hapus</button></td>
@@ -1731,10 +1838,13 @@ a:hover {
                         <thead>
                             <tr>
                                 <th>Item</th>
+                                <th>Kode</th>
+                                <th>Deskripsi</th>
                                 <th>Qty</th>
                                 <th>UOM</th>
                                 <th>Harga Satuan</th>
-                                <th>Total</th>
+                                <th>Diskon</th>
+                                <th>Subtotal</th>
                                 <th>Gudang</th>
                                 <th class="actions">Aksi</th>
                             </tr>
@@ -1746,6 +1856,53 @@ a:hover {
             recalculateTotals();
         }
 
+        function renderActivityLog(logs) {
+            const list = document.getElementById('activityLogList');
+            const empty = document.getElementById('activityLogEmpty');
+            if (!list || !empty) {
+                return;
+            }
+
+            if (!Array.isArray(logs) || logs.length === 0) {
+                list.innerHTML = '';
+                empty.style.display = 'flex';
+                return;
+            }
+
+            const normalized = [...logs]
+                .map((log) => {
+                    const rawType = (log.type || log.comment_type || '').replace(/_/g, ' ');
+                    const formattedType = rawType
+                        ? rawType.replace(/\b\w/g, (char) => char.toUpperCase())
+                        : '';
+                    return {
+                        actor: log.owner_name || log.owner || '-',
+                        message: (log.message || '').trim(),
+                        timestamp: log.timestamp || log.creation || log.modified || '',
+                        type: formattedType,
+                    };
+                })
+                .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+
+            list.innerHTML = normalized.map((log) => {
+                const displayMessage = escapeHtml(log.message || 'Tidak ada detail perubahan.')
+                    .replace(/\n/g, '<br>');
+                const typeLabel = log.type ? `<span class="activity-log__type">${escapeHtml(log.type)}</span>` : '';
+                return `
+                    <div class="activity-log__entry">
+                        <div class="activity-log__meta">
+                            <span>${escapeHtml(log.actor)}</span>
+                            <span>• ${escapeHtml(formatDisplayDate(log.timestamp) || '-')}</span>
+                            ${typeLabel}
+                        </div>
+                        <div class="activity-log__message">${displayMessage}</div>
+                    </div>
+                `;
+            }).join('');
+
+            empty.style.display = 'none';
+        }
+
         window.addRequiredPart = function() {
             requiredParts.push({
                 item_code: '',
@@ -1753,6 +1910,7 @@ a:hover {
                 description: '',
                 qty: 1,
                 rate: 0,
+                discount_amount: 0,
                 uom: 'Unit',
                 stock_status: 'Pending Check',
                 source: 'On Hand',
@@ -1801,7 +1959,7 @@ a:hover {
             }
             const qty = Number(value);
             requiredParts[index].qty = Number.isNaN(qty) ? 0 : Math.max(0, qty);
-            requiredParts[index].amount = (requiredParts[index].qty || 0) * (requiredParts[index].rate || 0);
+            recalculatePartAmount(requiredParts[index]);
             renderRequiredParts();
         };
 
@@ -1811,7 +1969,7 @@ a:hover {
             }
             const rate = normaliseCurrencyInput(value);
             requiredParts[index].rate = rate;
-            requiredParts[index].amount = (requiredParts[index].qty || 0) * (requiredParts[index].rate || 0);
+            recalculatePartAmount(requiredParts[index]);
             renderRequiredParts();
         };
 
@@ -1827,6 +1985,30 @@ a:hover {
                 return;
             }
             requiredParts[index].warehouse = value;
+        };
+
+        window.updateRequiredPartCode = function(index, value) {
+            if (!requiredParts[index]) {
+                return;
+            }
+            requiredParts[index].item_code = (value || '').toString().trim();
+        };
+
+        window.updateRequiredPartDescription = function(index, value) {
+            if (!requiredParts[index]) {
+                return;
+            }
+            requiredParts[index].description = value || '';
+        };
+
+        window.updateRequiredPartDiscount = function(index, value) {
+            if (!requiredParts[index]) {
+                return;
+            }
+            const discount = normaliseCurrencyInput(value);
+            requiredParts[index].discount_amount = discount;
+            recalculatePartAmount(requiredParts[index]);
+            renderRequiredParts();
         };
 
         async function fetchSparePartCatalog() {
@@ -2062,6 +2244,7 @@ a:hover {
                         description: part.description || '',
                         qty: Number(part.qty ?? part.quantity ?? 1) || 0,
                         rate: Number(part.rate ?? part.price ?? 0) || 0,
+                        discount_amount: Number(part.discount_amount ?? part.discount ?? 0) || 0,
                         uom: part.uom || part.unit || 'Unit',
                         stock_status: part.stock_status || 'Pending Check',
                         source: part.source || part.part_source || 'On Hand',
@@ -2101,6 +2284,7 @@ a:hover {
                 catalogLoadedFromOrder = true;
             }
 
+            renderActivityLog(order.activity_logs || []);
             renderRequiredParts();
             recalculateTotals();
         }
@@ -2120,18 +2304,26 @@ a:hover {
 
             recalculateTotals();
 
-            const sanitizedParts = requiredParts.map((part) => ({
-                item_code: part.item_code,
-                item_name: part.item_name,
-                description: part.description,
-                qty: Number(part.qty) || 0,
-                rate: Number(part.rate) || 0,
-                amount: (Number(part.qty) || 0) * (Number(part.rate) || 0),
-                uom: part.uom || 'Unit',
-                stock_status: part.stock_status || 'Pending Check',
-                source: part.source || 'On Hand',
-                warehouse: part.warehouse || ''
-            }));
+            const sanitizedParts = requiredParts.map((part) => {
+                const qty = Number(part.qty) || 0;
+                const rate = Number(part.rate) || 0;
+                const subtotal = Math.max(0, qty * rate);
+                const discount = Math.min(Math.max(0, Number(part.discount_amount) || 0), subtotal);
+                const amount = Math.max(0, subtotal - discount);
+                return {
+                    item_code: part.item_code,
+                    item_name: part.item_name,
+                    description: part.description,
+                    qty,
+                    rate,
+                    discount_amount: discount,
+                    amount,
+                    uom: part.uom || 'Unit',
+                    stock_status: part.stock_status || 'Pending Check',
+                    source: part.source || 'On Hand',
+                    warehouse: part.warehouse || ''
+                };
+            });
 
             const priorityInput = document.getElementById('priority');
             const estimatedDateInput = document.getElementById('estimated_delivery_date');
