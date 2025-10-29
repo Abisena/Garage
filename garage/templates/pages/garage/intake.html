@@ -1658,12 +1658,36 @@ button:disabled {
 
     
     function asArray(value) {
+        if (!value) {
+            return [];
+        }
+
         if (Array.isArray(value)) {
             return value;
         }
-        if (value && typeof value === 'object') {
+
+        if (typeof value === 'object') {
+            if (Array.isArray(value.data)) {
+                return value.data;
+            }
+            if (Array.isArray(value.results)) {
+                return value.results;
+            }
+            if (Array.isArray(value.values)) {
+                return value.values;
+            }
             return Object.values(value);
         }
+
+        if (typeof value === 'string') {
+            try {
+                const parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                console.warn('Failed to parse bundle data string', error);
+            }
+        }
+
         return [];
     }
 
