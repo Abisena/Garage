@@ -1262,35 +1262,13 @@ a:hover {
                 <div class="intake-summary">
                     <div class="intake-summary-group">
                         <div class="intake-summary-header">
-                            <span>Jasa</span>
+                            <span>Jenis Servis</span>
                             <strong id="intake_summary_service_total">Rp 0</strong>
                         </div>
                         <ul class="intake-summary-list" id="intake_summary_service_list">
                             <li class="placeholder">Belum ada jasa terdaftar.</li>
                         </ul>
                     </div>
-                    <div class="intake-summary-group">
-                        <div class="intake-summary-header">
-                            <span>Sparepart</span>
-                            <strong id="intake_summary_spare_total">Rp 0</strong>
-                        </div>
-                        <ul class="intake-summary-list" id="intake_summary_spare_list">
-                            <li class="placeholder">Belum ada sparepart terdaftar.</li>
-                        </ul>
-                    </div>
-                    <div class="intake-summary-group">
-                        <div class="intake-summary-header">
-                            <span>Bahan</span>
-                            <strong id="intake_summary_material_total">Rp 0</strong>
-                        </div>
-                        <ul class="intake-summary-list" id="intake_summary_material_list">
-                            <li class="placeholder">Belum ada bahan terdaftar.</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="intake-summary-footer">
-                    <span>Total Estimasi</span>
-                    <strong id="intake_summary_total">Rp 0</strong>
                 </div>
             </section>
             <section class="section-card intake-notes-card">
@@ -1809,30 +1787,13 @@ a:hover {
 
         function updateIntakeSummaryDisplay(summary) {
             const serviceItems = summary?.serviceItems || [];
-            const spareItems = summary?.spareItems || [];
-            const materialItems = summary?.materialItems || [];
             const totals = summary?.totals || {};
 
             renderSummaryList('intake_summary_service_list', serviceItems, 'Belum ada jasa terdaftar.');
-            renderSummaryList('intake_summary_spare_list', spareItems, 'Belum ada sparepart terdaftar.');
-            renderSummaryList('intake_summary_material_list', materialItems, 'Belum ada bahan terdaftar.');
 
             const serviceTotalNode = document.getElementById('intake_summary_service_total');
             if (serviceTotalNode) {
                 serviceTotalNode.textContent = formatCurrency(totals.service || 0);
-            }
-            const spareTotalNode = document.getElementById('intake_summary_spare_total');
-            if (spareTotalNode) {
-                spareTotalNode.textContent = formatCurrency(totals.spare || 0);
-            }
-            const materialTotalNode = document.getElementById('intake_summary_material_total');
-            if (materialTotalNode) {
-                materialTotalNode.textContent = formatCurrency(totals.material || 0);
-            }
-            const overallNode = document.getElementById('intake_summary_total');
-            if (overallNode) {
-                const overall = totals.overall || ((totals.service || 0) + (totals.spare || 0) + (totals.material || 0));
-                overallNode.textContent = formatCurrency(overall);
             }
         }
 
@@ -1865,61 +1826,16 @@ a:hover {
             return items;
         }
 
-        function categorizePartsForSummary(parts) {
-            const spareItems = [];
-            const materialItems = [];
-
-            (parts || []).forEach((part) => {
-                if (!part) {
-                    return;
-                }
-                const label = part.item_name || part.item_code || 'Item Servis';
-                const qty = Number(part.qty) || 0;
-                const uom = part.uom || '';
-                const warehouse = part.warehouse || '';
-                const metaPieces = [];
-                if (qty) {
-                    const qtyLabel = formatNumber(qty);
-                    metaPieces.push(`Qty: ${qtyLabel}${uom ? ` ${uom}` : ''}`);
-                }
-                if (warehouse) {
-                    metaPieces.push(`Gudang: ${warehouse}`);
-                }
-                const amount = Math.max(0, Math.round(Number(part.amount ?? computePartAmount(part) ?? 0)));
-                const payload = {
-                    label,
-                    meta: metaPieces.join(' • '),
-                    amount,
-                };
-                const source = (part.source || '').toLowerCase();
-                if (source.includes('purchase') || source.includes('material') || source.includes('bahan')) {
-                    materialItems.push(payload);
-                } else {
-                    spareItems.push(payload);
-                }
-            });
-
-            return { spareItems, materialItems };
-        }
-
         function refreshIntakeSummary(serviceFeeOverride) {
-            const { spareItems, materialItems } = categorizePartsForSummary(requiredParts);
             const serviceItems = (serviceSummaryItems && serviceSummaryItems.length)
                 ? serviceSummaryItems
                 : (latestOrder?.service_order_type ? [{ label: latestOrder.service_order_type }] : []);
             const normalizedServiceFee = Math.max(0, Math.round(serviceFeeOverride ?? baseServiceFee ?? 0));
-            const spareTotal = spareItems.reduce((sum, item) => sum + Math.max(0, item.amount || 0), 0);
-            const materialTotal = materialItems.reduce((sum, item) => sum + Math.max(0, item.amount || 0), 0);
 
             updateIntakeSummaryDisplay({
                 serviceItems,
-                spareItems,
-                materialItems,
                 totals: {
                     service: normalizedServiceFee,
-                    spare: spareTotal,
-                    material: materialTotal,
-                    overall: normalizedServiceFee + spareTotal + materialTotal,
                 },
             });
         }
