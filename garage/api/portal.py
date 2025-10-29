@@ -2809,11 +2809,14 @@ def generate_spare_part_approval_document(
     base_url = get_url()
     doctype = "Garage Division Request"
     print_format = "Standard"
+    quoted_doctype = quote(cstr(doctype))
+    quoted_docname = quote(cstr(division_doc.name))
+    quoted_format = quote(cstr(print_format))
     print_url = (
-        f"{base_url}/printview?doctype={quote(doctype)}&name={quote(division_doc.name)}"
-        f"&format={quote(print_format)}&no_letterhead=1"
+        f"{base_url}/printview?doctype={quoted_doctype}&name={quoted_docname}"
+        f"&format={quoted_format}&no_letterhead=1"
     )
-    form_url = f"{base_url}/app/garage-division-request/{quote(division_doc.name)}"
+    form_url = f"{base_url}/app/garage-division-request/{quoted_docname}"
 
     return {
         "name": division_doc.name,
