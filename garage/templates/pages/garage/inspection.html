@@ -1090,7 +1090,7 @@ a:hover {
             <article class="summary-card">
                 <h3>Total Estimasi</h3>
                 <p id="display_total_estimate">Rp 0</p>
-                <small class="summary-subtext" id="display_estimate_breakdown">Jasa Rp 0 + Sparepart &amp; Bahan Rp 0</small>
+                <!-- <small class="summary-subtext" id="display_estimate_breakdown">Jasa Rp 0 + Sparepart &amp; Bahan Rp 0</small> -->
                 <div class="summary-tax">
                     <div class="summary-tax__row">
                         <span>DPP</span>
@@ -1593,9 +1593,9 @@ a:hover {
             const normalizedServiceFee = Math.max(0, Math.round(serviceFee || 0));
             const normalizedPartsTotal = Math.max(0, Math.round(partsTotal || 0));
             const breakdown = document.getElementById('display_estimate_breakdown');
-            if (breakdown) {
-                breakdown.textContent = `Jasa ${formatCurrency(normalizedServiceFee)} + Sparepart & Bahan ${formatCurrency(normalizedPartsTotal)}`;
-            }
+            // if (breakdown) {
+            //     breakdown.textContent = `Jasa ${formatCurrency(normalizedServiceFee)} + Sparepart & Bahan ${formatCurrency(normalizedPartsTotal)}`;
+            // }
         }
 
         function recalculateTotals() {
