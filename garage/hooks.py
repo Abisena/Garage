@@ -105,6 +105,12 @@ role_home_page = {
 # 	"filters": "garage.utils.jinja_filters"
 # }
 
+jinja = {
+    "methods": [
+        "garage.utils.jinja.get_portal_nav_items",
+    ]
+}
+
 # Installation
 # ------------
 
