@@ -477,6 +477,48 @@ a:hover {
     min-width: 760px;
 }
 
+.parts-table th:first-child,
+.parts-table td:first-child {
+    min-width: 320px;
+    width: 38%;
+}
+
+.parts-table th:nth-child(2),
+.parts-table td:nth-child(2) {
+    min-width: 96px;
+    width: 10%;
+}
+
+.parts-table th:nth-child(3),
+.parts-table td:nth-child(3) {
+    min-width: 120px;
+    width: 12%;
+}
+
+.parts-table th:nth-child(4),
+.parts-table td:nth-child(4) {
+    min-width: 160px;
+    width: 15%;
+}
+
+.parts-table th:nth-child(5),
+.parts-table td:nth-child(5) {
+    min-width: 150px;
+    width: 12%;
+}
+
+.parts-table th:nth-child(6),
+.parts-table td:nth-child(6) {
+    min-width: 160px;
+    width: 13%;
+}
+
+.parts-table th:nth-child(7),
+.parts-table td:nth-child(7) {
+    min-width: 120px;
+    width: 10%;
+}
+
 .parts-table thead {
     background: var(--gray-100);
 }
@@ -853,7 +895,28 @@ a:hover {
 .action-info {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 12px;
+    margin-left: auto;
+    align-items: flex-end;
+    text-align: right;
+}
+
+.action-tax {
+    display: grid;
+    gap: 4px;
+    justify-items: end;
+}
+
+.action-tax-row {
+    display: flex;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.action-tax-row strong {
+    font-size: 14px;
+    color: var(--gray-900);
 }
 
 .action-label {
@@ -872,6 +935,24 @@ a:hover {
 .action-buttons {
     display: flex;
     gap: 12px;
+}
+
+.summary-tax {
+    margin-top: 8px;
+    display: grid;
+    gap: 6px;
+}
+
+.summary-tax__row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.summary-tax__value {
+    font-weight: 600;
+    color: var(--gray-800);
 }
 
 @media (max-width: 1024px) {
@@ -919,6 +1000,23 @@ a:hover {
         flex-direction: column;
         align-items: stretch;
         text-align: center;
+    }
+
+    .action-info {
+        margin-left: 0;
+        align-items: flex-start;
+        text-align: left;
+        width: 100%;
+    }
+
+    .action-tax {
+        justify-items: start;
+        width: 100%;
+    }
+
+    .action-tax-row {
+        justify-content: space-between;
+        width: 100%;
     }
 
     .action-buttons {
@@ -993,6 +1091,24 @@ a:hover {
                 <h3>Total Estimasi</h3>
                 <p id="display_total_estimate">Rp 0</p>
                 <small class="summary-subtext" id="display_estimate_breakdown">Jasa Rp 0 + Sparepart &amp; Bahan Rp 0</small>
+                <div class="summary-tax">
+                    <div class="summary-tax__row">
+                        <span>DPP</span>
+                        <span class="summary-tax__value" id="display_dpp">Rp 0</span>
+                    </div>
+                    <div class="summary-tax__row">
+                        <span>PPN (11%)</span>
+                        <span class="summary-tax__value" id="display_ppn">Rp 0</span>
+                    </div>
+                    <div class="summary-tax__row">
+                        <span>PPH (2,5%)</span>
+                        <span class="summary-tax__value" id="display_pph">Rp 0</span>
+                    </div>
+                    <div class="summary-tax__row">
+                        <span>Total + Pajak</span>
+                        <span class="summary-tax__value" id="display_total_with_tax">Rp 0</span>
+                    </div>
+                </div>
             </article>
         </div>
     </header>
@@ -1025,13 +1141,20 @@ a:hover {
     </div>
 
     <div class="action-bar">
-        <div class="action-info">
-            <span class="action-label">Total Estimasi</span>
-            <span class="action-amount" id="action_total_estimate">Rp 0</span>
-        </div>
         <div class="action-buttons">
             <a href="/garage/service" class="btn btn-secondary">Batal</a>
-            <button type="button" class="btn btn-primary" onclick="submitInspection()">Simpan Inspeksi</button>
+            <button type="button" class="btn btn-primary" onclick="submitInspection()">Save</button>
+        </div>
+        <div class="action-info">
+            <div class="action-tax">
+                <div class="action-tax-row"><span>DPP</span><strong id="action_dpp">Rp 0</strong></div>
+                <div class="action-tax-row"><span>PPN (11%)</span><strong id="action_ppn">Rp 0</strong></div>
+                <div class="action-tax-row"><span>PPH (2,5%)</span><strong id="action_pph">Rp 0</strong></div>
+            </div>
+            <div>
+                <span class="action-label">Total Estimasi</span>
+                <span class="action-amount" id="action_total_estimate">Rp 0</span>
+            </div>
         </div>
     </div>
 </div>
@@ -1041,6 +1164,10 @@ a:hover {
 <script>
 (() => {
     const DEFAULT_SERVICE_FEE = 50000;
+    const TAX_RATES = {
+        ppn: 0.11,
+        pph: 0.025
+    };
     const currencyFormatter = new Intl.NumberFormat('id-ID', {
         style: 'currency',
         currency: 'IDR',
@@ -1277,14 +1404,49 @@ a:hover {
     }
 
     function updateTotalEstimateDisplay(value) {
-        const displayValue = formatCurrency(value);
+        const totals = typeof value === 'number' ? { dpp: Math.max(0, Math.round(value)) } : (value || {});
+        const dpp = Math.max(0, Math.round(totals.dpp ?? 0));
+        const ppn = Math.max(0, Math.round(totals.ppn ?? dpp * TAX_RATES.ppn));
+        const pph = Math.max(0, Math.round(totals.pph ?? dpp * TAX_RATES.pph));
+        const totalWithTax = Math.max(0, Math.round(totals.totalWithTax ?? (dpp + ppn + pph)));
+
         const summary = document.getElementById('display_total_estimate');
         const action = document.getElementById('action_total_estimate');
         if (summary) {
-            summary.textContent = displayValue;
+            summary.textContent = formatCurrency(totalWithTax);
         }
         if (action) {
-            action.textContent = displayValue;
+            action.textContent = formatCurrency(totalWithTax);
+        }
+
+        const summaryDpp = document.getElementById('display_dpp');
+        if (summaryDpp) {
+            summaryDpp.textContent = formatCurrency(dpp);
+        }
+        const summaryPpn = document.getElementById('display_ppn');
+        if (summaryPpn) {
+            summaryPpn.textContent = formatCurrency(ppn);
+        }
+        const summaryPph = document.getElementById('display_pph');
+        if (summaryPph) {
+            summaryPph.textContent = formatCurrency(pph);
+        }
+        const summaryTotalWithTax = document.getElementById('display_total_with_tax');
+        if (summaryTotalWithTax) {
+            summaryTotalWithTax.textContent = formatCurrency(totalWithTax);
+        }
+
+        const actionDpp = document.getElementById('action_dpp');
+        if (actionDpp) {
+            actionDpp.textContent = formatCurrency(dpp);
+        }
+        const actionPpn = document.getElementById('action_ppn');
+        if (actionPpn) {
+            actionPpn.textContent = formatCurrency(ppn);
+        }
+        const actionPph = document.getElementById('action_pph');
+        if (actionPph) {
+            actionPph.textContent = formatCurrency(pph);
         }
     }
 
@@ -1431,7 +1593,17 @@ a:hover {
                 totalEstimatedAmount = fallback;
             }
 
-            updateTotalEstimateDisplay(totalEstimatedAmount);
+            const dpp = Math.max(0, Math.round(totalEstimatedAmount));
+            const ppn = Math.max(0, Math.round(dpp * TAX_RATES.ppn));
+            const pph = Math.max(0, Math.round(dpp * TAX_RATES.pph));
+            const totalWithTax = dpp + ppn + pph;
+
+            updateTotalEstimateDisplay({
+                dpp,
+                ppn,
+                pph,
+                totalWithTax
+            });
             const appliedServiceFee = Math.max(0, totalEstimatedAmount - partsTotal);
             updateEstimateBreakdown(partsTotal, appliedServiceFee);
         }

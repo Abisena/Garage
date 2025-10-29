@@ -419,7 +419,8 @@ header .navbar-nav li button {
 
 @media (min-width: 1024px) {
     .portal-grid.two-column {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+        align-items: flex-start;
         gap: var(--space-10) !important;
     }
 }
@@ -468,6 +469,55 @@ header .navbar-nav li button {
     line-height: var(--line-height-relaxed) !important;
     color: var(--text-secondary) !important;
     margin: 0;
+}
+
+.estimate-card {
+    position: sticky;
+    top: var(--space-8);
+    align-self: flex-start;
+    gap: var(--space-4);
+}
+
+.estimate-card__subtitle {
+    font-size: var(--font-size-sm) !important;
+    color: var(--text-secondary) !important;
+    margin-bottom: 0 !important;
+}
+
+.estimate-breakdown {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.estimate-breakdown__row {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--font-size-sm) !important;
+    color: var(--text-secondary) !important;
+}
+
+.estimate-breakdown__row strong {
+    color: var(--text-primary) !important;
+    font-weight: var(--font-weight-semibold) !important;
+}
+
+.estimate-total {
+    margin-top: var(--space-3);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    background: var(--gray-100);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--font-size-base) !important;
+    font-weight: var(--font-weight-semibold) !important;
+}
+
+.estimate-note {
+    font-size: var(--font-size-xs) !important;
+    color: var(--text-muted) !important;
+    line-height: var(--line-height-relaxed) !important;
+    margin: 0 !important;
 }
 
 /* === FORM BANNER === */
@@ -1002,6 +1052,10 @@ button:disabled {
     .portal-hero--sub h1 {
         font-size: var(--font-size-3xl) !important;
     }
+
+    .estimate-card {
+        position: static;
+    }
 }
 
 @media (max-width: 767px) {
@@ -1454,9 +1508,11 @@ button:disabled {
                                     <p class="form-hint">Gunakan prioritas tinggi bila unit membutuhkan penanganan segera.</p>
                                 </div>
                                 <div class="form-field">
-                                    <label for="estimated_delivery_date">Estimasi Selesai</label>
-                                    <input type="date" id="estimated_delivery_date" name="estimated_delivery_date" />
-                                    <p class="form-hint">Tanggal target unit selesai dan siap diserahkan ke customer.</p>
+                                    <label for="service_bundle">Bundel Estimasi</label>
+                                    <select id="service_bundle" name="service_bundle">
+                                        <option value="">— Pilih Bundel Estimasi —</option>
+                                    </select>
+                                    <p class="form-hint">Pilih paket servis dengan kombinasi jasa, sparepart, dan bahan.</p>
                                 </div>
                                 <div class="form-field">
                                     <label for="total_estimated_amount">Total Estimasi (Rp)</label>
@@ -1468,7 +1524,7 @@ button:disabled {
                                         step="1000"
                                         placeholder="0"
                                     />
-                                    <p class="form-hint">Masukkan estimasi biaya awal termasuk jasa dan sparepart jika sudah diketahui.</p>
+                                    <p class="form-hint">Nilai total diperbarui otomatis berdasarkan bundel atau bisa disesuaikan manual.</p>
                                 </div>
                                 <div class="form-field form-field--full">
                                     <label for="notes">Keluhan Customer</label>
@@ -1483,6 +1539,33 @@ button:disabled {
                         </div>
                     </form>
                 </article>
+                <article class="portal-card estimate-card">
+                    <div class="portal-card__header">
+                        <h2>Ringkasan Estimasi</h2>
+                        <p class="estimate-card__subtitle">Pilih bundel estimasi untuk mengisi rincian biaya otomatis.</p>
+                    </div>
+                    <div class="estimate-breakdown">
+                        <div class="estimate-breakdown__row">
+                            <span>Jasa</span>
+                            <strong id="estimate_service_amount">Rp 0</strong>
+                        </div>
+                        <div class="estimate-breakdown__row">
+                            <span>Sparepart</span>
+                            <strong id="estimate_spare_amount">Rp 0</strong>
+                        </div>
+                        <div class="estimate-breakdown__row">
+                            <span>Bahan</span>
+                            <strong id="estimate_material_amount">Rp 0</strong>
+                        </div>
+                    </div>
+                    <div class="estimate-total">
+                        <span>Total Estimasi</span>
+                        <strong id="estimate_total_amount">Rp 0</strong>
+                    </div>
+                    <p class="estimate-note" id="estimate_bundle_description">
+                        Pilih bundel estimasi untuk melihat rincian jasa, sparepart, dan bahan.
+                    </p>
+                </article>
             </div>
         </div>
     </section>
@@ -1491,6 +1574,134 @@ button:disabled {
 {% block script %}
 <script>
     frappe.require("/assets/garage/js/garage_portal.js");
+</script>
+<script>
+(function() {
+    const SERVICE_BUNDLES = [
+        {
+            id: 'bundle_basic',
+            name: 'Bundel Servis Dasar',
+            description: 'Perawatan ringan termasuk ganti oli dan pemeriksaan keselamatan.',
+            service: 350000,
+            spareparts: 200000,
+            materials: 75000
+        },
+        {
+            id: 'bundle_advanced',
+            name: 'Bundel Servis Menengah',
+            description: 'Tune-up mesin, pembersihan throttle, dan pengecekan rem.',
+            service: 550000,
+            spareparts: 325000,
+            materials: 150000
+        },
+        {
+            id: 'bundle_premium',
+            name: 'Bundel Servis Premium',
+            description: 'Perawatan menyeluruh mencakup detailing interior dan balancing roda.',
+            service: 750000,
+            spareparts: 420000,
+            materials: 210000
+        }
+    ];
+
+    const currencyFormatter = new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0
+    });
+
+    function formatCurrency(value) {
+        const numeric = Number(value);
+        if (Number.isNaN(numeric)) {
+            return currencyFormatter.format(0);
+        }
+        return currencyFormatter.format(Math.max(0, Math.round(numeric)));
+    }
+
+    function renderCustomTotal(totalInput, totalNode) {
+        if (!totalNode) {
+            return;
+        }
+        const value = totalInput ? totalInput.value : 0;
+        totalNode.textContent = formatCurrency(value || 0);
+    }
+
+    function resetEstimateDisplay(nodes, totalInput) {
+        if (!nodes) {
+            return;
+        }
+        const { service, spare, material, total, description } = nodes;
+        if (service) service.textContent = formatCurrency(0);
+        if (spare) spare.textContent = formatCurrency(0);
+        if (material) material.textContent = formatCurrency(0);
+        renderCustomTotal(totalInput, total);
+        if (description) {
+            description.textContent = 'Pilih bundel estimasi untuk melihat rincian jasa, sparepart, dan bahan.';
+        }
+    }
+
+    function applyBundleToForm(bundle, nodes, totalInput) {
+        if (!nodes || !bundle) {
+            resetEstimateDisplay(nodes, totalInput);
+            return;
+        }
+        const { service, spare, material, total, description } = nodes;
+        const serviceTotal = Math.max(0, bundle.service || 0);
+        const spareTotal = Math.max(0, bundle.spareparts || 0);
+        const materialTotal = Math.max(0, bundle.materials || 0);
+        const overall = serviceTotal + spareTotal + materialTotal;
+
+        if (service) service.textContent = formatCurrency(serviceTotal);
+        if (spare) spare.textContent = formatCurrency(spareTotal);
+        if (material) material.textContent = formatCurrency(materialTotal);
+        if (total) total.textContent = formatCurrency(overall);
+        if (description) {
+            description.textContent = bundle.description || 'Bundel estimasi terpilih.';
+        }
+        if (totalInput) {
+            totalInput.value = overall;
+            totalInput.dispatchEvent(new Event('input', { bubbles: true }));
+            totalInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const bundleSelect = document.getElementById('service_bundle');
+        const totalInput = document.getElementById('total_estimated_amount');
+        const nodes = {
+            service: document.getElementById('estimate_service_amount'),
+            spare: document.getElementById('estimate_spare_amount'),
+            material: document.getElementById('estimate_material_amount'),
+            total: document.getElementById('estimate_total_amount'),
+            description: document.getElementById('estimate_bundle_description')
+        };
+
+        if (!bundleSelect || !nodes.service || !nodes.spare || !nodes.material || !nodes.total) {
+            return;
+        }
+
+        SERVICE_BUNDLES.forEach((bundle) => {
+            const option = document.createElement('option');
+            const overall = (bundle.service || 0) + (bundle.spareparts || 0) + (bundle.materials || 0);
+            option.value = bundle.id;
+            option.textContent = `${bundle.name} — ${formatCurrency(overall)}`;
+            bundleSelect.appendChild(option);
+        });
+
+        bundleSelect.addEventListener('change', (event) => {
+            const selected = SERVICE_BUNDLES.find((bundle) => bundle.id === event.target.value);
+            applyBundleToForm(selected || null, nodes, totalInput);
+        });
+
+        if (totalInput) {
+            totalInput.addEventListener('input', () => {
+                renderCustomTotal(totalInput, nodes.total);
+            });
+        }
+
+        resetEstimateDisplay(nodes, totalInput);
+    });
+})();
 </script>
 <script>
 /**
