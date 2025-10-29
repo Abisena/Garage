@@ -1724,6 +1724,22 @@ button:disabled {
         };
     }
 
+    function getBundleRecordsFromState(state) {
+        if (!state || typeof state !== 'object') {
+            return undefined;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(state, 'service_bundles')) {
+            return state.service_bundles;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(state, 'serviceBundles')) {
+            return state.serviceBundles;
+        }
+
+        return undefined;
+    }
+
     function updateBundles(records) {
         const normalized = asArray(records)
             .map((entry) => normalizeBundle(entry))
@@ -1820,17 +1836,18 @@ button:disabled {
     }
 
     function handleStateUpdate(state) {
-        if (!state) {
+        const records = getBundleRecordsFromState(state);
+        if (records === undefined) {
             return;
         }
-        updateBundles(state.service_bundles);
+        updateBundles(records);
     }
 
     document.addEventListener('garage-portal:state-updated', (event) => {
         handleStateUpdate(event?.detail?.state || {});
     });
 
-    document.addEventListener('DOMContentLoaded', () => {
+    function initializeBundleEstimator() {
         bundleSelect = document.getElementById('service_bundle');
         totalInput = document.getElementById('total_estimated_amount');
         nodes = {
@@ -1846,7 +1863,12 @@ button:disabled {
         }
 
         const initialState = window.garagePortalState || {};
-        updateBundles(initialState.service_bundles || []);
+        const initialRecords = getBundleRecordsFromState(initialState);
+        if (initialRecords !== undefined) {
+            updateBundles(initialRecords || []);
+        } else {
+            rebuildOptions();
+        }
 
         bundleSelect.addEventListener('change', (event) => {
             const selected = computedBundles.find((bundle) => bundle.id === event.target.value);
@@ -1860,7 +1882,13 @@ button:disabled {
         }
 
         renderCustomTotal(totalInput, nodes.total);
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeBundleEstimator);
+    } else {
+        initializeBundleEstimator();
+    }
 })();
 </script>
 <script>
