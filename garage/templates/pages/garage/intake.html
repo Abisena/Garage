@@ -1227,6 +1227,27 @@ button:disabled {
     clip: rect(0, 0, 0, 0);
     overflow: hidden;
 }
+
+.estimate-summary-container {
+    margin-top: var(--space-6);
+}
+
+.estimate-summary-card {
+    padding: var(--space-6);
+    background: var(--portal-surface-alt, #f9fafb);
+    border: 1px solid var(--portal-border);
+    border-radius: var(--portal-radius);
+    box-shadow: none;
+    gap: var(--space-5);
+    display: flex;
+    flex-direction: column;
+}
+
+.estimate-summary-card:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--portal-border);
+}
 </style>
 {% endblock %}
 
@@ -1531,6 +1552,35 @@ button:disabled {
                                     <textarea id="notes" name="notes" placeholder="Catat keluhan utama customer, detail kondisi kendaraan, atau permintaan khusus"></textarea>
                                     <p class="form-hint">Gunakan catatan untuk riwayat servis, permintaan khusus, atau peringatan teknis.</p>
                                 </div>
+                                <div class="form-field form-field--full estimate-summary-container">
+                                    <section class="estimate-summary-card">
+                                        <header class="portal-card__header">
+                                            <h2>Ringkasan Estimasi</h2>
+                                            <p class="estimate-card__subtitle">Pilih bundel estimasi untuk mengisi rincian biaya otomatis.</p>
+                                        </header>
+                                        <div class="estimate-breakdown">
+                                            <div class="estimate-breakdown__row">
+                                                <span>Jasa</span>
+                                                <strong id="estimate_service_amount">Rp 0</strong>
+                                            </div>
+                                            <div class="estimate-breakdown__row">
+                                                <span>Sparepart</span>
+                                                <strong id="estimate_spare_amount">Rp 0</strong>
+                                            </div>
+                                            <div class="estimate-breakdown__row">
+                                                <span>Bahan</span>
+                                                <strong id="estimate_material_amount">Rp 0</strong>
+                                            </div>
+                                        </div>
+                                        <div class="estimate-total">
+                                            <span>Total Estimasi</span>
+                                            <strong id="estimate_total_amount">Rp 0</strong>
+                                        </div>
+                                        <p class="estimate-note" id="estimate_bundle_description">
+                                            Pilih bundel estimasi untuk melihat rincian jasa, sparepart, dan bahan.
+                                        </p>
+                                    </section>
+                                </div>
                             </div>
                             <div class="form-actions">
                                 <button class="primary" type="submit">💾 Save</button>
@@ -1538,33 +1588,6 @@ button:disabled {
                             </div>
                         </div>
                     </form>
-                </article>
-                <article class="portal-card estimate-card">
-                    <div class="portal-card__header">
-                        <h2>Ringkasan Estimasi</h2>
-                        <p class="estimate-card__subtitle">Pilih bundel estimasi untuk mengisi rincian biaya otomatis.</p>
-                    </div>
-                    <div class="estimate-breakdown">
-                        <div class="estimate-breakdown__row">
-                            <span>Jasa</span>
-                            <strong id="estimate_service_amount">Rp 0</strong>
-                        </div>
-                        <div class="estimate-breakdown__row">
-                            <span>Sparepart</span>
-                            <strong id="estimate_spare_amount">Rp 0</strong>
-                        </div>
-                        <div class="estimate-breakdown__row">
-                            <span>Bahan</span>
-                            <strong id="estimate_material_amount">Rp 0</strong>
-                        </div>
-                    </div>
-                    <div class="estimate-total">
-                        <span>Total Estimasi</span>
-                        <strong id="estimate_total_amount">Rp 0</strong>
-                    </div>
-                    <p class="estimate-note" id="estimate_bundle_description">
-                        Pilih bundel estimasi untuk melihat rincian jasa, sparepart, dan bahan.
-                    </p>
                 </article>
             </div>
         </div>
