@@ -1576,39 +1576,137 @@ button:disabled {
     frappe.require("/assets/garage/js/garage_portal.js");
 </script>
 <script>
-(function() {
-    const SERVICE_BUNDLES = [
+(function () {
+    const DEFAULT_NOTE = 'Pilih bundel estimasi untuk melihat rincian jasa, sparepart, dan bahan.';
+
+    const SERVICE_BLUEPRINTS = [
         {
-            id: 'bundle_basic',
-            name: 'Bundel Servis Dasar',
-            description: 'Perawatan ringan termasuk ganti oli dan pemeriksaan keselamatan.',
+            id: 'bundle_stage_basic',
+            name: 'Servis Berkala Dasar',
+            notes: 'Paket servis berkala 10.000 km meliputi ganti oli dan inspeksi keselamatan.',
             service: 350000,
-            spareparts: 200000,
-            materials: 75000
+            stages: [
+                'Ganti oli mesin & gasket plug',
+                'Pengecekan tekanan ban dan rem',
+                'General check area ruang mesin',
+            ],
+            items: [
+                {
+                    usage: 'material',
+                    quantity: 4,
+                    criteria: { category: 'Engine Oil', keywords: ['oli mesin', 'engine oil'] },
+                    fallbackLabel: 'Oli mesin 1 liter',
+                },
+                {
+                    usage: 'sparepart',
+                    quantity: 1,
+                    criteria: { category: 'Oil Filter', keywords: ['filter oli'] },
+                    fallbackLabel: 'Filter oli',
+                },
+                {
+                    usage: 'sparepart',
+                    quantity: 1,
+                    criteria: { keywords: ['gasket', 'washer'] },
+                    fallbackLabel: 'Gasket drain plug',
+                },
+            ],
         },
         {
-            id: 'bundle_advanced',
-            name: 'Bundel Servis Menengah',
-            description: 'Tune-up mesin, pembersihan throttle, dan pengecekan rem.',
-            service: 550000,
-            spareparts: 325000,
-            materials: 150000
+            id: 'bundle_stage_intermediate',
+            name: 'Servis Bertahap Menengah',
+            notes: 'Tambahan perawatan saluran udara dan sistem rem untuk servis 20.000 km.',
+            service: 520000,
+            stages: [
+                'Pembersihan throttle body',
+                'Pengecekan dan kalibrasi rem',
+                'Penggantian filter udara & kabin',
+            ],
+            items: [
+                {
+                    usage: 'material',
+                    quantity: 1,
+                    criteria: { category: 'Throttle Cleaner', keywords: ['throttle', 'cleaner'] },
+                    fallbackLabel: 'Cairan pembersih throttle',
+                },
+                {
+                    usage: 'sparepart',
+                    quantity: 1,
+                    criteria: { category: 'Air Filter', keywords: ['filter udara', 'air filter'] },
+                    fallbackLabel: 'Filter udara mesin',
+                },
+                {
+                    usage: 'sparepart',
+                    quantity: 1,
+                    criteria: { category: 'Cabin Filter', keywords: ['filter kabin', 'ac filter'] },
+                    fallbackLabel: 'Filter kabin/AC',
+                },
+                {
+                    usage: 'material',
+                    quantity: 1,
+                    criteria: { category: 'Brake Cleaner', keywords: ['brake cleaner', 'pembersih rem'] },
+                    fallbackLabel: 'Brake cleaner',
+                },
+            ],
         },
         {
-            id: 'bundle_premium',
-            name: 'Bundel Servis Premium',
-            description: 'Perawatan menyeluruh mencakup detailing interior dan balancing roda.',
-            service: 750000,
-            spareparts: 420000,
-            materials: 210000
-        }
+            id: 'bundle_stage_major',
+            name: 'Servis Besar & Tune-Up',
+            notes: 'Perawatan menyeluruh untuk servis 40.000 km termasuk penggantian komponen aus.',
+            service: 780000,
+            stages: [
+                'Tune-up mesin & kalibrasi injektor',
+                'Penggantian busi & cek sistem pengapian',
+                'Flush coolant dan pengecekan rem kaki',
+            ],
+            items: [
+                {
+                    usage: 'sparepart',
+                    quantity: 4,
+                    criteria: { category: 'Spark Plug', keywords: ['busi', 'spark plug'] },
+                    fallbackLabel: 'Busi set (4 pcs)',
+                },
+                {
+                    usage: 'sparepart',
+                    quantity: 1,
+                    criteria: { category: 'Brake Pad', keywords: ['kampas rem', 'brake pad'] },
+                    fallbackLabel: 'Kampas rem depan',
+                },
+                {
+                    usage: 'material',
+                    quantity: 2,
+                    criteria: { category: 'Coolant', keywords: ['coolant', 'radiator'] },
+                    fallbackLabel: 'Coolant 1 liter',
+                },
+                {
+                    usage: 'material',
+                    quantity: 1,
+                    criteria: { category: 'Brake Fluid', keywords: ['brake fluid', 'minyak rem'] },
+                    fallbackLabel: 'Brake fluid DOT 4',
+                },
+            ],
+        },
     ];
 
     const currencyFormatter = new Intl.NumberFormat('id-ID', {
         style: 'currency',
         currency: 'IDR',
-        minimumFractionDigits: 0
+        minimumFractionDigits: 0,
     });
+
+    let cachedSpareParts = [];
+    let computedBundles = [];
+    let bundleSelect = null;
+    let totalInput = null;
+    let nodes = null;
+
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
 
     function formatCurrency(value) {
         const numeric = Number(value);
@@ -1618,33 +1716,187 @@ button:disabled {
         return currencyFormatter.format(Math.max(0, Math.round(numeric)));
     }
 
-    function renderCustomTotal(totalInput, totalNode) {
+    function formatQuantity(qty, uom) {
+        const numeric = Number(qty);
+        if (Number.isNaN(numeric)) {
+            return uom ? `0 ${uom}` : '0';
+        }
+        const formatted = Number.isInteger(numeric)
+            ? numeric.toLocaleString('id-ID')
+            : numeric.toLocaleString('id-ID', { maximumFractionDigits: 2 });
+        return uom ? `${formatted} ${uom}` : formatted;
+    }
+
+    function renderCustomTotal(targetInput, totalNode) {
         if (!totalNode) {
             return;
         }
-        const value = totalInput ? totalInput.value : 0;
+        const value = targetInput ? targetInput.value : 0;
         totalNode.textContent = formatCurrency(value || 0);
     }
 
-    function resetEstimateDisplay(nodes, totalInput) {
-        if (!nodes) {
+    function resetEstimateDisplay(targetNodes, targetInput) {
+        if (!targetNodes) {
             return;
         }
-        const { service, spare, material, total, description } = nodes;
+        const { service, spare, material, total, description } = targetNodes;
         if (service) service.textContent = formatCurrency(0);
         if (spare) spare.textContent = formatCurrency(0);
         if (material) material.textContent = formatCurrency(0);
-        renderCustomTotal(totalInput, total);
+        renderCustomTotal(targetInput, total);
         if (description) {
-            description.textContent = 'Pilih bundel estimasi untuk melihat rincian jasa, sparepart, dan bahan.';
+            description.innerHTML = escapeHtml(DEFAULT_NOTE);
         }
     }
 
-    function applyBundleToForm(bundle, nodes, totalInput) {
+    function findPartMatch(parts, criteria) {
+        if (!Array.isArray(parts) || !criteria) {
+            return null;
+        }
+
+        const keywordList = (criteria.keywords || []).map((keyword) => keyword.toLowerCase());
+        const category = (criteria.category || '').toLowerCase();
+        const code = (criteria.part_code || '').toLowerCase();
+
+        let bestMatch = null;
+        let bestScore = 0;
+
+        parts.forEach((part) => {
+            const partCode = (part.part_code || '').toLowerCase();
+            const partName = (part.part_name || '').toLowerCase();
+            const partCategory = (part.category || '').toLowerCase();
+
+            let score = 0;
+
+            if (code && partCode === code) {
+                score += 5;
+            }
+            if (category) {
+                if (partCategory === category) {
+                    score += 4;
+                } else if (partCategory.includes(category)) {
+                    score += 3;
+                }
+            }
+
+            keywordList.forEach((keyword) => {
+                if (!keyword) {
+                    return;
+                }
+                if (partName.includes(keyword)) {
+                    score += 2;
+                } else if (partCategory.includes(keyword)) {
+                    score += 1.5;
+                } else if (partCode.includes(keyword.replace(/\s+/g, ''))) {
+                    score += 1;
+                }
+            });
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestMatch = part;
+            }
+        });
+
+        return bestMatch;
+    }
+
+    function buildBundleFromBlueprint(blueprint, partsCatalog) {
+        const bundle = {
+            id: blueprint.id,
+            name: blueprint.name,
+            notes: blueprint.notes || '',
+            stages: blueprint.stages || [],
+            service: Math.max(0, Number(blueprint.service) || 0),
+            spareparts: 0,
+            materials: 0,
+            parts: [],
+        };
+
+        (blueprint.items || []).forEach((item) => {
+            const quantity = Math.max(Number(item.quantity) || 0, 0);
+            const usage = item.usage === 'material' ? 'material' : 'sparepart';
+            const match = findPartMatch(partsCatalog, item.criteria || {});
+
+            if (match) {
+                const unitPrice = Math.max(Number(match.unit_price) || 0, 0);
+                const total = unitPrice * quantity;
+                const record = {
+                    status: 'available',
+                    usage,
+                    quantity,
+                    unitPrice,
+                    total,
+                    uom: match.uom || 'Unit',
+                    partCode: match.part_code || '',
+                    partName: match.part_name || match.part_code || item.fallbackLabel || '-',
+                    stockQty: Number(match.stock_qty) || 0,
+                };
+                bundle.parts.push(record);
+                if (usage === 'material') {
+                    bundle.materials += total;
+                } else {
+                    bundle.spareparts += total;
+                }
+            } else {
+                bundle.parts.push({
+                    status: 'missing',
+                    usage,
+                    quantity,
+                    unitPrice: 0,
+                    total: 0,
+                    uom: '',
+                    partCode: (item.criteria && item.criteria.part_code) || '',
+                    partName: item.fallbackLabel || 'Sparepart tambahan',
+                    stockQty: null,
+                });
+            }
+        });
+
+        bundle.spareparts = Math.round(bundle.spareparts);
+        bundle.materials = Math.round(bundle.materials);
+
+        return bundle;
+    }
+
+    function renderBundleDescription(bundle) {
+        const stages = (bundle.stages || [])
+            .map((stage) => `<li>${escapeHtml(stage)}</li>`)
+            .join('');
+
+        const parts = (bundle.parts || [])
+            .map((part) => {
+                const label = `${escapeHtml(part.partName || '-')}${part.partCode ? ` (${escapeHtml(part.partCode)})` : ''}`;
+                const qty = formatQuantity(part.quantity || 0, part.uom || '');
+                if (part.status === 'available') {
+                    const cost = formatCurrency(part.total || 0);
+                    const stockInfo = part.stockQty !== null && part.stockQty !== undefined
+                        ? ` • Stok: ${formatQuantity(part.stockQty, part.uom || '')}`
+                        : '';
+                    return `<li>${label} — ${escapeHtml(qty)} • ${escapeHtml(cost)}${stockInfo}</li>`;
+                }
+                return `<li>${label} — ${escapeHtml(qty)} • <em>Perlu konfirmasi stok</em></li>`;
+            })
+            .join('');
+
+        const summary = `Jasa ${formatCurrency(bundle.service)} • Sparepart ${formatCurrency(bundle.spareparts)} • Bahan ${formatCurrency(bundle.materials)}`;
+
+        return `
+            <strong>${escapeHtml(bundle.name)}</strong>
+            <p>${escapeHtml(bundle.notes || '')}</p>
+            ${stages ? `<p>Tahapan servis:</p><ul>${stages}</ul>` : ''}
+            ${parts ? `<p>Komponen yang disiapkan:</p><ul>${parts}</ul>` : ''}
+            <p class="estimate-summary">${escapeHtml(summary)}</p>
+            <p class="estimate-reminder">Estimasi awal dapat diperbarui saat inspeksi jika ada sparepart tambahan.</p>
+        `;
+    }
+
+    function applyBundleToForm(bundle) {
         if (!nodes || !bundle) {
             resetEstimateDisplay(nodes, totalInput);
             return;
         }
+
         const { service, spare, material, total, description } = nodes;
         const serviceTotal = Math.max(0, bundle.service || 0);
         const spareTotal = Math.max(0, bundle.spareparts || 0);
@@ -1656,7 +1908,7 @@ button:disabled {
         if (material) material.textContent = formatCurrency(materialTotal);
         if (total) total.textContent = formatCurrency(overall);
         if (description) {
-            description.textContent = bundle.description || 'Bundel estimasi terpilih.';
+            description.innerHTML = renderBundleDescription(bundle);
         }
         if (totalInput) {
             totalInput.value = overall;
@@ -1665,32 +1917,77 @@ button:disabled {
         }
     }
 
+    function rebuildOptions() {
+        if (!bundleSelect) {
+            return;
+        }
+        const previousValue = bundleSelect.value;
+        bundleSelect.innerHTML = '';
+
+        const blank = document.createElement('option');
+        blank.value = '';
+        blank.textContent = '— Pilih Bundel Estimasi —';
+        bundleSelect.appendChild(blank);
+
+        computedBundles.forEach((bundle) => {
+            const option = document.createElement('option');
+            const total = (bundle.service || 0) + (bundle.spareparts || 0) + (bundle.materials || 0);
+            option.value = bundle.id;
+            option.textContent = `${bundle.name} — ${formatCurrency(total)}`;
+            bundleSelect.appendChild(option);
+        });
+
+        if (previousValue && bundleSelect.querySelector(`option[value="${previousValue}"]`)) {
+            bundleSelect.value = previousValue;
+            const selected = computedBundles.find((bundle) => bundle.id === previousValue);
+            applyBundleToForm(selected || null);
+        } else {
+            resetEstimateDisplay(nodes, totalInput);
+        }
+    }
+
+    function recomputeBundles() {
+        computedBundles = SERVICE_BLUEPRINTS.map((blueprint) =>
+            buildBundleFromBlueprint(blueprint, cachedSpareParts)
+        );
+        rebuildOptions();
+    }
+
+    function handleStateUpdate(state) {
+        if (state && Array.isArray(state.spare_parts)) {
+            cachedSpareParts = state.spare_parts;
+            recomputeBundles();
+        }
+    }
+
+    document.addEventListener('garage-portal:state-updated', (event) => {
+        handleStateUpdate(event?.detail?.state || {});
+    });
+
     document.addEventListener('DOMContentLoaded', () => {
-        const bundleSelect = document.getElementById('service_bundle');
-        const totalInput = document.getElementById('total_estimated_amount');
-        const nodes = {
+        bundleSelect = document.getElementById('service_bundle');
+        totalInput = document.getElementById('total_estimated_amount');
+        nodes = {
             service: document.getElementById('estimate_service_amount'),
             spare: document.getElementById('estimate_spare_amount'),
             material: document.getElementById('estimate_material_amount'),
             total: document.getElementById('estimate_total_amount'),
-            description: document.getElementById('estimate_bundle_description')
+            description: document.getElementById('estimate_bundle_description'),
         };
 
         if (!bundleSelect || !nodes.service || !nodes.spare || !nodes.material || !nodes.total) {
             return;
         }
 
-        SERVICE_BUNDLES.forEach((bundle) => {
-            const option = document.createElement('option');
-            const overall = (bundle.service || 0) + (bundle.spareparts || 0) + (bundle.materials || 0);
-            option.value = bundle.id;
-            option.textContent = `${bundle.name} — ${formatCurrency(overall)}`;
-            bundleSelect.appendChild(option);
-        });
+        const initialState = window.__garage_portal_state__;
+        if (initialState && Array.isArray(initialState.spare_parts)) {
+            cachedSpareParts = initialState.spare_parts;
+        }
+        recomputeBundles();
 
         bundleSelect.addEventListener('change', (event) => {
-            const selected = SERVICE_BUNDLES.find((bundle) => bundle.id === event.target.value);
-            applyBundleToForm(selected || null, nodes, totalInput);
+            const selected = computedBundles.find((bundle) => bundle.id === event.target.value);
+            applyBundleToForm(selected || null);
         });
 
         if (totalInput) {
@@ -1699,7 +1996,7 @@ button:disabled {
             });
         }
 
-        resetEstimateDisplay(nodes, totalInput);
+        renderCustomTotal(totalInput, nodes.total);
     });
 })();
 </script>
