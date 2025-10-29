@@ -539,6 +539,121 @@ def _ensure_dict(payload: Any) -> MutableMapping[str, Any]:
     return data
 
 
+def _serialize_bundle_part(row: Any, usage: str) -> Optional[Dict[str, Any]]:
+    """Return a normalized representation of a bundle line item."""
+
+    data: Dict[str, Any]
+    if hasattr(row, "as_dict") and callable(row.as_dict):
+        data = row.as_dict()
+    elif isinstance(row, Mapping):
+        data = dict(row)
+    else:
+        data = {}
+
+    if not data:
+        return None
+
+    quantity = flt(data.get("quantity"))
+    unit_price = flt(data.get("unit_price"))
+    total = flt(data.get("amount")) or quantity * unit_price
+    stock_qty = data.get("stock_qty")
+
+    return {
+        "usage": "material" if usage == "material" else "sparepart",
+        "quantity": quantity,
+        "unitPrice": unit_price,
+        "total": total,
+        "uom": data.get("uom") or "Unit",
+        "partCode": data.get("part_code") or "",
+        "partName": data.get("item_name") or data.get("part_name") or "",
+        "stockQty": stock_qty if stock_qty is not None else None,
+    }
+
+
+def _serialize_service_bundle(doc: Any, base: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
+    base_map = dict(base) if base else {}
+    bundle_name = getattr(doc, "bundle_name", None) or base_map.get("bundle_name")
+    description = getattr(doc, "description", None) or base_map.get("description") or ""
+    service_fee = flt(getattr(doc, "service_fee", 0) or base_map.get("service_fee"))
+    spare_total = flt(getattr(doc, "total_spare_amount", 0) or base_map.get("total_spare_amount"))
+    material_total = flt(getattr(doc, "total_material_amount", 0) or base_map.get("total_material_amount"))
+    parts: List[Dict[str, Any]] = []
+
+    for row in getattr(doc, "spare_parts", []) or []:
+        part = _serialize_bundle_part(row, "sparepart")
+        if part:
+            parts.append(part)
+
+    for row in getattr(doc, "materials", []) or []:
+        part = _serialize_bundle_part(row, "material")
+        if part:
+            parts.append(part)
+
+    total_amount = flt(
+        getattr(doc, "grand_total", 0)
+        or base_map.get("grand_total")
+        or service_fee + spare_total + material_total
+    )
+
+    identifier = getattr(doc, "name", None) or base_map.get("name")
+
+    return {
+        "id": identifier,
+        "name": bundle_name or identifier,
+        "bundle_name": bundle_name or identifier,
+        "description": description,
+        "notes": description,
+        "service": service_fee,
+        "service_fee": service_fee,
+        "spareparts": spare_total,
+        "total_spare_amount": spare_total,
+        "materials": material_total,
+        "total_material_amount": material_total,
+        "total": total_amount,
+        "parts": parts,
+        "is_active": bool(getattr(doc, "is_active", None) or base_map.get("is_active", 0)),
+    }
+
+
+def _get_service_bundles() -> List[Dict[str, Any]]:
+    """Return active service bundles with their aggregated line items."""
+
+    bundles: List[Dict[str, Any]] = []
+    rows = _list_dicts(
+        "Garage Service Bundle",
+        [
+            "name",
+            "bundle_name",
+            "service_fee",
+            "total_spare_amount",
+            "total_material_amount",
+            "grand_total",
+            "description",
+            "is_active",
+        ],
+        filters=[["is_active", "=", 1]],
+        limit=100,
+    )
+
+    for row in rows:
+        name = row.get("name")
+        if not name:
+            continue
+
+        try:
+            doc = frappe.get_doc("Garage Service Bundle", name)
+        except Exception:
+            frappe.log_error(
+                title="Garage Service Bundle load failed",
+                message=f"{name}:\n{frappe.get_traceback()}"
+            )
+            continue
+
+        bundles.append(_serialize_service_bundle(doc, row))
+
+    return bundles
+
+
 def _filter_fields(data: Mapping[str, Any], allowed: Iterable[str]) -> Dict[str, Any]:
     result: Dict[str, Any] = {}
     for field in allowed:
@@ -1296,6 +1411,8 @@ def portal_bootstrap() -> Dict[str, Any]:
         ["name", "payment_entry", "receipt_date", "receipt_number", "delivery_method"],
     )
 
+    service_bundles = _get_service_bundles()
+
     status_summary = {
         "service_orders": _group_status("Garage Service Order"),
         "spare_orders": _group_status("Garage Spare Part Order"),
@@ -1321,6 +1438,7 @@ def portal_bootstrap() -> Dict[str, Any]:
         "spare_orders": spare_orders,
         "open_spare_orders": open_spare_orders,
         "spare_parts": spare_parts,
+        "service_bundles": service_bundles,
         "spare_part_requests": spare_part_requests,
         "procurement_orders": procurement_orders,
         "pending_procurement": pending_procurement,

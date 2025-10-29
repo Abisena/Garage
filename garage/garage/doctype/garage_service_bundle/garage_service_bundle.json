@@ -1,0 +1,152 @@
+{
+  "actions": [],
+  "allow_guest_to_edit": 0,
+  "allow_guest_to_view": 0,
+  "allow_import": 1,
+  "allow_rename": 0,
+  "autoname": "format:BND-{####}",
+  "beta": 0,
+  "creation": "2024-06-02 00:00:00.000000",
+  "default_view": "List",
+  "disable_prepared_report": 0,
+  "docstatus": 0,
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "bundle_name",
+    "service_fee",
+    "is_active",
+    "description",
+    "section_totals",
+    "total_spare_amount",
+    "total_material_amount",
+    "grand_total",
+    "section_spare_parts",
+    "spare_parts",
+    "section_materials",
+    "materials"
+  ],
+  "fields": [
+    {
+      "fieldname": "bundle_name",
+      "fieldtype": "Data",
+      "label": "Nama Paket",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "service_fee",
+      "fieldtype": "Currency",
+      "label": "Biaya Jasa",
+      "default": 0,
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "is_active",
+      "fieldtype": "Check",
+      "label": "Aktif",
+      "default": "1",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "description",
+      "fieldtype": "Small Text",
+      "label": "Deskripsi"
+    },
+    {
+      "fieldname": "section_totals",
+      "fieldtype": "Section Break",
+      "label": "Ringkasan Biaya"
+    },
+    {
+      "fieldname": "total_spare_amount",
+      "fieldtype": "Currency",
+      "label": "Total Spare Part",
+      "read_only": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "total_material_amount",
+      "fieldtype": "Currency",
+      "label": "Total Bahan",
+      "read_only": 1
+    },
+    {
+      "fieldname": "grand_total",
+      "fieldtype": "Currency",
+      "label": "Total Paket",
+      "read_only": 1
+    },
+    {
+      "fieldname": "section_spare_parts",
+      "fieldtype": "Section Break",
+      "label": "Spare Part"
+    },
+    {
+      "fieldname": "spare_parts",
+      "fieldtype": "Table",
+      "label": "Daftar Spare Part",
+      "options": "Garage Service Bundle Spare Part"
+    },
+    {
+      "fieldname": "section_materials",
+      "fieldtype": "Section Break",
+      "label": "Bahan Gudang"
+    },
+    {
+      "fieldname": "materials",
+      "fieldtype": "Table",
+      "label": "Daftar Bahan",
+      "options": "Garage Service Bundle Material"
+    }
+  ],
+  "has_web_view": 0,
+  "hide_heading": 0,
+  "hide_toolbar": 0,
+  "idx": 0,
+  "image_field": "",
+  "in_create": 0,
+  "info_fields": [],
+  "is_submittable": 0,
+  "issingle": 0,
+  "istable": 0,
+  "links": [],
+  "make_attachments_public": 0,
+  "max_attachments": 0,
+  "modified": "2024-06-02 00:00:00.000000",
+  "module": "Garage",
+  "name": "Garage Service Bundle",
+  "naming_rule": "",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1,
+      "export": 1
+    }
+  ],
+  "quick_entry": 0,
+  "read_only": 0,
+  "read_only_onload": 0,
+  "search_fields": "bundle_name,description",
+  "show_name_in_global_search": 1,
+  "show_preview_popup": 0,
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "subject": "",
+  "title_field": "bundle_name",
+  "track_changes": 1,
+  "track_seen": 0,
+  "translated_doctype": 0,
+  "migration_hash": "",
+  "description": "Paket layanan servis dengan kombinasi biaya jasa, spare part, dan bahan gudang."
+}
