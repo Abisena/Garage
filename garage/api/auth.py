@@ -54,7 +54,7 @@ PORTAL_NAV_ITEMS: List[Dict[str, Any]] = [
             "Head Manager Bengkel",
         ],
     },
-    {"route": "/garage/insight", "key": "insight", "label": "📊 Insight", "roles": []},
+    {"route": "/garage/insight", "key": "insight", "label": "📊 Report", "roles": []},
 ]
 
 
