@@ -289,10 +289,9 @@ a:hover {
 }
 
 .content-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+    display: flex;
+    flex-direction: column;
     gap: 28px;
-    align-items: start;
 }
 
 .main-column {
@@ -305,8 +304,6 @@ a:hover {
     display: flex;
     flex-direction: column;
     gap: 24px;
-    position: sticky;
-    top: 120px;
 }
 
 .intake-summary {
@@ -924,8 +921,6 @@ a:hover {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    position: sticky;
-    top: 24px;
 }
 
 .detail-card {
@@ -1068,11 +1063,7 @@ a:hover {
 
 @media (max-width: 1024px) {
     .content-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .side-column {
-        position: static;
+        gap: 20px;
     }
 }
 
