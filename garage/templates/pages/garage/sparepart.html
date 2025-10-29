@@ -800,6 +800,19 @@ body {
         }).format(value || 0);
     }
 
+    function escapeHTML(value) {
+        if (value === undefined || value === null) {
+            return '';
+        }
+
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function getStatusBadge(status) {
         const badges = {
             'Active': '<span class="badge success">Active</span>',
@@ -1033,6 +1046,7 @@ body {
                 <td>
                     <div class="cell-strong">${part.part_code || '-'}</div>
                     <div class="cell-secondary">${part.part_name || '-'}</div>
+                    ${part.description ? `<div class="cell-muted">${escapeHTML(part.description)}</div>` : ''}
                     ${part.category ? `<div class="cell-muted">${part.category}</div>` : ''}
                     ${part.brand ? `<div class="cell-muted">Brand: ${part.brand}</div>` : ''}
                 </td>
