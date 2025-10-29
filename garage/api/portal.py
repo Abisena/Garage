@@ -1290,6 +1290,7 @@ def portal_bootstrap() -> Dict[str, Any]:
             "name",
             "part_code",
             "part_name",
+            "description",
             "category",
             "brand",
             "uom",
@@ -1963,6 +1964,7 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
             "name",
             "part_code",
             "part_name",
+            "description",
             "category",
             "brand",
             "uom",
@@ -2075,6 +2077,7 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
             if search_term in (part.get("part_code") or "").lower()
             or search_term in (part.get("part_name") or "").lower()
             or search_term in (part.get("brand") or "").lower()
+            or search_term in (part.get("description") or "").lower()
         ]
     
     # Filter low stock items if requested
