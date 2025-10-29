@@ -448,7 +448,7 @@ const VEHICLE_BRAND_MODELS = {
                         'engine_number',
                         'service_order_type',
                         'priority',
-                        'estimated_delivery_date',
+                        'service_bundle',
                         'total_estimated_amount',
                         'notes',
                         'intake_type',
