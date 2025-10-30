@@ -878,10 +878,9 @@ body {
                 <thead>
                     <tr>
                         <th>Service Order</th>
-                        <th>Sparepart</th>
-                        <th>Kuantitas</th>
+                        <th>Jumlah Item</th>
                         <th>Status</th>
-                        <th>Penanggung Jawab</th>
+                        <th>Tanggung Jawab</th>
                         <th>Tindakan</th>
                     </tr>
                 </thead>
@@ -967,6 +966,7 @@ body {
         spareRequests: [],
         searchQuery: '',
         partIndex: new Map(),
+        groupedRequests: new Map(),
     };
 
     function formatCurrency(value) {
@@ -1076,66 +1076,185 @@ body {
         if (!requests || requests.length === 0) {
             tbody.innerHTML = '';
             if (emptyState) emptyState.style.display = 'block';
+            state.groupedRequests = new Map();
             return;
         }
 
         if (emptyState) emptyState.style.display = 'none';
 
-        tbody.innerHTML = requests.map(request => {
-            const requestName = request.name || '';
-            const technicians = (request.technicians || [])
-                .map(tech => tech.technician_name || tech.technician)
-                .filter(Boolean);
-            const managerLines = [];
+        const groups = new Map();
+
+        requests.forEach(request => {
+            const serviceOrder = request.parent || request.name || '';
+            if (!serviceOrder) {
+                return;
+            }
+
+            if (!groups.has(serviceOrder)) {
+                groups.set(serviceOrder, {
+                    serviceOrder,
+                    customer: request.service_customer || '-',
+                    vehicle: request.service_vehicle || '',
+                    requests: [],
+                    managedBy: new Set(),
+                    warehouses: new Set(),
+                    technicians: new Set(),
+                    serviceAdvisor: request.service_advisor || '',
+                });
+            }
+
+            const group = groups.get(serviceOrder);
+            group.requests.push(request);
+            if (request.service_customer) {
+                group.customer = request.service_customer;
+            }
+            if (request.service_vehicle) {
+                group.vehicle = request.service_vehicle;
+            }
             if (request.service_advisor) {
-                managerLines.push(`SA: ${request.service_advisor}`);
+                group.serviceAdvisor = request.service_advisor;
             }
-            if (technicians.length) {
-                managerLines.push(technicians.join(', '));
+            (request.technicians || []).forEach(tech => {
+                const name = tech?.technician_name || tech?.technician;
+                if (name) {
+                    group.technicians.add(name);
+                }
+            });
+
+            const part = state.partIndex.get(request.item_code) || state.partIndex.get(request.item_name);
+            if (part?.managed_by) {
+                group.managedBy.add(part.managed_by);
+            }
+            if (part?.warehouse_location) {
+                group.warehouses.add(part.warehouse_location);
+            }
+        });
+
+        state.groupedRequests = groups;
+
+        const statusPriority = {
+            'pending check': 0,
+            'pending': 1,
+            'to order': 2,
+            'ordered': 3,
+            'in transit': 4,
+            'available': 5,
+            'received': 6,
+            'issued': 7,
+            'approved': 8,
+            'rejected': 9,
+            'cancelled': 10,
+        };
+
+        tbody.innerHTML = Array.from(groups.values()).map(group => {
+            const requestNames = group.requests.map(req => req.name).filter(Boolean);
+            const categoryCount = { sparepart: 0, bahan: 0, other: 0 };
+            const sources = new Set();
+
+            const allAvailable = group.requests.every(req => {
+                const part = state.partIndex.get(req.item_code) || state.partIndex.get(req.item_name);
+                const qty = parseFloat(req.qty || req.stock_qty || 0);
+                if (!part || !qty) {
+                    return false;
+                }
+                return parseFloat(part.stock_qty || 0) >= qty;
+            });
+
+            group.requests.forEach(req => {
+                const part = state.partIndex.get(req.item_code) || state.partIndex.get(req.item_name);
+                const category = (part?.category || req.item_category || '').toLowerCase();
+                if (category.includes('bahan')) {
+                    categoryCount.bahan += 1;
+                } else if (category.includes('spare')) {
+                    categoryCount.sparepart += 1;
+                } else {
+                    categoryCount.other += 1;
+                }
+                if (req.source) {
+                    sources.add(req.source);
+                }
+            });
+
+            const summaryParts = [];
+            if (categoryCount.sparepart) summaryParts.push(`${categoryCount.sparepart} Sparepart`);
+            if (categoryCount.bahan) summaryParts.push(`${categoryCount.bahan} Bahan`);
+            if (categoryCount.other) summaryParts.push(`${categoryCount.other} Item`);
+            const itemSummary = `${group.requests.length} Item${summaryParts.length ? ` (${summaryParts.join(', ')})` : ''}`;
+
+            const statuses = Array.from(new Set(group.requests.map(req => req.stock_status).filter(Boolean)));
+            let primaryStatus = statuses[0] || 'Pending Check';
+            let bestScore = Number.POSITIVE_INFINITY;
+            statuses.forEach(status => {
+                const normalized = (status || '').toLowerCase();
+                const score = normalized in statusPriority ? statusPriority[normalized] : 99;
+                if (score < bestScore) {
+                    bestScore = score;
+                    primaryStatus = status;
+                }
+            });
+
+            const metaLines = [];
+            if (group.warehouses.size) {
+                metaLines.push(Array.from(group.warehouses).join(', '));
+            }
+            if (sources.size) {
+                metaLines.push(`Sumber: ${Array.from(sources).join(', ')}`);
             }
 
-            const part = state.partIndex.get(request.item_code) || state.partIndex.get(request.item_name) || null;
-            const partCategory = part?.category || request.item_category || '';
-            const qty = request.qty || request.stock_qty || 0;
-            const uom = request.uom ? ` ${request.uom}` : '';
-            const metaParts = [];
-            if (part?.managed_by) metaParts.push(`👤 ${part.managed_by}`);
-            if (part?.warehouse_location) metaParts.push(part.warehouse_location);
+            const responsibilityLines = [];
+            if (group.managedBy.size) {
+                responsibilityLines.push(Array.from(group.managedBy).join(', '));
+            }
+            if (group.serviceAdvisor) {
+                responsibilityLines.push(`SA: ${group.serviceAdvisor}`);
+            }
+            if (group.technicians.size) {
+                responsibilityLines.push(`Teknisi: ${Array.from(group.technicians).join(', ')}`);
+            }
 
-            const managerHtml = managerLines.length
-                ? managerLines.map(line => `<div class="cell-secondary">${line}</div>`).join('')
+            const approveDisabled = allAvailable ? '' : ' disabled title="Sparepart belum tersedia atau stok tidak mencukupi"';
+            const approveLabel = group.requests.length > 1 ? '✅ Approve All' : '✅ Approve';
+            const rejectLabel = group.requests.length > 1 ? '❌ Reject All' : '❌ Reject';
+
+            const customerLine = group.customer ? escapeHTML(group.customer) : '-';
+            const vehicleLine = group.vehicle ? `<div class="cell-muted">${escapeHTML(group.vehicle)}</div>` : '';
+            const metaText = metaLines.length ? `<div class="cell-muted">${escapeHTML(metaLines.join(' • '))}</div>` : '<div class="cell-muted">-</div>';
+            const responsibilityHtml = responsibilityLines.length
+                ? responsibilityLines.map(line => `<div class="cell-secondary">${escapeHTML(line)}</div>`).join('')
                 : '<div class="cell-muted">-</div>';
 
-            const approveDisabled = part && part.stock_qty >= qty ? '' : ' disabled title="Sparepart belum tersedia atau stok tidak mencukupi"';
+            const requestNamesAttr = escapeHTML(requestNames.join(','));
+            const primaryRequestName = requestNames[0] ? escapeHTML(requestNames[0]) : '';
+            const serviceOrderDisplay = group.serviceOrder || '-';
+            const serviceOrderLink = group.serviceOrder
+                ? `/app/garage-service-order/${encodeURIComponent(group.serviceOrder)}`
+                : '';
+            const serviceOrderHtml = group.serviceOrder
+                ? `<a href="${serviceOrderLink}" target="_blank">${escapeHTML(serviceOrderDisplay)}</a>`
+                : escapeHTML(serviceOrderDisplay);
 
             return `
-                <tr class="spare-request-row" data-request-name="${requestName}" data-service-order="${request.parent || ''}">
+                <tr class="spare-request-row" data-service-order="${escapeHTML(group.serviceOrder)}" data-request-names="${requestNamesAttr}" data-request-name="${primaryRequestName}">
                     <td>
-                        <div class="cell-strong"><a href="/app/garage-service-order/${request.parent || ''}" target="_blank">${request.parent || '-'}</a></div>
-                        <div class="cell-secondary">${request.service_customer || '-'}</div>
+                        <div class="cell-strong">${serviceOrderHtml}</div>
+                        <div class="cell-secondary">${customerLine}</div>
+                        ${vehicleLine}
                     </td>
                     <td>
-                        <div class="cell-strong">${request.item_name || request.item_code || '-'}</div>
-                        <div class="cell-muted">${request.item_code || part?.part_code || 'Manual'}</div>
-                        ${partCategory ? `<div class="cell-muted">${partCategory}</div>` : ''}
-                        ${request.description ? `<div class="cell-note">${request.description}</div>` : ''}
+                        <div class="metric-text">${escapeHTML(itemSummary)}</div>
                     </td>
                     <td>
-                        <div class="metric-text">${qty}${uom}</div>
+                        <div class="status-badges">${getRequestStatusBadge(primaryStatus)}</div>
+                        ${metaText}
                     </td>
                     <td>
-                        <div class="status-badges">${getRequestStatusBadge(request.stock_status)}</div>
-                        <div class="cell-muted">${metaParts.join(' • ') || '-'}</div>
-                    </td>
-                    <td>
-                        ${managerHtml}
+                        ${responsibilityHtml}
                     </td>
                     <td>
                         <div class="request-actions">
-                            <button class="primary small" type="button" data-request-action="approve"${approveDisabled}>Approve</button>
-                            <button class="danger small" type="button" data-request-action="reject">Reject</button>
-                            <button class="ghost small" type="button" data-request-action="document">Dokumen</button>
-                            <button class="ghost small" type="button" data-request-action="cancel">Cancel</button>
+                            <button class="ghost small" type="button" data-request-action="detail">🔍 Detail</button>
+                            <button class="primary small" type="button" data-request-action="approve"${approveDisabled}>${approveLabel}</button>
+                            <button class="danger small" type="button" data-request-action="reject">${rejectLabel}</button>
                         </div>
                     </td>
                 </tr>
@@ -1153,55 +1272,192 @@ body {
 
         const action = button.dataset.requestAction;
         const row = button.closest('tr[data-request-name]');
-        const requestName = row?.dataset?.requestName;
         const serviceOrder = row?.dataset?.serviceOrder || '';
-        if (!action || !requestName) {
+        const requestNames = (row?.dataset?.requestNames || '')
+            .split(',')
+            .map(name => name.trim())
+            .filter(Boolean);
+        const requestName = row?.dataset?.requestName;
+        if (!requestNames.length && requestName) {
+            requestNames.push(requestName);
+        }
+
+        if (action === 'detail') {
+            openSpareRequestModal(serviceOrder);
             return;
         }
 
         if (action === 'document') {
-            generateApprovalDocument(requestName, serviceOrder, button);
+            if (requestName) {
+                generateApprovalDocument(requestName, serviceOrder, button);
+            }
             return;
         }
 
+        if (!action || !requestNames.length) {
+            return;
+        }
+
+        processGroupAction(requestNames, action, serviceOrder, button);
+    }
+
+    function processGroupAction(requestNames, action, serviceOrder, button) {
+        const normalized = (action || '').toLowerCase();
+        const isBulk = requestNames.length > 1;
         const confirmMessages = {
-            approve: 'Setujui permintaan ini? Stok gudang akan berkurang otomatis.',
-            reject: 'Tolak permintaan sparepart ini?',
-            cancel: 'Batalkan permintaan sparepart ini?',
-            default: 'Lanjutkan aksi ini?',
+            'approve-single': 'Setujui permintaan ini? Stok gudang akan berkurang otomatis.',
+            'approve-bulk': 'Setujui semua permintaan sparepart di order ini? Stok gudang akan berkurang otomatis.',
+            'reject-single': 'Tolak permintaan sparepart ini?',
+            'reject-bulk': 'Tolak semua permintaan sparepart di order ini?',
+            'cancel-single': 'Batalkan permintaan sparepart ini?',
+            'cancel-bulk': 'Batalkan semua permintaan sparepart di order ini?',
         };
 
-        const executeAction = async () => {
+        const indicatorMap = { approve: 'green', reject: 'red', cancel: 'orange' };
+        const key = `${normalized}-${isBulk ? 'bulk' : 'single'}`;
+        const confirmation = confirmMessages[key] || 'Lanjutkan aksi ini?';
+
+        const execute = async () => {
             try {
-                button.disabled = true;
-                const response = await frappe.call({
-                    method: API.updateSpareRequest,
-                    args: { name: requestName, action },
-                    freeze: true,
-                    freeze_message: 'Memproses permintaan...',
-                });
-                const payload = response.message || {};
-                const indicatorMap = { approve: 'green', reject: 'red', cancel: 'orange' };
-                const indicator = indicatorMap[action] || 'green';
-                frappe.show_alert({
-                    message: payload.message || 'Permintaan diperbarui.',
-                    indicator,
-                }, 5);
+                if (button) {
+                    button.disabled = true;
+                }
+
+                for (let index = 0; index < requestNames.length; index += 1) {
+                    const name = requestNames[index];
+                    await frappe.call({
+                        method: API.updateSpareRequest,
+                        args: { name, action: normalized },
+                        freeze: index === 0,
+                        freeze_message: 'Memproses permintaan...',
+                    });
+                }
+
+                const indicator = indicatorMap[normalized] || 'green';
+                const message = isBulk
+                    ? `Berhasil memproses ${requestNames.length} permintaan pada ${serviceOrder || 'order ini'}.`
+                    : 'Permintaan diperbarui.';
+                frappe.show_alert({ message, indicator }, 5);
                 await loadSpareParts();
             } catch (error) {
-                frappe.show_alert({ message: 'Gagal memproses: ' + (error.message || error), indicator: 'red' }, 5);
+                frappe.show_alert({ message: 'Gagal memproses: ' + (error.message || error), indicator: 'red' }, 7);
             } finally {
-                button.disabled = false;
-                button.blur();
+                if (button) {
+                    button.disabled = false;
+                    button.blur();
+                }
             }
         };
 
-        const confirmation = confirmMessages[action] || confirmMessages.default;
         if (frappe.confirm) {
-            frappe.confirm(confirmation, () => executeAction());
+            frappe.confirm(confirmation, () => execute());
         } else if (window.confirm(confirmation)) {
-            executeAction();
+            execute();
         }
+    }
+
+    function openSpareRequestModal(serviceOrder) {
+        const modal = document.getElementById('spare-request-modal');
+        if (!modal) {
+            return;
+        }
+
+        const group = state.groupedRequests.get(serviceOrder);
+        const title = modal.querySelector('[data-role="spare-request-modal-title"]');
+        const summary = modal.querySelector('[data-role="spare-request-modal-summary"]');
+        const list = modal.querySelector('[data-role="spare-request-modal-list"]');
+        const empty = modal.querySelector('[data-role="spare-request-modal-empty"]');
+
+        if (title) {
+            title.textContent = `Detail Sparepart – ${serviceOrder || '-'}`;
+        }
+
+        if (!group || !group.requests.length) {
+            if (summary) {
+                summary.innerHTML = '<div>Tidak ada permintaan untuk ditampilkan.</div>';
+            }
+            if (list) {
+                list.innerHTML = '';
+                list.style.display = 'none';
+            }
+            if (empty) {
+                empty.classList.add('is-visible');
+            }
+        } else {
+            if (summary) {
+                const breakdown = `${group.requests.length} permintaan`; 
+                const advisorLine = group.serviceAdvisor ? `<div>Service Advisor: ${escapeHTML(group.serviceAdvisor)}</div>` : '';
+                const technicianLine = group.technicians.size
+                    ? `<div>Teknisi: ${escapeHTML(Array.from(group.technicians).join(', '))}</div>`
+                    : '';
+                summary.innerHTML = `
+                    <div><strong>Service Order:</strong> ${escapeHTML(serviceOrder)}</div>
+                    <div><strong>Customer:</strong> ${escapeHTML(group.customer || '-')}</div>
+                    <div><strong>Total Permintaan:</strong> ${breakdown}</div>
+                    ${advisorLine}
+                    ${technicianLine}
+                `;
+            }
+
+            if (list) {
+                list.style.display = 'flex';
+                list.innerHTML = group.requests.map(req => {
+                    const part = state.partIndex.get(req.item_code) || state.partIndex.get(req.item_name);
+                    const qty = req.qty || req.stock_qty || 0;
+                    const uom = req.uom || 'Unit';
+                    const metaSegments = [];
+                    if (part?.category) metaSegments.push(`Kategori: ${escapeHTML(part.category)}`);
+                    if (part?.managed_by) metaSegments.push(`Penanggung Jawab: ${escapeHTML(part.managed_by)}`);
+                    if (part?.warehouse_location) metaSegments.push(`Gudang: ${escapeHTML(part.warehouse_location)}`);
+                    if (req.source) metaSegments.push(`Sumber: ${escapeHTML(req.source)}`);
+
+                    const description = req.description ? `<div class="spare-request-modal__item-note">${escapeHTML(req.description)}</div>` : '';
+                    const warning = !part
+                        ? '<div class="spare-request-modal__item-warning">Sparepart belum terdaftar di master gudang.</div>'
+                        : '';
+
+                    const metaHtml = metaSegments.length
+                        ? `<div class="spare-request-modal__item-meta">${metaSegments.join(' • ')}</div>`
+                        : '';
+
+                    return `
+                        <div class="spare-request-modal__item">
+                            <div class="spare-request-modal__item-header">
+                                <div>
+                                    <div class="spare-request-modal__item-name">${escapeHTML(req.item_name || req.item_code || '-')}</div>
+                                    <div class="spare-request-modal__item-code">${escapeHTML(req.item_code || part?.part_code || 'Manual')}</div>
+                                </div>
+                                <div class="spare-request-modal__item-status">
+                                    ${getRequestStatusBadge(req.stock_status)}
+                                    <span>${escapeHTML(`${qty} ${uom}`)}</span>
+                                </div>
+                            </div>
+                            ${metaHtml}
+                            ${description}
+                            ${warning}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            if (empty) {
+                empty.classList.remove('is-visible');
+            }
+        }
+
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeSpareRequestModal() {
+        const modal = document.getElementById('spare-request-modal');
+        if (!modal) {
+            return;
+        }
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
     }
 
     function renderInventoryTable(spareParts) {
@@ -1292,6 +1548,22 @@ body {
 
         document.querySelector('[data-role="spare-search"]')?.addEventListener('input', handleSearch);
         document.querySelector('[data-role="spare-request-table"]')?.addEventListener('click', handleRequestAction);
+
+        document.querySelectorAll('[data-role="spare-request-modal-close"]').forEach(button => {
+            button.addEventListener('click', closeSpareRequestModal);
+        });
+
+        document.getElementById('spare-request-modal')?.addEventListener('click', event => {
+            if (event.target === event.currentTarget) {
+                closeSpareRequestModal();
+            }
+        });
+
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                closeSpareRequestModal();
+            }
+        });
 
         document.querySelectorAll('[data-desk-link]').forEach(link => {
             link.href = `/app/${link.dataset.deskLink.toLowerCase().replace(/ /g, '-')}`;
