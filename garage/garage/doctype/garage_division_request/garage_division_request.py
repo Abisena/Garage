@@ -28,7 +28,8 @@ class GarageDivisionRequest(Document):
         ):
             frappe.throw(_("Divisi pemohon dan divisi tujuan tidak boleh sama."))
 
-        self.requested_by_full_name = self._resolve_full_name(self.requested_by)
+        if self.requested_by and not self.requested_by_full_name:
+            self.requested_by_full_name = self._resolve_full_name(self.requested_by)
 
         if not self.request_scope and self.reference_type and self.reference_name:
             self.request_scope = _("{0} {1}").format(self.reference_type, self.reference_name)
