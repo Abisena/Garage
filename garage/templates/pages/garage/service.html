@@ -1517,12 +1517,13 @@ body {
                         <th>Service Order</th>
                         <th>Kendaraan</th>
                         <th>Customer</th>
+                        <th>Status</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody id="table-progress">
                     <tr>
-                        <td colspan="4">
+                        <td colspan="5">
                             <div class="loading-state">
                                 <div class="loading-spinner"></div>
                                 <p>Loading data...</p>
@@ -1876,7 +1877,7 @@ body {
         if (!orders || orders.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="4">
+                    <td colspan="5">
                         <div class="empty-state">
                             <div class="empty-state__icon">⚙️</div>
                             <div class="empty-state__title">Tidak ada service dalam pengerjaan</div>
@@ -1911,6 +1912,7 @@ body {
                         <div class="customer-contact">${order.customer_phone || '-'}</div>
                     </div>
                 </td>
+                <td>${getStatusBadge(order.status)}</td>
                 <td>
                     <button class="action-btn" data-order="${escapeAttribute(order.name || '')}" onclick="openStatusUpdateModal(this.dataset.order)">
                         🔄 Update
