@@ -11,6 +11,8 @@ import frappe
 from frappe import _
 from frappe.utils import cint, cstr, flt, get_datetime, get_url, now_datetime, nowdate
 
+from garage.utils import service_estimate
+
 TECHNICIAN_ACTIVE_TASK_STATUSES = {"Pending", "In Progress"}
 SERVICE_ORDER_ACTIVE_STATUSES = {
     "Draft",
@@ -2927,6 +2929,7 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
     vehicle_payload = _filter_fields(data, vehicle_fields)
     intake_notes = (data.get("notes") or "").strip()
     vehicle_name: Optional[str] = None
+    service_doc: Optional[frappe.Document] = None
 
     if vehicle_payload:
         vehicle_doc = frappe.new_doc("Garage Vehicle")
@@ -3041,7 +3044,11 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         created["service_order"] = service_doc.name
         created["service_order_status"] = service_doc.status
 
-    return created
+    pdf_payload = None
+    if service_doc:
+        pdf_payload = service_estimate.create_service_estimate_pdf(service_doc.name)
+
+    return {"created": created, "estimate_pdf": pdf_payload}
 
 
 @frappe.whitelist()

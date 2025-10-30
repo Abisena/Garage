@@ -480,10 +480,22 @@ const VEHICLE_BRAND_MODELS = {
                     ]);
                     
                     this.submitForm(
-                        this.forms.intake, 
-                        'garage.api.portal.register_customer_vehicle', 
-                        { payload }, 
-                        'Data intake tersimpan.'
+                        this.forms.intake,
+                        'garage.api.portal.register_customer_vehicle',
+                        { payload },
+                        'Data intake tersimpan.',
+                        {
+                            onSuccess: (response) => {
+                                const pdf = response?.message?.estimate_pdf;
+                                if (pdf?.content) {
+                                    this.downloadBase64File(
+                                        pdf.content,
+                                        pdf.filename || 'estimasi-service.pdf',
+                                        pdf.mime_type || 'application/pdf'
+                                    );
+                                }
+                            },
+                        }
                     );
                 });
                 
@@ -3455,7 +3467,8 @@ const VEHICLE_BRAND_MODELS = {
             }, delay);
         }
 
-        submitForm(form, method, args, successMessage) {
+        submitForm(form, method, args, successMessage, options = {}) {
+            const opts = options || {};
             const primaryButton = form.querySelector('button.primary');
             if (primaryButton) {
                 primaryButton.disabled = true;
@@ -3464,10 +3477,17 @@ const VEHICLE_BRAND_MODELS = {
                 method,
                 args,
                 freeze: true,
-                callback: () => {
+                callback: (response) => {
                     frappe.show_alert({ message: __(successMessage), indicator: 'green' });
                     this.resetForm(form);
                     this.fetchBootstrap(false);
+                    if (typeof opts.onSuccess === 'function') {
+                        try {
+                            opts.onSuccess(response);
+                        } catch (error) {
+                            console.error('Post-submit handler failed', error);
+                        }
+                    }
                 },
                 always: () => {
                     if (primaryButton) {
@@ -3475,6 +3495,33 @@ const VEHICLE_BRAND_MODELS = {
                     }
                 },
             });
+        }
+
+        downloadBase64File(content, filename, mimeType = 'application/pdf') {
+            if (!content) {
+                return;
+            }
+            try {
+                const sanitized = content.replace(/^data:[^,]+,/, '');
+                const binary = atob(sanitized);
+                const length = binary.length;
+                const buffer = new Uint8Array(length);
+                for (let index = 0; index < length; index += 1) {
+                    buffer[index] = binary.charCodeAt(index);
+                }
+                const blob = new Blob([buffer], { type: mimeType || 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename || 'download.pdf';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Failed to download PDF', error);
+                frappe.msgprint(__('Gagal mengunduh dokumen estimasi. Silakan coba lagi.'));
+            }
         }
 
         resetForm(form) {
