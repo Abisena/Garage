@@ -13,7 +13,7 @@
 <style>
 /* ============================================================================
    SERVICE MANAGEMENT PAGE - WORKFLOW BASED DESIGN
-   Three-Stage Pipeline: Inspection Entry → In Progress → Completed
+   Three-Stage Pipeline: Waiting Entry → In Progress → Completed
    ============================================================================ */
 
 :root {
@@ -825,6 +825,54 @@ body {
 .section-actions {
     display: flex;
     gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.section-search {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1 1 260px;
+    max-width: 340px;
+}
+
+.section-search input {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 14px 10px 38px;
+    border: 1px solid var(--border-base);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    color: var(--text-primary);
+    background: white;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.section-search input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.12);
+}
+
+.section-search__icon {
+    position: absolute;
+    top: 12px;
+    left: 14px;
+    font-size: 16px;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.section-search__meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    min-height: 16px;
+}
+
+.section-search__meta.is-visible {
+    color: var(--text-secondary);
 }
 
 .btn {
@@ -1434,10 +1482,10 @@ body {
         <div class="stat-card">
             <div class="stat-card__header">
                 <div class="stat-card__icon pending">📋</div>
-                <div class="stat-card__label">Inspection Entry</div>
+                <div class="stat-card__label">Waiting Entry</div>
             </div>
             <div class="stat-card__value" id="stat-inspection">-</div>
-            <div class="stat-card__subtitle">Menunggu inspeksi & planning</div>
+            <div class="stat-card__subtitle">Menunggu pekerjaan servis</div>
         </div>
 
         <div class="stat-card">
@@ -1459,14 +1507,19 @@ body {
         </div>
     </div>
 
-    <!-- Inspection Entry Section -->
+    <!-- Waiting Entry Section -->
     <div class="workflow-section">
         <div class="section-header">
             <div class="section-title">
-                <h2>📋 Inspection Entry</h2>
+                <h2>📋 Waiting Entry</h2>
                 <span class="section-badge pending" id="badge-inspection">0</span>
             </div>
             <div class="section-actions">
+                <div class="section-search">
+                    <span class="section-search__icon">🔍</span>
+                    <input type="search" id="inspection-search" placeholder="Cari order, customer, atau kendaraan" aria-label="Cari Waiting Entry" oninput="handleInspectionSearch(event)">
+                    <div class="section-search__meta" id="inspection-search-meta"></div>
+                </div>
                 <button class="btn btn-secondary" onclick="refreshData()">🔄 Refresh</button>
             </div>
         </div>
@@ -1481,7 +1534,7 @@ body {
                         <th>Keluhan Customer</th>
                         <th>Tgl. Masuk</th>
                         <th>Action</th>
-                        <th>Status</th>
+                        <th>Waiting</th>
                     </tr>
                 </thead>
                 <tbody id="table-inspection">
@@ -1595,6 +1648,8 @@ body {
     };
 
     const orderLookup = {};
+    let inspectionOrdersCache = [];
+    let inspectionSearchQuery = '';
 
     // ============================================================================
     // UTILITY FUNCTIONS
@@ -1686,6 +1741,19 @@ body {
         }
 
         return raw;
+    }
+
+    function formatVehiclePlate(plate) {
+        if (plate === undefined || plate === null) {
+            return '';
+        }
+
+        const value = plate.toString().trim();
+        if (!value) {
+            return '';
+        }
+
+        return value.toUpperCase();
     }
 
     function getRowClass(order) {
@@ -1808,22 +1876,89 @@ body {
 
     window.openStatusUpdateModal = openStatusUpdateModal;
 
+    function filterInspectionOrders(orders, query) {
+        if (!Array.isArray(orders)) {
+            return [];
+        }
+
+        const normalizedQuery = (query || '').trim().toLowerCase();
+        if (!normalizedQuery) {
+            return orders;
+        }
+
+        return orders.filter(order => {
+            if (!order) {
+                return false;
+            }
+
+            const fields = [
+                order.name,
+                order.customer_name,
+                order.customer,
+                order.customer_phone,
+                order.vehicle_plate,
+                formatVehiclePlate(order.vehicle_plate),
+                order.vehicle_brand,
+                order.vehicle_model,
+                order.vehicle_model_variant,
+                order.service_order_type,
+                order.service_notes
+            ];
+
+            return fields.some(value => {
+                if (value === undefined || value === null) {
+                    return false;
+                }
+                return value.toString().toLowerCase().includes(normalizedQuery);
+            });
+        });
+    }
+
+    function updateInspectionSearchMeta(visibleCount, totalCount) {
+        const metaElement = document.getElementById('inspection-search-meta');
+        if (!metaElement) {
+            return;
+        }
+
+        const activeQuery = inspectionSearchQuery.trim();
+        if (!activeQuery) {
+            metaElement.textContent = '';
+            metaElement.classList.remove('is-visible');
+            return;
+        }
+
+        metaElement.textContent = `Menampilkan ${visibleCount} dari ${totalCount} order`;
+        metaElement.classList.add('is-visible');
+    }
+
+    function applyInspectionSearch() {
+        const filtered = filterInspectionOrders(inspectionOrdersCache, inspectionSearchQuery);
+        renderInspectionTable(filtered);
+        updateInspectionSearchMeta(filtered.length, inspectionOrdersCache.length);
+    }
+
+    window.handleInspectionSearch = function(event) {
+        inspectionSearchQuery = event?.target?.value || '';
+        applyInspectionSearch();
+    };
+
     // ============================================================================
     // TABLE RENDERING FUNCTIONS
     // ============================================================================
 
-    // Render Inspection Entry table
+    // Render Waiting Entry table
     function renderInspectionTable(orders) {
         const tbody = document.getElementById('table-inspection');
-        
+
         if (!orders || orders.length === 0) {
+            const hasQuery = (inspectionSearchQuery || '').trim().length > 0;
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7">
                         <div class="empty-state">
                             <div class="empty-state__icon">📋</div>
-                            <div class="empty-state__title">Tidak ada service untuk inspeksi</div>
-                            <div class="empty-state__message">Service order baru dari intake akan muncul di sini</div>
+                            <div class="empty-state__title">${hasQuery ? 'Tidak ada hasil pencarian' : 'Tidak ada order di Waiting Entry'}</div>
+                            <div class="empty-state__message">${hasQuery ? 'Coba ubah kata kunci pencarian Anda' : 'Service order baru dari intake akan muncul di sini'}</div>
                         </div>
                     </td>
                 </tr>
@@ -1844,7 +1979,7 @@ body {
                 </td>
                 <td>
                     <div class="vehicle-info">
-                        <div class="vehicle-plate">${order.vehicle_plate || '-'}</div>
+                        <div class="vehicle-plate">${escapeHtml(formatVehiclePlate(order.vehicle_plate) || '-')}</div>
                         <div class="vehicle-model">${[order.vehicle_brand, order.vehicle_model, order.vehicle_model_variant].filter(Boolean).join(' ')}</div>
                     </div>
                 </td>
@@ -1902,7 +2037,7 @@ body {
                 </td>
                 <td>
                     <div class="vehicle-info">
-                        <div class="vehicle-plate">${order.vehicle_plate || '-'}</div>
+                        <div class="vehicle-plate">${escapeHtml(formatVehiclePlate(order.vehicle_plate) || '-')}</div>
                         <div class="vehicle-model">${[order.vehicle_brand, order.vehicle_model, order.vehicle_model_variant].filter(Boolean).join(' ')}</div>
                     </div>
                 </td>
@@ -1953,7 +2088,7 @@ body {
                 </td>
                 <td>
                     <div class="vehicle-info">
-                        <div class="vehicle-plate">${order.vehicle_plate || '-'}</div>
+                        <div class="vehicle-plate">${escapeHtml(formatVehiclePlate(order.vehicle_plate) || '-')}</div>
                         <div class="vehicle-model">${[order.vehicle_brand, order.vehicle_model, order.vehicle_model_variant].filter(Boolean).join(' ')}</div>
                     </div>
                 </td>
@@ -2012,7 +2147,7 @@ body {
                 const schedule = formatDateTime(order.service_booking_date);
                 const customer = order.customer_name || order.customer || '-';
                 const vehicleParts = [
-                    order.vehicle_plate,
+                    formatVehiclePlate(order.vehicle_plate),
                     [order.vehicle_brand, order.vehicle_model, order.vehicle_model_variant].filter(Boolean).join(' ')
                 ].filter(Boolean);
                 const vehicleInfo = vehicleParts.join(' • ');
@@ -2105,7 +2240,9 @@ body {
             // Update UI
             renderBookingAlerts(allOrders);
             updateStats(categorized);
-            renderInspectionTable(categorized.inspection);
+
+            inspectionOrdersCache = categorized.inspection || [];
+            applyInspectionSearch();
             renderProgressTable(categorized.progress);
             renderCompletedTable(categorized.completed);
 
@@ -2128,6 +2265,13 @@ body {
                 </tr>
             `;
 
+            inspectionOrdersCache = [];
+            inspectionSearchQuery = '';
+            const searchInput = document.getElementById('inspection-search');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            updateInspectionSearchMeta(0, 0);
             document.getElementById('table-inspection').innerHTML = buildErrorRow(7);
             document.getElementById('table-progress').innerHTML = buildErrorRow(4);
             document.getElementById('table-completed').innerHTML = buildErrorRow(7);
