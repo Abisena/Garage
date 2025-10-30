@@ -1540,6 +1540,9 @@ a:hover {
     let sparePartIndex = new Map();
     let catalogLoadedFromOrder = false;
     let technicianRoster = [];
+    let baseTechnicianRoster = [];
+    let currentAssignedMechanic = '';
+    let currentAssignedMechanicDisplay = '';
     // ====================================================================
 
     function setSparePartCatalog(parts) {
@@ -1652,6 +1655,7 @@ a:hover {
             status,
             max_active_jobs: resolvedMaxJobs,
             active_task_count: resolvedLoad,
+            base_active_task_count: resolvedLoad,
             available_capacity: availableCapacity,
             is_available: status === 'Active' && resolvedLoad < resolvedMaxJobs,
             skill_tags: entry.skill_tags || '',
@@ -1879,33 +1883,110 @@ a:hover {
 
     function setTechnicianRoster(roster) {
         if (Array.isArray(roster)) {
-            technicianRoster = roster.map(normalizeTechnicianEntry).filter(Boolean);
+            baseTechnicianRoster = roster.map(normalizeTechnicianEntry).filter(Boolean);
+        } else {
+            baseTechnicianRoster = [];
+        }
+
+        refreshTechnicianRosterState();
+    }
+
+    function refreshTechnicianRosterState() {
+        const select = document.getElementById('assigned_mechanic');
+        const normalizedSelection = (currentAssignedMechanic || '').trim();
+        const baseRoster = Array.isArray(baseTechnicianRoster) ? baseTechnicianRoster : [];
+
+        if (baseRoster.length) {
+            technicianRoster = baseRoster.map((entry) => {
+                if (!entry) {
+                    return null;
+                }
+
+                const baseLoad = Number(entry.base_active_task_count ?? entry.active_task_count ?? 0);
+                const maxJobsNumeric = Number(entry.max_active_jobs);
+                const resolvedMaxJobs = Number.isFinite(maxJobsNumeric) && maxJobsNumeric > 0
+                    ? Math.floor(maxJobsNumeric)
+                    : DEFAULT_TECHNICIAN_CAPACITY;
+
+                const clone = { ...entry };
+                clone.max_active_jobs = resolvedMaxJobs;
+                clone.active_task_count = baseLoad;
+                clone.available_capacity = Math.max(0, resolvedMaxJobs - baseLoad);
+                clone.is_available = clone.status === 'Active' && baseLoad < resolvedMaxJobs;
+
+                if (normalizedSelection && clone.identifier === normalizedSelection) {
+                    const adjustedLoad = baseLoad + 1;
+                    clone.active_task_count = adjustedLoad;
+                    clone.available_capacity = Math.max(0, resolvedMaxJobs - adjustedLoad);
+                    clone.is_available = clone.status === 'Active' && adjustedLoad < resolvedMaxJobs;
+                }
+
+                return clone;
+            }).filter(Boolean);
         } else {
             technicianRoster = [];
         }
 
-        const select = document.getElementById('assigned_mechanic');
-        const currentValue = select ? (select.dataset.currentValue || select.value || '') : '';
-        updateTechnicianSelect(currentValue);
+        const targetValue = normalizedSelection
+            || (select ? (select.dataset.currentValue || select.value || '') : '');
+
+        if (select) {
+            select.dataset.currentValue = targetValue;
+            if (targetValue) {
+                select.dataset.currentDisplay = currentAssignedMechanicDisplay
+                    || select.dataset.currentDisplay
+                    || '';
+            } else {
+                select.dataset.currentDisplay = '';
+            }
+        }
+
+        updateTechnicianSelect(targetValue);
+
+        const updatedSelect = document.getElementById('assigned_mechanic');
+        if (updatedSelect) {
+            const selectedOption = updatedSelect.options[updatedSelect.selectedIndex];
+            if (targetValue) {
+                const nextDisplay = selectedOption
+                    ? (selectedOption.dataset.displayName || selectedOption.textContent)
+                    : '';
+                currentAssignedMechanic = targetValue;
+                currentAssignedMechanicDisplay = nextDisplay;
+                updatedSelect.dataset.currentValue = targetValue;
+                updatedSelect.dataset.currentDisplay = nextDisplay;
+            } else {
+                currentAssignedMechanic = '';
+                currentAssignedMechanicDisplay = '';
+                updatedSelect.dataset.currentValue = '';
+                updatedSelect.dataset.currentDisplay = '';
+            }
+        } else {
+            currentAssignedMechanic = targetValue || '';
+            if (!targetValue) {
+                currentAssignedMechanicDisplay = '';
+            }
+        }
+
         renderTechnicianRoster();
     }
 
     function syncAssignedMechanicSelection(identifier, displayName) {
         const select = document.getElementById('assigned_mechanic');
-        if (!select) {
-            return;
-        }
-
         const normalizedValue = identifier ? String(identifier).trim() : '';
         const rosterEntry = normalizedValue ? findTechnicianByIdentifier(normalizedValue) : null;
         const resolvedDisplay = displayName
             ? String(displayName).trim()
             : (rosterEntry ? rosterEntry.employee_name : normalizedValue);
 
-        select.dataset.currentValue = normalizedValue;
-        select.dataset.currentDisplay = resolvedDisplay || '';
+        currentAssignedMechanic = normalizedValue;
+        currentAssignedMechanicDisplay = resolvedDisplay || '';
 
-        updateTechnicianSelect(normalizedValue);
+        if (select) {
+            select.dataset.currentValue = normalizedValue;
+            select.dataset.currentDisplay = currentAssignedMechanicDisplay;
+        }
+
+        refreshTechnicianRosterState();
     }
 
     function bindTechnicianSelect() {
@@ -1920,11 +2001,18 @@ a:hover {
 
         select.addEventListener('change', () => {
             const option = select.options[select.selectedIndex];
-            select.dataset.currentValue = select.value || '';
-            select.dataset.currentDisplay = option
+            const value = select.value || '';
+            const display = option
                 ? (option.dataset.displayName || option.textContent)
                 : '';
-            updateTechnicianStatusHint();
+
+            select.dataset.currentValue = value;
+            select.dataset.currentDisplay = display;
+
+            currentAssignedMechanic = value ? String(value).trim() : '';
+            currentAssignedMechanicDisplay = currentAssignedMechanic ? display : '';
+
+            refreshTechnicianRosterState();
         });
     }
 
