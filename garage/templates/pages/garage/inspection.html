@@ -89,16 +89,16 @@ a:hover {
 .page-scaffold {
     max-width: 1240px;
     margin: 0 auto;
-    padding: 32px 16px 120px;
+    padding: 24px 16px 72px;
     position: relative;
 }
 
 .hero-section {
-    background: linear-gradient(135deg, rgba(0, 102, 255, 0.08) 0%, rgba(255, 255, 255, 0.9) 100%);
-    padding: 32px;
+    background: linear-gradient(135deg, rgba(0, 102, 255, 0.05) 0%, rgba(255, 255, 255, 0.9) 100%);
+    padding: 20px 24px;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-md);
-    margin-bottom: 28px;
+    margin-bottom: 24px;
 }
 
 .hero-top {
@@ -199,13 +199,13 @@ a:hover {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 32px;
+    gap: 24px;
 }
 
 .hero-text h1 {
-    font-size: 32px;
+    font-size: 26px;
     font-weight: 700;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     color: var(--gray-900);
 }
 
@@ -248,45 +248,6 @@ a:hover {
     color: var(--text-primary);
 }
 
-.summary-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
-    margin-top: 28px;
-}
-
-.summary-card {
-    background: white;
-    border-radius: var(--radius-lg);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 20px 22px;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
-}
-
-.summary-card h3 {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    margin-bottom: 8px;
-    letter-spacing: 0.6px;
-}
-
-.summary-card p {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--gray-900);
-    line-height: 1.3;
-    word-break: break-word;
-}
-
-.summary-card .summary-subtext {
-    display: block;
-    margin-top: 6px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-secondary);
-}
 
 .content-grid {
     display: flex;
@@ -304,6 +265,73 @@ a:hover {
     display: flex;
     flex-direction: column;
     gap: 24px;
+}
+
+.intake-meta {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.intake-meta__list {
+    display: grid;
+    gap: 12px;
+}
+
+.intake-meta__item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+}
+
+.intake-meta__label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.6px;
+}
+
+.intake-meta__value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gray-900);
+    word-break: break-word;
+    text-align: right;
+}
+
+.intake-assignment {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.intake-assignment label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 6px;
+}
+
+.intake-assignment input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.intake-assignment input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.12);
 }
 
 .intake-summary {
@@ -991,20 +1019,18 @@ a:hover {
 }
 
 .action-bar {
-    position: sticky;
-    bottom: 0;
-    margin-top: 32px;
+    position: relative;
+    margin-top: 40px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 16px;
-    padding: 18px 24px;
+    padding: 24px 28px;
     border-radius: var(--radius-xl);
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.16);
-    backdrop-filter: blur(18px);
-    z-index: 20;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-md);
+    z-index: 1;
 }
 
 .action-info {
@@ -1024,50 +1050,37 @@ a:hover {
 
 .action-tax-row {
     display: flex;
-    gap: 12px;
-    font-size: 13px;
-    color: var(--text-muted);
+    gap: 16px;
+    font-size: 18px;
+    color: var(--gray-800);
 }
 
 .action-tax-row strong {
-    font-size: 14px;
+    font-size: 20px;
     color: var(--gray-900);
 }
 
 .action-label {
-    font-size: 13px;
-    color: var(--text-muted);
+    font-size: 15px;
+    color: var(--gray-700);
     text-transform: uppercase;
     letter-spacing: 0.6px;
 }
 
 .action-amount {
-    font-size: 20px;
+    font-size: 28px;
     font-weight: 700;
     color: var(--gray-900);
 }
 
 .action-buttons {
     display: flex;
-    gap: 12px;
+    gap: 16px;
 }
 
-.summary-tax {
-    margin-top: 8px;
-    display: grid;
-    gap: 6px;
-}
-
-.summary-tax__row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    color: var(--text-muted);
-}
-
-.summary-tax__value {
-    font-weight: 600;
-    color: var(--gray-800);
+.action-buttons .btn {
+    font-size: 18px;
+    padding: 16px 32px;
 }
 
 @media (max-width: 1024px) {
@@ -1185,43 +1198,6 @@ a:hover {
                 </div>
             </div>
         </div>
-        <div class="summary-cards">
-            <article class="summary-card">
-                <h3>Order ID</h3>
-                <p id="display_order_id">-</p>
-            </article>
-            <article class="summary-card">
-                <h3>Customer</h3>
-                <p id="display_customer">-</p>
-            </article>
-            <article class="summary-card">
-                <h3>Kendaraan</h3>
-                <p id="display_vehicle">-</p>
-            </article>
-            <article class="summary-card">
-                <h3>Total Estimasi</h3>
-                <p id="display_total_estimate">Rp 0</p>
-                <!-- <small class="summary-subtext" id="display_estimate_breakdown">Jasa Rp 0 + Sparepart &amp; Bahan Rp 0</small> -->
-                <div class="summary-tax">
-                    <div class="summary-tax__row">
-                        <span>DPP</span>
-                        <span class="summary-tax__value" id="display_dpp">Rp 0</span>
-                    </div>
-                    <div class="summary-tax__row">
-                        <span>PPN (11%)</span>
-                        <span class="summary-tax__value" id="display_ppn">Rp 0</span>
-                    </div>
-                    <div class="summary-tax__row">
-                        <span>PPH (2,5%)</span>
-                        <span class="summary-tax__value" id="display_pph">Rp 0</span>
-                    </div>
-                    <div class="summary-tax__row">
-                        <span>Total + Pajak</span>
-                        <span class="summary-tax__value" id="display_total_with_tax">Rp 0</span>
-                    </div>
-                </div>
-            </article>
-        </div>
     </header>
 
     <div class="content-grid">
@@ -1239,6 +1215,32 @@ a:hover {
                     </div>
                 </div>
                 <div class="intake-summary">
+                    <div class="intake-meta">
+                        <div class="intake-meta__list">
+                            <div class="intake-meta__item">
+                                <span class="intake-meta__label">Order ID</span>
+                                <span class="intake-meta__value" id="display_order_id">-</span>
+                            </div>
+                            <div class="intake-meta__item">
+                                <span class="intake-meta__label">Customer</span>
+                                <span class="intake-meta__value" id="display_customer">-</span>
+                            </div>
+                            <div class="intake-meta__item">
+                                <span class="intake-meta__label">Kendaraan</span>
+                                <span class="intake-meta__value" id="display_vehicle">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="intake-assignment">
+                        <div>
+                            <label for="assigned_mechanic">Mekanik Ditugaskan</label>
+                            <input type="text" id="assigned_mechanic" name="assigned_mechanic" placeholder="Nama mekanik bertugas" autocomplete="off">
+                        </div>
+                        <div>
+                            <label for="parts_runner_mechanic">Mekanik Pengambil Sparepart &amp; Paket Servis</label>
+                            <input type="text" id="parts_runner_mechanic" name="parts_runner_mechanic" placeholder="Nama mekanik untuk pengambilan" autocomplete="off">
+                        </div>
+                    </div>
                     <div class="intake-summary-group">
                         <ul class="intake-summary-list" id="intake_summary_service_list">
                             <li class="placeholder">Belum ada jasa terdaftar.</li>
@@ -1576,30 +1578,9 @@ a:hover {
         const pph = Math.max(0, Math.round(totals.pph ?? dpp * TAX_RATES.pph));
         const totalWithTax = Math.max(0, Math.round(totals.totalWithTax ?? (dpp + ppn + pph)));
 
-        const summary = document.getElementById('display_total_estimate');
         const action = document.getElementById('action_total_estimate');
-        if (summary) {
-            summary.textContent = formatCurrency(totalWithTax);
-        }
         if (action) {
             action.textContent = formatCurrency(totalWithTax);
-        }
-
-        const summaryDpp = document.getElementById('display_dpp');
-        if (summaryDpp) {
-            summaryDpp.textContent = formatCurrency(dpp);
-        }
-        const summaryPpn = document.getElementById('display_ppn');
-        if (summaryPpn) {
-            summaryPpn.textContent = formatCurrency(ppn);
-        }
-        const summaryPph = document.getElementById('display_pph');
-        if (summaryPph) {
-            summaryPph.textContent = formatCurrency(pph);
-        }
-        const summaryTotalWithTax = document.getElementById('display_total_with_tax');
-        if (summaryTotalWithTax) {
-            summaryTotalWithTax.textContent = formatCurrency(totalWithTax);
         }
 
         const actionDpp = document.getElementById('action_dpp');
@@ -1616,11 +1597,10 @@ a:hover {
         }
     }
 
-    function updateEstimatedDeliveryDisplay(sourceValue) {
+    function updateEstimatedDeliveryDisplay() {
         const display = document.getElementById('display_estimated_delivery');
-        const dateValue = sourceValue ?? document.getElementById('estimated_delivery_date')?.value;
         if (display) {
-            display.textContent = dateValue ? formatDisplayDate(dateValue) : '-';
+            display.textContent = formatDisplayDate(new Date());
         }
     }
 
@@ -2347,9 +2327,19 @@ a:hover {
                 intakeNotesDisplay.textContent = intakeNotes || 'Belum ada catatan tambahan dari intake.';
             }
 
+            const assignedMechanicInput = document.getElementById('assigned_mechanic');
+            if (assignedMechanicInput) {
+                assignedMechanicInput.value = order.assigned_mechanic || order.mechanic_in_charge || '';
+            }
+
+            const partsRunnerMechanicInput = document.getElementById('parts_runner_mechanic');
+            if (partsRunnerMechanicInput) {
+                partsRunnerMechanicInput.value = order.parts_runner_mechanic || order.parts_runner || '';
+            }
+
             applyServiceTypeBadge(order.service_order_type || '-');
 
-            updateEstimatedDeliveryDisplay(order.estimated_delivery_date || null);
+            updateEstimatedDeliveryDisplay();
             applyPriorityBadge(order.priority || '-');
 
             const summaryInput = document.getElementById('inspection_summary');
@@ -2466,6 +2456,8 @@ a:hover {
             const estimatedDateInput = document.getElementById('estimated_delivery_date');
             const summaryInput = document.getElementById('inspection_summary');
             const notesInput = document.getElementById('service_notes');
+            const assignedMechanicInput = document.getElementById('assigned_mechanic');
+            const partsRunnerMechanicInput = document.getElementById('parts_runner_mechanic');
 
             const data = {
                 order_id: orderId,
@@ -2474,6 +2466,9 @@ a:hover {
                 total_estimated_amount: totalEstimatedAmount,
                 inspection_summary: summaryInput ? summaryInput.value : (latestOrder?.inspection_summary || ''),
                 service_notes: notesInput ? notesInput.value : (latestOrder?.service_notes || ''),
+                assigned_mechanic: assignedMechanicInput ? assignedMechanicInput.value.trim() : (latestOrder?.assigned_mechanic || ''),
+                parts_runner_mechanic: partsRunnerMechanicInput ? partsRunnerMechanicInput.value.trim() : (latestOrder?.parts_runner_mechanic || ''),
+                parts_runner: partsRunnerMechanicInput ? partsRunnerMechanicInput.value.trim() : (latestOrder?.parts_runner || ''),
                 required_parts: sanitizedParts,
                 status: 'Work In Progress'
             };
