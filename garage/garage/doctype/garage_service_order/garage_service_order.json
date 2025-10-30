@@ -15,6 +15,8 @@
   "engine": "InnoDB",
   "field_order": [
     "service_order_type",
+    "service_bundle",
+    "service_bundle_name",
     "order_category",
     "status",
     "priority",
@@ -53,6 +55,17 @@
       "options": "Service/Repair\nInspection\nWarranty\nInsurance Claim",
       "default": "Service/Repair",
       "reqd": 1
+    },
+    {
+      "fieldname": "service_bundle",
+      "fieldtype": "Link",
+      "label": "Service Bundle",
+      "options": "Garage Service Bundle"
+    },
+    {
+      "fieldname": "service_bundle_name",
+      "fieldtype": "Data",
+      "label": "Service Bundle Name"
     },
     {
       "fieldname": "order_category",

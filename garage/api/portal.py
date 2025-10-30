@@ -115,6 +115,8 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "vehicle",
             "service_advisor",
             "primary_contact",
+            "service_bundle",
+            "service_bundle_name",
             "job_card_status",
             "work_order_status",
             "qc_status",
@@ -213,6 +215,8 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "rejection_reason",
             "inspection_summary",
             "service_notes",
+            "service_bundle",
+            "service_bundle_name",
         },
     },
     "Garage Spare Part Order": {
@@ -573,7 +577,12 @@ def _serialize_bundle_part(row: Any, usage: str) -> Optional[Dict[str, Any]]:
     }
 
 
-def _bundle_row_to_required_part(row: Any, usage: str = "sparepart") -> Optional[Dict[str, Any]]:
+def _bundle_row_to_required_part(
+    row: Any,
+    usage: str = "sparepart",
+    *,
+    include_meta: bool = False,
+) -> Optional[Dict[str, Any]]:
     """Convert a service bundle line item into a required part row."""
 
     if hasattr(row, "as_dict") and callable(row.as_dict):
@@ -624,6 +633,38 @@ def _bundle_row_to_required_part(row: Any, usage: str = "sparepart") -> Optional
         amount = amount or (qty * rate)
         warehouse = warehouse or (part_doc.warehouse_location or "")
 
+    catalog_name = None
+    catalog_part_code = None
+    catalog_stock_qty = None
+    catalog_reserved_qty = None
+    catalog_managed_by = None
+    catalog_unit_price = None
+    catalog_image = None
+
+    if part_doc:
+        catalog_name = part_doc.name
+        catalog_part_code = part_doc.part_code or part_doc.name
+        if getattr(part_doc, "stock_qty", None) is not None:
+            catalog_stock_qty = flt(part_doc.stock_qty)
+        if getattr(part_doc, "reserved_qty", None) is not None:
+            catalog_reserved_qty = flt(part_doc.reserved_qty)
+        catalog_managed_by = getattr(part_doc, "managed_by", None)
+        if getattr(part_doc, "unit_price", None) is not None:
+            catalog_unit_price = flt(part_doc.unit_price)
+        catalog_image = getattr(part_doc, "image", None)
+    else:
+        if part_code:
+            catalog_part_code = part_code
+        if data.get("stock_qty") is not None:
+            catalog_stock_qty = flt(data.get("stock_qty"))
+        if data.get("reserved_qty") is not None:
+            catalog_reserved_qty = flt(data.get("reserved_qty"))
+        if data.get("managed_by"):
+            catalog_managed_by = data.get("managed_by")
+        if data.get("unit_price") is not None:
+            catalog_unit_price = flt(data.get("unit_price"))
+        catalog_image = data.get("image")
+
     qty = qty if qty > 0 else 1.0
     amount = amount if amount > 0 else qty * rate
 
@@ -634,7 +675,7 @@ def _bundle_row_to_required_part(row: Any, usage: str = "sparepart") -> Optional
     if usage == "material" and not warehouse:
         source = "Purchase"
 
-    return {
+    payload: Dict[str, Any] = {
         "item_code": part_code or part_name,
         "item_name": part_name or part_code,
         "description": description,
@@ -645,7 +686,23 @@ def _bundle_row_to_required_part(row: Any, usage: str = "sparepart") -> Optional
         "warehouse": warehouse,
         "rate": rate,
         "amount": amount,
+        "discount_amount": 0,
     }
+
+    if include_meta:
+        payload.update(
+            {
+                "catalog_name": catalog_name,
+                "catalog_part_code": catalog_part_code or (part_code or part_name),
+                "catalog_stock_qty": catalog_stock_qty,
+                "catalog_reserved_qty": catalog_reserved_qty,
+                "catalog_managed_by": catalog_managed_by,
+                "catalog_unit_price": catalog_unit_price,
+                "catalog_image": catalog_image,
+            }
+        )
+
+    return payload
 
 
 def _serialize_service_bundle(doc: Any, base: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
@@ -2284,6 +2341,8 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
         "job_card_status": doc.job_card_status,
         "work_order_status": doc.work_order_status,
         "qc_status": doc.qc_status,
+        "service_bundle": getattr(doc, "service_bundle", None),
+        "service_bundle_name": getattr(doc, "service_bundle_name", None),
     }
     
     # Get customer details
@@ -2362,7 +2421,44 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
             result["progress_logs"] = logs
     except Exception:
         pass
-    
+
+    bundle_details = None
+    bundle_required_parts: List[Dict[str, Any]] = []
+    bundle_identifier = getattr(doc, "service_bundle", None)
+    bundle_label = result.get("service_bundle_name")
+
+    if bundle_identifier:
+        try:
+            bundle_doc = frappe.get_doc("Garage Service Bundle", bundle_identifier)
+        except Exception:
+            bundle_doc = None
+
+        if bundle_doc:
+            bundle_details = _serialize_service_bundle(bundle_doc)
+            if not bundle_label:
+                bundle_label = bundle_details.get("bundle_name") or bundle_doc.name
+
+            for row in bundle_doc.get("spare_parts", []) or []:
+                part_row = _bundle_row_to_required_part(row, "sparepart", include_meta=True)
+                if part_row:
+                    bundle_required_parts.append(part_row)
+
+            for row in bundle_doc.get("materials", []) or []:
+                part_row = _bundle_row_to_required_part(row, "material", include_meta=True)
+                if part_row:
+                    bundle_required_parts.append(part_row)
+        elif not bundle_label:
+            bundle_label = bundle_identifier
+
+    if bundle_label:
+        result["service_bundle_name"] = bundle_label
+
+    if bundle_details:
+        result["service_bundle_details"] = bundle_details
+
+    if bundle_required_parts:
+        result["bundle_required_parts"] = bundle_required_parts
+
     # ========== CRITICAL: GET AVAILABLE SPARE PARTS ==========
     # This is needed for the dropdown in inspection page
     result["available_spare_parts"] = _list_dicts(
@@ -2910,12 +3006,16 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         bundle_name = (data.get("service_bundle") or "").strip()
         if bundle_name:
             required_parts: List[Dict[str, Any]] = []
+            bundle_label = bundle_name
             try:
                 bundle_doc = _get_doc("Garage Service Bundle", bundle_name)
             except Exception:
                 bundle_doc = None
 
             if bundle_doc:
+                bundle_label = getattr(bundle_doc, "bundle_name", None) or bundle_doc.name
+                service_payload["service_bundle"] = bundle_doc.name
+
                 for row in bundle_doc.get("spare_parts", []) or []:
                     part_row = _bundle_row_to_required_part(row, "sparepart")
                     if part_row:
@@ -2931,6 +3031,11 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
                 bundle_total = flt(getattr(bundle_doc, "grand_total", 0))
                 if bundle_total > 0 and not service_payload.get("total_estimated_amount"):
                     service_payload["total_estimated_amount"] = bundle_total
+            else:
+                service_payload["service_bundle"] = bundle_name
+
+            if bundle_label:
+                service_payload["service_bundle_name"] = bundle_label
 
         service_doc = _insert_document("Garage Service Order", service_payload)
         created["service_order"] = service_doc.name
