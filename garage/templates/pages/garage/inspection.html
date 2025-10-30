@@ -1251,7 +1251,7 @@ a:hover {
             <section class="section-card intake-summary-card">
                 <div class="section-header">
                     <div>
-                        <h2>📦 Ringkasan Intake</h2>
+                        <h2>📦 Detail Paket Service</h2>
                         <p>Detail paket servis yang dipilih saat registrasi.</p>
                     </div>
                     <div class="section-tags">
@@ -1799,8 +1799,42 @@ a:hover {
 
         function deriveServiceSummaryItems(order) {
             const items = [];
-            const tasks = Array.isArray(order?.service_tasks) ? order.service_tasks : [];
+            const serviceType = order?.service_order_type || '';
+            const bundleName = order?.service_bundle_name
+                || order?.service_bundle_details?.bundle_name
+                || order?.service_bundle_details?.name
+                || '';
+            const bundleDescription = order?.service_bundle_details?.description
+                || order?.service_bundle_details?.notes
+                || '';
 
+            const labelParts = [];
+            if (serviceType) {
+                labelParts.push(serviceType);
+            }
+            if (bundleName) {
+                if (labelParts.length) {
+                    const lastIndex = labelParts.length - 1;
+                    labelParts[lastIndex] = `${labelParts[lastIndex]} (${bundleName})`;
+                } else {
+                    labelParts.push(bundleName);
+                }
+            }
+
+            const primaryLabel = labelParts.join(' ').trim();
+            if (primaryLabel) {
+                const metaPieces = [];
+                if (bundleDescription && bundleDescription !== bundleName) {
+                    metaPieces.push(bundleDescription);
+                }
+                const meta = metaPieces.join(' • ');
+                items.push({
+                    label: primaryLabel,
+                    meta: meta || undefined,
+                });
+            }
+
+            const tasks = Array.isArray(order?.service_tasks) ? order.service_tasks : [];
             tasks.forEach((task) => {
                 const label = task.task || task.description;
                 if (!label) {
@@ -1813,14 +1847,15 @@ a:hover {
                 if (task.technician_name) {
                     metaPieces.push(`Teknisi: ${task.technician_name}`);
                 }
+                const meta = metaPieces.join(' • ');
                 items.push({
                     label,
-                    meta: metaPieces.join(' • '),
+                    meta: meta || undefined,
                 });
             });
 
-            if (!items.length && order?.service_order_type) {
-                items.push({ label: order.service_order_type });
+            if (!items.length && (serviceType || bundleName)) {
+                items.push({ label: serviceType || bundleName });
             }
 
             return items;
@@ -2353,29 +2388,38 @@ a:hover {
             }
 
             const rawRequiredParts = Array.isArray(order.required_parts) ? order.required_parts : [];
+            const bundleRequiredParts = Array.isArray(order.bundle_required_parts) ? order.bundle_required_parts : [];
+            const sourceParts = rawRequiredParts.length ? rawRequiredParts : bundleRequiredParts;
             const totalEstimateFromServer = Number(order.total_estimated_amount);
 
-            preserveServerEstimate = !rawRequiredParts.length && !Number.isNaN(totalEstimateFromServer) && totalEstimateFromServer > 0;
+            preserveServerEstimate = !sourceParts.length && !Number.isNaN(totalEstimateFromServer) && totalEstimateFromServer > 0;
 
-            if (rawRequiredParts.length) {
-                requiredParts = rawRequiredParts.map((part) => {
+            if (sourceParts.length) {
+                requiredParts = sourceParts.map((part) => {
                     const base = {
                         item_code: part.item_code || part.part_code || '',
                         item_name: part.item_name || part.part_name || '',
                         description: part.description || '',
                         qty: Number(part.qty ?? part.quantity ?? 1) || 0,
-                        rate: Number(part.rate ?? part.price ?? 0) || 0,
+                        rate: Number(part.rate ?? part.price ?? part.unit_price ?? 0) || 0,
                         discount_amount: Number(part.discount_amount ?? part.discount ?? 0) || 0,
                         uom: part.uom || part.unit || 'Unit',
                         stock_status: part.stock_status || 'Pending Check',
                         source: part.source || part.part_source || 'On Hand',
-                        warehouse: part.warehouse || ''
+                        warehouse: part.warehouse || part.warehouse_location || '',
+                        catalog_name: part.catalog_name || null,
+                        catalog_part_code: part.catalog_part_code || part.catalog_code || null,
+                        catalog_stock_qty: part.catalog_stock_qty ?? part.stock_qty ?? null,
+                        catalog_reserved_qty: part.catalog_reserved_qty ?? part.reserved_qty ?? null,
+                        catalog_managed_by: part.catalog_managed_by || part.managed_by || '',
+                        catalog_unit_price: part.catalog_unit_price ?? part.unit_price ?? null,
+                        catalog_image: part.catalog_image || '',
                     };
                     const catalogPart =
-                        lookupSparePart(base.item_code) ||
-                        lookupSparePart(part.catalog_name) ||
-                        lookupSparePart(part.catalog_part_code) ||
-                        lookupSparePart(part.item_name);
+                        lookupSparePart(base.item_code)
+                        || lookupSparePart(part.catalog_name)
+                        || lookupSparePart(part.catalog_part_code)
+                        || lookupSparePart(part.item_name);
                     return catalogPart ? mergeRequiredPartWithCatalog(base, catalogPart) : base;
                 });
             } else {
