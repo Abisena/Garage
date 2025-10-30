@@ -510,6 +510,17 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
 }
 
 SPARE_REQUEST_CLOSED_STATUSES = ["Received", "Issued", "Rejected", "Cancelled"]
+SPARE_REQUEST_ACTIVE_STATUSES = [
+    "Pending Check",
+    "Request",
+    "Pending",
+    "Available",
+    "To Order",
+    "Ordered",
+    "In Transit",
+    "Backordered",
+    "Approved",
+]
 
 DOC_TYPES = tuple(ALLOWED_DOCS.keys())
 DEFAULT_LIMIT = 20
@@ -689,7 +700,7 @@ def _bundle_row_to_required_part(
         "qty": qty,
         "uom": uom or "Unit",
         "source": source,
-        "stock_status": "Pending Check",
+        "stock_status": "Draft",
         "warehouse": warehouse,
         "rate": rate,
         "amount": amount,
@@ -1475,7 +1486,7 @@ def portal_bootstrap() -> Dict[str, Any]:
         ],
         filters=[
             ["parenttype", "=", "Garage Service Order"],
-            ["stock_status", "not in", SPARE_REQUEST_CLOSED_STATUSES],
+            ["stock_status", "in", SPARE_REQUEST_ACTIVE_STATUSES],
         ],
         limit=200,
     )
@@ -2153,7 +2164,7 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
         ],
         filters=[
             ["parenttype", "=", "Garage Service Order"],
-            ["stock_status", "not in", SPARE_REQUEST_CLOSED_STATUSES],
+            ["stock_status", "in", SPARE_REQUEST_ACTIVE_STATUSES],
         ],
         limit=200,
     )
@@ -2597,6 +2608,9 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
                 child_config = ALLOWED_DOCS["Garage Service Order"]["children"]["required_parts"]
                 parts = _sanitize_child_rows("required_parts", data["required_parts"], child_config)
                 for part in parts:
+                    status = cstr(part.get("stock_status") or "").strip().lower()
+                    if not status or status in {"draft", "planned"}:
+                        part["stock_status"] = "Pending Check"
                     doc.append("required_parts", part)
         except Exception as e:
             frappe.log_error(f"Error updating required_parts: {str(e)}")

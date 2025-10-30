@@ -68,8 +68,8 @@
       "fieldname": "stock_status",
       "fieldtype": "Select",
       "label": "Stock Status",
-      "options": "Pending Check\nAvailable\nTo Order\nOrdered\nReceived\nIssued\nRejected\nCancelled",
-      "default": "Pending Check",
+      "options": "Draft\nPending Check\nAvailable\nTo Order\nOrdered\nReceived\nIssued\nRejected\nCancelled",
+      "default": "Draft",
       "in_list_view": 1
     },
     {
