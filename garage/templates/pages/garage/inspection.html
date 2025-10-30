@@ -1400,7 +1400,6 @@ a:hover {
                             <select id="assigned_mechanic" name="assigned_mechanic">
                                 <option value="">Pilih mekanik tersedia</option>
                             </select>
-                            <div class="technician-status" id="assigned_mechanic_status">Belum ada mekanik ditugaskan.</div>
                         </div>
                     </div>
                     <div class="intake-summary-group">
@@ -1717,15 +1716,15 @@ a:hover {
             return;
         }
 
-        const loadText = `${technician.active_task_count} dari ${technician.max_active_jobs} tugas aktif`;
-        if (technician.available_capacity > 0) {
-            const slotText = `${technician.available_capacity} slot tersisa`;
-            statusElement.textContent = `${technician.employee_name} • ${loadText} • ${slotText}.`;
-            statusElement.classList.add('is-available');
-        } else {
-            statusElement.textContent = `${technician.employee_name} • ${loadText} • Mekanik sudah penuh.`;
-            statusElement.classList.add('is-full');
-        }
+        // const loadText = `${technician.active_task_count} dari ${technician.max_active_jobs} tugas aktif`;
+        // if (technician.available_capacity > 0) {
+        //     const slotText = `${technician.available_capacity} slot tersisa`;
+        //     statusElement.textContent = `${technician.employee_name} • ${loadText} • ${slotText}.`;
+        //     statusElement.classList.add('is-available');
+        // } else {
+        //     statusElement.textContent = `${technician.employee_name} • ${loadText} • Mekanik sudah penuh.`;
+        //     statusElement.classList.add('is-full');
+        // }
     }
 
     function updateTechnicianSelect(selectedValue) {
