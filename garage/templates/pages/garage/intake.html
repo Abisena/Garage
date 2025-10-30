@@ -2637,21 +2637,15 @@ button:disabled {
                 console.log('📥 PDF response:', pdfResponse);
                 
                 if (pdfResponse.message && pdfResponse.message.success) {
-                    // Auto download PDF
-                    const link = document.createElement('a');
-                    link.href = pdfResponse.message.file_url;
-                    link.download = pdfResponse.message.file_name;
-                    link.style.display = 'none';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+                    const fileUrl = pdfResponse.message.file_url;
+                    const fileName = pdfResponse.message.file_name;
                     
-                    frappe.show_alert({
-                        message: '✅ PDF berhasil didownload!',
-                        indicator: 'green'
-                    }, 3);
+                    console.log('📁 File URL:', fileUrl);
+                    console.log('📄 File Name:', fileName);
                     
-                    console.log('✅ PDF downloaded:', pdfResponse.message.file_name);
+                    // Force download dengan proper handling
+                    forceDownloadPDF(fileUrl, fileName);
+                    
                 } else {
                     console.warn('⚠️ PDF generation failed, but registration successful');
                     frappe.show_alert({
@@ -2702,59 +2696,6 @@ button:disabled {
             }
         });
         
-        // Handler untuk download button (untuk download manual setelah save)
-        if (downloadButton) {
-            downloadButton.addEventListener('click', async function(e) {
-                e.preventDefault();
-                
-                const urlParams = new URLSearchParams(window.location.search);
-                const orderId = urlParams.get('order_id');
-                
-                if (!orderId) {
-                    frappe.show_alert({
-                        message: '⚠️ Mohon simpan registrasi terlebih dahulu!',
-                        indicator: 'orange'
-                    }, 5);
-                    return;
-                }
-                
-                downloadButton.disabled = true;
-                downloadButton.innerHTML = '⏳ Generating PDF...';
-                
-                try {
-                    const pdfResponse = await frappe.call({
-                        method: 'garage.api.pdf_generator.generate_service_estimate_pdf',
-                        args: { order_id: orderId },
-                        type: 'POST',
-                        freeze: true
-                    });
-                    
-                    if (pdfResponse.message && pdfResponse.message.success) {
-                        const link = document.createElement('a');
-                        link.href = pdfResponse.message.file_url;
-                        link.download = pdfResponse.message.file_name;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        
-                        frappe.show_alert({
-                            message: '✅ PDF berhasil didownload!',
-                            indicator: 'green'
-                        }, 3);
-                    }
-                } catch (error) {
-                    console.error('Error generating PDF:', error);
-                    frappe.show_alert({
-                        message: '❌ Gagal generate PDF: ' + (error.message || 'Unknown error'),
-                        indicator: 'red'
-                    }, 5);
-                } finally {
-                    downloadButton.disabled = false;
-                    downloadButton.innerHTML = '📄 Download Estimasi Service Kendaraan';
-                }
-            });
-        }
-        
         console.log('✅ Form submit handler initialized');
     }
     
@@ -2764,5 +2705,81 @@ button:disabled {
         initFormSubmit();
     }
 })();
+
+
+function forceDownloadPDF(fileUrl, fileName) {
+    console.log('🔽 Force downloading:', fileUrl, fileName);
+    
+    // Cek apakah file URL ada
+    if (!fileUrl) {
+        console.error('❌ File URL is empty');
+        frappe.show_alert({
+            message: '❌ File URL tidak ditemukan',
+            indicator: 'red'
+        }, 5);
+        return;
+    }
+    
+    // Pastikan file URL punya domain lengkap
+    let fullUrl = fileUrl;
+    if (fileUrl.startsWith('/')) {
+        // Relative URL, tambahkan origin
+        fullUrl = window.location.origin + fileUrl;
+    }
+    
+    console.log('📥 Downloading from:', fullUrl);
+    
+    // Method 1: Fetch then blob (paling reliable)
+    fetch(fullUrl, {
+        method: 'GET',
+        headers: {
+            'X-Frappe-CSRF-Token': frappe.csrf_token
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        // Create blob URL
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        // Create download link
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName || 'download.pdf';
+        link.style.display = 'none';
+        
+        document.body.appendChild(link);
+        link.click();
+        
+        // Cleanup
+        setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+        }, 100);
+        
+        console.log('✅ Download triggered successfully');
+        
+        frappe.show_alert({
+            message: '✅ PDF berhasil didownload!',
+            indicator: 'green'
+        }, 3);
+    })
+    .catch(error => {
+        console.error('❌ Download error:', error);
+        
+        // Fallback: Try direct window.open
+        console.log('⚠️ Trying fallback method: window.open');
+        window.open(fullUrl, '_blank');
+        
+        frappe.show_alert({
+            message: '⚠️ Membuka PDF di tab baru...',
+            indicator: 'orange'
+        }, 3);
+    });
+}
 </script>
 {% endblock %}
