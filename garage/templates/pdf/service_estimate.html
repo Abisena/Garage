@@ -4,97 +4,201 @@
     <meta charset="utf-8" />
     <title>{{ title }}</title>
     <style>
+        @page {
+            size: A4;
+            margin: 2cm 1.5cm;
+        }
+        
         * {
             box-sizing: border-box;
         }
+        
         body {
             font-family: "Arial", "Helvetica", sans-serif;
-            font-size: 11px;
-            color: #111;
-            margin: 24px;
+            font-size: 11pt;
+            color: #000;
+            margin: 0;
+            padding: 0;
+            line-height: 1.3;
         }
+        
         h1 {
             text-align: center;
-            font-size: 18px;
-            margin: 0 0 18px;
-            letter-spacing: 1px;
+            font-size: 16pt;
+            font-weight: bold;
+            margin: 0 0 20px 0;
+            letter-spacing: 0.5px;
+            text-decoration: underline;
         }
+        
         table {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 15px;
         }
-        .meta-table,
-        .vehicle-table,
-        .job-table,
-        .summary-table,
-        .signature-table {
-            margin-bottom: 16px;
-        }
+        
+        /* Meta table - Info dasar estimasi */
         .meta-table td,
-        .meta-table th,
-        .vehicle-table td,
-        .vehicle-table th,
-        .job-table td,
-        .job-table th,
-        .summary-table td,
-        .summary-table th,
-        .signature-table td,
-        .signature-table th {
-            border: 1px solid #111;
-            padding: 6px 8px;
+        .meta-table th {
+            border: 2px solid #000;
+            padding: 8px 10px;
             vertical-align: top;
+            font-size: 10pt;
         }
-        .meta-table td.label,
-        .vehicle-table td.label,
-        .summary-table td.label {
-            width: 28%;
+        
+        .meta-table td.label {
+            width: 30%;
             font-weight: bold;
-            background: #f5f5f5;
+            background: #f0f0f0;
         }
+        
+        .meta-table td.value {
+            width: 70%;
+        }
+        
+        /* Vehicle table */
+        .vehicle-table td {
+            border: 2px solid #000;
+            padding: 8px 10px;
+            vertical-align: top;
+            font-size: 10pt;
+        }
+        
+        .vehicle-table td.label {
+            width: 30%;
+            font-weight: bold;
+            background: #f0f0f0;
+        }
+        
+        /* Section titles */
         .section-title {
             font-weight: bold;
-            margin: 12px 0 6px;
+            font-size: 11pt;
+            margin: 18px 0 8px 0;
             text-transform: uppercase;
+            color: #000;
         }
+        
+        /* Job table - Rincian pekerjaan */
+        .job-table {
+            border: 2px solid #000;
+        }
+        
         .job-table th {
+            border: 2px solid #000;
             text-align: center;
-            background: #f5f5f5;
+            background: #d9d9d9;
+            font-weight: bold;
+            padding: 8px 10px;
+            font-size: 10pt;
         }
+        
+        .job-table td {
+            border: 2px solid #000;
+            padding: 7px 10px;
+            font-size: 10pt;
+        }
+        
         .job-table td.number {
-            width: 40px;
+            width: 50px;
             text-align: center;
+            font-weight: normal;
         }
-        .job-table td.amount,
-        .summary-table td.amount {
-            text-align: right;
-            white-space: nowrap;
-            width: 140px;
-        }
+        
         .job-table td.description {
             width: auto;
+            text-align: left;
         }
+        
+        .job-table td.amount {
+            width: 150px;
+            text-align: right;
+            white-space: nowrap;
+            font-weight: normal;
+        }
+        
         .job-table td.empty {
             text-align: center;
             font-style: italic;
-            color: #777;
+            color: #666;
         }
-        .notes {
-            min-height: 80px;
-            border: 1px solid #111;
-            padding: 8px;
+        
+        /* Summary table */
+        .summary-table {
+            border: 2px solid #000;
         }
-        .signature-table td {
-            height: 80px;
+        
+        .summary-table td {
+            border: 2px solid #000;
+            padding: 8px 10px;
+            font-size: 10pt;
         }
-        .signature-name {
-            margin-top: 48px;
+        
+        .summary-table td.label {
+            width: 70%;
             font-weight: bold;
-            text-align: center;
+            background: #f0f0f0;
+            text-align: left;
         }
+        
+        .summary-table td.amount {
+            width: 30%;
+            text-align: right;
+            white-space: nowrap;
+            font-weight: bold;
+        }
+        
+        .summary-table tr.grand-total td {
+            background: #d9d9d9;
+            font-weight: bold;
+            font-size: 11pt;
+        }
+        
+        /* Notes section */
+        .notes-box {
+            border: 2px solid #000;
+            min-height: 100px;
+            padding: 10px;
+            font-size: 10pt;
+            background: #fff;
+        }
+        
+        /* Signature table */
+        .signature-table {
+            margin-top: 25px;
+            border: none;
+        }
+        
+        .signature-table td {
+            border: 2px solid #000;
+            padding: 10px;
+            vertical-align: top;
+            height: 100px;
+            width: 50%;
+        }
+        
         .signature-role {
-            font-size: 10px;
+            font-size: 10pt;
             text-align: center;
-            color: #555;
+            margin-bottom: 60px;
+            font-weight: normal;
+        }
+        
+        .signature-name {
+            text-align: center;
+            font-weight: bold;
+            font-size: 11pt;
+            border-bottom: 1px solid #000;
+            padding-bottom: 3px;
+            margin: 0 auto;
+            width: 80%;
+        }
+        
+        .signature-title {
+            text-align: center;
+            font-size: 9pt;
+            margin-top: 5px;
+            font-style: italic;
         }
     </style>
 </head>
@@ -103,29 +207,27 @@
 
     <table class="meta-table">
         <tr>
-            <td class="label">No Estimasi</td>
-            <td>{{ meta.number }}</td>
+            <td class="label">No. Estimasi</td>
+            <td class="value">{{ meta.number }}</td>
             <td class="label">Tanggal</td>
-            <td>{{ meta.date }}</td>
+            <td class="value">{{ meta.date }}</td>
         </tr>
         <tr>
-            <td class="label">Customer</td>
-            <td>{{ meta.customer }}</td>
-            <td class="label">Telp</td>
-            <td>{{ meta.phone }}</td>
+            <td class="label">Nama Customer</td>
+            <td class="value">{{ meta.customer }}</td>
+            <td class="label">No. Telepon</td>
+            <td class="value">{{ meta.phone }}</td>
         </tr>
         <tr>
             <td class="label">Contact Person</td>
-            <td>{{ meta.contact_person }}</td>
-            <td class="label">Catatan Intake</td>
-            <td>{{ meta.intake_notes }}</td>
+            <td class="value" colspan="3">{{ meta.contact_person }}</td>
         </tr>
     </table>
 
     <div class="section-title">Informasi Kendaraan</div>
     <table class="vehicle-table">
         <tr>
-            <td class="label">Kendaraan</td>
+            <td class="label">Jenis Kendaraan</td>
             <td>{{ vehicle.description }}</td>
         </tr>
         <tr>
@@ -134,13 +236,13 @@
         </tr>
     </table>
 
-    <div class="section-title">Rincian Pekerjaan</div>
+    <div class="section-title">Rincian Pekerjaan & Estimasi Biaya</div>
     <table class="job-table">
         <thead>
             <tr>
-                <th style="width: 40px;">No</th>
+                <th>No</th>
                 <th>Deskripsi Pekerjaan</th>
-                <th style="width: 150px;">Estimasi Biaya</th>
+                <th>Estimasi Biaya (Rp)</th>
             </tr>
         </thead>
         <tbody>
@@ -154,8 +256,7 @@
                 {% endfor %}
             {% else %}
                 <tr>
-                    <td class="number">-</td>
-                    <td class="empty" colspan="2">Belum ada rincian pekerjaan yang dicatat.</td>
+                    <td colspan="3" class="empty">Belum ada rincian pekerjaan yang dicatat.</td>
                 </tr>
             {% endif %}
         </tbody>
@@ -164,37 +265,37 @@
     <div class="section-title">Ringkasan Estimasi</div>
     <table class="summary-table">
         <tr>
-            <td class="label">Total Jasa</td>
+            <td class="label">Total Biaya Jasa</td>
             <td class="amount">{{ summary.service_total_formatted }}</td>
         </tr>
         <tr>
-            <td class="label">Total Part</td>
+            <td class="label">Total Biaya Spare Part</td>
             <td class="amount">{{ summary.spare_total_formatted }}</td>
         </tr>
         <tr>
-            <td class="label">Total Material</td>
+            <td class="label">Total Biaya Material</td>
             <td class="amount">{{ summary.material_total_formatted }}</td>
         </tr>
-        <tr>
-            <td class="label">Total Estimasi</td>
+        <tr class="grand-total">
+            <td class="label">TOTAL ESTIMASI</td>
             <td class="amount">{{ summary.grand_total_formatted }}</td>
         </tr>
     </table>
 
-    <div class="section-title">Catatan / Keluhan</div>
-    <div class="notes">{{ notes }}</div>
+    <div class="section-title">Catatan / Keluhan Customer</div>
+    <div class="notes-box">{{ notes }}</div>
 
     <table class="signature-table">
         <tr>
             <td>
                 <div class="signature-role">Dibuat oleh:</div>
                 <div class="signature-name">{{ signatures.prepared_by }}</div>
-                <div class="signature-role">Service Advisor</div>
+                <div class="signature-title">Service Advisor</div>
             </td>
             <td>
                 <div class="signature-role">Disetujui oleh:</div>
                 <div class="signature-name">{{ signatures.approved_by }}</div>
-                <div class="signature-role">Customer</div>
+                <div class="signature-title">Customer</div>
             </td>
         </tr>
     </table>

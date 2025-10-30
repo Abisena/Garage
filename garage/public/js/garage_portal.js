@@ -520,12 +520,72 @@ function cloneBrandModelMap(map) {
                             onSuccess: (response) => {
                                 const pdf = response?.message?.estimate_pdf;
                                 this.setEstimateDownload(pdf);
+                                
                                 if (pdf?.content) {
-                                    this.downloadBase64File(
-                                        pdf.content,
-                                        pdf.filename || 'estimasi-service.pdf',
-                                        pdf.mime_type || 'application/pdf'
-                                    );
+                                    // Try auto-download
+                                    try {
+                                        this.downloadBase64File(
+                                            pdf.content,
+                                            pdf.filename || 'estimasi-service.pdf',
+                                            pdf.mime_type || 'application/pdf'
+                                        );
+                                        
+                                        // Show success with manual download button
+                                        setTimeout(() => {
+                                            frappe.msgprint({
+                                                title: __('PDF Estimasi Berhasil Dibuat'),
+                                                indicator: 'green',
+                                                message: `
+                                                    <div style="margin-bottom: 15px;">
+                                                        <p>PDF estimasi service <strong>${pdf.filename || 'estimasi-service.pdf'}</strong> berhasil dibuat.</p>
+                                                    </div>
+                                                    <div style="margin-bottom: 10px;">
+                                                        <strong>Jika download tidak dimulai otomatis:</strong>
+                                                    </div>
+                                                    <ol style="margin-left: 20px;">
+                                                        <li>Klik tombol "Download PDF" di bawah, ATAU</li>
+                                                        <li>Klik tombol "Download Estimasi" di atas form</li>
+                                                    </ol>
+                                                `,
+                                                primary_action: {
+                                                    label: __('Download PDF'),
+                                                    action: () => {
+                                                        this.downloadBase64File(
+                                                            pdf.content,
+                                                            pdf.filename || 'estimasi-service.pdf',
+                                                            pdf.mime_type || 'application/pdf'
+                                                        );
+                                                    }
+                                                }
+                                            });
+                                        }, 500); // Delay 500ms agar auto-download sempat jalan dulu
+                                        
+                                    } catch (error) {
+                                        console.error('Auto-download error:', error);
+                                        
+                                        // If auto-download fails, force show manual download dialog
+                                        frappe.msgprint({
+                                            title: __('Download Estimasi Service'),
+                                            indicator: 'orange',
+                                            message: `
+                                                <div style="margin-bottom: 15px;">
+                                                    <p><strong>Browser Anda memblokir auto-download.</strong></p>
+                                                    <p>Silakan klik tombol di bawah untuk download manual:</p>
+                                                </div>
+                                            `,
+                                            primary_action: {
+                                                label: __('Download PDF Sekarang'),
+                                                action: () => {
+                                                    this.downloadBase64File(
+                                                        pdf.content,
+                                                        pdf.filename || 'estimasi-service.pdf',
+                                                        pdf.mime_type || 'application/pdf'
+                                                    );
+                                                }
+                                            }
+                                        });
+                                    }
+                                    
                                 } else if (response?.message?.created?.service_order) {
                                     frappe.show_alert({
                                         message: __('File estimasi belum berhasil dibuat. Coba simpan ulang atau hubungi admin.'),
@@ -3671,29 +3731,81 @@ function cloneBrandModelMap(map) {
         }
 
         downloadBase64File(content, filename, mimeType = 'application/pdf') {
+            console.log('🔍 downloadBase64File called');
+            console.log('  Content length:', content ? content.length : 0);
+            console.log('  Filename:', filename);
+            console.log('  MIME type:', mimeType);
+            
             if (!content) {
+                console.error('❌ No content provided');
+                frappe.msgprint(__('Error: PDF content kosong'));
                 return;
             }
+            
             try {
+                // Remove data URL prefix if exists
                 const sanitized = content.replace(/^data:[^,]+,/, '').trim();
+                console.log('  Sanitized length:', sanitized.length);
+                
+                // Decode base64
                 const binary = atob(sanitized);
+                console.log('  Binary length:', binary.length);
+                
+                // Convert to array buffer
                 const length = binary.length;
                 const buffer = new Uint8Array(length);
                 for (let index = 0; index < length; index += 1) {
                     buffer[index] = binary.charCodeAt(index);
                 }
+                console.log('  Buffer created, size:', buffer.byteLength, 'bytes');
+                
+                // Create blob
                 const blob = new Blob([buffer], { type: mimeType || 'application/pdf' });
+                console.log('  Blob created, size:', blob.size, 'bytes');
+                
+                // Create download link
                 const url = URL.createObjectURL(blob);
+                console.log('  Blob URL:', url);
+                
                 const link = document.createElement('a');
                 link.href = url;
                 link.download = filename || 'download.pdf';
+                link.style.display = 'none';
+                
+                // Append to body
                 document.body.appendChild(link);
+                console.log('  Link appended to body');
+                
+                // Trigger download
                 link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
+                console.log('✅ Download triggered');
+                
+                // Cleanup
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                    console.log('  Cleanup complete');
+                }, 100);
+                
             } catch (error) {
-                console.error('Failed to download PDF', error);
-                frappe.msgprint(__('Gagal mengunduh dokumen estimasi. Silakan coba lagi.'));
+                console.error('❌ Failed to download PDF:', error);
+                console.error('  Error details:', error.message);
+                console.error('  Stack:', error.stack);
+                
+                frappe.msgprint({
+                    title: __('Error Download PDF'),
+                    indicator: 'red',
+                    message: `
+                        <p><strong>Gagal mengunduh dokumen estimasi.</strong></p>
+                        <p>Error: ${error.message}</p>
+                        <p>Silakan:</p>
+                        <ol>
+                            <li>Refresh halaman (F5)</li>
+                            <li>Coba lagi</li>
+                            <li>Hubungi admin jika masalah berlanjut</li>
+                        </ol>
+                    `
+                });
             }
         }
 

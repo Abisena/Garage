@@ -1996,7 +1996,6 @@ a:hover {
                     <tr>
                         <td>
                             <div class="part-details">
-                                <span class="item-code-badge">${itemCodeDisplay}</span>
                                 <div class="part-select">
                                     <select onchange="selectRequiredPart(${i}, this.value)" ${part.catalog_name || part.item_code ? '' : 'required'}>
                                         <option value="">— Pilih sparepart atau bahan —</option>
@@ -2008,14 +2007,14 @@ a:hover {
                             </div>
                         </td>
                         <td>
-                            <textarea onchange="updateRequiredPartDescription(${i}, this.value)">${escapeHtml(part.description || '')}</textarea>
+                            <input onchange="updateRequiredPartDescription(${i}, this.value)">${escapeHtml(part.description || '')}</input>
                         </td>
                         <td><input type="number" value="${part.qty}" min="0" step="0.01" onchange="updateRequiredPartQty(${i}, this.value)" required></td>
                         <td><input type="text" value="${escapeHtml(part.uom || '')}" onchange="updateRequiredPartUom(${i}, this.value)"></td>
                         <td><input type="text" value="${escapeHtml(formatCurrency(part.rate || 0))}" inputmode="numeric" onchange="updateRequiredPartRate(${i}, this.value)"></td>
                         <td><input type="text" value="${escapeHtml(formatCurrency(part.discount_amount || 0))}" inputmode="numeric" onchange="updateRequiredPartDiscount(${i}, this.value)"></td>
                         <td class="numeric">${formatCurrency(part.amount || 0)}</td>
-                        <td class="actions"><button type="button" class="btn-remove" onclick="removeRequiredPart(${i})">🗑️ Hapus</button></td>
+                        <td class="actions"><button type="button" class="btn-remove" onclick="removeRequiredPart(${i})">🗑️</button></td>
                     </tr>
                 `;
             }).join('');
