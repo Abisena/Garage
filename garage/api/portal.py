@@ -13,7 +13,10 @@ from frappe.utils import cint, cstr, flt, get_datetime, get_url, now_datetime, n
 
 from garage.utils import service_estimate
 
-TECHNICIAN_ACTIVE_TASK_STATUSES = {"Pending", "In Progress"}
+# Treat blank/None statuses on tasks as active to ensure newly created tasks
+# (which default to an empty status value) are counted towards a technician's
+# workload. Pending/In Progress remain explicitly active states.
+TECHNICIAN_ACTIVE_TASK_STATUSES = {"", "Pending", "In Progress"}
 SERVICE_ORDER_ACTIVE_STATUSES = {
     "Draft",
     "Inspection",
@@ -1026,7 +1029,7 @@ def _technician_load_map(exclude_order: Optional[str] = None) -> Dict[str, int]:
     conditions = [
         "task.parenttype = 'Garage Service Order'",
         "COALESCE(task.technician, '') != ''",
-        f"task.status in ({status_placeholders})",
+        f"COALESCE(task.status, '') in ({status_placeholders})",
     ]
     params: List[Any] = list(statuses)
 
