@@ -2625,8 +2625,13 @@ a:hover {
                         `;
                     })
                     .join('');
-                const manualOption = !part.catalog_name && part.item_code
-                    ? `<option value="__manual__${i}" selected>Manual: ${escapeHtml(part.item_code)}${part.item_name ? ` – ${escapeHtml(part.item_name)}` : ''}</option>`
+                const manualLabel = part.item_name || part.description || '';
+                const manualCode = part.item_code || manualLabel;
+                const manualDisplay = manualLabel && manualCode && manualLabel !== manualCode
+                    ? `${escapeHtml(manualCode)} — ${escapeHtml(manualLabel)}`
+                    : `${escapeHtml(manualCode)}`;
+                const manualOption = !part.catalog_name && manualCode
+                    ? `<option value="__manual__${i}" selected>${manualDisplay}</option>`
                     : '';
                 const catalogHint = sparePartCatalog.length ? '' : '<p class="sparepart-hint">Katalog sparepart masih kosong. Tambahkan data di halaman Sparepart.</p>';
                 const availableStock = Number(part.catalog_stock_qty ?? part.stock_qty ?? 0);
@@ -2687,9 +2692,9 @@ a:hover {
 
         window.addRequiredPart = function() {
             requiredParts.push({
-                item_code: '',
-                item_name: '',
-                description: 'OLI MESIN',
+                item_code: 'Oli Mesin',
+                item_name: 'Oli Mesin',
+                description: 'Oli Mesin',
                 qty: 1,
                 rate: 0,
                 uom: 'Unit',
@@ -2780,10 +2785,19 @@ a:hover {
         };
 
         window.updateRequiredPartDescription = function(index, value) {
-            if (!requiredParts[index]) {
+            const part = requiredParts[index];
+            if (!part) {
                 return;
             }
-            requiredParts[index].description = value;
+            part.description = value;
+            if (!part.catalog_name) {
+                const trimmed = typeof value === 'string' ? value.trim() : '';
+                if (trimmed) {
+                    part.item_name = trimmed;
+                    part.item_code = trimmed;
+                }
+            }
+            renderRequiredParts();
         };
 
         window.updateRequiredPartUom = function(index, value) {
