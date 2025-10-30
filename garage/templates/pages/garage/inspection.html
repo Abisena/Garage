@@ -1174,14 +1174,6 @@ a:hover {
                     <span class="meta-label">Estimasi Selesai</span>
                     <span class="meta-value" id="display_estimated_delivery">-</span>
                 </div>
-                <div class="meta-item">
-                    <span class="meta-label">Jenis Servis</span>
-                    <span class="meta-value" id="display_service_type_value">-</span>
-                </div>
-                <div class="meta-item">
-                    <span class="meta-label">Prioritas</span>
-                    <span class="meta-value" id="display_priority_value">-</span>
-                </div>
             </div>
         </div>
         <div class="summary-cards">
@@ -1225,6 +1217,27 @@ a:hover {
 
     <div class="content-grid">
         <main class="main-column">
+            <aside class="side-column">
+            <section class="section-card intake-summary-card">
+                <div class="section-header">
+                    <div>
+                        <h2>📦 Ringkasan Intake</h2>
+                        <p>Detail paket servis yang dipilih saat registrasi.</p>
+                    </div>
+                    <div class="section-tags">
+                        <span class="tag service-type-badge" id="display_service_type">-</span>
+                        <span class="tag priority-badge" id="display_priority">-</span>
+                    </div>
+                </div>
+                <div class="intake-summary">
+                    <div class="intake-summary-group">
+                        <ul class="intake-summary-list" id="intake_summary_service_list">
+                            <li class="placeholder">Belum ada jasa terdaftar.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </aside>
             <form id="inspectionForm" class="inspection-form">
                 <section class="section-card">
                     <div class="section-header">
@@ -1247,40 +1260,7 @@ a:hover {
                 </section>
             </form>
         </main>
-        <aside class="side-column">
-            <section class="section-card intake-summary-card">
-                <div class="section-header">
-                    <div>
-                        <h2>📦 Ringkasan Intake</h2>
-                        <p>Detail paket servis yang dipilih saat registrasi.</p>
-                    </div>
-                    <div class="section-tags">
-                        <span class="tag service-type-badge" id="display_service_type">-</span>
-                        <span class="tag priority-badge" id="display_priority">-</span>
-                    </div>
-                </div>
-                <div class="intake-summary">
-                    <div class="intake-summary-group">
-                        <div class="intake-summary-header">
-                            <span>Jenis Servis</span>
-                            <strong id="intake_summary_service_total">Rp 0</strong>
-                        </div>
-                        <ul class="intake-summary-list" id="intake_summary_service_list">
-                            <li class="placeholder">Belum ada jasa terdaftar.</li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-            <section class="section-card intake-notes-card">
-                <div class="section-header">
-                    <div>
-                        <h2>📝 Catatan Intake</h2>
-                        <p>Masukan dari tim front desk saat registrasi.</p>
-                    </div>
-                </div>
-                <p class="intake-notes" id="display_intake_notes">Belum ada catatan tambahan dari intake.</p>
-            </section>
-        </aside>
+    
 
     </div>
 
