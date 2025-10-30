@@ -569,61 +569,54 @@ a:hover {
 .parts-table-wrapper {
     border: 1px solid var(--gray-200);
     border-radius: var(--radius-lg);
-    overflow-x: auto;
     background: var(--gray-25);
+    overflow: hidden;
 }
 
 .parts-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 960px;
+    min-width: 0;
+    table-layout: fixed;
 }
 
 .parts-table th:first-child,
 .parts-table td:first-child {
-    min-width: 280px;
-    width: 24%;
+    width: 22%;
 }
 
 .parts-table th:nth-child(2),
 .parts-table td:nth-child(2) {
-    min-width: 220px;
-    width: 20%;
+    width: 25%;
 }
 
 .parts-table th:nth-child(3),
 .parts-table td:nth-child(3) {
-    min-width: 90px;
     width: 8%;
 }
 
 .parts-table th:nth-child(4),
 .parts-table td:nth-child(4) {
-    min-width: 90px;
     width: 8%;
 }
 
 .parts-table th:nth-child(5),
 .parts-table td:nth-child(5) {
-    min-width: 150px;
-    width: 12%;
+    width: 11%;
 }
 
 .parts-table th:nth-child(6),
 .parts-table td:nth-child(6) {
-    min-width: 140px;
     width: 10%;
 }
 
 .parts-table th:nth-child(7),
 .parts-table td:nth-child(7) {
-    min-width: 150px;
-    width: 12%;
+    width: 10%;
 }
 
 .parts-table th:nth-child(8),
 .parts-table td:nth-child(8) {
-    min-width: 110px;
     width: 6%;
 }
 
@@ -637,6 +630,7 @@ a:hover {
     text-align: left;
     border-bottom: 1px solid var(--gray-200);
     vertical-align: top;
+    word-break: break-word;
 }
 
 .parts-table th {
@@ -681,7 +675,20 @@ a:hover {
 .part-details {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
+}
+
+.item-code-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: var(--radius-md);
+    background: var(--gray-100);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--gray-800);
+    width: fit-content;
 }
 
 .part-summary {
@@ -720,7 +727,7 @@ a:hover {
 }
 
 .parts-table .actions {
-    width: 1%;
+    width: auto;
     white-space: nowrap;
 }
 
@@ -1421,15 +1428,17 @@ a:hover {
         merged.catalog_managed_by = catalogPart.managed_by;
         merged.catalog_image = catalogPart.image;
         const catalogDescription = catalogPart.description || catalogPart.notes || '';
+        const catalogName = catalogPart.part_name || '';
+        const fallbackDescription = catalogName || catalogDescription;
         merged.catalog_description = catalogDescription;
-        if (!merged.description || !merged.description.trim()) {
-            merged.description = catalogDescription;
+        if (!merged.description || !merged.description.trim() || merged.description.trim() === catalogDescription.trim()) {
+            merged.description = fallbackDescription;
         }
         const unitPrice = Number(catalogPart.unit_price);
         const normalizedUnitPrice = Number.isNaN(unitPrice) ? Number(part?.rate ?? 0) || 0 : unitPrice;
         merged.catalog_unit_price = normalizedUnitPrice;
         merged.item_code = catalogPart.part_code || merged.item_code || '';
-        merged.item_name = catalogPart.part_name || merged.item_name || '';
+        merged.item_name = catalogName || merged.item_name || '';
         merged.uom = merged.uom || catalogPart.uom || 'Unit';
         merged.rate = normalizedUnitPrice;
         if (merged.qty === undefined || merged.qty === null || merged.qty === '') {
@@ -1975,21 +1984,17 @@ a:hover {
                         </option>
                     `)
                     .join('');
-                const catalogRef = lookupSparePart(part.catalog_name || part.item_code);
                 const manualOption = !part.catalog_name && part.item_code
                     ? `<option value="__manual__${i}" selected>Manual: ${escapeHtml(part.item_code)}${part.item_name ? ` – ${escapeHtml(part.item_name)}` : ''}</option>`
                     : '';
-                const stockDisplay = part.catalog_name
-                    ? `${formatNumber(part.catalog_stock_qty ?? catalogRef?.stock_qty ?? 0)} unit`
-                    : 'Tidak diketahui';
-                const managedBy = part.catalog_managed_by || catalogRef?.managed_by || '-';
-                const catalogWarehouse = catalogRef?.warehouse_location || '';
                 const catalogHint = sparePartCatalog.length ? '' : '<p class="sparepart-hint">Katalog sparepart masih kosong. Tambahkan data di halaman Sparepart.</p>';
+                const itemCodeDisplay = escapeHtml(part.item_code || part.catalog_part_code || '-');
 
                 return `
                     <tr>
                         <td>
                             <div class="part-details">
+                                <span class="item-code-badge">${itemCodeDisplay}</span>
                                 <div class="part-select">
                                     <select onchange="selectRequiredPart(${i}, this.value)" ${part.catalog_name || part.item_code ? '' : 'required'}>
                                         <option value="">— Pilih sparepart atau bahan —</option>
@@ -1997,15 +2002,6 @@ a:hover {
                                         ${catalogOptions}
                                     </select>
                                     ${catalogHint}
-                                </div>
-                                <div class="part-summary">
-                                    <strong>${escapeHtml(part.item_name || 'Belum dipilih')}</strong>
-                                    <div class="part-meta-row">
-                                        <span>Kode: ${escapeHtml(part.item_code || '-')}</span>
-                                        <span>Stok: ${stockDisplay}</span>
-                                        <span>Gudang Katalog: ${escapeHtml(catalogWarehouse || '-')}</span>
-                                        <span>Penjaga: ${escapeHtml(managedBy)}</span>
-                                    </div>
                                 </div>
                             </div>
                         </td>
@@ -2017,7 +2013,6 @@ a:hover {
                         <td><input type="text" value="${escapeHtml(formatCurrency(part.rate || 0))}" inputmode="numeric" onchange="updateRequiredPartRate(${i}, this.value)"></td>
                         <td><input type="text" value="${escapeHtml(formatCurrency(part.discount_amount || 0))}" inputmode="numeric" onchange="updateRequiredPartDiscount(${i}, this.value)"></td>
                         <td class="numeric">${formatCurrency(part.amount || 0)}</td>
-                        <td><input type="text" value="${escapeHtml(part.warehouse || '')}" onchange="updateRequiredPartWarehouse(${i}, this.value)"></td>
                         <td class="actions"><button type="button" class="btn-remove" onclick="removeRequiredPart(${i})">🗑️ Hapus</button></td>
                     </tr>
                 `;
@@ -2035,7 +2030,6 @@ a:hover {
                                 <th>Harga Satuan</th>
                                 <th>Diskon</th>
                                 <th>Total</th>
-                                <th>Gudang</th>
                                 <th class="actions">Aksi</th>
                             </tr>
                         </thead>
@@ -2087,12 +2081,21 @@ a:hover {
             if (!catalog) {
                 return;
             }
+            const previousCatalogName = part.catalog_name || '';
+            const nextCatalogName = catalog.name || '';
+            const previousCode = part.item_code ? String(part.item_code) : '';
+            const nextCode = catalog.part_code ? String(catalog.part_code) : '';
+            const isDifferentSelection = (previousCatalogName && previousCatalogName !== nextCatalogName)
+                || (previousCode && previousCode !== nextCode);
             requiredParts[index] = mergeRequiredPartWithCatalog({
                 ...part,
                 catalog_name: catalog.name,
                 catalog_part_code: catalog.part_code,
                 source: part.source || 'On Hand'
             }, catalog);
+            if (isDifferentSelection || !part.description || !part.description.trim()) {
+                requiredParts[index].description = catalog.part_name || requiredParts[index].description;
+            }
             renderRequiredParts();
         };
 
@@ -2140,13 +2143,6 @@ a:hover {
                 return;
             }
             requiredParts[index].uom = value;
-        };
-
-        window.updateRequiredPartWarehouse = function(index, value) {
-            if (!requiredParts[index]) {
-                return;
-            }
-            requiredParts[index].warehouse = value;
         };
 
         async function fetchSparePartCatalog() {
