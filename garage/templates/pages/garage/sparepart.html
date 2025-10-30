@@ -1075,7 +1075,8 @@ body {
     function getRequestStatusBadge(status) {
         const normalized = (status || '').toLowerCase();
         const badges = {
-            'pending check': '<span class="badge warning">Pending Check</span>',
+            'request': '<span class="badge warning">Request</span>',
+            'pending check': '<span class="badge warning">Request</span>',
             'pending': '<span class="badge warning">Pending</span>',
             'available': '<span class="badge success">Available</span>',
             'to order': '<span class="badge warning">To Order</span>',
@@ -1196,7 +1197,7 @@ body {
             const itemSummary = `${group.requests.length} Item${summaryParts.length ? ` (${summaryParts.join(', ')})` : ''}`;
 
             const statuses = Array.from(new Set(group.requests.map(req => req.stock_status).filter(Boolean)));
-            let primaryStatus = statuses[0] || 'Pending Check';
+            let primaryStatus = statuses[0] || 'Request';
             let bestScore = Number.POSITIVE_INFINITY;
             statuses.forEach(status => {
                 const normalized = (status || '').toLowerCase();
@@ -1397,19 +1398,9 @@ body {
                     const part = state.partIndex.get(req.item_code) || state.partIndex.get(req.item_name);
                     const qty = req.qty || req.stock_qty || 0;
                     const uom = req.uom || 'Unit';
-                    const metaSegments = [];
-                    if (part?.category) metaSegments.push(`Kategori: ${escapeHTML(part.category)}`);
-                    if (part?.managed_by) metaSegments.push(`Penanggung Jawab: ${escapeHTML(part.managed_by)}`);
-                    if (part?.warehouse_location) metaSegments.push(`Gudang: ${escapeHTML(part.warehouse_location)}`);
-                    if (req.source) metaSegments.push(`Sumber: ${escapeHTML(req.source)}`);
-
                     const description = req.description ? `<div class="spare-request-modal__item-note">${escapeHTML(req.description)}</div>` : '';
                     const warning = !part
                         ? '<div class="spare-request-modal__item-warning">Sparepart belum terdaftar di master gudang.</div>'
-                        : '';
-
-                    const metaHtml = metaSegments.length
-                        ? `<div class="spare-request-modal__item-meta">${metaSegments.join(' • ')}</div>`
                         : '';
 
                     return `
@@ -1424,7 +1415,6 @@ body {
                                     <span>${escapeHTML(`${qty} ${uom}`)}</span>
                                 </div>
                             </div>
-                            ${metaHtml}
                             ${description}
                             ${warning}
                         </div>
