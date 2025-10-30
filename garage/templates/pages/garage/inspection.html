@@ -135,6 +135,69 @@ a:hover {
     box-shadow: 0 12px 24px rgba(0, 102, 255, 0.16);
 }
 
+.section-tags {
+    display: none !important;
+}
+
+/* Atau hanya untuk badge service type */
+.service-type-badge {
+    display: none !important;
+}
+
+.parts-table textarea {
+    width: 100%;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 8px 10px;
+    font-size: 14px;
+    background: var(--gray-50);
+    font-family: var(--font-sans);
+    resize: vertical;
+    min-height: 40px; /* Ubah dari 72px menjadi 40px */
+    max-height: 120px; /* Tambahkan max height agar tidak terlalu besar */
+}
+
+/* Atau lebih kecil lagi */
+.parts-table textarea {
+    min-height: 36px; /* Lebih kecil lagi */
+    padding: 6px 10px; /* Kurangi padding */
+    font-size: 13px; /* Kurangi font size */
+    line-height: 1.4; /* Atur line height */
+}
+
+/* Reset styling untuk item mekanik agar label tidak keluar */
+.intake-meta__item--no-card {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.intake-meta__item--no-card .intake-meta__label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.6px;
+    margin-bottom: 0;
+}
+
+.intake-meta__item--no-card .intake-meta__control {
+    width: 100%;
+}
+
+.intake-meta__item--no-card select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background-color: var(--bg-surface);
+}
+
 .status-badge {
     display: inline-flex;
     align-items: center;
@@ -629,7 +692,7 @@ a:hover {
     background: white;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-sm);
-    padding: 20px;
+    padding: 16px 24px;
     border: 1px solid var(--border-light);
 }
 
@@ -1413,7 +1476,7 @@ a:hover {
                 <div class="intake-summary">
                     <div class="intake-summary">
                         <div class="intake-meta__list">
-                            <!-- Baris 1: Order ID, Customer, Kendaraan (dengan card) -->
+                            <!-- Baris 1: Order ID, Customer, Kendaraan -->
                             <div class="intake-meta__item">
                                 <span class="intake-meta__label">Order ID</span>
                                 <span class="intake-meta__value" id="display_order_id">-</span>
@@ -1427,9 +1490,9 @@ a:hover {
                                 <span class="intake-meta__value" id="display_vehicle">-</span>
                             </div>
                             
-                            <!-- Baris 2: Mekanik (TANPA CARD, span 1 kolom) -->
+                            <!-- Baris 2: Mekanik (PINDAHKAN LABEL KE DALAM) -->
                             <div class="intake-meta__item intake-meta__item--no-card">
-                                <span class="intake-meta__label">Mekanik</span>
+                                <span class="intake-meta__label">Mekanik</span> <!-- Label di dalam -->
                                 <div class="intake-meta__control">
                                     <select id="assigned_mechanic" name="assigned_mechanic">
                                         <option value="">Pilih mekanik tersedia</option>
@@ -1437,8 +1500,9 @@ a:hover {
                                 </div>
                             </div>
                             
-                            <!-- Service/Repair (dengan card, span 2 kolom) -->
+                            <!-- Service/Repair -->
                             <div class="intake-meta__item intake-meta__item--service">
+                                <span class="intake-meta__label">Service/Repair</span>
                                 <ul class="intake-summary-list" id="intake_summary_service_list">
                                     <li class="placeholder">Belum ada jasa terdaftar.</li>
                                 </ul>
