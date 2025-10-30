@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional,
 import frappe
 from frappe import _
 from frappe.utils import cint, cstr, flt, get_datetime, get_url, now_datetime, nowdate
+from frappe.utils.file_manager import save_file
 
 from garage.utils import service_estimate
 
@@ -3088,6 +3089,94 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         pdf_payload = service_estimate.create_service_estimate_pdf(service_doc.name)
 
     return {"created": created, "estimate_pdf": pdf_payload}
+
+
+@frappe.whitelist()
+def generate_service_estimate_document(service_order: str) -> Dict[str, Any]:
+    """Generate and persist the service estimate PDF for an existing service order."""
+
+    _require_login()
+
+    order_name = cstr(service_order or "").strip()
+    if not order_name:
+        frappe.throw(_("Order servis wajib dipilih."))
+
+    service_doc = _get_doc("Garage Service Order", order_name)
+
+    pdf_payload = service_estimate.create_service_estimate_pdf(service_doc.name)
+    if not pdf_payload or not pdf_payload.get("content"):
+        frappe.throw(_("Gagal membuat dokumen estimasi service kendaraan."))
+
+    content = (pdf_payload.get("content") or "").strip()
+    if not content:
+        frappe.throw(_("Konten PDF estimasi tidak ditemukan."))
+
+    if content.startswith("data:"):
+        parts = content.split(",", 1)
+        if len(parts) == 2:
+            content = parts[1]
+
+    filename = (pdf_payload.get("filename") or f"{service_doc.name}-estimasi-service.pdf").strip()
+    if not filename.lower().endswith(".pdf"):
+        filename = f"{filename}.pdf"
+
+    file_doc = None
+    try:
+        existing_files = frappe.get_all(
+            "File",
+            filters={
+                "attached_to_doctype": "Garage Service Order",
+                "attached_to_name": service_doc.name,
+                "file_name": filename,
+                "is_folder": 0,
+            },
+            fields=["name"],
+        )
+        for row in existing_files:
+            try:
+                frappe.delete_doc("File", row["name"], ignore_permissions=True, force=True)
+            except Exception:
+                frappe.log_error(
+                    title="Service estimate PDF - Cleanup failed",
+                    message=f"Tidak dapat menghapus file lama {row['name']} untuk {service_doc.name}",
+                )
+
+        file_doc = save_file(
+            filename,
+            content,
+            "Garage Service Order",
+            service_doc.name,
+            decode=True,
+            is_private=1,
+        )
+    except Exception:
+        frappe.log_error(
+            title="Service estimate PDF - Save failed",
+            message=f"Tidak dapat menyimpan PDF estimasi untuk {service_doc.name}\n{frappe.get_traceback()}",
+        )
+        file_doc = None
+
+    file_url = getattr(file_doc, "file_url", None) if file_doc else None
+    absolute_url = get_url(file_url) if file_url else None
+
+    response: Dict[str, Any] = {
+        "service_order": service_doc.name,
+        "estimate_pdf": pdf_payload,
+        "indicator": "green",
+        "message": _("Dokumen estimasi service kendaraan siap diunduh."),
+    }
+
+    if file_doc:
+        response.update(
+            {
+                "file_name": getattr(file_doc, "file_name", filename),
+                "file_url": file_url,
+                "absolute_file_url": absolute_url,
+                "file_doc": file_doc.name,
+            }
+        )
+
+    return response
 
 
 @frappe.whitelist()

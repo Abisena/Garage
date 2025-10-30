@@ -361,7 +361,8 @@ function cloneBrandModelMap(map) {
                 status: document.querySelector('[data-role="spare-status-badge"]'),
             };
 
-            this.setEstimateDownload(null);
+            this.lastEstimateServiceOrder = null;
+            this.setEstimateDownload(null, { service_order: null });
 
             this.metrics = {
                 serviceEstimate: document.querySelector('[data-metric="service-estimate"]'),
@@ -519,7 +520,8 @@ function cloneBrandModelMap(map) {
                         {
                             onSuccess: (response) => {
                                 const pdf = response?.message?.estimate_pdf;
-                                this.setEstimateDownload(pdf);
+                                const serviceOrder = response?.message?.created?.service_order || null;
+                                this.setEstimateDownload(pdf, { service_order: serviceOrder });
                                 
                                 if (pdf?.content) {
                                     // Try auto-download
@@ -3704,7 +3706,7 @@ function cloneBrandModelMap(map) {
             });
         }
 
-        setEstimateDownload(pdfPayload) {
+        setEstimateDownload(pdfPayload, metadata = {}) {
             const hasContent = pdfPayload && typeof pdfPayload.content === 'string' && pdfPayload.content.trim();
             this.lastEstimatePdf = hasContent
                 ? {
@@ -3714,12 +3716,23 @@ function cloneBrandModelMap(map) {
                   }
                 : null;
 
+            if (metadata && Object.prototype.hasOwnProperty.call(metadata, 'service_order')) {
+                const orderValue = metadata.service_order;
+                if (orderValue === undefined || orderValue === null || String(orderValue).trim() === '') {
+                    this.lastEstimateServiceOrder = null;
+                } else {
+                    this.lastEstimateServiceOrder = String(orderValue).trim();
+                }
+            }
+
             const button = this.buttons?.downloadEstimate;
             if (!button) {
                 return;
             }
 
-            if (this.lastEstimatePdf) {
+            const hasDownloadSource = Boolean(this.lastEstimatePdf || this.lastEstimateServiceOrder);
+
+            if (hasDownloadSource) {
                 button.hidden = false;
                 button.disabled = false;
                 button.setAttribute('aria-disabled', 'false');
@@ -3809,7 +3822,7 @@ function cloneBrandModelMap(map) {
             }
         }
 
-        handleEstimateDownload() {
+        async handleEstimateDownload() {
             if (this.lastEstimatePdf?.content) {
                 this.downloadBase64File(
                     this.lastEstimatePdf.content,
@@ -3819,7 +3832,76 @@ function cloneBrandModelMap(map) {
                 return;
             }
 
-            frappe.msgprint(__('Belum ada estimasi service yang bisa diunduh. Simpan intake terlebih dahulu.'));
+            const serviceOrder = this.lastEstimateServiceOrder;
+            if (!serviceOrder) {
+                frappe.msgprint(
+                    __('Belum ada estimasi service yang bisa diunduh. Simpan intake terlebih dahulu.')
+                );
+                return;
+            }
+
+            try {
+                const triggerButton = this.buttons?.downloadEstimate;
+                if (triggerButton) {
+                    triggerButton.disabled = true;
+                    triggerButton.setAttribute('aria-disabled', 'true');
+                }
+
+                const response = await frappe.call({
+                    method: 'garage.api.portal.generate_service_estimate_document',
+                    args: { service_order: serviceOrder },
+                    freeze: true,
+                    freeze_message: __('Menyiapkan dokumen estimasi...'),
+                });
+
+                const payload = response?.message || {};
+                const pdf = payload.estimate_pdf;
+                const resolvedOrder = payload.service_order || serviceOrder;
+
+                if (pdf?.content) {
+                    this.setEstimateDownload(pdf, { service_order: resolvedOrder });
+                    this.downloadBase64File(
+                        pdf.content,
+                        pdf.filename || 'estimasi-service.pdf',
+                        pdf.mime_type || 'application/pdf'
+                    );
+                } else {
+                    this.setEstimateDownload(null, { service_order: resolvedOrder });
+                }
+
+                const indicator = payload.indicator || 'green';
+                const message =
+                    payload.message || __('Dokumen estimasi service kendaraan siap diunduh.');
+                const fileLink = payload.absolute_file_url || payload.file_url;
+
+                let htmlMessage = `<p>${message}</p>`;
+                if (fileLink) {
+                    htmlMessage += `<p><a href="${fileLink}" target="_blank" rel="noopener">${__(
+                        'Buka Lampiran Estimasi'
+                    )}</a></p>`;
+                }
+
+                frappe.msgprint({
+                    title: __('Estimasi Service'),
+                    indicator,
+                    message: htmlMessage,
+                });
+            } catch (error) {
+                frappe.show_alert(
+                    {
+                        message: __('Gagal menyiapkan dokumen estimasi: {0}', [error.message || error]),
+                        indicator: 'red',
+                    },
+                    7
+                );
+            } finally {
+                const triggerButton = this.buttons?.downloadEstimate;
+                if (triggerButton) {
+                    const hasSource = Boolean(this.lastEstimatePdf || this.lastEstimateServiceOrder);
+                    triggerButton.disabled = !hasSource;
+                    triggerButton.setAttribute('aria-disabled', hasSource ? 'false' : 'true');
+                }
+            }
         }
 
         resetForm(form) {
