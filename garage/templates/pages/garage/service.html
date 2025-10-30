@@ -1517,13 +1517,12 @@ body {
                         <th>Service Order</th>
                         <th>Kendaraan</th>
                         <th>Customer</th>
-                        <th>Service Details</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody id="table-progress">
                     <tr>
-                        <td colspan="5">
+                        <td colspan="4">
                             <div class="loading-state">
                                 <div class="loading-spinner"></div>
                                 <p>Loading data...</p>
@@ -1877,7 +1876,7 @@ body {
         if (!orders || orders.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="5">
+                    <td colspan="4">
                         <div class="empty-state">
                             <div class="empty-state__icon">⚙️</div>
                             <div class="empty-state__title">Tidak ada service dalam pengerjaan</div>
@@ -1911,9 +1910,6 @@ body {
                         <div class="customer-name">${order.customer_name || '-'}</div>
                         <div class="customer-contact">${order.customer_phone || '-'}</div>
                     </div>
-                </td>
-                <td>
-                    <div class="cell-muted">${order.inspection_summary || '-'}</div>
                 </td>
                 <td>
                     <button class="action-btn" data-order="${escapeAttribute(order.name || '')}" onclick="openStatusUpdateModal(this.dataset.order)">
@@ -2131,7 +2127,7 @@ body {
             `;
 
             document.getElementById('table-inspection').innerHTML = buildErrorRow(7);
-            document.getElementById('table-progress').innerHTML = buildErrorRow(5);
+            document.getElementById('table-progress').innerHTML = buildErrorRow(4);
             document.getElementById('table-completed').innerHTML = buildErrorRow(7);
         }
     }
