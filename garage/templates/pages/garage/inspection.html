@@ -1377,7 +1377,7 @@ a:hover {
                                 <span class="intake-meta__value" id="display_vehicle">-</span>
                             </div>
                             <div class="intake-meta__item intake-meta__item--field">
-                                <span class="intake-meta__label">Mekanik Penanggung Jawab</span>
+                                <span class="intake-meta__label">Mekanik</span>
                                 <div class="intake-meta__control">
                                     <select id="assigned_mechanic" name="assigned_mechanic">
                                         <option value="">Pilih mekanik tersedia</option>
@@ -2656,7 +2656,7 @@ a:hover {
                             </div>
                         </td>
                         <td>
-                            <input onchange="updateRequiredPartDescription(${i}, this.value)">${escapeHtml(part.description || '')}</input>
+                            <textarea onchange="updateRequiredPartDescription(${i}, this.value)">${escapeHtml(part.description || '')}</textarea>
                         </td>
                         <td><input type="number" value="${part.qty}" min="0" step="0.01" onchange="updateRequiredPartQty(${i}, this.value)" required></td>
                         <td><input type="text" value="${escapeHtml(part.uom || '')}" onchange="updateRequiredPartUom(${i}, this.value)"></td>
