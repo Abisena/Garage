@@ -2388,6 +2388,21 @@ a:hover {
             return Math.max(0, Math.min(subtotal, numericDiscount));
         }
 
+        function normalizeStockStatus(value) {
+            if (value === undefined || value === null) {
+                return 'Pending Check';
+            }
+            const status = String(value).trim();
+            if (!status) {
+                return 'Pending Check';
+            }
+            const lowered = status.toLowerCase();
+            if (lowered === 'draft' || lowered === 'planned') {
+                return 'Pending Check';
+            }
+            return status;
+        }
+
         function computePartAmount(part) {
             const qty = Number(part?.qty) || 0;
             const rate = Number(part?.rate) || 0;
@@ -2522,7 +2537,7 @@ a:hover {
                 qty: 1,
                 rate: 0,
                 uom: 'Unit',
-                stock_status: 'Pending Check',
+                stock_status: 'Draft',
                 source: 'On Hand',
                 warehouse: '',
                 catalog_name: null,
@@ -2865,7 +2880,7 @@ a:hover {
                         rate: Number(part.rate ?? part.price ?? part.unit_price ?? 0) || 0,
                         discount_amount: Number(part.discount_amount ?? part.discount ?? 0) || 0,
                         uom: part.uom || part.unit || 'Unit',
-                        stock_status: part.stock_status || 'Pending Check',
+                        stock_status: part.stock_status || 'Draft',
                         source: part.source || part.part_source || 'On Hand',
                         warehouse: part.warehouse || part.warehouse_location || '',
                         catalog_name: part.catalog_name || null,
@@ -2942,7 +2957,7 @@ a:hover {
                     discount_amount: discountAmount,
                     amount,
                     uom: part.uom || 'Unit',
-                    stock_status: part.stock_status || 'Pending Check',
+                    stock_status: normalizeStockStatus(part.stock_status),
                     source: part.source || 'On Hand',
                     warehouse: part.warehouse || ''
                 };
