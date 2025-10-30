@@ -276,14 +276,15 @@ a:hover {
 .intake-meta__list {
     display: grid;
     gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
 .intake-meta__item {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 14px 16px;
     border: 1px solid var(--border-light);
     border-radius: var(--radius-lg);
     background: var(--bg-surface);
@@ -302,7 +303,8 @@ a:hover {
     font-weight: 600;
     color: var(--gray-900);
     word-break: break-word;
-    text-align: right;
+    text-align: left;
+    width: 100%;
 }
 
 .intake-assignment {
@@ -1394,14 +1396,12 @@ a:hover {
                     </div>
                     <div class="intake-assignment">
                         <div class="intake-assignment__field">
-                            <label for="assigned_mechanic">Teknisi Penanggung Jawab</label>
+                            <label for="assigned_mechanic">Mekanik Penanggung Jawab</label>
                             <select id="assigned_mechanic" name="assigned_mechanic">
-                                <option value="">Pilih teknisi tersedia</option>
+                                <option value="">Pilih mekanik tersedia</option>
                             </select>
-                            <p class="intake-assignment__hint">Maksimal 3 tugas aktif per teknisi. Pilih teknisi yang masih memiliki slot tugas.</p>
-                            <div class="technician-status" id="assigned_mechanic_status">Belum ada teknisi ditugaskan.</div>
+                            <div class="technician-status" id="assigned_mechanic_status">Belum ada mekanik ditugaskan.</div>
                         </div>
-                        <div class="technician-roster" id="technician_roster"></div>
                     </div>
                     <div class="intake-summary-group">
                         <ul class="intake-summary-list" id="intake_summary_service_list">
@@ -1704,7 +1704,7 @@ a:hover {
 
         const value = select.value || '';
         if (!value) {
-            statusElement.textContent = 'Belum ada teknisi ditugaskan.';
+            statusElement.textContent = 'Belum ada mekanik ditugaskan.';
             return;
         }
 
@@ -1712,7 +1712,7 @@ a:hover {
         const displayName = select.dataset.currentDisplay || value;
 
         if (!technician) {
-            statusElement.textContent = `${displayName} (tidak ditemukan di daftar teknisi).`;
+            statusElement.textContent = `${displayName} (tidak ditemukan di daftar mekanik).`;
             statusElement.classList.add('is-unknown');
             return;
         }
@@ -1723,7 +1723,7 @@ a:hover {
             statusElement.textContent = `${technician.employee_name} • ${loadText} • ${slotText}.`;
             statusElement.classList.add('is-available');
         } else {
-            statusElement.textContent = `${technician.employee_name} • ${loadText} • Teknisinya sudah penuh.`;
+            statusElement.textContent = `${technician.employee_name} • ${loadText} • Mekanik sudah penuh.`;
             statusElement.classList.add('is-full');
         }
     }
@@ -1745,7 +1745,7 @@ a:hover {
         select.innerHTML = '';
         const placeholder = document.createElement('option');
         placeholder.value = '';
-        placeholder.textContent = 'Pilih teknisi tersedia';
+        placeholder.textContent = 'Pilih mekanik tersedia';
         select.appendChild(placeholder);
 
         const sortedRoster = sortTechnicians(technicianRoster);
@@ -1758,7 +1758,7 @@ a:hover {
             const capacityText = technician.available_capacity > 0
                 ? `${technician.available_capacity} slot tersisa`
                 : 'Penuh';
-            option.textContent = `${technician.employee_name} • ${loadText} • ${capacityText}`;
+            option.textContent = technician.employee_name;
             option.dataset.displayName = technician.employee_name;
             const isCurrentSelection = targetValue && technician.identifier === targetValue;
             option.disabled = !technician.is_available && !isCurrentSelection;
@@ -1780,7 +1780,7 @@ a:hover {
             const fallbackOption = document.createElement('option');
             fallbackOption.value = targetValue;
             const fallbackLabel = previousDisplay || targetValue;
-            fallbackOption.textContent = `${fallbackLabel} (di luar daftar teknisi)`;
+            fallbackOption.textContent = `${fallbackLabel} (di luar daftar mekanik)`;
             fallbackOption.dataset.displayName = fallbackLabel;
             select.appendChild(fallbackOption);
             select.value = targetValue;
@@ -1808,7 +1808,7 @@ a:hover {
         if (!technicianRoster.length) {
             const emptyState = document.createElement('div');
             emptyState.className = 'technician-roster__empty';
-            emptyState.textContent = 'Belum ada teknisi yang terdaftar.';
+            emptyState.textContent = 'Belum ada mekanik yang terdaftar.';
             container.appendChild(emptyState);
             return;
         }
@@ -2335,13 +2335,14 @@ a:hover {
 
         function deriveServiceSummaryItems(order) {
             const items = [];
+            const bundleDetails = order?.service_bundle_details || {};
             const serviceType = order?.service_order_type || '';
             const bundleName = order?.service_bundle_name
-                || order?.service_bundle_details?.bundle_name
-                || order?.service_bundle_details?.name
+                || bundleDetails.bundle_name
+                || bundleDetails.name
                 || '';
-            const bundleDescription = order?.service_bundle_details?.description
-                || order?.service_bundle_details?.notes
+            const bundleDescription = bundleDetails.description
+                || bundleDetails.notes
                 || '';
 
             const labelParts = [];
@@ -2370,25 +2371,108 @@ a:hover {
                 });
             }
 
-            const tasks = Array.isArray(order?.service_tasks) ? order.service_tasks : [];
-            tasks.forEach((task) => {
-                const label = task.task || task.description;
+            const candidateKeys = [
+                'stages',
+                'service_stages',
+                'serviceStages',
+                'services',
+                'service_items',
+                'serviceItems',
+                'packages',
+                'package_items',
+                'packageItems',
+            ];
+            const packageEntries = [];
+            candidateKeys.forEach((key) => {
+                const value = bundleDetails[key];
+                if (Array.isArray(value)) {
+                    packageEntries.push(...value);
+                }
+            });
+
+            const normalizedPackages = [];
+            const seenPackages = new Set();
+            packageEntries.forEach((entry) => {
+                if (!entry && entry !== 0) {
+                    return;
+                }
+
+                let label = '';
+                const metaPieces = [];
+
+                if (typeof entry === 'string' || typeof entry === 'number') {
+                    label = String(entry).trim();
+                } else if (typeof entry === 'object') {
+                    label = String(
+                        entry.label
+                        || entry.name
+                        || entry.stage_name
+                        || entry.stage
+                        || entry.title
+                        || entry.description
+                        || entry.service
+                        || entry.task
+                        || entry.item
+                        || entry.item_name
+                        || '',
+                    ).trim();
+
+                    const details = [
+                        entry.description,
+                        entry.detail,
+                        entry.notes,
+                        entry.meta,
+                    ];
+                    details.forEach((value) => {
+                        if (!value) {
+                            return;
+                        }
+                        const text = String(value).trim();
+                        if (text && text !== label) {
+                            metaPieces.push(text);
+                        }
+                    });
+                }
+
                 if (!label) {
                     return;
                 }
-                const metaPieces = [];
-                if (task.description && task.description !== label) {
-                    metaPieces.push(task.description);
+
+                const meta = metaPieces.filter(Boolean).join(' • ');
+                const signature = `${label}|${meta}`;
+                if (seenPackages.has(signature)) {
+                    return;
                 }
-                if (task.technician_name) {
-                    metaPieces.push(`Teknisi: ${task.technician_name}`);
-                }
-                const meta = metaPieces.join(' • ');
-                items.push({
+                seenPackages.add(signature);
+                normalizedPackages.push({
                     label,
                     meta: meta || undefined,
                 });
             });
+
+            if (normalizedPackages.length) {
+                items.push(...normalizedPackages);
+            } else {
+                const tasks = Array.isArray(order?.service_tasks) ? order.service_tasks : [];
+                tasks.forEach((task) => {
+                    const label = task.task || task.description;
+                    if (!label) {
+                        return;
+                    }
+                    const metaPieces = [];
+                    if (task.description && task.description !== label) {
+                        metaPieces.push(task.description);
+                    }
+                    if (task.technician_name) {
+                        metaPieces.push(`Mekanik: ${task.technician_name}`);
+                    }
+                    const meta = metaPieces.join(' • ');
+                    items.push({
+                        label,
+                        meta: meta || undefined,
+                    });
+                });
+            }
 
             if (!items.length && (serviceType || bundleName)) {
                 items.push({ label: serviceType || bundleName });
