@@ -276,7 +276,48 @@ a:hover {
 .intake-meta__list {
     display: grid;
     gap: 12px;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
+}
+
+/* Styling default untuk card dengan border */
+.intake-meta__item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 14px 16px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+}
+
+/* KHUSUS untuk mekanik select: TANPA card/border */
+.intake-meta__item--no-card {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+}
+
+/* Service/Repair span 2 kolom */
+.intake-meta__item--service {
+    grid-column: span 2;
+}
+
+/* Responsive */
+@media (min-width: 769px) and (max-width: 1023px) {
+    .intake-meta__list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .intake-meta__list {
+        grid-template-columns: 1fr;
+    }
+    
+    .intake-meta__item--service {
+        grid-column: span 1;
+    }
 }
 
 .intake-meta__item {
@@ -1362,8 +1403,9 @@ a:hover {
                     </div>
                 </div>
                 <div class="intake-summary">
-                    <div class="intake-meta">
+                    <div class="intake-summary">
                         <div class="intake-meta__list">
+                            <!-- Baris 1: Order ID, Customer, Kendaraan (dengan card) -->
                             <div class="intake-meta__item">
                                 <span class="intake-meta__label">Order ID</span>
                                 <span class="intake-meta__value" id="display_order_id">-</span>
@@ -1376,7 +1418,9 @@ a:hover {
                                 <span class="intake-meta__label">Kendaraan</span>
                                 <span class="intake-meta__value" id="display_vehicle">-</span>
                             </div>
-                            <div class="intake-meta__item intake-meta__item--field">
+                            
+                            <!-- Baris 2: Mekanik (TANPA CARD, span 1 kolom) -->
+                            <div class="intake-meta__item intake-meta__item--no-card">
                                 <span class="intake-meta__label">Mekanik</span>
                                 <div class="intake-meta__control">
                                     <select id="assigned_mechanic" name="assigned_mechanic">
@@ -1384,6 +1428,8 @@ a:hover {
                                     </select>
                                 </div>
                             </div>
+                            
+                            <!-- Service/Repair (dengan card, span 2 kolom) -->
                             <div class="intake-meta__item intake-meta__item--service">
                                 <span class="intake-meta__label">Service/Repair</span>
                                 <ul class="intake-summary-list" id="intake_summary_service_list">
