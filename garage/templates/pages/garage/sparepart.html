@@ -879,8 +879,7 @@ body {
                     <tr>
                         <th>Service Order</th>
                         <th>Jumlah Item</th>
-                        <th>Status</th>
-                        <th>Tanggung Jawab</th>
+                        <th>Request</th>
                         <th>Tindakan</th>
                     </tr>
                 </thead>
@@ -1000,6 +999,32 @@ body {
         return badges[status] || badges['Active'];
     }
 
+    function formatServiceOrderId(value) {
+        if (value === undefined || value === null) {
+            return '-';
+        }
+
+        const raw = String(value).trim();
+        if (!raw) {
+            return '-';
+        }
+
+        if (/^SO-\d{5,}$/i.test(raw)) {
+            const [, digits] = raw.split('-');
+            return `SO-${digits}`;
+        }
+
+        const numericMatch = raw.match(/\d+/);
+        if (numericMatch) {
+            const numeric = Number(numericMatch[0]);
+            if (!Number.isNaN(numeric)) {
+                return `SO-${numeric.toString().padStart(5, '0')}`;
+            }
+        }
+
+        return raw;
+    }
+
     function getStockStatus(stockQty, reorderLevel) {
         const stock = parseFloat(stockQty) || 0;
         const reorder = parseFloat(reorderLevel) || 0;
@@ -1096,8 +1121,6 @@ body {
                     customer: request.service_customer || '-',
                     vehicle: request.service_vehicle || '',
                     requests: [],
-                    managedBy: new Set(),
-                    warehouses: new Set(),
                     technicians: new Set(),
                     serviceAdvisor: request.service_advisor || '',
                 });
@@ -1122,12 +1145,6 @@ body {
             });
 
             const part = state.partIndex.get(request.item_code) || state.partIndex.get(request.item_name);
-            if (part?.managed_by) {
-                group.managedBy.add(part.managed_by);
-            }
-            if (part?.warehouse_location) {
-                group.warehouses.add(part.warehouse_location);
-            }
         });
 
         state.groupedRequests = groups;
@@ -1149,7 +1166,6 @@ body {
         tbody.innerHTML = Array.from(groups.values()).map(group => {
             const requestNames = group.requests.map(req => req.name).filter(Boolean);
             const categoryCount = { sparepart: 0, bahan: 0, other: 0 };
-            const sources = new Set();
 
             const allAvailable = group.requests.every(req => {
                 const part = state.partIndex.get(req.item_code) || state.partIndex.get(req.item_name);
@@ -1170,9 +1186,7 @@ body {
                 } else {
                     categoryCount.other += 1;
                 }
-                if (req.source) {
-                    sources.add(req.source);
-                }
+                // source information is handled in detail modal only
             });
 
             const summaryParts = [];
@@ -1193,39 +1207,20 @@ body {
                 }
             });
 
-            const metaLines = [];
-            if (group.warehouses.size) {
-                metaLines.push(Array.from(group.warehouses).join(', '));
-            }
-            if (sources.size) {
-                metaLines.push(`Sumber: ${Array.from(sources).join(', ')}`);
-            }
-
-            const responsibilityLines = [];
-            if (group.managedBy.size) {
-                responsibilityLines.push(Array.from(group.managedBy).join(', '));
-            }
-            if (group.serviceAdvisor) {
-                responsibilityLines.push(`SA: ${group.serviceAdvisor}`);
-            }
-            if (group.technicians.size) {
-                responsibilityLines.push(`Teknisi: ${Array.from(group.technicians).join(', ')}`);
-            }
-
             const approveDisabled = allAvailable ? '' : ' disabled title="Sparepart belum tersedia atau stok tidak mencukupi"';
             const approveLabel = group.requests.length > 1 ? '✅ Approve All' : '✅ Approve';
             const rejectLabel = group.requests.length > 1 ? '❌ Reject All' : '❌ Reject';
 
             const customerLine = group.customer ? escapeHTML(group.customer) : '-';
             const vehicleLine = group.vehicle ? `<div class="cell-muted">${escapeHTML(group.vehicle)}</div>` : '';
-            const metaText = metaLines.length ? `<div class="cell-muted">${escapeHTML(metaLines.join(' • '))}</div>` : '<div class="cell-muted">-</div>';
-            const responsibilityHtml = responsibilityLines.length
-                ? responsibilityLines.map(line => `<div class="cell-secondary">${escapeHTML(line)}</div>`).join('')
-                : '<div class="cell-muted">-</div>';
 
             const requestNamesAttr = escapeHTML(requestNames.join(','));
             const primaryRequestName = requestNames[0] ? escapeHTML(requestNames[0]) : '';
-            const serviceOrderDisplay = group.serviceOrder || '-';
+            const advisorLine = group.serviceAdvisor ? `<div class="cell-muted">SA: ${escapeHTML(group.serviceAdvisor)}</div>` : '';
+            const technicianLine = group.technicians.size
+                ? `<div class="cell-muted">Teknisi: ${escapeHTML(Array.from(group.technicians).join(', '))}</div>`
+                : '';
+            const serviceOrderDisplay = formatServiceOrderId(group.serviceOrder);
             const serviceOrderLink = group.serviceOrder
                 ? `/app/garage-service-order/${encodeURIComponent(group.serviceOrder)}`
                 : '';
@@ -1239,16 +1234,14 @@ body {
                         <div class="cell-strong">${serviceOrderHtml}</div>
                         <div class="cell-secondary">${customerLine}</div>
                         ${vehicleLine}
+                        ${advisorLine}
+                        ${technicianLine}
                     </td>
                     <td>
                         <div class="metric-text">${escapeHTML(itemSummary)}</div>
                     </td>
                     <td>
                         <div class="status-badges">${getRequestStatusBadge(primaryStatus)}</div>
-                        ${metaText}
-                    </td>
-                    <td>
-                        ${responsibilityHtml}
                     </td>
                     <td>
                         <div class="request-actions">
@@ -1256,7 +1249,6 @@ body {
                             <button class="primary small" type="button" data-request-action="approve"${approveDisabled}>${approveLabel}</button>
                             <button class="danger small" type="button" data-request-action="reject">${rejectLabel}</button>
                             <button class="ghost small" type="button" data-request-action="document">📄 Dokumen</button>
-                            <button class="ghost small" type="button" data-request-action="cancel">Cancel</button>
                         </div>
                     </td>
                 </tr>
@@ -1311,11 +1303,9 @@ body {
             'approve-bulk': 'Setujui semua permintaan sparepart di order ini? Stok gudang akan berkurang otomatis.',
             'reject-single': 'Tolak permintaan sparepart ini?',
             'reject-bulk': 'Tolak semua permintaan sparepart di order ini?',
-            'cancel-single': 'Batalkan permintaan sparepart ini?',
-            'cancel-bulk': 'Batalkan semua permintaan sparepart di order ini?',
         };
 
-        const indicatorMap = { approve: 'green', reject: 'red', cancel: 'orange' };
+        const indicatorMap = { approve: 'green', reject: 'red' };
         const key = `${normalized}-${isBulk ? 'bulk' : 'single'}`;
         const confirmation = confirmMessages[key] || 'Lanjutkan aksi ini?';
 
@@ -1371,7 +1361,7 @@ body {
         const empty = modal.querySelector('[data-role="spare-request-modal-empty"]');
 
         if (title) {
-            title.textContent = `Detail Sparepart – ${serviceOrder || '-'}`;
+            title.textContent = `Detail Sparepart – ${formatServiceOrderId(serviceOrder)}`;
         }
 
         if (!group || !group.requests.length) {
@@ -1393,7 +1383,7 @@ body {
                     ? `<div>Teknisi: ${escapeHTML(Array.from(group.technicians).join(', '))}</div>`
                     : '';
                 summary.innerHTML = `
-                    <div><strong>Service Order:</strong> ${escapeHTML(serviceOrder)}</div>
+                    <div><strong>Service Order:</strong> ${escapeHTML(formatServiceOrderId(serviceOrder))}</div>
                     <div><strong>Customer:</strong> ${escapeHTML(group.customer || '-')}</div>
                     <div><strong>Total Permintaan:</strong> ${breakdown}</div>
                     ${advisorLine}

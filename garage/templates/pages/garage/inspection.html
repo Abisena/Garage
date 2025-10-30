@@ -1960,16 +1960,29 @@ a:hover {
 
             const rows = requiredParts.map((part, i) => {
                 const catalogOptions = sparePartCatalog
-                    .map((catalog) => `
-                        <option value="${escapeHtml(catalog.name)}" ${catalog.name === part.catalog_name ? 'selected' : ''}>
-                            ${escapeHtml(catalog.part_code || catalog.part_name || catalog.name)} — ${escapeHtml(catalog.part_name || '')}
-                        </option>
-                    `)
+                    .map((catalog) => {
+                        const isSelected = catalog.name === part.catalog_name;
+                        const stockQty = Number(catalog.stock_qty) || 0;
+                        const isOutOfStock = stockQty <= 0;
+                        const disabledAttr = !isSelected && isOutOfStock ? ' disabled' : '';
+                        const selectedAttr = isSelected ? ' selected' : '';
+                        const labelSuffix = isOutOfStock ? ' (Stok Habis)' : '';
+                        const optionLabel = `${escapeHtml(catalog.part_code || catalog.part_name || catalog.name)} — ${escapeHtml(catalog.part_name || '')}${labelSuffix}`;
+                        return `
+                            <option value="${escapeHtml(catalog.name)}"${selectedAttr}${disabledAttr}>
+                                ${optionLabel}
+                            </option>
+                        `;
+                    })
                     .join('');
                 const manualOption = !part.catalog_name && part.item_code
                     ? `<option value="__manual__${i}" selected>Manual: ${escapeHtml(part.item_code)}${part.item_name ? ` – ${escapeHtml(part.item_name)}` : ''}</option>`
                     : '';
                 const catalogHint = sparePartCatalog.length ? '' : '<p class="sparepart-hint">Katalog sparepart masih kosong. Tambahkan data di halaman Sparepart.</p>';
+                const availableStock = Number(part.catalog_stock_qty ?? part.stock_qty ?? 0);
+                const stockWarning = availableStock <= 0 && part.catalog_name
+                    ? '<p class="sparepart-hint">Stok gudang habis. Pilih sumber lain atau lakukan pemesanan.</p>'
+                    : '';
                 const itemCodeDisplay = escapeHtml(part.item_code || part.catalog_part_code || '-');
 
                 return `
@@ -1983,6 +1996,7 @@ a:hover {
                                         ${catalogOptions}
                                     </select>
                                     ${catalogHint}
+                                    ${stockWarning}
                                 </div>
                             </div>
                         </td>
@@ -2068,11 +2082,14 @@ a:hover {
             const nextCode = catalog.part_code ? String(catalog.part_code) : '';
             const isDifferentSelection = (previousCatalogName && previousCatalogName !== nextCatalogName)
                 || (previousCode && previousCode !== nextCode);
+            const availableStock = Number(catalog.stock_qty) || 0;
+            const defaultSource = availableStock > 0 ? 'On Hand' : 'To Order';
+            const selectedSource = availableStock > 0 ? (part.source || defaultSource) : 'To Order';
             requiredParts[index] = mergeRequiredPartWithCatalog({
                 ...part,
                 catalog_name: catalog.name,
                 catalog_part_code: catalog.part_code,
-                source: part.source || 'On Hand'
+                source: selectedSource
             }, catalog);
             if (isDifferentSelection || !part.description || !part.description.trim()) {
                 requiredParts[index].description = catalog.part_name || requiredParts[index].description;
