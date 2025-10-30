@@ -109,6 +109,12 @@ a:hover {
     margin-bottom: 24px;
 }
 
+.hero-top__status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .back-link {
     display: inline-flex;
     align-items: center;
@@ -623,7 +629,7 @@ a:hover {
     background: white;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-sm);
-    padding: 28px;
+    padding: 20px;
     border: 1px solid var(--border-light);
 }
 
@@ -754,7 +760,7 @@ a:hover {
 
 .form-group textarea {
     resize: vertical;
-    min-height: 120px;
+    min-height: 96px;
 }
 
 .form-hint {
@@ -879,7 +885,7 @@ a:hover {
 
 .parts-table textarea {
     resize: vertical;
-    min-height: 72px;
+    min-height: 56px;
 }
 
 .parts-table .numeric {
@@ -1356,7 +1362,10 @@ a:hover {
     <header class="hero-section">
         <div class="hero-top">
             <a href="/garage/service" class="back-link">← Kembali ke Service Management</a>
-            <span class="status-badge status-draft" id="display_status">Draft</span>
+            <div class="hero-top__status">
+                <span class="status-badge status-draft" id="display_status">Draft</span>
+                <span class="tag priority-badge" id="display_priority">-</span>
+            </div>
         </div>
         <div class="hero-body">
             <div class="hero-text">
@@ -1399,7 +1408,6 @@ a:hover {
                     </div>
                     <div class="section-tags">
                         <span class="tag service-type-badge" id="display_service_type">-</span>
-                        <span class="tag priority-badge" id="display_priority">-</span>
                     </div>
                 </div>
                 <div class="intake-summary">
@@ -1431,7 +1439,6 @@ a:hover {
                             
                             <!-- Service/Repair (dengan card, span 2 kolom) -->
                             <div class="intake-meta__item intake-meta__item--service">
-                                <span class="intake-meta__label">Service/Repair</span>
                                 <ul class="intake-summary-list" id="intake_summary_service_list">
                                     <li class="placeholder">Belum ada jasa terdaftar.</li>
                                 </ul>
