@@ -25,6 +25,7 @@ SERVICE_ORDER_ACTIVE_STATUSES = {
 }
 TECHNICIAN_ACTIVE_STATUS = {"Active"}
 TECHNICIAN_ROLE_NAMES = {"Technician", "Teknisi"}
+DEFAULT_TECHNICIAN_CAPACITY = 3
 
 # Whitelisted DocTypes that can be created/updated from the public portal along with
 # the permitted fields. The definition intentionally mirrors the JSON DocType schema
@@ -131,6 +132,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "rejection_reason",
             "inspection_summary",
             "service_notes",
+            "assigned_mechanic",
         },
         "children": {
             "inspection_items": {
@@ -1053,13 +1055,20 @@ def _technician_load_map(exclude_order: Optional[str] = None) -> Dict[str, int]:
     return {row[0]: cint(row[1]) for row in rows if row and row[0]}
 
 
+def _resolve_max_jobs(raw: Any) -> int:
+    max_jobs = cint(raw or 0)
+    return max_jobs if max_jobs > 0 else DEFAULT_TECHNICIAN_CAPACITY
+
+
 def _update_roster_capacity(technician: MutableMapping[str, Any]) -> None:
-    max_jobs = cint(technician.get("max_active_jobs") or 0)
-    load = cint(technician.get("active_task_count") or 0)
-    technician["available_capacity"] = max(0, max_jobs - load) if max_jobs else None
+    max_jobs = _resolve_max_jobs(technician.get("max_active_jobs"))
+    load = max(0, cint(technician.get("active_task_count") or 0))
+    technician["max_active_jobs"] = max_jobs
+    technician["active_task_count"] = load
+    technician["available_capacity"] = max(0, max_jobs - load)
     technician["is_available"] = (
         technician.get("status") in TECHNICIAN_ACTIVE_STATUS
-        and (max_jobs == 0 or load < max_jobs)
+        and load < max_jobs
     )
 
 
@@ -1166,7 +1175,7 @@ def _technician_profiles_from_roles(
                 "employee_name": employee.get("employee_name") or identifier,
                 "user_id": employee.get("user_id"),
                 "status": normalized_status or "Active",
-                "max_active_jobs": 3,
+                "max_active_jobs": DEFAULT_TECHNICIAN_CAPACITY,
                 "skill_tags": "",
                 "phone": employee.get("cell_number"),
                 "email": employee.get("company_email"),
@@ -1215,7 +1224,8 @@ def _auto_assign_technicians(
     }
 
     loads = {
-        employee: cint(meta.get("active_task_count") or 0) for employee, meta in roster_by_employee.items()
+        employee: max(0, cint(meta.get("active_task_count") or 0))
+        for employee, meta in roster_by_employee.items()
     }
 
     for task in tasks:
@@ -1238,9 +1248,9 @@ def _auto_assign_technicians(
             if meta.get("status") not in TECHNICIAN_ACTIVE_STATUS:
                 continue
 
-            max_jobs = cint(meta.get("max_active_jobs") or 0)
+            max_jobs = _resolve_max_jobs(meta.get("max_active_jobs"))
             current_load = loads.get(employee, 0)
-            if max_jobs and current_load >= max_jobs:
+            if current_load >= max_jobs:
                 continue
 
             candidates.append(
@@ -2346,6 +2356,13 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
         "service_bundle": getattr(doc, "service_bundle", None),
         "service_bundle_name": getattr(doc, "service_bundle_name", None),
     }
+
+    assigned_mechanic = getattr(doc, "assigned_mechanic", None) or getattr(doc, "mechanic_in_charge", None)
+    if assigned_mechanic:
+        result["assigned_mechanic"] = assigned_mechanic
+        assigned_display = _employee_display_map([assigned_mechanic])
+        if assigned_display.get(assigned_mechanic):
+            result["assigned_mechanic_name"] = assigned_display[assigned_mechanic]
     
     # Get customer details
     if doc.customer:
@@ -2516,7 +2533,8 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
         "estimated_delivery_date",
         "total_estimated_amount",
         "inspection_summary",
-        "service_notes"
+        "service_notes",
+        "assigned_mechanic",
     }
     
     for field, value in data.items():
