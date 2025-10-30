@@ -220,6 +220,33 @@ const VEHICLE_BRAND_MODELS = {
     ],
 };
 
+function cloneBrandModelMap(map) {
+    if (!map || typeof map !== 'object') {
+        return {};
+    }
+    const clone = {};
+    Object.entries(map).forEach(([brand, entries]) => {
+        if (!Array.isArray(entries)) {
+            clone[brand] = [];
+            return;
+        }
+        clone[brand] = entries.map((entry) => {
+            if (typeof entry === 'string') {
+                return entry;
+            }
+            if (!entry || typeof entry !== 'object') {
+                return { name: '' };
+            }
+            const result = { name: entry.name || '' };
+            if (Array.isArray(entry.variants) && entry.variants.length) {
+                result.variants = entry.variants.slice();
+            }
+            return result;
+        });
+    });
+    return clone;
+}
+
 (() => {
     class GaragePortal {
         constructor() {
@@ -240,7 +267,8 @@ const VEHICLE_BRAND_MODELS = {
             this.filteredSpareParts = [];
             this.currentSparePart = null;
             this.creatingSparePart = false;
-            this.brandModelMap = VEHICLE_BRAND_MODELS;
+            this.defaultBrandModelMap = cloneBrandModelMap(VEHICLE_BRAND_MODELS);
+            this.brandModelMap = cloneBrandModelMap(VEHICLE_BRAND_MODELS);
             this.brandModelInitialized = false;
             this.bootstrapRefreshHandle = null;
             this.isPrefilling = false; // ← TAMBAHKAN BARIS INI
@@ -857,7 +885,7 @@ const VEHICLE_BRAND_MODELS = {
                         return;
                     }
                     const previousPrefilled = this.lastPrefilledPlate;
-                    this.registerVehicleData(vehicle);
+                    this.registerVehicleData(vehicle, { refreshBrandOptions: true });
                     this.lastPrefilledPlate = normalized;
                     this.prefillVehicleFields(vehicle);
                     const customerName = vehicle.customer;
@@ -1049,7 +1077,7 @@ const VEHICLE_BRAND_MODELS = {
             }
         }
 
-        registerVehicleData(vehicle) {
+        registerVehicleData(vehicle, options = {}) {
             if (!vehicle) {
                 return;
             }
@@ -1059,6 +1087,105 @@ const VEHICLE_BRAND_MODELS = {
             }
             this.vehicleIndex.set(normalized, vehicle);
             this.ensureLicensePlateOption(vehicle);
+
+            const updatedBrandMap = this.integrateBrandModelFromVehicle(vehicle);
+            if (updatedBrandMap && options.refreshBrandOptions) {
+                this.refreshBrandModelOptions();
+            }
+        }
+
+        integrateBrandModelFromVehicle(vehicle) {
+            if (!vehicle) {
+                return false;
+            }
+            const brand = (vehicle.brand || '').trim();
+            if (!brand) {
+                return false;
+            }
+
+            if (!this.brandModelMap || typeof this.brandModelMap !== 'object') {
+                this.brandModelMap = cloneBrandModelMap(this.defaultBrandModelMap || {});
+            }
+
+            const map = this.brandModelMap;
+            const entries = Array.isArray(map[brand]) ? map[brand].slice() : [];
+            const variant = (vehicle.model_variant || '').trim();
+            let changed = false;
+
+            const candidates = [vehicle.model, vehicle.type_model]
+                .map((value) => (value || '').trim())
+                .filter((value, index, array) => value && array.indexOf(value) === index);
+
+            if (!candidates.length) {
+                map[brand] = entries;
+                return false;
+            }
+
+            const ensureEntry = (modelName) => {
+                if (!modelName) {
+                    return;
+                }
+                const existingIndex = entries.findIndex((entry) =>
+                    typeof entry === 'string' ? entry === modelName : entry?.name === modelName
+                );
+
+                if (existingIndex === -1) {
+                    if (variant) {
+                        entries.push({ name: modelName, variants: [variant] });
+                    } else {
+                        entries.push({ name: modelName });
+                    }
+                    changed = true;
+                    return;
+                }
+
+                const existingEntry = entries[existingIndex];
+                if (typeof existingEntry === 'string') {
+                    if (variant) {
+                        entries[existingIndex] = { name: modelName, variants: [variant] };
+                        changed = true;
+                    }
+                    return;
+                }
+
+                if (!variant) {
+                    return;
+                }
+
+                const variants = Array.isArray(existingEntry.variants)
+                    ? existingEntry.variants.slice()
+                    : [];
+                if (!variants.includes(variant)) {
+                    variants.push(variant);
+                    entries[existingIndex] = variants.length
+                        ? { name: modelName, variants }
+                        : { name: modelName };
+                    changed = true;
+                }
+            };
+
+            candidates.forEach((modelName) => ensureEntry(modelName));
+            map[brand] = entries;
+
+            return changed;
+        }
+
+        refreshBrandModelOptions() {
+            const brandSelect = this.selects.brand;
+            const modelSelect = this.selects.model;
+            if (!brandSelect || !modelSelect) {
+                return;
+            }
+
+            const variantSelect = this.selects.modelVariant;
+            const brandValue = brandSelect.value || brandSelect.getAttribute('data-pending-value') || '';
+            const modelValue = modelSelect.value || modelSelect.getAttribute('data-pending-value') || '';
+            const variantValue = variantSelect
+                ? variantSelect.value || variantSelect.getAttribute('data-pending-value') || ''
+                : '';
+
+            this.populateBrandOptions(brandValue);
+            this.populateModelOptions(brandValue, modelValue, variantValue);
         }
 
         ensureLicensePlateOption(vehicle) {
@@ -1175,6 +1302,7 @@ const VEHICLE_BRAND_MODELS = {
                     this.registerCustomerData(customer);
                     if (Array.isArray(data.vehicles)) {
                         data.vehicles.forEach((vehicle) => this.registerVehicleData(vehicle));
+                        this.refreshBrandModelOptions();
                     }
                     this.prefillCustomerFields(customer);
                     this.updateCustomerSearchInput(customer);
@@ -1325,6 +1453,7 @@ const VEHICLE_BRAND_MODELS = {
                     this.registerCustomerData(customer);
                     if (Array.isArray(data.vehicles)) {
                         data.vehicles.forEach((vehicle) => this.registerVehicleData(vehicle));
+                        this.refreshBrandModelOptions();
                     }
                     if (this.selects.existingCustomer) {
                         const set = this.setSelectValue(this.selects.existingCustomer, customer.name);
@@ -1745,6 +1874,8 @@ const VEHICLE_BRAND_MODELS = {
             vehicles.forEach((vehicle) => {
                 this.registerVehicleData(vehicle);
             });
+
+            this.refreshBrandModelOptions();
 
             this.populateSelect(this.selects.existingCustomer, customers, {
                 valueKey: 'name',
