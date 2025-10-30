@@ -10,8 +10,8 @@ def generate_service_estimate_pdf(order_id):
     """Generate PDF estimasi service dari template"""
     
     try:
-        # Get order data
-        order = frappe.get_doc("Service Order", order_id)
+        # Get order data - PAKAI NAMA YANG BENAR
+        order = frappe.get_doc("Garage Service Order", order_id)  # ← FIX: Garage Service Order
         
         # Prepare data for template
         customer_details = order.customer_details or {}
@@ -60,7 +60,7 @@ def generate_service_estimate_pdf(order_id):
             'ppn': ppn,
             'pph': pph,
             'total': total_with_tax,
-            'notes': order.service_notes or order.inspection_summary or '-',
+            'notes': order.service_notes or order.inspection_summary or order.notes or '-',
             'format_currency': format_currency
         }
         
@@ -121,7 +121,7 @@ def generate_service_estimate_pdf(order_id):
                 'is_private': 1,
                 'file_url': file_url,
                 'folder': 'Home',
-                'attached_to_doctype': 'Service Order',
+                'attached_to_doctype': 'Garage Service Order',  # ← FIX
                 'attached_to_name': order.name
             })
             file_doc.insert(ignore_permissions=True)

@@ -3480,23 +3480,27 @@ def create_service_intake(data):
         if not service_order_type:
             frappe.throw(_("Service order type is required"))
         
-        # 1. Handle Customer
+        # 1. Handle Customer (existing atau baru)
         customer_name = None
-        existing_customer = data.get('existing_customer')
         
+        # Cek apakah pilih customer existing
+        existing_customer = data.get('existing_customer')
         if existing_customer:
             customer_name = existing_customer
         else:
+            # Buat customer baru
             new_customer_name = data.get('customer_name') or data.get('new_customer_name')
             if not new_customer_name:
                 frappe.throw(_("Customer name is required"))
             
-            existing = frappe.db.exists('Customer', {'customer_name': new_customer_name})
+            # Cek apakah customer sudah ada
+            existing = frappe.db.exists('Garage Customer', {'customer_name': new_customer_name})
             if existing:
                 customer_name = existing
             else:
+                # Buat customer baru
                 customer = frappe.get_doc({
-                    'doctype': 'Customer',
+                    'doctype': 'Garage Customer',
                     'customer_name': new_customer_name,
                     'customer_type': data.get('customer_type', 'Individual'),
                     'phone': data.get('phone', ''),
@@ -3509,31 +3513,29 @@ def create_service_intake(data):
                 customer_name = customer.name
                 frappe.db.commit()
         
-        # 2. Handle Vehicle
+        # 2. Handle Vehicle (cek existing atau buat baru)
         vehicle_name = None
-        existing_vehicle = frappe.db.exists('Vehicle', {'license_plate': license_plate})
+        existing_vehicle = frappe.db.exists('Garage Vehicle', {'license_plate': license_plate})
         
-        # Get brand (make) - MANDATORY
+        # Get mandatory fields dengan default values
         brand = data.get('brand', 'Other')
         if not brand:
             brand = 'Other'
         
-        # Get mileage (last_odometer) - MANDATORY
         mileage = data.get('mileage', 0)
         if not mileage:
             mileage = 0
         
-        # Get fuel UOM - MANDATORY (default: Litre)
         fuel_uom = data.get('fuel_uom', 'Litre')
         if not fuel_uom:
             fuel_uom = 'Litre'
         
         if existing_vehicle:
             vehicle_name = existing_vehicle
-            vehicle = frappe.get_doc('Vehicle', vehicle_name)
+            vehicle = frappe.get_doc('Garage Vehicle', vehicle_name)
             vehicle.customer = customer_name
             
-            # Update fields
+            # Update fields jika ada
             if data.get('brand'):
                 vehicle.make = data.get('brand')
             if data.get('model'):
@@ -3560,18 +3562,18 @@ def create_service_intake(data):
         else:
             # Buat vehicle baru
             vehicle = frappe.get_doc({
-                'doctype': 'Vehicle',
+                'doctype': 'Garage Vehicle',
                 'license_plate': license_plate,
                 'customer': customer_name,
-                'make': brand,  # ← MANDATORY: brand sebagai make
+                'make': brand,  # Mandatory
                 'model': data.get('model', ''),
                 'model_variant': data.get('model_variant', ''),
                 'vehicle_year': data.get('vehicle_year'),
                 'color': data.get('color', ''),
                 'transmission': data.get('transmission', ''),
                 'fuel_type': data.get('fuel_type', 'Petrol'),
-                'last_odometer': mileage,  # ← MANDATORY: mileage sebagai last_odometer
-                'uom': fuel_uom,  # ← MANDATORY: fuel UOM
+                'last_odometer': mileage,  # Mandatory
+                'uom': fuel_uom,  # Mandatory
                 'vin': data.get('vin', ''),
                 'engine_number': data.get('engine_number', ''),
                 'last_service_date': frappe.utils.now()
@@ -3582,9 +3584,9 @@ def create_service_intake(data):
         
         # 3. Create Service Order
         service_order = frappe.get_doc({
-            'doctype': 'Service Order',
+            'doctype': 'Garage Service Order',  # ← Nama yang benar
             'customer': customer_name,
-            'customer_name': frappe.db.get_value('Customer', customer_name, 'customer_name'),
+            'customer_name': frappe.db.get_value('Garage Customer', customer_name, 'customer_name'),
             'vehicle': vehicle_name,
             'vehicle_plate': license_plate,
             'vehicle_brand': brand,
