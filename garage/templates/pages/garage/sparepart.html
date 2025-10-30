@@ -596,6 +596,161 @@ body {
     color: var(--primary);
 }
 
+.portal-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 35, 50, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+    padding: 24px;
+}
+
+.portal-modal.is-open {
+    display: flex;
+}
+
+.portal-modal__dialog {
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: min(720px, 95vw);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.portal-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.portal-modal__title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.portal-modal__close {
+    border: none;
+    background: transparent;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+}
+
+.portal-modal__close:hover {
+    background: var(--gray-100);
+    color: var(--text-primary);
+}
+
+.portal-modal__body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.portal-modal__summary {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.spare-request-modal__list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.spare-request-modal__item {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    background: var(--gray-50);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.spare-request-modal__item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.spare-request-modal__item-name {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text-primary);
+}
+
+.spare-request-modal__item-code {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.spare-request-modal__item-meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.spare-request-modal__item-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.spare-request-modal__item-note {
+    font-size: 13px;
+    color: var(--text-secondary);
+    background: white;
+    border-left: 3px solid var(--primary);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+}
+
+.spare-request-modal__item-warning {
+    font-size: 13px;
+    color: #c62828;
+    background: rgba(255, 61, 0, 0.12);
+    border: 1px solid rgba(255, 61, 0, 0.2);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+}
+
+.portal-modal__empty {
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-secondary);
+    display: none;
+    padding: 32px 0;
+}
+
+.portal-modal__empty.is-visible {
+    display: block;
+}
+
+.portal-modal__footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    justify-content: flex-end;
+}
+
 .empty-state {
     display: none;
     text-align: center;
@@ -770,6 +925,29 @@ body {
             <p class="empty-state__message">Tambahkan data master sparepart dari halaman profil untuk mulai mengelola stok.</p>
         </div>
     </section>
+</div>
+
+<div class="portal-modal" id="spare-request-modal" aria-hidden="true">
+    <div class="portal-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="spare-request-modal-title">
+        <div class="portal-modal__header">
+            <h3 class="portal-modal__title" id="spare-request-modal-title" data-role="spare-request-modal-title">
+                Detail Sparepart
+            </h3>
+            <button type="button" class="portal-modal__close" data-role="spare-request-modal-close" aria-label="Tutup">
+                ×
+            </button>
+        </div>
+        <div class="portal-modal__body">
+            <div class="portal-modal__summary" data-role="spare-request-modal-summary"></div>
+            <div class="spare-request-modal__list" data-role="spare-request-modal-list"></div>
+            <div class="portal-modal__empty" data-role="spare-request-modal-empty">
+                <p>Belum ada detail sparepart untuk ditampilkan.</p>
+            </div>
+        </div>
+        <div class="portal-modal__footer">
+            <button type="button" class="btn btn-secondary" data-role="spare-request-modal-close">Tutup</button>
+        </div>
+    </div>
 </div>
 {% endblock %}
 

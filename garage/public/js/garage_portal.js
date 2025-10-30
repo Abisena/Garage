@@ -245,6 +245,8 @@ const VEHICLE_BRAND_MODELS = {
             this.bootstrapRefreshHandle = null;
             this.isPrefilling = false; // ← TAMBAHKAN BARIS INI
             this.manualCustomerQuery = '';
+            this.spareRequestGroups = new Map();
+            this.boundSpareRequestModalKeydown = (event) => this.handleSpareRequestModalKeydown(event);
         }
 
         init() {
@@ -354,18 +356,41 @@ const VEHICLE_BRAND_MODELS = {
             this.refreshedAtLabel = document.querySelector('[data-role="refreshed-at"]');
             this.deskLinks = document.querySelectorAll('[data-desk-link]');
 
+            const statusModal = document.getElementById('service-status-modal');
+            const spareRequestModal = document.getElementById('spare-request-modal');
+
             this.modals = {
-                status: document.getElementById('service-status-modal'),
+                status: statusModal,
+                spareRequest: spareRequestModal,
             };
 
             this.statusModal = {
-                container: document.getElementById('service-status-modal'),
-                title: document.querySelector('[data-role="status-modal-title"]'),
-                summary: document.querySelector('[data-role="status-modal-summary"]'),
-                tableBody: document.querySelector('[data-role="status-modal-table"]'),
-                tableWrapper: document.querySelector('[data-role="status-modal-table-wrapper"]'),
-                emptyState: document.querySelector('[data-role="status-modal-empty"]'),
-                closeButtons: document.querySelectorAll('[data-role="status-modal-close"]'),
+                container: statusModal,
+                title: statusModal ? statusModal.querySelector('[data-role="status-modal-title"]') : null,
+                summary: statusModal ? statusModal.querySelector('[data-role="status-modal-summary"]') : null,
+                tableBody: statusModal ? statusModal.querySelector('[data-role="status-modal-table"]') : null,
+                tableWrapper: statusModal ? statusModal.querySelector('[data-role="status-modal-table-wrapper"]') : null,
+                emptyState: statusModal ? statusModal.querySelector('[data-role="status-modal-empty"]') : null,
+                closeButtons: statusModal ? statusModal.querySelectorAll('[data-role="status-modal-close"]') : [],
+            };
+
+            this.spareRequestModal = {
+                container: spareRequestModal,
+                title: spareRequestModal
+                    ? spareRequestModal.querySelector('[data-role="spare-request-modal-title"]')
+                    : null,
+                summary: spareRequestModal
+                    ? spareRequestModal.querySelector('[data-role="spare-request-modal-summary"]')
+                    : null,
+                list: spareRequestModal
+                    ? spareRequestModal.querySelector('[data-role="spare-request-modal-list"]')
+                    : null,
+                emptyState: spareRequestModal
+                    ? spareRequestModal.querySelector('[data-role="spare-request-modal-empty"]')
+                    : null,
+                closeButtons: spareRequestModal
+                    ? spareRequestModal.querySelectorAll('[data-role="spare-request-modal-close"]')
+                    : [],
             };
         }
 
@@ -704,6 +729,20 @@ const VEHICLE_BRAND_MODELS = {
             this.refreshButtons.forEach((button) => {
                 button.addEventListener('click', () => this.fetchBootstrap());
             });
+
+            if (this.spareRequestModal?.closeButtons?.length) {
+                this.spareRequestModal.closeButtons.forEach((button) => {
+                    button.addEventListener('click', () => this.closeSpareRequestDetail());
+                });
+            }
+
+            if (this.spareRequestModal?.container) {
+                this.spareRequestModal.container.addEventListener('click', (event) => {
+                    if (event.target === this.spareRequestModal.container) {
+                        this.closeSpareRequestDetail();
+                    }
+                });
+            }
 
             if (this.statusModal?.closeButtons) {
                 this.statusModal.closeButtons.forEach((button) => {
@@ -1839,7 +1878,10 @@ const VEHICLE_BRAND_MODELS = {
 
         updateSpareMetrics() {
             const totalParts = this.sparePartCatalog ? this.sparePartCatalog.length : 0;
-            const requestTotal = this.asArray(this.state.spare_part_requests).length;
+            const requestRows = this.asArray(this.state.spare_part_requests);
+            const requestTotal = new Set(
+                requestRows.map((row) => row.parent || row.name).filter(Boolean)
+            ).size;
             const lowStockTotal = (this.sparePartCatalog || []).filter((part) => this.isLowStock(part)).length;
 
             if (this.metrics.spareCount) {
@@ -1891,6 +1933,7 @@ const VEHICLE_BRAND_MODELS = {
             }
 
             const requests = this.asArray(this.state.spare_part_requests);
+            this.spareRequestGroups = new Map();
             table.innerHTML = '';
             if (!requests.length) {
                 if (this.emptyStates.spareRequests) {
@@ -1903,23 +1946,70 @@ const VEHICLE_BRAND_MODELS = {
             }
 
             const serviceIndex = new Map(serviceOrders.map((order) => [order.name, order]));
+            const groupedRequests = [];
+            const groupIndex = new Map();
 
             requests.forEach((request) => {
-                const order = serviceIndex.get(request.parent) || {};
-                const part = this.lookupSparePart(request.item_code) || this.lookupSparePart(request.item_name) || {};
+                const key = request.parent || request.name || `orphan-${request.item_code || request.item_name || ''}`;
+                if (!groupIndex.has(key)) {
+                    const order = serviceIndex.get(request.parent) || {};
+                    const group = { key, order, requests: [] };
+                    groupIndex.set(key, group);
+                    groupedRequests.push(group);
+                }
+                groupIndex.get(key).requests.push(request);
+            });
+
+            groupedRequests.forEach((group) => {
+                const order = group.order || {};
+                const detailItems = group.requests.map((request) => {
+                    const part =
+                        this.lookupSparePart(request.item_code) ||
+                        this.lookupSparePart(request.item_name) ||
+                        {};
+                    const qty = parseFloat(request.qty) || 0;
+                    const availableNumeric = parseFloat(part.stock_qty);
+                    return {
+                        request,
+                        part,
+                        qty,
+                        availableNumeric,
+                    };
+                });
+
+                this.spareRequestGroups.set(group.key, {
+                    order,
+                    requests: [...group.requests],
+                    items: detailItems,
+                });
 
                 const tr = document.createElement('tr');
                 tr.className = 'spare-request-row';
-                if (request?.name) {
-                    tr.setAttribute('data-request-name', request.name);
-                }
+                tr.setAttribute('data-request-group', group.key);
 
                 const orderCell = document.createElement('td');
                 orderCell.className = 'spare-request-cell spare-request-cell--order';
-                orderCell.appendChild(this.renderLink('Garage Service Order', request.parent, request.parent || '-'));
+                const orderName = group.requests[0]?.parent;
+                const primaryOrderName = orderName || group.requests[0]?.name || group.key;
+                if (orderName) {
+                    orderCell.appendChild(
+                        this.renderLink('Garage Service Order', orderName, primaryOrderName || '-')
+                    );
+                } else {
+                    const label = document.createElement('span');
+                    label.textContent = primaryOrderName || '-';
+                    orderCell.appendChild(label);
+                }
                 const orderMeta = document.createElement('div');
                 orderMeta.className = 'table-meta';
-                orderMeta.textContent = order.customer || '-';
+                const orderMetaParts = [];
+                if (order.customer) {
+                    orderMetaParts.push(order.customer);
+                }
+                if (order.vehicle) {
+                    orderMetaParts.push(order.vehicle);
+                }
+                orderMeta.textContent = orderMetaParts.join(' • ') || '-';
                 orderCell.appendChild(orderMeta);
                 tr.appendChild(orderCell);
 
@@ -1927,22 +2017,54 @@ const VEHICLE_BRAND_MODELS = {
                 partCell.className = 'spare-request-cell spare-request-cell--part';
                 const nameEl = document.createElement('div');
                 nameEl.className = 'spare-part-name';
-                nameEl.textContent = request.item_name || part.part_name || request.item_code || '-';
+                const partNames = detailItems.map((item) =>
+                    item.request.item_name || item.part.part_name || item.request.item_code || '-'
+                );
+                const displayedNames = partNames.slice(0, 2).join(', ');
+                nameEl.textContent = displayedNames || __('Tidak ada sparepart');
                 partCell.appendChild(nameEl);
+
                 const codeMeta = document.createElement('div');
                 codeMeta.className = 'table-meta';
-                codeMeta.textContent = request.item_code || part.part_code || __('Manual');
+                if (detailItems.length === 1) {
+                    const item = detailItems[0];
+                    codeMeta.textContent = item.request.item_code || item.part.part_code || __('Manual');
+                } else {
+                    codeMeta.textContent = __('Total {0} sparepart', [detailItems.length]);
+                }
                 partCell.appendChild(codeMeta);
-                if (part.category) {
+
+                if (detailItems.length > 2) {
+                    const moreMeta = document.createElement('div');
+                    moreMeta.className = 'table-meta';
+                    moreMeta.textContent = __('Termasuk {0} item lain', [detailItems.length - 2]);
+                    partCell.appendChild(moreMeta);
+                }
+
+                const categories = Array.from(
+                    new Set(
+                        detailItems
+                            .map((item) => item.part.category)
+                            .filter(Boolean)
+                    )
+                );
+                if (categories.length) {
                     const categoryMeta = document.createElement('div');
                     categoryMeta.className = 'table-meta';
-                    categoryMeta.textContent = part.category;
+                    categoryMeta.textContent = categories.join(', ');
                     partCell.appendChild(categoryMeta);
                 }
-                if (request.description) {
+
+                const notes = detailItems
+                    .map((item) => item.request.description)
+                    .filter(Boolean);
+                if (notes.length) {
                     const desc = document.createElement('div');
                     desc.className = 'table-note';
-                    desc.textContent = request.description;
+                    desc.textContent = notes[0];
+                    if (notes.length > 1) {
+                        desc.textContent += ` (+${notes.length - 1} ${__('catatan lainnya')})`;
+                    }
                     partCell.appendChild(desc);
                 }
                 tr.appendChild(partCell);
@@ -1951,37 +2073,47 @@ const VEHICLE_BRAND_MODELS = {
                 qtyCell.className = 'spare-request-cell spare-request-cell--qty';
                 const qtyValue = document.createElement('div');
                 qtyValue.className = 'metric-text';
-                const qty = parseFloat(request.qty) || 0;
-                const uom = request.uom || part.uom || '';
-                qtyValue.textContent = `${qty} ${uom}`.trim();
+                qtyValue.textContent = `${detailItems.length} ${__('item')}`;
                 qtyCell.appendChild(qtyValue);
+                const readyCount = detailItems.filter(
+                    (item) => Number.isFinite(item.availableNumeric) && item.availableNumeric >= item.qty
+                ).length;
                 const stockMeta = document.createElement('div');
                 stockMeta.className = 'table-meta';
-                const availableNumeric = parseFloat(part.stock_qty);
-                const available = this.formatStockValue(part.stock_qty);
-                stockMeta.textContent = available ? `${__('Stok')}: ${available}` : __('Stok tidak diketahui');
+                stockMeta.textContent = __('{0} item siap dari {1}', [readyCount, detailItems.length]);
                 qtyCell.appendChild(stockMeta);
                 tr.appendChild(qtyCell);
 
                 const statusCell = document.createElement('td');
                 statusCell.className = 'spare-request-cell spare-request-cell--status';
-                statusCell.appendChild(this.createStatusBadge(request.stock_status || part.status));
+                const statusCounts = {};
+                detailItems.forEach((item) => {
+                    const status = item.request.stock_status || item.part.status || __('Menunggu');
+                    statusCounts[status] = (statusCounts[status] || 0) + 1;
+                });
+                const uniqueStatuses = Object.keys(statusCounts);
+                const badgeLabel = uniqueStatuses.length === 1 ? uniqueStatuses[0] : __('Campuran');
+                statusCell.appendChild(this.createStatusBadge(badgeLabel));
                 const statusMeta = document.createElement('div');
                 statusMeta.className = 'table-meta';
                 const statusParts = [];
-                if (request.source) {
-                    statusParts.push(request.source);
-                }
-                if (request.warehouse || part.warehouse_location) {
-                    statusParts.push(request.warehouse || part.warehouse_location);
+                statusParts.push(`${detailItems.length} ${__('permintaan')}`);
+                if (uniqueStatuses.length) {
+                    statusParts.push(
+                        uniqueStatuses
+                            .map((label) => `${label}: ${statusCounts[label]}`)
+                            .join(' • ')
+                    );
                 }
                 if (order.priority) {
                     statusParts.push(`${__('Prioritas')}: ${order.priority}`);
                 }
-                if (this.isOutOfStock(part)) {
-                    statusParts.push(__('Stok habis'));
-                } else if (this.isLowStock(part)) {
-                    statusParts.push(__('Stok menipis'));
+                const lowStockCount = detailItems.filter((item) => this.isLowStock(item.part)).length;
+                const outOfStockCount = detailItems.filter((item) => this.isOutOfStock(item.part)).length;
+                if (outOfStockCount) {
+                    statusParts.push(__('Stok habis pada {0} item', [outOfStockCount]));
+                } else if (lowStockCount) {
+                    statusParts.push(__('Stok menipis pada {0} item', [lowStockCount]));
                 }
                 statusMeta.textContent = statusParts.filter(Boolean).join(' • ') || __('-');
                 statusCell.appendChild(statusMeta);
@@ -1989,41 +2121,44 @@ const VEHICLE_BRAND_MODELS = {
 
                 const managerCell = document.createElement('td');
                 managerCell.className = 'spare-request-cell spare-request-cell--manager';
-                const technicianRows = this.asArray(request.technicians);
-                const technicianNames = technicianRows
-                    .map((row) => (row && (row.technician_name || row.technician)) || '')
-                    .filter(Boolean);
+                const technicianNames = new Set();
+                const technicianDetails = new Set();
+                detailItems.forEach((item) => {
+                    const technicianRows = this.asArray(item.request.technicians);
+                    technicianRows.forEach((row) => {
+                        if (!row) {
+                            return;
+                        }
+                        const name = row.technician_name || row.technician;
+                        if (name) {
+                            technicianNames.add(name);
+                        }
+                        const details = [];
+                        if (row.task) {
+                            details.push(row.task);
+                        }
+                        if (row.status) {
+                            details.push(row.status);
+                        }
+                        if (details.length) {
+                            technicianDetails.add(details.join(' • '));
+                        }
+                    });
+                });
 
-                if (technicianNames.length) {
+                if (technicianNames.size) {
                     const primary = document.createElement('div');
                     primary.className = 'metric-text';
-                    primary.textContent = technicianNames.join(', ');
+                    primary.textContent = Array.from(technicianNames).join(', ');
                     managerCell.appendChild(primary);
-
-                    const assignmentDetails = technicianRows
-                        .map((row) => {
-                            if (!row) {
-                                return '';
-                            }
-                            const details = [];
-                            if (row.task) {
-                                details.push(row.task);
-                            }
-                            if (row.status) {
-                                details.push(row.status);
-                            }
-                            return details.join(' • ');
-                        })
-                        .filter(Boolean);
-
-                    if (assignmentDetails.length) {
-                        const taskMeta = document.createElement('div');
-                        taskMeta.className = 'table-meta';
-                        taskMeta.textContent = assignmentDetails.join(', ');
-                        managerCell.appendChild(taskMeta);
+                    if (technicianDetails.size) {
+                        const detailMeta = document.createElement('div');
+                        detailMeta.className = 'table-meta';
+                        detailMeta.textContent = Array.from(technicianDetails).join(' • ');
+                        managerCell.appendChild(detailMeta);
                     }
-                } else if (part.managed_by) {
-                    managerCell.textContent = part.managed_by;
+                } else if (order.service_advisor) {
+                    managerCell.textContent = order.service_advisor;
                 } else {
                     managerCell.textContent = __('Belum ditetapkan');
                 }
@@ -2034,12 +2169,20 @@ const VEHICLE_BRAND_MODELS = {
                 const actionsWrapper = document.createElement('div');
                 actionsWrapper.className = 'request-actions';
 
-                const approveDisabled = !Number.isFinite(availableNumeric) || availableNumeric < qty;
+                const approveDisabled = detailItems.some(
+                    (item) => !Number.isFinite(item.availableNumeric) || item.availableNumeric < item.qty
+                );
                 const actionConfigs = [
-                    { action: 'approve', label: __('Approve'), className: 'primary small', disabled: approveDisabled },
-                    { action: 'reject', label: __('Reject'), className: 'danger small' },
+                    {
+                        action: 'approve',
+                        label: __('Approve Semua'),
+                        className: 'primary small',
+                        disabled: approveDisabled,
+                        disabledTitle: __('Sparepart belum tersedia atau stok tidak mencukupi'),
+                    },
+                    { action: 'reject', label: __('Reject Semua'), className: 'danger small' },
                     { action: 'document', label: __('Dokumen'), className: 'ghost small' },
-                    { action: 'cancel', label: __('Cancel'), className: 'ghost small' },
+                    { action: 'cancel', label: __('Cancel Semua'), className: 'ghost small' },
                 ];
 
                 actionConfigs.forEach((config) => {
@@ -2050,11 +2193,23 @@ const VEHICLE_BRAND_MODELS = {
                     button.dataset.requestAction = config.action;
                     if (config.disabled) {
                         button.disabled = true;
-                        button.title = __('Sparepart belum tersedia atau stok tidak mencukupi');
+                        if (config.disabledTitle) {
+                            button.title = config.disabledTitle;
+                        }
                     }
-                    button.addEventListener('click', () => this.handleSpareRequestAction(request, config.action, button));
+                    button.addEventListener('click', () =>
+                        this.handleSpareRequestAction(group.requests, config.action, button)
+                    );
                     actionsWrapper.appendChild(button);
                 });
+
+                const detailButton = document.createElement('button');
+                detailButton.type = 'button';
+                detailButton.className = 'ghost small';
+                detailButton.textContent = __('Detail');
+                detailButton.dataset.requestAction = 'detail';
+                detailButton.addEventListener('click', () => this.openSpareRequestDetail(group.key));
+                actionsWrapper.appendChild(detailButton);
 
                 actionsCell.appendChild(actionsWrapper);
                 tr.appendChild(actionsCell);
@@ -2063,22 +2218,42 @@ const VEHICLE_BRAND_MODELS = {
             });
         }
 
-        handleSpareRequestAction(request, action, button) {
-            const requestName = request?.name;
-            if (!requestName) {
+        handleSpareRequestAction(requestOrGroup, action, button) {
+            const requests = Array.isArray(requestOrGroup)
+                ? requestOrGroup.filter((item) => item?.name)
+                : requestOrGroup?.name
+                    ? [requestOrGroup]
+                    : [];
+
+            if (!requests.length) {
                 frappe.show_alert({ message: __('Permintaan tidak valid.'), indicator: 'orange' }, 5);
                 return;
             }
 
+            if (action === 'detail') {
+                const first = requests[0];
+                this.openSpareRequestDetail(first?.parent || first?.name);
+                return;
+            }
+
             if (action === 'document') {
-                this.generateSpareRequestDocument(request, button);
+                this.generateSpareRequestDocument(requests[0], button);
                 return;
             }
 
             const confirmMessages = {
-                approve: __('Setujui permintaan ini? Stok gudang akan berkurang otomatis.'),
-                reject: __('Tolak permintaan sparepart ini?'),
-                cancel: __('Batalkan permintaan sparepart ini?'),
+                approve:
+                    requests.length > 1
+                        ? __('Setujui {0} permintaan ini? Stok gudang akan berkurang otomatis.', [requests.length])
+                        : __('Setujui permintaan ini? Stok gudang akan berkurang otomatis.'),
+                reject:
+                    requests.length > 1
+                        ? __('Tolak {0} permintaan sparepart ini?', [requests.length])
+                        : __('Tolak permintaan sparepart ini?'),
+                cancel:
+                    requests.length > 1
+                        ? __('Batalkan {0} permintaan sparepart ini?', [requests.length])
+                        : __('Batalkan permintaan sparepart ini?'),
                 default: __('Lanjutkan aksi ini?'),
             };
 
@@ -2087,17 +2262,24 @@ const VEHICLE_BRAND_MODELS = {
                     if (button) {
                         button.disabled = true;
                     }
-                    const response = await frappe.call({
-                        method: 'garage.api.portal.update_spare_part_request_status',
-                        args: { name: requestName, action },
-                        freeze: true,
-                        freeze_message: __('Memproses permintaan...'),
-                    });
-                    const payload = response?.message || {};
                     const indicatorMap = { approve: 'green', reject: 'red', cancel: 'orange' };
+                    let lastPayload = null;
+                    for (const request of requests) {
+                        const response = await frappe.call({
+                            method: 'garage.api.portal.update_spare_part_request_status',
+                            args: { name: request.name, action },
+                            freeze: true,
+                            freeze_message: __('Memproses permintaan...'),
+                        });
+                        lastPayload = response?.message || lastPayload;
+                    }
                     frappe.show_alert(
                         {
-                            message: payload.message || __('Permintaan diperbarui.'),
+                            message:
+                                lastPayload?.message ||
+                                (requests.length > 1
+                                    ? __('{0} permintaan diperbarui.', [requests.length])
+                                    : __('Permintaan diperbarui.')),
                             indicator: indicatorMap[action] || 'green',
                         },
                         5,
@@ -2121,7 +2303,8 @@ const VEHICLE_BRAND_MODELS = {
             }
         }
 
-        async generateSpareRequestDocument(request, button) {
+        async generateSpareRequestDocument(requestOrGroup, button) {
+            const request = Array.isArray(requestOrGroup) ? requestOrGroup[0] : requestOrGroup;
             const serviceOrder = request?.parent;
             if (!serviceOrder) {
                 frappe.show_alert({ message: __('Order servis tidak ditemukan untuk permintaan ini.'), indicator: 'orange' }, 5);
@@ -2158,6 +2341,169 @@ const VEHICLE_BRAND_MODELS = {
                     button.disabled = false;
                     button.blur();
                 }
+            }
+        }
+
+        openSpareRequestDetail(groupKey) {
+            const modal = this.spareRequestModal;
+            if (!modal?.container) {
+                return;
+            }
+
+            const group = this.spareRequestGroups?.get(groupKey);
+            if (!group) {
+                frappe.show_alert({ message: __('Detail sparepart tidak ditemukan.'), indicator: 'orange' }, 5);
+                return;
+            }
+
+            const orderName = group.requests[0]?.parent || group.requests[0]?.name || groupKey;
+            if (modal.title) {
+                modal.title.textContent = `${__('Detail Sparepart')} – ${orderName || '-'}`;
+            }
+
+            if (modal.summary) {
+                const summaryParts = [];
+                if (group.order?.customer) {
+                    summaryParts.push(`${__('Customer')}: ${group.order.customer}`);
+                }
+                if (group.order?.vehicle) {
+                    summaryParts.push(`${__('Kendaraan')}: ${group.order.vehicle}`);
+                }
+                if (group.order?.priority) {
+                    summaryParts.push(`${__('Prioritas')}: ${group.order.priority}`);
+                }
+                summaryParts.push(`${group.requests.length} ${__('permintaan sparepart')}`);
+                modal.summary.textContent = summaryParts.filter(Boolean).join(' • ');
+            }
+
+            if (modal.list) {
+                modal.list.innerHTML = '';
+                group.items.forEach((item) => {
+                    const row = document.createElement('div');
+                    row.className = 'spare-request-modal__item';
+
+                    const header = document.createElement('div');
+                    header.className = 'spare-request-modal__item-header';
+
+                    const name = document.createElement('div');
+                    name.className = 'spare-request-modal__item-name';
+                    name.textContent = item.request.item_name || item.part.part_name || item.request.item_code || '-';
+                    header.appendChild(name);
+
+                    const code = document.createElement('div');
+                    code.className = 'spare-request-modal__item-code';
+                    code.textContent = item.request.item_code || item.part.part_code || __('Manual');
+                    header.appendChild(code);
+
+                    row.appendChild(header);
+
+                    const qtyMeta = document.createElement('div');
+                    qtyMeta.className = 'spare-request-modal__item-meta';
+                    const qtyLabel = this.formatQuantityDisplay(
+                        item.request.qty,
+                        item.request.uom || item.part.uom || ''
+                    );
+                    const qtyParts = [`${__('Kuantitas')}: ${qtyLabel || '-'}`];
+                    if (item.request.source) {
+                        qtyParts.push(`${__('Sumber')}: ${item.request.source}`);
+                    }
+                    qtyMeta.textContent = qtyParts.join(' • ');
+                    row.appendChild(qtyMeta);
+
+                    const stockMeta = document.createElement('div');
+                    stockMeta.className = 'spare-request-modal__item-meta';
+                    const stockParts = [];
+                    const available = this.formatStockValue(item.part.stock_qty);
+                    if (available) {
+                        stockParts.push(`${__('Stok')}: ${available}`);
+                    }
+                    if (item.request.warehouse || item.part.warehouse_location) {
+                        stockParts.push(
+                            `${__('Gudang')}: ${item.request.warehouse || item.part.warehouse_location}`
+                        );
+                    }
+                    if (stockParts.length) {
+                        stockMeta.textContent = stockParts.join(' • ');
+                        row.appendChild(stockMeta);
+                    }
+
+                    const statusWrapper = document.createElement('div');
+                    statusWrapper.className = 'spare-request-modal__item-status';
+                    const statusLabel = item.request.stock_status || item.part.status || __('Menunggu');
+                    statusWrapper.appendChild(this.createStatusBadge(statusLabel));
+                    row.appendChild(statusWrapper);
+
+                    const technicianRows = this.asArray(item.request.technicians);
+                    const technicianNames = technicianRows
+                        .map((tech) => (tech && (tech.technician_name || tech.technician)) || '')
+                        .filter(Boolean);
+                    if (technicianNames.length) {
+                        const technicianMeta = document.createElement('div');
+                        technicianMeta.className = 'spare-request-modal__item-meta';
+                        technicianMeta.textContent = `${__('Teknisi')}: ${technicianNames.join(', ')}`;
+                        row.appendChild(technicianMeta);
+                    }
+
+                    if (item.request.description) {
+                        const desc = document.createElement('div');
+                        desc.className = 'spare-request-modal__item-note';
+                        desc.textContent = item.request.description;
+                        row.appendChild(desc);
+                    }
+
+                    if (!Number.isFinite(item.availableNumeric) || item.availableNumeric < item.qty) {
+                        const warning = document.createElement('div');
+                        warning.className = 'spare-request-modal__item-warning';
+                        warning.textContent = __('Stok belum mencukupi untuk item ini.');
+                        row.appendChild(warning);
+                    }
+
+                    modal.list.appendChild(row);
+                });
+            }
+
+            const hasItems = group.items.length > 0;
+            if (modal.emptyState) {
+                modal.emptyState.classList.toggle('is-visible', !hasItems);
+            }
+            if (modal.list) {
+                modal.list.style.display = hasItems ? 'flex' : 'none';
+            }
+
+            this.previousFocus = document.activeElement;
+            modal.container.classList.add('is-open');
+            modal.container.setAttribute('aria-hidden', 'false');
+            this.bodyOverflowCache = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            document.addEventListener('keydown', this.boundSpareRequestModalKeydown);
+
+            const closeButton = modal.container.querySelector('.portal-modal__close');
+            if (closeButton) {
+                closeButton.focus();
+            }
+        }
+
+        closeSpareRequestDetail() {
+            const modal = this.spareRequestModal;
+            if (!modal?.container) {
+                return;
+            }
+            modal.container.classList.remove('is-open');
+            modal.container.setAttribute('aria-hidden', 'true');
+            document.removeEventListener('keydown', this.boundSpareRequestModalKeydown);
+            if (typeof this.bodyOverflowCache === 'string') {
+                document.body.style.overflow = this.bodyOverflowCache;
+            } else {
+                document.body.style.removeProperty('overflow');
+            }
+            if (this.previousFocus && typeof this.previousFocus.focus === 'function') {
+                this.previousFocus.focus();
+            }
+        }
+
+        handleSpareRequestModalKeydown(event) {
+            if (event.key === 'Escape') {
+                this.closeSpareRequestDetail();
             }
         }
 
@@ -2650,6 +2996,20 @@ const VEHICLE_BRAND_MODELS = {
                 return numeric.toLocaleString('id-ID');
             }
             return numeric.toLocaleString('id-ID', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+        }
+
+        formatQuantityDisplay(qty, uom) {
+            const numeric = parseFloat(qty);
+            if (!Number.isNaN(numeric)) {
+                const formatted = Number.isInteger(numeric)
+                    ? numeric.toLocaleString('id-ID')
+                    : numeric.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return `${formatted} ${uom || ''}`.trim();
+            }
+            if (qty && uom) {
+                return `${qty} ${uom}`.trim();
+            }
+            return qty || uom || '';
         }
 
         isOutOfStock(part) {
