@@ -319,7 +319,8 @@ a:hover {
     margin-bottom: 6px;
 }
 
-.intake-assignment input {
+.intake-assignment input,
+.intake-assignment select {
     width: 100%;
     padding: 12px 14px;
     border: 1px solid var(--border-light);
@@ -328,10 +329,170 @@ a:hover {
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.intake-assignment input:focus {
+.intake-assignment input:focus,
+.intake-assignment select:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.12);
+}
+
+.intake-assignment__field {
+    display: flex;
+    flex-direction: column;
+}
+
+.intake-assignment__hint {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--gray-600);
+}
+
+.technician-status {
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-600);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.technician-status::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--gray-400);
+}
+
+.technician-status.is-available {
+    color: var(--success-600, #047857);
+}
+
+.technician-status.is-available::before {
+    background: var(--success-500, #10b981);
+}
+
+.technician-status.is-full {
+    color: var(--danger-600, #dc2626);
+}
+
+.technician-status.is-full::before {
+    background: var(--danger-500, #ef4444);
+}
+
+.technician-status.is-unknown {
+    color: var(--gray-600);
+}
+
+.technician-roster {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 0 0;
+}
+
+.technician-roster__item {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    background: var(--bg-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.technician-roster__item.is-available {
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
+.technician-roster__item.is-full {
+    border-color: rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.06);
+}
+
+.technician-roster__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.technician-roster__name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.technician-roster__badge {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: var(--gray-200);
+    color: var(--gray-700);
+}
+
+.technician-roster__badge.is-available {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success-700, #047857);
+}
+
+.technician-roster__badge.is-full {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--danger-700, #b91c1c);
+}
+
+.technician-roster__details {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--gray-600);
+}
+
+.technician-roster__load {
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.technician-roster__capacity {
+    font-weight: 500;
+}
+
+.technician-roster__item.is-available .technician-roster__capacity {
+    color: var(--success-700, #047857);
+}
+
+.technician-roster__item.is-full .technician-roster__capacity {
+    color: var(--danger-700, #b91c1c);
+}
+
+.technician-roster__skills {
+    color: var(--gray-600);
+}
+
+.technician-roster__contact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.technician-roster__contact span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.technician-roster__empty {
+    font-size: 12px;
+    color: var(--gray-600);
+    padding: 12px 14px;
+    border: 1px dashed var(--border-light);
+    border-radius: var(--radius-md);
+    background: var(--bg-muted);
 }
 
 .intake-summary {
@@ -1232,14 +1393,15 @@ a:hover {
                         </div>
                     </div>
                     <div class="intake-assignment">
-                        <div>
-                            <label for="assigned_mechanic">Mekanik Ditugaskan</label>
-                            <input type="text" id="assigned_mechanic" name="assigned_mechanic" placeholder="Nama mekanik bertugas" autocomplete="off">
+                        <div class="intake-assignment__field">
+                            <label for="assigned_mechanic">Teknisi Penanggung Jawab</label>
+                            <select id="assigned_mechanic" name="assigned_mechanic">
+                                <option value="">Pilih teknisi tersedia</option>
+                            </select>
+                            <p class="intake-assignment__hint">Maksimal 3 tugas aktif per teknisi. Pilih teknisi yang masih memiliki slot tugas.</p>
+                            <div class="technician-status" id="assigned_mechanic_status">Belum ada teknisi ditugaskan.</div>
                         </div>
-                        <div>
-                            <label for="parts_runner_mechanic">Mekanik Pengambil Sparepart &amp; Paket Servis</label>
-                            <input type="text" id="parts_runner_mechanic" name="parts_runner_mechanic" placeholder="Nama mekanik untuk pengambilan" autocomplete="off">
-                        </div>
+                        <div class="technician-roster" id="technician_roster"></div>
                     </div>
                     <div class="intake-summary-group">
                         <ul class="intake-summary-list" id="intake_summary_service_list">
@@ -1300,6 +1462,7 @@ a:hover {
 <script>
 (() => {
     const DEFAULT_SERVICE_FEE = 50000;
+    const DEFAULT_TECHNICIAN_CAPACITY = 3;
     const TAX_RATES = {
         ppn: 0.11,
         pph: 0.025
@@ -1376,6 +1539,7 @@ a:hover {
     let sparePartCatalog = [];
     let sparePartIndex = new Map();
     let catalogLoadedFromOrder = false;
+    let technicianRoster = [];
     // ====================================================================
 
     function setSparePartCatalog(parts) {
@@ -1450,6 +1614,318 @@ a:hover {
         }
         merged.warehouse = merged.warehouse || catalogPart.warehouse_location || '';
         return merged;
+    }
+
+    function normalizeTechnicianEntry(entry) {
+        if (!entry || typeof entry !== 'object') {
+            return null;
+        }
+
+        const identifierRaw = entry.employee || entry.name || entry.identifier;
+        const identifier = identifierRaw ? String(identifierRaw).trim() : '';
+        if (!identifier) {
+            return null;
+        }
+
+        const nameRaw = entry.employee_name || entry.employee || entry.name || identifier;
+        const employeeName = String(nameRaw || identifier).trim() || identifier;
+        const statusRaw = entry.status ? String(entry.status).trim() : 'Active';
+        const status = statusRaw || 'Active';
+
+        const maxJobsNumeric = Number(entry.max_active_jobs);
+        const resolvedMaxJobs = Number.isFinite(maxJobsNumeric) && maxJobsNumeric > 0
+            ? Math.floor(maxJobsNumeric)
+            : DEFAULT_TECHNICIAN_CAPACITY;
+
+        const loadNumeric = Number(entry.active_task_count);
+        const resolvedLoad = Number.isFinite(loadNumeric) && loadNumeric > 0
+            ? Math.floor(loadNumeric)
+            : 0;
+
+        const availableCapacity = Math.max(0, resolvedMaxJobs - resolvedLoad);
+
+        return {
+            ...entry,
+            identifier,
+            employee: entry.employee || identifier,
+            employee_name: employeeName,
+            status,
+            max_active_jobs: resolvedMaxJobs,
+            active_task_count: resolvedLoad,
+            available_capacity: availableCapacity,
+            is_available: status === 'Active' && resolvedLoad < resolvedMaxJobs,
+            skill_tags: entry.skill_tags || '',
+            phone: entry.phone || '',
+            email: entry.email || '',
+            notes: entry.notes || '',
+        };
+    }
+
+    function sortTechnicians(roster) {
+        return (roster || []).slice().sort((a, b) => {
+            if (a.is_available !== b.is_available) {
+                return a.is_available ? -1 : 1;
+            }
+            if (a.available_capacity !== b.available_capacity) {
+                return b.available_capacity - a.available_capacity;
+            }
+            if (a.active_task_count !== b.active_task_count) {
+                return a.active_task_count - b.active_task_count;
+            }
+            const aName = (a.employee_name || a.identifier || '').toLowerCase();
+            const bName = (b.employee_name || b.identifier || '').toLowerCase();
+            return aName.localeCompare(bName, 'id');
+        });
+    }
+
+    function findTechnicianByIdentifier(identifier) {
+        if (!identifier) {
+            return null;
+        }
+        const normalized = String(identifier).trim();
+        if (!normalized) {
+            return null;
+        }
+        return technicianRoster.find((tech) => tech.identifier === normalized) || null;
+    }
+
+    function updateTechnicianStatusHint() {
+        const statusElement = document.getElementById('assigned_mechanic_status');
+        const select = document.getElementById('assigned_mechanic');
+        if (!statusElement || !select) {
+            return;
+        }
+
+        statusElement.className = 'technician-status';
+
+        const value = select.value || '';
+        if (!value) {
+            statusElement.textContent = 'Belum ada teknisi ditugaskan.';
+            return;
+        }
+
+        const technician = findTechnicianByIdentifier(value);
+        const displayName = select.dataset.currentDisplay || value;
+
+        if (!technician) {
+            statusElement.textContent = `${displayName} (tidak ditemukan di daftar teknisi).`;
+            statusElement.classList.add('is-unknown');
+            return;
+        }
+
+        const loadText = `${technician.active_task_count} dari ${technician.max_active_jobs} tugas aktif`;
+        if (technician.available_capacity > 0) {
+            const slotText = `${technician.available_capacity} slot tersisa`;
+            statusElement.textContent = `${technician.employee_name} • ${loadText} • ${slotText}.`;
+            statusElement.classList.add('is-available');
+        } else {
+            statusElement.textContent = `${technician.employee_name} • ${loadText} • Teknisinya sudah penuh.`;
+            statusElement.classList.add('is-full');
+        }
+    }
+
+    function updateTechnicianSelect(selectedValue) {
+        const select = document.getElementById('assigned_mechanic');
+        if (!select) {
+            return;
+        }
+
+        let targetValue = selectedValue;
+        if (targetValue === undefined || targetValue === null) {
+            targetValue = select.dataset.currentValue || select.value || '';
+        }
+        targetValue = String(targetValue || '').trim();
+
+        const previousDisplay = select.dataset.currentDisplay || '';
+
+        select.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Pilih teknisi tersedia';
+        select.appendChild(placeholder);
+
+        const sortedRoster = sortTechnicians(technicianRoster);
+        let matchedOption = null;
+
+        for (const technician of sortedRoster) {
+            const option = document.createElement('option');
+            option.value = technician.identifier;
+            const loadText = `${technician.active_task_count}/${technician.max_active_jobs} tugas aktif`;
+            const capacityText = technician.available_capacity > 0
+                ? `${technician.available_capacity} slot tersisa`
+                : 'Penuh';
+            option.textContent = `${technician.employee_name} • ${loadText} • ${capacityText}`;
+            option.dataset.displayName = technician.employee_name;
+            const isCurrentSelection = targetValue && technician.identifier === targetValue;
+            option.disabled = !technician.is_available && !isCurrentSelection;
+            if (technician.skill_tags) {
+                option.title = `${technician.employee_name} • ${loadText} • ${capacityText} • Keahlian: ${technician.skill_tags}`;
+            } else {
+                option.title = `${technician.employee_name} • ${loadText} • ${capacityText}`;
+            }
+            select.appendChild(option);
+
+            if (!matchedOption && isCurrentSelection) {
+                matchedOption = option;
+            }
+        }
+
+        if (matchedOption) {
+            select.value = matchedOption.value;
+        } else if (targetValue) {
+            const fallbackOption = document.createElement('option');
+            fallbackOption.value = targetValue;
+            const fallbackLabel = previousDisplay || targetValue;
+            fallbackOption.textContent = `${fallbackLabel} (di luar daftar teknisi)`;
+            fallbackOption.dataset.displayName = fallbackLabel;
+            select.appendChild(fallbackOption);
+            select.value = targetValue;
+        } else {
+            select.value = '';
+        }
+
+        const selectedOption = select.options[select.selectedIndex];
+        select.dataset.currentValue = select.value || '';
+        select.dataset.currentDisplay = selectedOption
+            ? (selectedOption.dataset.displayName || selectedOption.textContent)
+            : '';
+
+        updateTechnicianStatusHint();
+    }
+
+    function renderTechnicianRoster() {
+        const container = document.getElementById('technician_roster');
+        if (!container) {
+            return;
+        }
+
+        container.innerHTML = '';
+
+        if (!technicianRoster.length) {
+            const emptyState = document.createElement('div');
+            emptyState.className = 'technician-roster__empty';
+            emptyState.textContent = 'Belum ada teknisi yang terdaftar.';
+            container.appendChild(emptyState);
+            return;
+        }
+
+        const sortedRoster = sortTechnicians(technicianRoster);
+
+        for (const technician of sortedRoster) {
+            const card = document.createElement('div');
+            card.className = 'technician-roster__item';
+            card.classList.add(technician.is_available ? 'is-available' : 'is-full');
+
+            const header = document.createElement('div');
+            header.className = 'technician-roster__header';
+
+            const name = document.createElement('div');
+            name.className = 'technician-roster__name';
+            name.textContent = technician.employee_name;
+
+            const badge = document.createElement('span');
+            badge.className = 'technician-roster__badge';
+            badge.classList.add(technician.is_available ? 'is-available' : 'is-full');
+            badge.textContent = technician.is_available ? 'Tersedia' : 'Penuh';
+
+            header.appendChild(name);
+            header.appendChild(badge);
+            card.appendChild(header);
+
+            const details = document.createElement('div');
+            details.className = 'technician-roster__details';
+
+            const loadLine = document.createElement('div');
+            loadLine.className = 'technician-roster__load';
+            loadLine.textContent = `${technician.active_task_count} dari ${technician.max_active_jobs} tugas aktif`;
+            details.appendChild(loadLine);
+
+            const capacityLine = document.createElement('div');
+            capacityLine.className = 'technician-roster__capacity';
+            capacityLine.textContent = technician.available_capacity > 0
+                ? `${technician.available_capacity} slot tersisa`
+                : 'Slot tugas penuh';
+            details.appendChild(capacityLine);
+
+            if (technician.skill_tags) {
+                const skillsLine = document.createElement('div');
+                skillsLine.className = 'technician-roster__skills';
+                skillsLine.textContent = `Keahlian: ${technician.skill_tags}`;
+                details.appendChild(skillsLine);
+            }
+
+            const contactPieces = [];
+            if (technician.phone) {
+                contactPieces.push(`📞 ${technician.phone}`);
+            }
+            if (technician.email) {
+                contactPieces.push(`✉️ ${technician.email}`);
+            }
+            if (contactPieces.length) {
+                const contactLine = document.createElement('div');
+                contactLine.className = 'technician-roster__contact';
+                for (const piece of contactPieces) {
+                    const span = document.createElement('span');
+                    span.textContent = piece;
+                    contactLine.appendChild(span);
+                }
+                details.appendChild(contactLine);
+            }
+
+            card.appendChild(details);
+            container.appendChild(card);
+        }
+    }
+
+    function setTechnicianRoster(roster) {
+        if (Array.isArray(roster)) {
+            technicianRoster = roster.map(normalizeTechnicianEntry).filter(Boolean);
+        } else {
+            technicianRoster = [];
+        }
+
+        const select = document.getElementById('assigned_mechanic');
+        const currentValue = select ? (select.dataset.currentValue || select.value || '') : '';
+        updateTechnicianSelect(currentValue);
+        renderTechnicianRoster();
+    }
+
+    function syncAssignedMechanicSelection(identifier, displayName) {
+        const select = document.getElementById('assigned_mechanic');
+        if (!select) {
+            return;
+        }
+
+        const normalizedValue = identifier ? String(identifier).trim() : '';
+        const rosterEntry = normalizedValue ? findTechnicianByIdentifier(normalizedValue) : null;
+        const resolvedDisplay = displayName
+            ? String(displayName).trim()
+            : (rosterEntry ? rosterEntry.employee_name : normalizedValue);
+
+        select.dataset.currentValue = normalizedValue;
+        select.dataset.currentDisplay = resolvedDisplay || '';
+
+        updateTechnicianSelect(normalizedValue);
+    }
+
+    function bindTechnicianSelect() {
+        const select = document.getElementById('assigned_mechanic');
+        if (!select || select.dataset.bound === '1') {
+            return;
+        }
+
+        select.dataset.bound = '1';
+        select.dataset.currentValue = select.value || '';
+        select.dataset.currentDisplay = '';
+
+        select.addEventListener('change', () => {
+            const option = select.options[select.selectedIndex];
+            select.dataset.currentValue = select.value || '';
+            select.dataset.currentDisplay = option
+                ? (option.dataset.displayName || option.textContent)
+                : '';
+            updateTechnicianStatusHint();
+        });
     }
 
     function safeDateParse(value) {
@@ -1709,6 +2185,9 @@ a:hover {
         let latestOrder = null;
         let baseServiceFee = 0;
         let serviceSummaryItems = [];
+
+        bindTechnicianSelect();
+        setTechnicianRoster([]);
 
         function resolveBaseServiceFee(partsTotal) {
             const normalizedBase = Math.max(0, Math.round(baseServiceFee || 0));
@@ -2327,15 +2806,15 @@ a:hover {
                 intakeNotesDisplay.textContent = intakeNotes || 'Belum ada catatan tambahan dari intake.';
             }
 
-            const assignedMechanicInput = document.getElementById('assigned_mechanic');
-            if (assignedMechanicInput) {
-                assignedMechanicInput.value = order.assigned_mechanic || order.mechanic_in_charge || '';
-            }
-
-            const partsRunnerMechanicInput = document.getElementById('parts_runner_mechanic');
-            if (partsRunnerMechanicInput) {
-                partsRunnerMechanicInput.value = order.parts_runner_mechanic || order.parts_runner || '';
-            }
+            const rosterData = Array.isArray(order.available_technicians)
+                ? order.available_technicians
+                : [];
+            setTechnicianRoster(rosterData);
+            const assignedMechanic = order.assigned_mechanic || order.mechanic_in_charge || '';
+            const assignedMechanicName = order.assigned_mechanic_name
+                || order.mechanic_in_charge_name
+                || '';
+            syncAssignedMechanicSelection(assignedMechanic, assignedMechanicName);
 
             applyServiceTypeBadge(order.service_order_type || '-');
 
@@ -2457,7 +2936,6 @@ a:hover {
             const summaryInput = document.getElementById('inspection_summary');
             const notesInput = document.getElementById('service_notes');
             const assignedMechanicInput = document.getElementById('assigned_mechanic');
-            const partsRunnerMechanicInput = document.getElementById('parts_runner_mechanic');
 
             const data = {
                 order_id: orderId,
@@ -2467,8 +2945,6 @@ a:hover {
                 inspection_summary: summaryInput ? summaryInput.value : (latestOrder?.inspection_summary || ''),
                 service_notes: notesInput ? notesInput.value : (latestOrder?.service_notes || ''),
                 assigned_mechanic: assignedMechanicInput ? assignedMechanicInput.value.trim() : (latestOrder?.assigned_mechanic || ''),
-                parts_runner_mechanic: partsRunnerMechanicInput ? partsRunnerMechanicInput.value.trim() : (latestOrder?.parts_runner_mechanic || ''),
-                parts_runner: partsRunnerMechanicInput ? partsRunnerMechanicInput.value.trim() : (latestOrder?.parts_runner || ''),
                 required_parts: sanitizedParts,
                 status: 'Work In Progress'
             };
