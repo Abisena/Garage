@@ -276,7 +276,8 @@ def create_service_estimate_pdf(service_order_name: str) -> Optional[Dict[str, s
     context = build_service_estimate_context(service_order)
 
     try:
-        html = frappe.render_template(TEMPLATE_PATH, context)
+        template = frappe.get_template(TEMPLATE_PATH)
+        html = template.render(context)
         pdf_content = get_pdf(html)
     except Exception:
         frappe.log_error(
