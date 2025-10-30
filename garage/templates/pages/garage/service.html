@@ -1518,14 +1518,12 @@ body {
                         <th>Kendaraan</th>
                         <th>Customer</th>
                         <th>Service Details</th>
-                        <th>Progress</th>
-                        <th>Estimasi Selesai</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody id="table-progress">
                     <tr>
-                        <td colspan="7">
+                        <td colspan="5">
                             <div class="loading-state">
                                 <div class="loading-spinner"></div>
                                 <p>Loading data...</p>
@@ -1879,7 +1877,7 @@ body {
         if (!orders || orders.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7">
+                    <td colspan="5">
                         <div class="empty-state">
                             <div class="empty-state__icon">⚙️</div>
                             <div class="empty-state__title">Tidak ada service dalam pengerjaan</div>
@@ -1914,12 +1912,8 @@ body {
                         <div class="customer-contact">${order.customer_phone || '-'}</div>
                     </div>
                 </td>
-                <td>${getStatusBadge(order.status)}</td>
                 <td>
                     <div class="cell-muted">${order.inspection_summary || '-'}</div>
-                </td>
-                <td>
-                    <div class="date-display">${formatDate(order.estimated_delivery_date)}${renderBookingDate(order)}</div>
                 </td>
                 <td>
                     <button class="action-btn" data-order="${escapeAttribute(order.name || '')}" onclick="openStatusUpdateModal(this.dataset.order)">
@@ -2121,23 +2115,24 @@ body {
 
         } catch (error) {
             console.error('[API] Error loading data:', error);
-            
+
             // Show error in all tables
-            const errorHTML = `
+            const errorMessage = escapeHTML(error?.message || 'Unknown error');
+            const buildErrorRow = (colspan) => `
                 <tr>
-                    <td colspan="7">
+                    <td colspan="${colspan}">
                         <div class="empty-state">
                             <div class="empty-state__icon">⚠️</div>
                             <div class="empty-state__title">Error loading data</div>
-                            <div class="empty-state__message">${error.message || 'Unknown error'}</div>
+                            <div class="empty-state__message">${errorMessage}</div>
                         </div>
                     </td>
                 </tr>
             `;
-            
-            document.getElementById('table-inspection').innerHTML = errorHTML;
-            document.getElementById('table-progress').innerHTML = errorHTML;
-            document.getElementById('table-completed').innerHTML = errorHTML;
+
+            document.getElementById('table-inspection').innerHTML = buildErrorRow(7);
+            document.getElementById('table-progress').innerHTML = buildErrorRow(5);
+            document.getElementById('table-completed').innerHTML = buildErrorRow(7);
         }
     }
 
