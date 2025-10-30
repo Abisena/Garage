@@ -2508,7 +2508,9 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
     )
     # =========================================================
 
-    result["available_technicians"] = _get_technician_roster()
+    result["available_technicians"] = _get_technician_roster(
+        exclude_order=doc.name,
+    )
 
     return result
 
@@ -2617,7 +2619,9 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
         "name": doc.name,
         "status": doc.status,
         "message": _("Inspection data berhasil disimpan."),
-        "available_technicians": _get_technician_roster(),
+        "available_technicians": _get_technician_roster(
+            exclude_order=doc.name,
+        ),
     }
 
     if auto_assignments:
