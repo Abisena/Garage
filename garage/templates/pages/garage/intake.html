@@ -1955,7 +1955,7 @@ button:disabled {
             const option = document.createElement('option');
             const total = (bundle.service || 0) + (bundle.spareparts || 0) + (bundle.materials || 0);
             option.value = bundle.id;
-            option.textContent = `${bundle.name} — ${formatCurrency(total)}`;
+            option.textContent = `${bundle.name}`;
             bundleSelect.appendChild(option);
         });
 
