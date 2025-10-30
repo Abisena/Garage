@@ -274,6 +274,7 @@ function cloneBrandModelMap(map) {
             this.isPrefilling = false; // ← TAMBAHKAN BARIS INI
             this.manualCustomerQuery = '';
             this.spareRequestGroups = new Map();
+            this.lastEstimatePdf = null;
             this.boundSpareRequestModalKeydown = (event) => this.handleSpareRequestModalKeydown(event);
         }
 
@@ -348,6 +349,7 @@ function cloneBrandModelMap(map) {
 
             this.buttons = {
                 createSparePart: document.querySelector('[data-action="create-spare-part"]'),
+                downloadEstimate: document.querySelector('[data-action="download-estimate"]'),
             };
 
             this.spareDetail = {
@@ -358,6 +360,8 @@ function cloneBrandModelMap(map) {
                 meta: document.querySelector('[data-role="spare-preview-meta"]'),
                 status: document.querySelector('[data-role="spare-status-badge"]'),
             };
+
+            this.setEstimateDownload(null);
 
             this.metrics = {
                 serviceEstimate: document.querySelector('[data-metric="service-estimate"]'),
@@ -515,12 +519,18 @@ function cloneBrandModelMap(map) {
                         {
                             onSuccess: (response) => {
                                 const pdf = response?.message?.estimate_pdf;
+                                this.setEstimateDownload(pdf);
                                 if (pdf?.content) {
                                     this.downloadBase64File(
                                         pdf.content,
                                         pdf.filename || 'estimasi-service.pdf',
                                         pdf.mime_type || 'application/pdf'
                                     );
+                                } else if (response?.message?.created?.service_order) {
+                                    frappe.show_alert({
+                                        message: __('File estimasi belum berhasil dibuat. Coba simpan ulang atau hubungi admin.'),
+                                        indicator: 'orange',
+                                    });
                                 }
                             },
                         }
@@ -742,6 +752,12 @@ function cloneBrandModelMap(map) {
             if (this.buttons.createSparePart) {
                 this.buttons.createSparePart.addEventListener('click', () => {
                     this.startCreateSparePart();
+                });
+            }
+
+            if (this.buttons.downloadEstimate) {
+                this.buttons.downloadEstimate.addEventListener('click', () => {
+                    this.handleEstimateDownload();
                 });
             }
 
@@ -3610,8 +3626,6 @@ function cloneBrandModelMap(map) {
                 freeze: true,
                 callback: (response) => {
                     frappe.show_alert({ message: __(successMessage), indicator: 'green' });
-                    this.resetForm(form);
-                    this.fetchBootstrap(false);
                     if (typeof opts.onSuccess === 'function') {
                         try {
                             opts.onSuccess(response);
@@ -3619,6 +3633,8 @@ function cloneBrandModelMap(map) {
                             console.error('Post-submit handler failed', error);
                         }
                     }
+                    this.resetForm(form);
+                    this.fetchBootstrap(false);
                 },
                 always: () => {
                     if (primaryButton) {
@@ -3628,12 +3644,38 @@ function cloneBrandModelMap(map) {
             });
         }
 
+        setEstimateDownload(pdfPayload) {
+            const hasContent = pdfPayload && typeof pdfPayload.content === 'string' && pdfPayload.content.trim();
+            this.lastEstimatePdf = hasContent
+                ? {
+                      content: pdfPayload.content.trim(),
+                      filename: pdfPayload.filename || 'estimasi-service.pdf',
+                      mime_type: pdfPayload.mime_type || 'application/pdf',
+                  }
+                : null;
+
+            const button = this.buttons?.downloadEstimate;
+            if (!button) {
+                return;
+            }
+
+            if (this.lastEstimatePdf) {
+                button.hidden = false;
+                button.disabled = false;
+                button.setAttribute('aria-disabled', 'false');
+            } else {
+                button.disabled = true;
+                button.setAttribute('aria-disabled', 'true');
+                button.hidden = true;
+            }
+        }
+
         downloadBase64File(content, filename, mimeType = 'application/pdf') {
             if (!content) {
                 return;
             }
             try {
-                const sanitized = content.replace(/^data:[^,]+,/, '');
+                const sanitized = content.replace(/^data:[^,]+,/, '').trim();
                 const binary = atob(sanitized);
                 const length = binary.length;
                 const buffer = new Uint8Array(length);
@@ -3653,6 +3695,19 @@ function cloneBrandModelMap(map) {
                 console.error('Failed to download PDF', error);
                 frappe.msgprint(__('Gagal mengunduh dokumen estimasi. Silakan coba lagi.'));
             }
+        }
+
+        handleEstimateDownload() {
+            if (this.lastEstimatePdf?.content) {
+                this.downloadBase64File(
+                    this.lastEstimatePdf.content,
+                    this.lastEstimatePdf.filename,
+                    this.lastEstimatePdf.mime_type
+                );
+                return;
+            }
+
+            frappe.msgprint(__('Belum ada estimasi service yang bisa diunduh. Simpan intake terlebih dahulu.'));
         }
 
         resetForm(form) {
