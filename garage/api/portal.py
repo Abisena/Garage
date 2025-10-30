@@ -3269,6 +3269,33 @@ def generate_spare_part_approval_document(
     request_name = cstr(request_name).strip() if request_name is not None else ""
     service_doc = _get_doc("Garage Service Order", service_order)
 
+    assigned_mechanic = (
+        cstr(getattr(service_doc, "assigned_mechanic", ""))
+        or cstr(getattr(service_doc, "mechanic_in_charge", ""))
+    ).strip()
+    mechanic_user: str = ""
+    mechanic_name: str = ""
+    if assigned_mechanic:
+        try:
+            mechanic_row = frappe.db.get_value(
+                "Employee",
+                assigned_mechanic,
+                ["name", "employee_name", "user_id"],
+                as_dict=True,
+            )
+        except Exception:
+            mechanic_row = None
+
+        if mechanic_row:
+            mechanic_name = (
+                mechanic_row.get("employee_name")
+                or mechanic_row.get("name")
+                or assigned_mechanic
+            )
+            mechanic_user = cstr(mechanic_row.get("user_id") or "")
+        else:
+            mechanic_name = assigned_mechanic
+
     parts = []
     for row in service_doc.get("required_parts", []) or []:
         if request_name and cstr(row.name) != request_name:
@@ -3320,6 +3347,14 @@ def generate_spare_part_approval_document(
         if division_doc.approval_status in {"Approved", "Rejected"}
         else "Pending Approval"
     )
+
+    if mechanic_user:
+        division_doc.requested_by = mechanic_user
+    elif assigned_mechanic:
+        division_doc.requested_by = None
+
+    if mechanic_name:
+        division_doc.requested_by_full_name = mechanic_name
 
     if not division_doc.request_title:
         division_doc.request_title = _("Persetujuan Sparepart {0}").format(service_order)
