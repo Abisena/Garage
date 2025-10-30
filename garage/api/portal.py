@@ -12,6 +12,9 @@ from frappe import _
 from frappe.utils import cint, cstr, flt, get_datetime, get_url, now_datetime, nowdate
 
 from garage.utils import service_estimate
+import json
+import frappe
+from frappe import _
 
 # Treat blank/None statuses on tasks as active to ensure newly created tasks
 # (which default to an empty status value) are counted towards a technician's
@@ -3451,6 +3454,170 @@ def generate_spare_part_approval_document(
         "message": _("Dokumen persetujuan lintas divisi siap digunakan."),
     }
 
+
+@frappe.whitelist()
+def create_service_intake(data):
+    """
+    Create new service intake with customer and vehicle
+    
+    Args:
+        data: Form data dari frontend
+        
+    Returns:
+        dict: Response dengan order_id
+    """
+    try:
+        # Parse data jika masih string
+        if isinstance(data, str):
+            data = json.loads(data)
+        
+        # Validasi required fields
+        license_plate = data.get('license_plate', '').strip().upper()
+        if not license_plate:
+            frappe.throw(_("License plate is required"))
+        
+        service_order_type = data.get('service_order_type')
+        if not service_order_type:
+            frappe.throw(_("Service order type is required"))
+        
+        # 1. Handle Customer
+        customer_name = None
+        existing_customer = data.get('existing_customer')
+        
+        if existing_customer:
+            customer_name = existing_customer
+        else:
+            new_customer_name = data.get('customer_name') or data.get('new_customer_name')
+            if not new_customer_name:
+                frappe.throw(_("Customer name is required"))
+            
+            existing = frappe.db.exists('Customer', {'customer_name': new_customer_name})
+            if existing:
+                customer_name = existing
+            else:
+                customer = frappe.get_doc({
+                    'doctype': 'Customer',
+                    'customer_name': new_customer_name,
+                    'customer_type': data.get('customer_type', 'Individual'),
+                    'phone': data.get('phone', ''),
+                    'email': data.get('email', ''),
+                    'preferred_contact_method': data.get('preferred_contact_method', 'Phone'),
+                    'is_vip': int(data.get('is_vip', 0)),
+                    'marketing_source': data.get('marketing_source', '')
+                })
+                customer.insert(ignore_permissions=True)
+                customer_name = customer.name
+                frappe.db.commit()
+        
+        # 2. Handle Vehicle
+        vehicle_name = None
+        existing_vehicle = frappe.db.exists('Vehicle', {'license_plate': license_plate})
+        
+        # Get brand (make) - MANDATORY
+        brand = data.get('brand', 'Other')
+        if not brand:
+            brand = 'Other'
+        
+        # Get mileage (last_odometer) - MANDATORY
+        mileage = data.get('mileage', 0)
+        if not mileage:
+            mileage = 0
+        
+        # Get fuel UOM - MANDATORY (default: Litre)
+        fuel_uom = data.get('fuel_uom', 'Litre')
+        if not fuel_uom:
+            fuel_uom = 'Litre'
+        
+        if existing_vehicle:
+            vehicle_name = existing_vehicle
+            vehicle = frappe.get_doc('Vehicle', vehicle_name)
+            vehicle.customer = customer_name
+            
+            # Update fields
+            if data.get('brand'):
+                vehicle.make = data.get('brand')
+            if data.get('model'):
+                vehicle.model = data.get('model')
+            if data.get('model_variant'):
+                vehicle.model_variant = data.get('model_variant')
+            if data.get('vehicle_year'):
+                vehicle.vehicle_year = data.get('vehicle_year')
+            if data.get('color'):
+                vehicle.color = data.get('color')
+            if data.get('transmission'):
+                vehicle.transmission = data.get('transmission')
+            if data.get('fuel_type'):
+                vehicle.fuel_type = data.get('fuel_type')
+            if data.get('mileage'):
+                vehicle.last_odometer = data.get('mileage')
+            if data.get('vin'):
+                vehicle.vin = data.get('vin')
+            if data.get('engine_number'):
+                vehicle.engine_number = data.get('engine_number')
+            
+            vehicle.save(ignore_permissions=True)
+            frappe.db.commit()
+        else:
+            # Buat vehicle baru
+            vehicle = frappe.get_doc({
+                'doctype': 'Vehicle',
+                'license_plate': license_plate,
+                'customer': customer_name,
+                'make': brand,  # ← MANDATORY: brand sebagai make
+                'model': data.get('model', ''),
+                'model_variant': data.get('model_variant', ''),
+                'vehicle_year': data.get('vehicle_year'),
+                'color': data.get('color', ''),
+                'transmission': data.get('transmission', ''),
+                'fuel_type': data.get('fuel_type', 'Petrol'),
+                'last_odometer': mileage,  # ← MANDATORY: mileage sebagai last_odometer
+                'uom': fuel_uom,  # ← MANDATORY: fuel UOM
+                'vin': data.get('vin', ''),
+                'engine_number': data.get('engine_number', ''),
+                'last_service_date': frappe.utils.now()
+            })
+            vehicle.insert(ignore_permissions=True)
+            vehicle_name = vehicle.name
+            frappe.db.commit()
+        
+        # 3. Create Service Order
+        service_order = frappe.get_doc({
+            'doctype': 'Service Order',
+            'customer': customer_name,
+            'customer_name': frappe.db.get_value('Customer', customer_name, 'customer_name'),
+            'vehicle': vehicle_name,
+            'vehicle_plate': license_plate,
+            'vehicle_brand': brand,
+            'vehicle_model': data.get('model', ''),
+            'vehicle_model_variant': data.get('model_variant', ''),
+            'intake_type': data.get('intake_type', 'Walk-In'),
+            'service_booking_date': frappe.utils.now(),
+            'service_order_type': service_order_type,
+            'priority': data.get('priority', 'Normal'),
+            'service_bundle': data.get('service_bundle', ''),
+            'total_estimated_amount': float(data.get('total_estimated_amount', 0)),
+            'notes': data.get('notes', ''),
+            'status': 'Draft',
+            'workflow_state': 'Draft'
+        })
+        
+        service_order.insert(ignore_permissions=True)
+        frappe.db.commit()
+        
+        return {
+            'success': True,
+            'order_id': service_order.name,
+            'customer': customer_name,
+            'vehicle': vehicle_name,
+            'message': f'Service intake created successfully: {service_order.name}'
+        }
+        
+    except frappe.exceptions.ValidationError:
+        raise
+        
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), 'Create Service Intake Error')
+        frappe.throw(_('Error creating service intake: {0}').format(str(e)))
 
 @frappe.whitelist()
 def create_spare_part(part: Optional[Any] = None) -> Dict[str, Any]:

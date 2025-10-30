@@ -1664,6 +1664,8 @@ button:disabled {
 <script>
     frappe.require("/assets/garage/js/garage_portal.js");
 </script>
+
+<!-- Bundle Estimator Script -->
 <script>
 (function () {
     const DEFAULT_NOTE = 'Pilih bundel estimasi untuk melihat rincian jasa, sparepart, dan bahan.';
@@ -1752,7 +1754,6 @@ button:disabled {
         renderList(materialList, [], 'Belum ada bahan pada bundel ini.');
     }
 
-    
     function asArray(value) {
         if (!value) {
             return [];
@@ -1953,7 +1954,6 @@ button:disabled {
 
         computedBundles.forEach((bundle) => {
             const option = document.createElement('option');
-            const total = (bundle.service || 0) + (bundle.spareparts || 0) + (bundle.materials || 0);
             option.value = bundle.id;
             option.textContent = `${bundle.name}`;
             bundleSelect.appendChild(option);
@@ -1998,18 +1998,12 @@ button:disabled {
 
         if (!bundleSelect || !nodes.service || !nodes.spare || !nodes.material || !nodes.total) {
             console.warn('❌ Bundle estimator: Required elements not found');
-            console.log('   bundleSelect:', !!bundleSelect);
-            console.log('   nodes.service:', !!nodes.service);
-            console.log('   nodes.spare:', !!nodes.spare);
-            console.log('   nodes.material:', !!nodes.material);
-            console.log('   nodes.total:', !!nodes.total);
             return;
         }
 
         console.log('✅ All required elements found');
         console.log('📡 Loading service bundles from API...');
         
-        // Load service bundles directly from API
         frappe.call({
             method: 'garage.api.portal.portal_bootstrap',
             freeze: false,
@@ -2020,12 +2014,10 @@ button:disabled {
                     console.log('✅ Portal state loaded successfully');
                     const initialRecords = response.message.service_bundles || [];
                     console.log('📦 Service bundles found:', initialRecords.length);
-                    console.log('📋 Service bundles data:', initialRecords);
                     
                     if (initialRecords.length > 0) {
                         updateBundles(initialRecords);
                         console.log('✅ Bundle dropdown populated with', computedBundles.length, 'bundles');
-                        console.log('🎯 Computed bundles:', computedBundles);
                     } else {
                         console.warn('⚠️ No service bundles available');
                         rebuildOptions();
@@ -2065,16 +2057,12 @@ button:disabled {
     }
 })();
 </script>
-<script>
-/**
- * Auto-fill Customer Data from No. Polisi
- * Fitur untuk mengisi otomatis data customer dan kendaraan berdasarkan nomor polisi
- */
 
+<!-- Auto-fill Customer Data Script -->
+<script>
 (function() {
     'use strict';
 
-    // Debounce function untuk menghindari terlalu banyak request
     function debounce(func, wait) {
         let timeout;
         return function executedFunction(...args) {
@@ -2087,7 +2075,6 @@ button:disabled {
         };
     }
 
-    // Fungsi untuk mencari data berdasarkan nomor polisi
     async function searchByLicensePlate(licensePlate) {
         if (!licensePlate || licensePlate.trim().length < 3) {
             return null;
@@ -2099,7 +2086,7 @@ button:disabled {
                 args: {
                     identifier: licensePlate.trim()
                 },
-                freeze: false // Tidak freeze UI agar lebih smooth
+                freeze: false
             });
 
             return response.message;
@@ -2109,7 +2096,6 @@ button:disabled {
         }
     }
 
-    // Fungsi untuk mengisi data customer
     function fillCustomerData(customerData) {
         if (!customerData || !customerData.customer) {
             return;
@@ -2117,11 +2103,9 @@ button:disabled {
 
         const customer = customerData.customer;
         
-        // Isi data customer
         if (customer.name) {
             const existingCustomerSelect = document.getElementById('existing_customer');
             if (existingCustomerSelect) {
-                // Tambahkan option jika belum ada
                 let optionExists = false;
                 for (let option of existingCustomerSelect.options) {
                     if (option.value === customer.name) {
@@ -2138,8 +2122,6 @@ button:disabled {
                 }
                 
                 existingCustomerSelect.value = customer.name;
-                
-                // Trigger change event
                 existingCustomerSelect.dispatchEvent(new Event('change', { bubbles: true }));
             }
         }
@@ -2172,30 +2154,25 @@ button:disabled {
             setFieldValue('marketing_source', customer.marketing_source);
         }
 
-        // Tampilkan notifikasi sukses
         showNotification('Data customer ditemukan dan telah diisi otomatis! ✅', 'success');
     }
 
-    // Fungsi untuk mengisi data kendaraan
     function fillVehicleData(customerData) {
         if (!customerData || !customerData.vehicles || customerData.vehicles.length === 0) {
             return;
         }
 
-        // Ambil kendaraan pertama yang cocok dengan nomor polisi
         const licensePlateInput = document.getElementById('license_plate');
         const searchPlate = licensePlateInput ? licensePlateInput.value.trim().toUpperCase() : '';
         
         let vehicle = null;
         
-        // Cari kendaraan yang cocok dengan nomor polisi yang diinput
         if (searchPlate) {
             vehicle = customerData.vehicles.find(v => 
                 v.license_plate && v.license_plate.toUpperCase() === searchPlate
             );
         }
         
-        // Jika tidak ditemukan, ambil kendaraan terbaru
         if (!vehicle && customerData.vehicles.length > 0) {
             vehicle = customerData.vehicles[0];
         }
@@ -2204,7 +2181,6 @@ button:disabled {
             return;
         }
 
-        // Isi data kendaraan
         if (vehicle.license_plate) {
             setFieldValue('license_plate', vehicle.license_plate.toUpperCase());
         }
@@ -2250,7 +2226,6 @@ button:disabled {
         }
     }
 
-    // Helper function untuk set nilai field
     function setFieldValue(fieldId, value, mirrorIds = []) {
         const ids = [fieldId]
             .concat(Array.isArray(mirrorIds) ? mirrorIds : [])
@@ -2299,16 +2274,13 @@ button:disabled {
         });
     }
 
-    // Fungsi untuk menampilkan notifikasi
     function showNotification(message, type = 'info') {
-        // Cek apakah ada frappe.show_alert
         if (typeof frappe !== 'undefined' && frappe.show_alert) {
             frappe.show_alert({
                 message: message,
                 indicator: type
             });
         } else {
-            // Fallback: buat notifikasi sederhana
             const notification = document.createElement('div');
             notification.className = `custom-notification notification-${type}`;
             notification.textContent = message;
@@ -2337,7 +2309,6 @@ button:disabled {
         }
     }
 
-    // Fungsi untuk menampilkan loading indicator
     function showLoadingIndicator(show) {
         const licensePlateField = document.getElementById('license_plate');
         if (!licensePlateField) return;
@@ -2370,7 +2341,6 @@ button:disabled {
         }
     }
 
-    // Handler untuk event input pada license plate
     const handleLicensePlateInput = debounce(async function(event) {
         const licensePlate = event.target.value;
         
@@ -2394,17 +2364,14 @@ button:disabled {
         } finally {
             showLoadingIndicator(false);
         }
-    }, 800); // Tunggu 800ms setelah user berhenti mengetik
+    }, 800);
 
-    // Inisialisasi
     function init() {
-        // Tunggu hingga DOM ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', init);
             return;
         }
 
-        // Tambahkan CSS untuk animasi dan styling
         const style = document.createElement('style');
         style.textContent = `
             @keyframes slideIn {
@@ -2458,12 +2425,10 @@ button:disabled {
         `;
         document.head.appendChild(style);
 
-        // Attach event listener ke license plate field
         const licensePlateField = document.getElementById('license_plate');
         if (licensePlateField) {
             licensePlateField.addEventListener('input', handleLicensePlateInput);
             
-            // Tambahkan hint text
             const hint = licensePlateField.parentElement.querySelector('.form-hint');
             if (hint) {
                 hint.innerHTML += ' <strong style="color: #0066FF;">💡 Ketik nomor polisi untuk auto-fill data customer!</strong>';
@@ -2473,10 +2438,8 @@ button:disabled {
         }
     }
 
-    // Jalankan inisialisasi
     init();
 
-    // Export untuk debugging
     window.GarageAutoFill = {
         searchByLicensePlate,
         fillCustomerData,
@@ -2485,11 +2448,12 @@ button:disabled {
 
 })();
 </script>
+
+<!-- Customer Name Sync Script -->
 <script>
 (function() {
     'use strict';
     
-    // Tunggu DOM siap
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initCustomerNameSync);
     } else {
@@ -2507,44 +2471,36 @@ button:disabled {
             return;
         }
         
-        // SYNC 1: Ketika user mengetik nama customer baru
         newCustomerNameInput.addEventListener('input', function(e) {
             const value = (e.target.value || '').trim();
             customerNameHidden.value = value;
             console.log('Customer name synced (input):', value);
         });
         
-        // SYNC 2: Ketika user blur dari field
         newCustomerNameInput.addEventListener('blur', function(e) {
             const value = (e.target.value || '').trim();
             customerNameHidden.value = value;
             console.log('Customer name synced (blur):', value);
         });
         
-        // SYNC 3: Ketika user memilih customer eksisting
         if (existingCustomerSelect) {
             existingCustomerSelect.addEventListener('change', function(e) {
                 const selectedValue = e.target.value;
                 if (selectedValue) {
-                    // Jika memilih customer eksisting, kosongkan new customer name
                     newCustomerNameInput.value = '';
-                    // Dan isi customer_name dengan nama dari option yang dipilih
                     const selectedOption = e.target.options[e.target.selectedIndex];
                     customerNameHidden.value = selectedOption.text || selectedValue;
                     console.log('Customer selected:', customerNameHidden.value);
                 } else {
-                    // Jika kembali ke "Customer Baru", kosongkan customer_name
                     customerNameHidden.value = '';
                 }
             });
         }
         
-        // VALIDASI SEBELUM SUBMIT
         form.addEventListener('submit', function(e) {
             const customerNameValue = customerNameHidden.value?.trim();
             const existingCustomerValue = existingCustomerSelect?.value?.trim();
             
-            // Cek apakah salah satu terisi
             if (!customerNameValue && !existingCustomerValue) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -2558,85 +2514,254 @@ button:disabled {
                     alert('Mohon isi nama customer baru atau pilih customer eksisting!');
                 }
                 
-                // Fokus ke field nama customer baru
                 newCustomerNameInput.focus();
                 return false;
             }
             
             console.log('Form validation passed. Customer name:', customerNameValue);
-        }, true); // Use capture phase untuk menangkap event lebih awal
+        }, true);
         
         console.log('Customer name sync initialized successfully');
     }
 })();
+</script>
 
+<!-- Form Submit with Auto-Download PDF -->
+<script>
 (function() {
     'use strict';
     
-    function initFix() {
-        const newCustomerInput = document.getElementById('new_customer_name');
-        const hiddenCustomerName = document.getElementById('customer_name');
-        const existingSelect = document.getElementById('existing_customer');
+    function initFormSubmit() {
         const form = document.getElementById('customer-vehicle-form');
+        const downloadButton = document.querySelector('button[data-action="download-estimate"]');
         
-        if (!newCustomerInput || !hiddenCustomerName) {
-            console.warn('[FIX] Customer name fields not found');
+        if (!form) {
+            console.warn('Form not found');
             return;
         }
         
-        // Sync on input
-        newCustomerInput.addEventListener('input', (e) => {
-            hiddenCustomerName.value = e.target.value.trim();
+        // Disable download button initially
+        if (downloadButton) {
+            downloadButton.disabled = true;
+            downloadButton.style.opacity = '0.5';
+        }
+        
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('🚀 Form submit started');
+            
+            // Validasi form
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return false;
+            }
+            
+            // Validasi customer name
+            const customerNameHidden = document.getElementById('customer_name');
+            const existingCustomerSelect = document.getElementById('existing_customer');
+            const customerNameValue = customerNameHidden?.value?.trim();
+            const existingCustomerValue = existingCustomerSelect?.value?.trim();
+            
+            if (!customerNameValue && !existingCustomerValue) {
+                frappe.show_alert({
+                    message: '⚠️ Mohon isi nama customer atau pilih customer eksisting!',
+                    indicator: 'orange'
+                }, 5);
+                return false;
+            }
+            
+            // Collect form data
+            const formData = new FormData(form);
+            const data = {};
+            
+            for (let [key, value] of formData.entries()) {
+                const field = form.elements[key];
+                if (field && field.dataset.cast === 'int') {
+                    data[key] = parseInt(value) || 0;
+                } else {
+                    data[key] = value;
+                }
+            }
+            
+            console.log('📦 Form data collected:', data);
+            
+            // Disable submit button
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '⏳ Menyimpan...';
+            }
+            
+            try {
+                // Step 1: Save intake data
+                console.log('💾 Saving intake data...');
+                const saveResponse = await frappe.call({
+                    method: 'garage.api.portal.create_service_intake',
+                    args: { data: data },
+                    type: 'POST',
+                    freeze: true,
+                    freeze_message: 'Menyimpan registrasi...'
+                });
+                
+                console.log('✅ Save response:', saveResponse);
+                
+                if (!saveResponse.message || !saveResponse.message.order_id) {
+                    throw new Error('Order ID tidak ditemukan dalam response');
+                }
+                
+                const orderId = saveResponse.message.order_id;
+                console.log('🎯 Order ID:', orderId);
+                
+                frappe.show_alert({
+                    message: `✅ Registrasi berhasil! Order ID: ${orderId}`,
+                    indicator: 'green'
+                }, 3);
+                
+                // Step 2: Generate and download PDF
+                console.log('📄 Generating PDF...');
+                
+                if (submitButton) {
+                    submitButton.innerHTML = '📄 Generating PDF...';
+                }
+                
+                const pdfResponse = await frappe.call({
+                    method: 'garage.api.pdf_generator.generate_service_estimate_pdf',
+                    args: { order_id: orderId },
+                    type: 'POST',
+                    freeze: true,
+                    freeze_message: 'Membuat PDF estimasi...'
+                });
+                
+                console.log('📥 PDF response:', pdfResponse);
+                
+                if (pdfResponse.message && pdfResponse.message.success) {
+                    // Auto download PDF
+                    const link = document.createElement('a');
+                    link.href = pdfResponse.message.file_url;
+                    link.download = pdfResponse.message.file_name;
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    frappe.show_alert({
+                        message: '✅ PDF berhasil didownload!',
+                        indicator: 'green'
+                    }, 3);
+                    
+                    console.log('✅ PDF downloaded:', pdfResponse.message.file_name);
+                } else {
+                    console.warn('⚠️ PDF generation failed, but registration successful');
+                    frappe.show_alert({
+                        message: '⚠️ Registrasi berhasil, tapi PDF gagal dibuat. Silakan download manual.',
+                        indicator: 'orange'
+                    }, 5);
+                }
+                
+                // Step 3: Redirect after success
+                setTimeout(() => {
+                    console.log('🔄 Redirecting to service page...');
+                    window.location.href = '/garage/service';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                
+                let errorMessage = '❌ Gagal menyimpan registrasi';
+                
+                if (error.message) {
+                    errorMessage += ': ' + error.message;
+                }
+                
+                if (error._server_messages) {
+                    try {
+                        const serverMessages = JSON.parse(error._server_messages);
+                        if (serverMessages && serverMessages.length > 0) {
+                            const parsedMsg = JSON.parse(serverMessages[0]);
+                            if (parsedMsg.message) {
+                                errorMessage = '❌ ' + parsedMsg.message;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse server messages:', e);
+                    }
+                }
+                
+                frappe.show_alert({
+                    message: errorMessage,
+                    indicator: 'red'
+                }, 7);
+                
+                // Re-enable submit button
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = '💾 Save';
+                }
+            }
         });
         
-        // Sync on blur
-        newCustomerInput.addEventListener('blur', (e) => {
-            hiddenCustomerName.value = e.target.value.trim();
-        });
-        
-        // Handle existing customer selection
-        if (existingSelect) {
-            existingSelect.addEventListener('change', (e) => {
-                if (e.target.value) {
-                    newCustomerInput.value = '';
-                    const opt = e.target.options[e.target.selectedIndex];
-                    hiddenCustomerName.value = opt.text;
+        // Handler untuk download button (untuk download manual setelah save)
+        if (downloadButton) {
+            downloadButton.addEventListener('click', async function(e) {
+                e.preventDefault();
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const orderId = urlParams.get('order_id');
+                
+                if (!orderId) {
+                    frappe.show_alert({
+                        message: '⚠️ Mohon simpan registrasi terlebih dahulu!',
+                        indicator: 'orange'
+                    }, 5);
+                    return;
+                }
+                
+                downloadButton.disabled = true;
+                downloadButton.innerHTML = '⏳ Generating PDF...';
+                
+                try {
+                    const pdfResponse = await frappe.call({
+                        method: 'garage.api.pdf_generator.generate_service_estimate_pdf',
+                        args: { order_id: orderId },
+                        type: 'POST',
+                        freeze: true
+                    });
+                    
+                    if (pdfResponse.message && pdfResponse.message.success) {
+                        const link = document.createElement('a');
+                        link.href = pdfResponse.message.file_url;
+                        link.download = pdfResponse.message.file_name;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        frappe.show_alert({
+                            message: '✅ PDF berhasil didownload!',
+                            indicator: 'green'
+                        }, 3);
+                    }
+                } catch (error) {
+                    console.error('Error generating PDF:', error);
+                    frappe.show_alert({
+                        message: '❌ Gagal generate PDF: ' + (error.message || 'Unknown error'),
+                        indicator: 'red'
+                    }, 5);
+                } finally {
+                    downloadButton.disabled = false;
+                    downloadButton.innerHTML = '📄 Download Estimasi Service Kendaraan';
                 }
             });
         }
         
-        // Pre-submit validation
-        if (form) {
-            form.addEventListener('submit', (e) => {
-                const name = hiddenCustomerName.value?.trim();
-                const existing = existingSelect?.value?.trim();
-                
-                if (!name && !existing) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    if (typeof frappe !== 'undefined' && frappe.show_alert) {
-                        frappe.show_alert({
-                            message: 'Mohon isi nama customer atau pilih customer eksisting!',
-                            indicator: 'red'
-                        });
-                    } else {
-                        alert('Mohon isi nama customer atau pilih customer eksisting!');
-                    }
-                    
-                    newCustomerInput.focus();
-                    return false;
-                }
-            }, true);
-        }
-        
-        console.log('[FIX] Customer name sync initialized');
+        console.log('✅ Form submit handler initialized');
     }
     
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initFix);
+        document.addEventListener('DOMContentLoaded', initFormSubmit);
     } else {
-        initFix();
+        initFormSubmit();
     }
 })();
 </script>
