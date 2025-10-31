@@ -3582,9 +3582,81 @@ def create_service_intake(data):
             vehicle_name = vehicle.name
             frappe.db.commit()
         
+        # 2.5. Load bundle parts jika ada
+        service_bundle_id = data.get('service_bundle')
+        bundle_parts = []
+        bundle_stages = []
+        
+        if service_bundle_id:
+            try:
+                bundle_doc = frappe.get_doc('Garage Service Bundle', service_bundle_id)
+                
+                # Get stages (jasa service)
+                if hasattr(bundle_doc, 'stages') and bundle_doc.stages:
+                    for stage in bundle_doc.stages:
+                        stage_name = getattr(stage, 'stage_name', '') or getattr(stage, 'name', '')
+                        if stage_name:
+                            bundle_stages.append(stage_name)
+                
+                # Get spare parts
+                if hasattr(bundle_doc, 'spare_parts') and bundle_doc.spare_parts:
+                    for part in bundle_doc.spare_parts:
+                        qty = float(getattr(part, 'qty', 0) or getattr(part, 'quantity', 0) or 0)
+                        rate = float(getattr(part, 'rate', 0) or getattr(part, 'unit_price', 0) or 0)
+                        amount = float(getattr(part, 'amount', 0) or 0)
+                        
+                        if amount == 0 and qty > 0 and rate > 0:
+                            amount = qty * rate
+                        
+                        bundle_parts.append({
+                            'item_code': getattr(part, 'item_code', '') or getattr(part, 'part_code', ''),
+                            'item_name': getattr(part, 'item_name', '') or getattr(part, 'part_name', ''),
+                            'description': (
+                                getattr(part, 'description', '') or 
+                                getattr(part, 'item_name', '') or 
+                                getattr(part, 'part_name', '')
+                            ),
+                            'qty': qty,
+                            'uom': getattr(part, 'uom', 'Unit') or 'Unit',
+                            'rate': rate,
+                            'amount': amount,
+                            'usage_type': 'Sparepart'
+                        })
+                
+                # Get materials
+                if hasattr(bundle_doc, 'materials') and bundle_doc.materials:
+                    for material in bundle_doc.materials:
+                        qty = float(getattr(material, 'qty', 0) or getattr(material, 'quantity', 0) or 0)
+                        rate = float(getattr(material, 'rate', 0) or getattr(material, 'unit_price', 0) or 0)
+                        amount = float(getattr(material, 'amount', 0) or 0)
+                        
+                        if amount == 0 and qty > 0 and rate > 0:
+                            amount = qty * rate
+                        
+                        bundle_parts.append({
+                            'item_code': getattr(material, 'item_code', '') or getattr(material, 'material_code', ''),
+                            'item_name': getattr(material, 'item_name', '') or getattr(material, 'material_name', ''),
+                            'description': (
+                                getattr(material, 'description', '') or 
+                                getattr(material, 'item_name', '') or 
+                                getattr(material, 'material_name', '')
+                            ),
+                            'qty': qty,
+                            'uom': getattr(material, 'uom', 'Unit') or 'Unit',
+                            'rate': rate,
+                            'amount': amount,
+                            'usage_type': 'Material'
+                        })
+                
+                frappe.logger().info(f"Loaded bundle {service_bundle_id}: {len(bundle_parts)} parts, {len(bundle_stages)} stages")
+                
+            except Exception as e:
+                frappe.log_error(f"Error loading bundle {service_bundle_id}: {str(e)}", "Bundle Load Error")
+                frappe.logger().warning(f"Failed to load bundle: {str(e)}")
+        
         # 3. Create Service Order
         service_order = frappe.get_doc({
-            'doctype': 'Garage Service Order',  # ← Nama yang benar
+            'doctype': 'Garage Service Order',
             'customer': customer_name,
             'customer_name': frappe.db.get_value('Garage Customer', customer_name, 'customer_name'),
             'vehicle': vehicle_name,
@@ -3596,21 +3668,82 @@ def create_service_intake(data):
             'service_booking_date': frappe.utils.now(),
             'service_order_type': service_order_type,
             'priority': data.get('priority', 'Normal'),
-            'service_bundle': data.get('service_bundle', ''),
+            'service_bundle': service_bundle_id or '',
             'total_estimated_amount': float(data.get('total_estimated_amount', 0)),
             'notes': data.get('notes', ''),
             'status': 'Draft',
             'workflow_state': 'Draft'
         })
         
+        # 3.5. Add parts to child table
+        if bundle_parts:
+            # Coba beberapa nama child table yang mungkin
+            child_table_added = False
+            
+            for table_name in ['parts', 'required_parts', 'items', 'order_parts', 'service_parts']:
+                if hasattr(service_order, table_name):
+                    frappe.logger().info(f"Adding {len(bundle_parts)} parts to child table: {table_name}")
+                    
+                    for idx, part in enumerate(bundle_parts, start=1):
+                        # VALIDASI: Skip jika item_code kosong
+                        item_code = part.get('item_code', '').strip()
+                        if not item_code:
+                            frappe.logger().warning(f"Skipping part #{idx}: item_code is empty")
+                            continue
+                        
+                        # VALIDASI: Pastikan description ada
+                        description = part.get('description', '').strip()
+                        if not description:
+                            description = part.get('item_name', '').strip()
+                        if not description:
+                            description = item_code  # Fallback ke item_code
+                        
+                        # VALIDASI: Pastikan qty > 0
+                        qty = part.get('qty', 0)
+                        if qty <= 0:
+                            frappe.logger().warning(f"Skipping part {item_code}: qty is 0 or negative")
+                            continue
+                        
+                        # VALIDASI: Pastikan rate ada
+                        rate = part.get('rate', 0)
+                        amount = part.get('amount', 0)
+                        
+                        # Recalculate amount
+                        if amount == 0 and qty > 0 and rate > 0:
+                            amount = qty * rate
+                        
+                        try:
+                            service_order.append(table_name, {
+                                'item_code': item_code,
+                                'item_name': part.get('item_name', item_code),
+                                'description': description,
+                                'qty': qty,
+                                'uom': part.get('uom', 'Unit'),
+                                'rate': rate,
+                                'amount': amount
+                            })
+                            frappe.logger().info(f"Added part: {item_code}")
+                        except Exception as e:
+                            frappe.logger().error(f"Failed to add part {item_code}: {str(e)}")
+                            continue
+                    
+                    child_table_added = True
+                    break
+            
+            if not child_table_added:
+                frappe.logger().warning(f"No child table found in Garage Service Order. Parts not added.")
+        
         service_order.insert(ignore_permissions=True)
         frappe.db.commit()
+        
+        frappe.logger().info(f"Service order created: {service_order.name} with {len(bundle_parts)} parts")
         
         return {
             'success': True,
             'order_id': service_order.name,
             'customer': customer_name,
             'vehicle': vehicle_name,
+            'parts_count': len(bundle_parts),
             'message': f'Service intake created successfully: {service_order.name}'
         }
         

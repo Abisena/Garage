@@ -29,7 +29,7 @@ def generate_service_estimate_pdf(order_id):
                     return val
             return ''
         
-        # Get data (sama seperti sebelumnya)
+        # Get data
         customer_name = safe_get(order, 'customer_name', 'name_customer')
         vehicle_plate = safe_get(order, 'vehicle_plate', 'license_plate', 'plate_number')
         vehicle_brand = safe_get(order, 'vehicle_brand', 'brand', 'make')
@@ -168,8 +168,31 @@ def generate_service_estimate_pdf(order_id):
             'quiet': ''
         }
         
-        # Create filename
-        pdf_filename = f"Estimasi_Service_{order.name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        # ========================================
+        # CREATE FILENAME - FORMAT BARU
+        # ========================================
+        # Get customer name untuk filename
+        customer_name_for_file = customer_name or 'Customer'
+        
+        # Clean customer name (remove special characters, spaces to dash)
+        import re
+        customer_name_clean = re.sub(r'[^\w\s-]', '', customer_name_for_file)  # Remove special chars
+        customer_name_clean = re.sub(r'[-\s]+', '-', customer_name_clean)      # Replace spaces/dashes with single dash
+        customer_name_clean = customer_name_clean.strip('-')[:30]              # Trim and limit length
+        
+        # Get order number (extract digits from order.name)
+        # Example: SO-00054 -> 00054
+        order_number = ''.join(filter(str.isdigit, order.name)).zfill(5)  # Pad with zeros to 5 digits
+        
+        # Get current year
+        current_year = datetime.now().strftime('%Y')
+        
+        # Format: EST-2025-00054-Joya.pdf
+        pdf_filename = f"EST-{current_year}-{order_number}-{customer_name_clean}.pdf"
+        html_filename = f"EST-{current_year}-{order_number}-{customer_name_clean}.html"
+        
+        frappe.logger().info(f"PDF filename: {pdf_filename}")
+        # ========================================
         
         # Get temp path for PDF generation
         import tempfile
@@ -192,13 +215,11 @@ def generate_service_estimate_pdf(order_id):
             frappe.log_error(f"PDF generation error: {str(e)}", "PDF Generator")
             
             # Fallback: create HTML file instead
-            html_filename = pdf_filename.replace('.pdf', '.html')
-            
             # Save using Frappe File API
             file_doc = frappe.get_doc({
                 'doctype': 'File',
                 'file_name': html_filename,
-                'is_private': 0,  # ← PUBLIC agar bisa di-download
+                'is_private': 0,
                 'content': html_content,
                 'folder': 'Home',
                 'attached_to_doctype': 'Garage Service Order',
@@ -218,7 +239,7 @@ def generate_service_estimate_pdf(order_id):
         file_doc = frappe.get_doc({
             'doctype': 'File',
             'file_name': pdf_filename,
-            'is_private': 0,  # ← CRITICAL: PUBLIC agar bisa di-download
+            'is_private': 0,
             'content': pdf_content,
             'folder': 'Home',
             'attached_to_doctype': 'Garage Service Order',
