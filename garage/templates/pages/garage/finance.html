@@ -1254,6 +1254,12 @@ button:disabled {
                 <form id="invoice-form" class="form-grid">
                     <div class="form-grid two-column">
                         <div class="form-field">
+                            <label for="invoice_branch">Cabang</label>
+                            <select id="invoice_branch" name="branch" required>
+                                <option value="">— Pilih cabang —</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
                             <label for="invoice_customer">Customer</label>
                             <select id="invoice_customer" name="customer">
                                 <option value="">— Pilih customer —</option>
@@ -1367,6 +1373,12 @@ button:disabled {
                 <form id="payment-form" class="form-grid">
                     <div class="form-grid two-column">
                         <div class="form-field">
+                            <label for="payment_branch">Cabang</label>
+                            <select id="payment_branch" name="branch" required>
+                                <option value="">— Pilih cabang —</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
                             <label for="payment_customer">Customer</label>
                             <select id="payment_customer" name="customer">
                                 <option value="">— Pilih customer —</option>
@@ -1440,6 +1452,12 @@ button:disabled {
                 <form id="receipt-form" class="form-grid form-grid--stacked">
                     <h3>Terbitkan Bukti Pembayaran</h3>
                     <div class="form-grid two-column">
+                        <div class="form-field">
+                            <label for="receipt_branch">Cabang</label>
+                            <select id="receipt_branch" name="branch" required>
+                                <option value="">— Pilih cabang —</option>
+                            </select>
+                        </div>
                         <div class="form-field">
                             <label for="receipt_payment_entry">Payment Entry</label>
                             <select id="receipt_payment_entry" name="payment_entry">

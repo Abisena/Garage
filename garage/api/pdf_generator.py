@@ -52,7 +52,35 @@ def generate_service_estimate_pdf(order_id):
                 vehicle_model = safe_get(vehicle_doc, 'model') or vehicle_model
             except:
                 pass
-        
+
+        branch_name = 'Bengkel Garasi'
+        branch_code = ''
+        branch_address = '-'
+        branch_contact = '-'
+        branch_ref = safe_get(order, 'branch')
+        if branch_ref:
+            try:
+                branch_doc = frappe.get_doc("Garage Branch", branch_ref)
+            except Exception:
+                branch_doc = None
+            if branch_doc:
+                branch_name = (getattr(branch_doc, 'branch_name', None) or getattr(branch_doc, 'name', None) or 'Bengkel Garasi').strip() or 'Bengkel Garasi'
+                branch_code = (getattr(branch_doc, 'branch_code', None) or getattr(branch_doc, 'name', None) or '').strip().upper()
+                address_parts = []
+                for field in ('address_line1', 'address_line2', 'city'):
+                    value = (getattr(branch_doc, field, None) or '').strip()
+                    if value:
+                        address_parts.append(value)
+                branch_address = ', '.join(address_parts) if address_parts else '-'
+                contact_parts = []
+                phone_value = (getattr(branch_doc, 'phone', None) or '').strip()
+                email_value = (getattr(branch_doc, 'email', None) or '').strip()
+                if phone_value:
+                    contact_parts.append(f"Telp: {phone_value}")
+                if email_value:
+                    contact_parts.append(f"Email: {email_value}")
+                branch_contact = ' | '.join(contact_parts) if contact_parts else '-'
+
         required_parts = []
         for attr_name in ['parts', 'required_parts', 'items', 'order_parts', 'service_parts']:
             parts_data = getattr(order, attr_name, None)
@@ -139,6 +167,10 @@ def generate_service_estimate_pdf(order_id):
             'assigned_mechanic': assigned_mechanic,
             'service_type': service_type,
             'priority': priority,
+            'branch_name': branch_name,
+            'branch_code': branch_code,
+            'branch_address': branch_address,
+            'branch_contact': branch_contact,
             'required_parts': parts_list,
             'total_parts': total_parts,
             'service_fee': service_fee,
@@ -179,18 +211,22 @@ def generate_service_estimate_pdf(order_id):
         customer_name_clean = re.sub(r'[^\w\s-]', '', customer_name_for_file)  # Remove special chars
         customer_name_clean = re.sub(r'[-\s]+', '-', customer_name_clean)      # Replace spaces/dashes with single dash
         customer_name_clean = customer_name_clean.strip('-')[:30]              # Trim and limit length
-        
+
         # Get order number (extract digits from order.name)
         # Example: SO-00054 -> 00054
         order_number = ''.join(filter(str.isdigit, order.name)).zfill(5)  # Pad with zeros to 5 digits
-        
+
         # Get current year
         current_year = datetime.now().strftime('%Y')
-        
-        # Format: EST-2025-00054-Joya.pdf
-        pdf_filename = f"EST-{current_year}-{order_number}-{customer_name_clean}.pdf"
-        html_filename = f"EST-{current_year}-{order_number}-{customer_name_clean}.html"
-        
+
+        # Determine branch token for filename
+        branch_token_source = branch_code or ((order.name or '').split('-', 1)[0] if order.name else '')
+        branch_token = re.sub(r'[^A-Z0-9]', '', branch_token_source.upper()) or 'BRANCH'
+
+        # Format: EST-BRANCH-2025-00054-Joya.pdf
+        pdf_filename = f"EST-{branch_token}-{current_year}-{order_number}-{customer_name_clean}.pdf"
+        html_filename = f"EST-{branch_token}-{current_year}-{order_number}-{customer_name_clean}.html"
+
         frappe.logger().info(f"PDF filename: {pdf_filename}")
         # ========================================
         
@@ -534,20 +570,31 @@ def get_pdf_template():
                 <div style="width: 70px; height: 70px; border: 2px solid #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24pt; font-weight: bold; color: #333;">🔧</div>
             </div>
             <div class="letterhead-text">
-                <h1>BENGKEL GARASI</h1>
-                <p>Jalan Raya Industri No. 123, Kawasan Industri MM2100<br>
-                Cikarang Barat, Bekasi 17520, Jawa Barat, Indonesia<br>
-                Telp: (021) 8998-7654 | Email: service@bengkelgarasi.co.id | www.bengkelgarasi.co.id</p>
+                <h1>{{ branch_name }}</h1>
+                <p>{{ branch_address }}<br>
+                {{ branch_contact }}</p>
             </div>
         </div>
     </div>
     
     <!-- Document Title -->
     <div class="document-title">ESTIMASI BIAYA PERBAIKAN KENDARAAN</div>
-    <div class="document-subtitle">No. Dokumen: {{ order_id }}</div>
+    <div class="document-subtitle">No. Dokumen: {{ order_id }}{% if branch_code %} — Cabang {{ branch_code }}{% endif %}</div>
     
     <!-- Customer & Vehicle Information -->
     <table class="info-table">
+        <tr>
+            <td class="label">Cabang</td>
+            <td class="value">{{ branch_name }}{% if branch_code %} ({{ branch_code }}){% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label">Alamat Cabang</td>
+            <td class="value">{{ branch_address }}</td>
+        </tr>
+        <tr>
+            <td class="label">Kontak Cabang</td>
+            <td class="value">{{ branch_contact }}</td>
+        </tr>
         <tr>
             <td class="label">Tanggal Estimasi</td>
             <td class="value">{{ date }}</td>

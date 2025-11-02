@@ -1,8 +1,14 @@
-"""Garage DocType controller for Garage Payment Entry."""
+"""DocType controller for Garage Payment Entry."""
+
+from __future__ import annotations
 
 from frappe.model.document import Document
 
+from garage.utils import naming
+
 
 class GaragePaymentEntry(Document):
-    """Basic controller for the `GaragePaymentEntry` DocType."""
-    pass
+    """Generate branch-specific numbering for payment entries."""
+
+    def autoname(self) -> None:
+        naming.make_branch_autoname(self, "PAY")

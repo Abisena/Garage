@@ -4,73 +4,65 @@
   "allow_guest_to_view": 0,
   "allow_import": 1,
   "allow_rename": 0,
-  "autoname": "",
+  "autoname": "field:branch_code",
   "beta": 0,
   "creation": "2024-06-02 00:00:00.000000",
-  "default_view": "Form",
+  "default_view": "List",
   "disable_prepared_report": 0,
   "docstatus": 0,
   "doctype": "DocType",
   "editable_grid": 0,
   "engine": "InnoDB",
   "field_order": [
-    "branch",
+    "branch_name",
     "branch_code",
-    "payment_entry",
-    "receipt_date",
-    "receipt_number",
-    "delivery_method",
-    "issued_by",
+    "address_line1",
+    "address_line2",
+    "city",
+    "phone",
+    "email",
     "notes"
   ],
   "fields": [
     {
-      "fieldname": "branch",
-      "fieldtype": "Link",
-      "label": "Branch",
-      "options": "Garage Branch",
-      "reqd": 1,
-      "in_list_view": 1
+      "fieldname": "branch_name",
+      "fieldtype": "Data",
+      "label": "Branch Name",
+      "in_list_view": 1,
+      "reqd": 1
     },
     {
       "fieldname": "branch_code",
       "fieldtype": "Data",
       "label": "Branch Code",
-      "read_only": 1,
-      "hidden": 1,
-      "fetch_from": "branch.branch_code"
-    },
-    {
-      "fieldname": "payment_entry",
-      "fieldtype": "Link",
-      "label": "Payment Entry",
-      "options": "Garage Payment Entry",
       "reqd": 1,
+      "unique": 1,
       "in_list_view": 1
     },
     {
-      "fieldname": "receipt_date",
-      "fieldtype": "Date",
-      "label": "Receipt Date",
-      "reqd": 1
-    },
-    {
-      "fieldname": "receipt_number",
+      "fieldname": "address_line1",
       "fieldtype": "Data",
-      "label": "Receipt Number",
-      "in_list_view": 1
+      "label": "Address Line 1"
     },
     {
-      "fieldname": "delivery_method",
-      "fieldtype": "Select",
-      "label": "Delivery Method",
-      "options": "Email\nPrinted Copy\nWhatsApp\nSMS"
+      "fieldname": "address_line2",
+      "fieldtype": "Data",
+      "label": "Address Line 2"
     },
     {
-      "fieldname": "issued_by",
-      "fieldtype": "Link",
-      "label": "Issued By",
-      "options": "User"
+      "fieldname": "city",
+      "fieldtype": "Data",
+      "label": "City"
+    },
+    {
+      "fieldname": "phone",
+      "fieldtype": "Data",
+      "label": "Phone"
+    },
+    {
+      "fieldname": "email",
+      "fieldtype": "Data",
+      "label": "Email"
     },
     {
       "fieldname": "notes",
@@ -93,7 +85,7 @@
   "max_attachments": 0,
   "modified": "2024-06-02 00:00:00.000000",
   "module": "Garage",
-  "name": "Garage Receipt Document",
+  "name": "Garage Branch",
   "naming_rule": "",
   "owner": "Administrator",
   "permissions": [
@@ -122,5 +114,5 @@
   "track_seen": 0,
   "translated_doctype": 0,
   "migration_hash": "",
-  "description": "Receipt confirmation produced from a payment entry."
+  "description": "Master data for workshop branches and their document codes."
 }
