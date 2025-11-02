@@ -74,6 +74,32 @@ def _format_plate(vehicle: Optional[frappe.Document]) -> str:
     return license_plate or "-"
 
 
+def _format_branch_address(branch: Optional[frappe.Document]) -> str:
+    """Combine branch address fields into a readable string."""
+    if not branch:
+        return "-"
+    parts: List[str] = []
+    for field in ("address_line1", "address_line2", "city"):
+        value = (getattr(branch, field, None) or "").strip()
+        if value:
+            parts.append(value)
+    return ", ".join(parts) if parts else "-"
+
+
+def _format_branch_contact(branch: Optional[frappe.Document]) -> str:
+    """Combine branch phone and email."""
+    if not branch:
+        return "-"
+    contacts: List[str] = []
+    phone = (getattr(branch, "phone", None) or "").strip()
+    email = (getattr(branch, "email", None) or "").strip()
+    if phone:
+        contacts.append(f"Telp: {phone}")
+    if email:
+        contacts.append(f"Email: {email}")
+    return " | ".join(contacts) if contacts else "-"
+
+
 def _safe_get_doc(doctype: str, name: Optional[str]) -> Optional[frappe.Document]:
     """Safely retrieve a document with permission bypass."""
     if not (doctype and name):
@@ -175,6 +201,24 @@ def build_service_estimate_context(service_order: frappe.Document) -> Dict[str, 
     # Get related documents
     customer = _safe_get_doc("Garage Customer", getattr(service_order, "customer", None))
     vehicle = _safe_get_doc("Garage Vehicle", getattr(service_order, "vehicle", None))
+    branch_doc = _safe_get_doc("Garage Branch", getattr(service_order, "branch", None))
+    branch_info = {
+        "name": "-",
+        "code": "-",
+        "address": _format_branch_address(branch_doc),
+        "contact": _format_branch_contact(branch_doc),
+        "phone": "-",
+        "email": "-",
+    }
+    if branch_doc:
+        branch_name = (getattr(branch_doc, "branch_name", None) or getattr(branch_doc, "name", None) or "-").strip()
+        branch_code = (getattr(branch_doc, "branch_code", None) or getattr(branch_doc, "name", None) or "-").strip()
+        branch_info["name"] = branch_name or "-"
+        branch_info["code"] = (branch_code or "-").upper()
+        phone_value = (getattr(branch_doc, "phone", None) or "").strip()
+        email_value = (getattr(branch_doc, "email", None) or "").strip()
+        branch_info["phone"] = phone_value or "-"
+        branch_info["email"] = email_value or "-"
 
     # Get service bundle if exists
     bundle_doc = None
@@ -269,6 +313,11 @@ def build_service_estimate_context(service_order: frappe.Document) -> Dict[str, 
             or "-"
         ),
         "contact_person": getattr(customer, "customer_name", None) or getattr(service_order, "customer", "-"),
+        "branch_name": branch_info["name"],
+        "branch_code": branch_info["code"],
+        "branch_contact": branch_info["contact"],
+        "branch_email": branch_info["email"],
+        "branch_address": branch_info["address"],
     }
 
     # Build vehicle information
@@ -292,6 +341,7 @@ def build_service_estimate_context(service_order: frappe.Document) -> Dict[str, 
         "summary": summary,
         "notes": intake_notes,
         "signatures": signatures,
+        "branch": branch_info,
     }
 
 

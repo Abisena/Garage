@@ -207,10 +207,22 @@
 
     <table class="meta-table">
         <tr>
+            <td class="label">Cabang</td>
+            <td class="value">{{ branch.name }}{% if branch.code and branch.code != '-' %} ({{ branch.code }}){% endif %}</td>
             <td class="label">No. Estimasi</td>
             <td class="value">{{ meta.number }}</td>
+        </tr>
+        <tr>
+            <td class="label">Alamat Cabang</td>
+            <td class="value">{{ branch.address }}</td>
             <td class="label">Tanggal</td>
             <td class="value">{{ meta.date }}</td>
+        </tr>
+        <tr>
+            <td class="label">Kontak Cabang</td>
+            <td class="value">{{ branch.contact }}</td>
+            <td class="label">Email Cabang</td>
+            <td class="value">{{ branch.email }}</td>
         </tr>
         <tr>
             <td class="label">Nama Customer</td>

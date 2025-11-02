@@ -276,6 +276,14 @@ function cloneBrandModelMap(map) {
             this.spareRequestGroups = new Map();
             this.lastEstimatePdf = null;
             this.boundSpareRequestModalKeydown = (event) => this.handleSpareRequestModalKeydown(event);
+            this.branchPreferenceKey = 'garage.portal.branch';
+            this.preferredBranch = '';
+            try {
+                this.preferredBranch = window.localStorage ? window.localStorage.getItem(this.branchPreferenceKey) || '' : '';
+            } catch (error) {
+                this.preferredBranch = '';
+            }
+            this.branchSelects = [];
         }
 
         init() {
@@ -320,6 +328,12 @@ function cloneBrandModelMap(map) {
                 invoiceCustomer: document.getElementById('invoice_customer'),
                 paymentCustomer: document.getElementById('payment_customer'),
                 receiptPaymentEntry: document.getElementById('receipt_payment_entry'),
+                intakeBranch: document.getElementById('intake_branch'),
+                serviceBranch: document.getElementById('service_branch'),
+                spareBranch: document.getElementById('spare_branch'),
+                invoiceBranch: document.getElementById('invoice_branch'),
+                paymentBranch: document.getElementById('payment_branch'),
+                receiptBranch: document.getElementById('receipt_branch'),
                 brand: document.getElementById('brand'),
                 model: document.getElementById('model'),
                 modelVariant: document.getElementById('model_variant'),
@@ -376,6 +390,8 @@ function cloneBrandModelMap(map) {
                 paymentsTotal: document.querySelector('[data-metric="payments-total"]'),
             };
 
+            this.syncBranchSelectReferences();
+
             this.statusLists = {};
             document.querySelectorAll('[data-status]').forEach((node) => {
                 const key = node.getAttribute('data-status');
@@ -425,6 +441,79 @@ function cloneBrandModelMap(map) {
                     ? spareRequestModal.querySelectorAll('[data-role="spare-request-modal-close"]')
                     : [],
             };
+        }
+
+        syncBranchSelectReferences() {
+            const selects = [
+                this.selects.intakeBranch,
+                this.selects.serviceBranch,
+                this.selects.spareBranch,
+                this.selects.invoiceBranch,
+                this.selects.paymentBranch,
+                this.selects.receiptBranch,
+            ].filter(Boolean);
+            this.branchSelects = selects;
+            selects.forEach((select) => {
+                if (!select.dataset.branchListenerAttached) {
+                    select.addEventListener('change', () => {
+                        this.onBranchChanged(select.value);
+                    });
+                    select.dataset.branchListenerAttached = '1';
+                }
+            });
+        }
+
+        onBranchChanged(value) {
+            const normalized = (value || '').trim();
+            this.preferredBranch = normalized;
+            try {
+                if (window.localStorage) {
+                    window.localStorage.setItem(this.branchPreferenceKey, normalized);
+                }
+            } catch (error) {
+                // ignore persistence failures
+            }
+            if (!normalized) {
+                return;
+            }
+            (this.branchSelects || []).forEach((select) => {
+                if (select && select.value !== normalized) {
+                    this.setSelectValue(select, normalized);
+                }
+            });
+        }
+
+        updateBranchSelects() {
+            this.syncBranchSelectReferences();
+            const branches = this.asArray(this.state.branches);
+            const selects = [
+                [this.selects.intakeBranch, '— Pilih cabang —'],
+                [this.selects.serviceBranch, '— Pilih cabang —'],
+                [this.selects.spareBranch, '— Pilih cabang —'],
+                [this.selects.invoiceBranch, '— Pilih cabang —'],
+                [this.selects.paymentBranch, '— Pilih cabang —'],
+                [this.selects.receiptBranch, '— Pilih cabang —'],
+            ];
+            selects.forEach(([select, blank]) => {
+                if (!select) {
+                    return;
+                }
+                this.populateSelect(select, branches, {
+                    valueKey: 'name',
+                    labelKey: 'branch_name',
+                    blankLabel: blank,
+                });
+            });
+            const available = new Set(branches.map((branch) => branch.name));
+            let defaultBranch = '';
+            if (this.preferredBranch && available.has(this.preferredBranch)) {
+                defaultBranch = this.preferredBranch;
+            } else if (branches.length) {
+                defaultBranch = branches[0].name;
+            }
+            if (defaultBranch) {
+                this.onBranchChanged(defaultBranch);
+            }
         }
 
         bindEvents() {
@@ -487,6 +576,7 @@ function cloneBrandModelMap(map) {
                         'customer_type',
                         'new_customer_name',
                         'customer_name',
+                        'branch',
                         'phone',
                         'email',
                         'preferred_contact_method',
@@ -608,6 +698,7 @@ function cloneBrandModelMap(map) {
                 this.forms.serviceOrder.addEventListener('submit', (event) => {
                     event.preventDefault();
                     const payload = this.collectFormData(this.forms.serviceOrder, [
+                        'branch',
                         'service_order_type',
                         'order_category',
                         'priority',
@@ -651,6 +742,7 @@ function cloneBrandModelMap(map) {
                 this.forms.spareOrder.addEventListener('submit', (event) => {
                     event.preventDefault();
                     const payload = this.collectFormData(this.forms.spareOrder, [
+                        'branch',
                         'customer',
                         'order_date',
                         'pickup_method',
@@ -707,6 +799,7 @@ function cloneBrandModelMap(map) {
                 this.forms.invoice.addEventListener('submit', (event) => {
                     event.preventDefault();
                     const payload = this.collectFormData(this.forms.invoice, [
+                        'branch',
                         'customer',
                         'invoice_date',
                         'source_type',
@@ -723,6 +816,7 @@ function cloneBrandModelMap(map) {
                 this.forms.payment.addEventListener('submit', (event) => {
                     event.preventDefault();
                     const payload = this.collectFormData(this.forms.payment, [
+                        'branch',
                         'customer',
                         'payment_date',
                         'mode_of_payment',
@@ -740,6 +834,7 @@ function cloneBrandModelMap(map) {
                 this.forms.receipt.addEventListener('submit', (event) => {
                     event.preventDefault();
                     const payload = this.collectFormData(this.forms.receipt, [
+                        'branch',
                         'payment_entry',
                         'receipt_date',
                         'receipt_number',
@@ -1928,6 +2023,7 @@ function cloneBrandModelMap(map) {
         }
 
         render() {
+            this.updateBranchSelects();
             this.updateDeskLinks();
             this.renderIntakeSection();
             this.renderServiceSection();

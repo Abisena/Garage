@@ -112,6 +112,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
     },
     "Garage Service Order": {
         "fields": {
+            "branch",
             "service_order_type",
             "order_category",
             "status",
@@ -208,6 +209,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             },
         },
         "update_fields": {
+            "branch",
             "status",
             "priority",
             "job_card_status",
@@ -231,6 +233,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
     },
     "Garage Spare Part Order": {
         "fields": {
+            "branch",
             "order_date",
             "customer",
             "contact_person",
@@ -256,6 +259,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             }
         },
         "update_fields": {
+            "branch",
             "status",
             "pickup_method",
             "delivery_date",
@@ -373,6 +377,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
     },
     "Garage Sales Invoice": {
         "fields": {
+            "branch",
             "invoice_date",
             "customer",
             "source_type",
@@ -408,6 +413,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             },
         },
         "update_fields": {
+            "branch",
             "status",
             "due_date",
             "total_amount",
@@ -417,6 +423,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
     },
     "Garage Payment Entry": {
         "fields": {
+            "branch",
             "payment_date",
             "customer",
             "mode_of_payment",
@@ -438,6 +445,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             }
         },
         "update_fields": {
+            "branch",
             "status",
             "mode_of_payment",
             "reference_no",
@@ -448,6 +456,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
     },
     "Garage Receipt Document": {
         "fields": {
+            "branch",
             "payment_entry",
             "receipt_date",
             "receipt_number",
@@ -456,6 +465,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "notes",
         },
         "update_fields": {
+            "branch",
             "receipt_date",
             "receipt_number",
             "delivery_method",
@@ -1406,6 +1416,10 @@ def portal_bootstrap() -> Dict[str, Any]:
         vehicle_fields,
         limit=100,
     )
+    branches = _list_dicts(
+        "Garage Branch",
+        ["name", "branch_name", "branch_code", "address_line1", "address_line2", "city", "phone", "email"],
+    )
     service_orders = _list_dicts(
         "Garage Service Order",
         [
@@ -1413,6 +1427,8 @@ def portal_bootstrap() -> Dict[str, Any]:
             "status",
             "customer",
             "vehicle",
+            "branch",
+            "branch_code",
             "priority",
             "service_booking_date",
             "estimated_delivery_date",
@@ -1432,6 +1448,8 @@ def portal_bootstrap() -> Dict[str, Any]:
             "status",
             "customer",
             "vehicle",
+            "branch",
+            "branch_code",
             "priority",
             "estimated_delivery_date",
             "service_notes",
@@ -1440,11 +1458,11 @@ def portal_bootstrap() -> Dict[str, Any]:
     )
     spare_orders = _list_dicts(
         "Garage Spare Part Order",
-        ["name", "status", "customer", "order_date", "delivery_date", "total_amount"],
+        ["name", "status", "customer", "branch", "branch_code", "order_date", "delivery_date", "total_amount"],
     )
     open_spare_orders = _list_dicts(
         "Garage Spare Part Order",
-        ["name", "status", "customer", "order_date", "delivery_date"],
+        ["name", "status", "customer", "branch", "branch_code", "order_date", "delivery_date"],
         filters=[["status", "not in", ["Delivered", "Cancelled"]]],
     )
     spare_parts = _list_dicts(
@@ -1557,6 +1575,8 @@ def portal_bootstrap() -> Dict[str, Any]:
             "name",
             "status",
             "customer",
+            "branch",
+            "branch_code",
             "invoice_date",
             "due_date",
             "total_amount",
@@ -1565,16 +1585,43 @@ def portal_bootstrap() -> Dict[str, Any]:
     )
     open_invoices = _list_dicts(
         "Garage Sales Invoice",
-        ["name", "customer", "invoice_date", "due_date", "total_amount", "outstanding_amount", "status"],
+        [
+            "name",
+            "customer",
+            "branch",
+            "branch_code",
+            "invoice_date",
+            "due_date",
+            "total_amount",
+            "outstanding_amount",
+            "status",
+        ],
         filters=[["status", "not in", ["Paid", "Cancelled"]]],
     )
     payments = _list_dicts(
         "Garage Payment Entry",
-        ["name", "status", "customer", "payment_date", "mode_of_payment", "paid_amount"],
+        [
+            "name",
+            "status",
+            "customer",
+            "branch",
+            "branch_code",
+            "payment_date",
+            "mode_of_payment",
+            "paid_amount",
+        ],
     )
     receipts = _list_dicts(
         "Garage Receipt Document",
-        ["name", "payment_entry", "receipt_date", "receipt_number", "delivery_method"],
+        [
+            "name",
+            "payment_entry",
+            "branch",
+            "branch_code",
+            "receipt_date",
+            "receipt_number",
+            "delivery_method",
+        ],
     )
 
     service_bundles = _get_service_bundles()
@@ -1613,6 +1660,7 @@ def portal_bootstrap() -> Dict[str, Any]:
         "open_invoices": open_invoices,
         "payment_entries": payments,
         "receipt_documents": receipts,
+        "branches": branches,
         "status_summary": status_summary,
         "totals": totals,
         "desk_routes": desk_routes,
@@ -2934,6 +2982,11 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
     data = _ensure_dict(payload or {})
 
+    branch_name = (data.get("branch") or "").strip()
+    if not branch_name:
+        frappe.throw(_("Cabang bengkel wajib dipilih."))
+    _get_doc("Garage Branch", branch_name)
+
     created: Dict[str, Any] = {}
     existing_customer = (data.get("existing_customer") or "").strip()
     customer_name = existing_customer
@@ -3003,6 +3056,7 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
             "customer": customer_name,
             "vehicle": vehicle_name,
             "status": "Inspection",
+            "branch": branch_name,
         }
         service_type = (data.get("service_order_type") or "").strip()
         if service_type:
