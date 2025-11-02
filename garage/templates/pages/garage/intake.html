@@ -1670,13 +1670,108 @@ button:disabled {
 
 {% block script %}
 <script>
-    frappe.require("/assets/garage/js/garage_portal.js");
+    (function loadGaragePortalBundle() {
+        const assetPath = '/assets/garage/js/garage_portal.js';
+
+        if (window.frappe && typeof window.frappe.require === 'function') {
+            window.frappe.require(assetPath);
+            return;
+        }
+
+        if (document.querySelector(`script[data-garage-portal="${assetPath}"]`)) {
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = assetPath;
+        script.async = true;
+        script.dataset.garagePortal = assetPath;
+        document.head.appendChild(script);
+    })();
 </script>
 
 <!-- Bundle Estimator Script -->
 <script>
 (function () {
     const DEFAULT_NOTE = 'Pilih bundel estimasi untuk melihat rincian jasa, sparepart, dan bahan.';
+
+    function callFrappe(options = {}) {
+        if (window.frappe && typeof window.frappe.call === 'function') {
+            return window.frappe.call(options);
+        }
+
+        const { method, args = {}, type = 'POST', callback, error } = options;
+
+        if (!method) {
+            const missingMethodError = new Error('Method is required for callFrappe');
+            if (typeof error === 'function') {
+                error(missingMethodError);
+            }
+            return Promise.reject(missingMethodError);
+        }
+
+        const url = method.startsWith('/') ? method : `/api/method/${method}`;
+        const requestType = (type || 'POST').toUpperCase();
+        const headers = { 'Content-Type': 'application/json' };
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        if (csrfToken) {
+            headers['X-Frappe-CSRF-Token'] = csrfToken;
+        }
+
+        const fetchOptions = {
+            method: requestType,
+            headers,
+            credentials: 'same-origin',
+        };
+
+        if (requestType === 'GET') {
+            const query = new URLSearchParams(args).toString();
+            return fetch(query ? `${url}?${query}` : url, fetchOptions)
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`Request failed with status ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then((data) => {
+                    if (typeof callback === 'function') {
+                        callback(data);
+                    }
+                    return data;
+                })
+                .catch((err) => {
+                    if (typeof error === 'function') {
+                        error(err);
+                    }
+                    throw err;
+                });
+        }
+
+        fetchOptions.body = JSON.stringify(args);
+
+        return fetch(url, fetchOptions)
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error(`Request failed with status ${response.status}`);
+                }
+                return response.json();
+            })
+            .then((data) => {
+                if (typeof callback === 'function') {
+                    callback(data);
+                }
+                return data;
+            })
+            .catch((err) => {
+                if (typeof error === 'function') {
+                    error(err);
+                }
+                throw err;
+            });
+    }
+
+    window.garageCall = callFrappe;
 
     const currencyFormatter = new Intl.NumberFormat('id-ID', {
         style: 'currency',
@@ -2012,7 +2107,7 @@ button:disabled {
         console.log('✅ All required elements found');
         console.log('📡 Loading service bundles from API...');
         
-        frappe.call({
+        callFrappe({
             method: 'garage.api.portal.portal_bootstrap',
             freeze: false,
             callback: function(response) {
@@ -2089,7 +2184,7 @@ button:disabled {
         }
 
         try {
-            const response = await frappe.call({
+            const response = await window.garageCall({
                 method: 'garage.api.portal.lookup_customer',
                 args: {
                     identifier: licensePlate.trim()
@@ -2605,7 +2700,7 @@ button:disabled {
             try {
                 // Step 1: Save intake data
                 console.log('💾 Saving intake data...');
-                const saveResponse = await frappe.call({
+                const saveResponse = await window.garageCall({
                     method: 'garage.api.portal.create_service_intake',
                     args: { data: data },
                     type: 'POST',
@@ -2634,7 +2729,7 @@ button:disabled {
                     submitButton.innerHTML = '📄 Generating PDF...';
                 }
                 
-                const pdfResponse = await frappe.call({
+                const pdfResponse = await window.garageCall({
                     method: 'garage.api.pdf_generator.generate_service_estimate_pdf',
                     args: { order_id: orderId },
                     type: 'POST',
