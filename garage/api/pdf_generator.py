@@ -5,6 +5,8 @@ from jinja2 import Template
 import os
 from datetime import datetime
 
+from garage.utils.service_estimate import format_service_order_document_number
+
 @frappe.whitelist()
 def generate_service_estimate_pdf(order_id):
     """Generate PDF estimasi service dari template"""
@@ -159,6 +161,7 @@ def generate_service_estimate_pdf(order_id):
         
         data = {
             'order_id': order.name,
+            'document_number': format_service_order_document_number(order),
             'date': datetime.now().strftime('%d %B %Y'),
             'customer_name': customer_name or '-',
             'vehicle_plate': vehicle_plate or '-',
@@ -189,11 +192,11 @@ def generate_service_estimate_pdf(order_id):
         
         # PDF options
         pdf_options = {
-            'page-size': 'A4',
-            'margin-top': '20mm',
-            'margin-right': '20mm',
-            'margin-bottom': '20mm',
-            'margin-left': '20mm',
+            'page-size': 'A5',
+            'margin-top': '10mm',
+            'margin-right': '10mm',
+            'margin-bottom': '10mm',
+            'margin-left': '12mm',
             'encoding': "UTF-8",
             'no-outline': None,
             'enable-local-file-access': None,
@@ -305,8 +308,8 @@ def get_pdf_template():
     <meta charset="UTF-8">
     <style>
         @page {
-            margin: 15mm 20mm 15mm 20mm;
-            size: A4;
+            margin: 10mm 12mm 12mm 12mm;
+            size: A5;
         }
         
         * {
@@ -579,7 +582,7 @@ def get_pdf_template():
     
     <!-- Document Title -->
     <div class="document-title">ESTIMASI BIAYA PERBAIKAN KENDARAAN</div>
-    <div class="document-subtitle">No. Dokumen: {{ order_id }}{% if branch_code %} — Cabang {{ branch_code }}{% endif %}</div>
+    <div class="document-subtitle">No. Dokumen: {{ document_number or order_id }}{% if branch_code %} — Cabang {{ branch_code }}{% endif %}</div>
     
     <!-- Customer & Vehicle Information -->
     <table class="info-table">
