@@ -476,6 +476,9 @@ function cloneBrandModelMap(map) {
             if (!normalized) {
                 return;
             }
+            if (this.state && typeof this.state === 'object') {
+                this.state.active_branch = normalized;
+            }
             (this.branchSelects || []).forEach((select) => {
                 if (select && select.value !== normalized) {
                     this.setSelectValue(select, normalized);
@@ -504,14 +507,23 @@ function cloneBrandModelMap(map) {
                     blankLabel: blank,
                 });
             });
-            const available = new Set(branches.map((branch) => branch.name));
+            const available = new Set(branches.map((branch) => branch.name).filter(Boolean));
+            const serverBranch =
+                this.state && typeof this.state.active_branch === 'string'
+                    ? this.state.active_branch.trim()
+                    : '';
             let defaultBranch = '';
-            if (this.preferredBranch && available.has(this.preferredBranch)) {
+            if (serverBranch && available.has(serverBranch)) {
+                defaultBranch = serverBranch;
+            } else if (this.preferredBranch && available.has(this.preferredBranch)) {
                 defaultBranch = this.preferredBranch;
             } else if (branches.length) {
-                defaultBranch = branches[0].name;
+                defaultBranch = branches[0].name || '';
             }
             if (defaultBranch) {
+                if (this.state && typeof this.state === 'object') {
+                    this.state.active_branch = defaultBranch;
+                }
                 this.onBranchChanged(defaultBranch);
             }
         }
