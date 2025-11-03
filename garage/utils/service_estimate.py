@@ -131,23 +131,23 @@ def _slugify(value: Optional[str], *, fallback: str = "") -> str:
     return slug or ""
 
 
-def _extract_sequence(identifier: Optional[str]) -> str:
+def _extract_sequence(identifier: Optional[str], *, width: int = 5) -> str:
     """Extract the trailing numeric sequence from a document identifier."""
 
     if not identifier:
-        return "00000"
+        return "0".zfill(width)
 
     if not isinstance(identifier, str):
         try:
             identifier = str(identifier)
         except Exception:
-            return "00000"
+            return "0".zfill(width)
 
     matches = re.findall(r"(\d+)", identifier)
     if not matches:
-        return "00000"
+        return "0".zfill(width)
 
-    return matches[-1].zfill(5)
+    return matches[-1].zfill(width)
 
 
 def _resolve_branch_identifier(service_order: frappe.Document) -> str:
@@ -170,6 +170,31 @@ def _resolve_branch_identifier(service_order: frappe.Document) -> str:
         .strip()
         or branch_name
     )
+
+
+def format_service_order_document_number(service_order: frappe.Document) -> str:
+    """Format document numbers to include branch, sequence, and year."""
+
+    branch_identifier = (_resolve_branch_identifier(service_order) or "CABANG").upper()
+    branch_parts = [
+        part.strip()
+        for part in re.split(r"[-/]+", branch_identifier)
+        if part and part.strip()
+    ]
+
+    sequence = _extract_sequence(getattr(service_order, "name", None), width=4)
+
+    try:
+        year = get_datetime(getattr(service_order, "creation", None)).year
+    except Exception:
+        year = now_datetime().year
+
+    parts: List[str] = branch_parts or ["CABANG"]
+    parts.append("EST")
+    parts.append(sequence)
+    parts.append(str(year))
+
+    return "-".join(parts)
 
 
 def _derive_customer_name(service_order: frappe.Document) -> str:
@@ -407,7 +432,7 @@ def build_service_estimate_context(service_order: frappe.Document) -> Dict[str, 
 
     # Build meta information
     meta = {
-        "number": getattr(service_order, "name", "-"),
+        "number": format_service_order_document_number(service_order),
         "date": _format_date(getattr(service_order, "creation", None)),
         "customer": getattr(customer, "customer_name", None) or getattr(service_order, "customer", "-"),
         "phone": (
