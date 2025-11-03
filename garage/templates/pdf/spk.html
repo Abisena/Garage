@@ -76,6 +76,13 @@
             padding-top: 8px;
             font-weight: bold;
         }
+        .signature-space {
+            height: 48px;
+        }
+        .signature-name {
+            margin-top: 8px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -133,19 +140,19 @@
 
     <div class="signature-grid">
         <div class="signature-box">
-            <div class="signature-role">Mekanik</div>
+            Mekanik
             <div class="signature-space"></div>
-            <div class="signature-name">{{ meta.mechanic or '-' }}</div>
+            <div class="signature-name">({{ signatures.assigned_mechanic or assigned_mechanic or '-' }})</div>
         </div>
         <div class="signature-box">
-            <div class="signature-role">Service Advisor</div>
+            Service Advisor
             <div class="signature-space"></div>
-            <div class="signature-name">{{ signatures.prepared_by or '-' }}</div>
+            <div class="signature-name">({{ service_advisor_name or signatures.prepared_by or '-' }})</div>
         </div>
         <div class="signature-box">
-            <div class="signature-role">Customer</div>
+            Customer
             <div class="signature-space"></div>
-            <div class="signature-name">{{ signatures.approved_by or meta.customer or '-' }}</div>
+            <div class="signature-name">({{ signatures.approved_by or '-' }})</div>
         </div>
     </div>
 </body>

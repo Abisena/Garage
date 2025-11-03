@@ -342,6 +342,89 @@ def _resolve_user_full_name(user_id: Optional[str]) -> str:
     return (full_name or user_id or "-").strip()
 
 
+def _resolve_employee_name(employee_id: Optional[str]) -> str:
+    """Get the human friendly name for an employee identifier."""
+    if not employee_id:
+        return "-"
+
+    identifier = (str(employee_id).strip() if employee_id else "") or "-"
+
+    try:
+        with _ignore_permissions():
+            row = frappe.db.get_value(
+                "Employee",
+                identifier,
+                ["employee_name", "user_id"],
+                as_dict=True,
+            )
+    except Exception:
+        row = None
+
+    if not row:
+        return identifier
+
+    employee_name = (row.get("employee_name") or "").strip()
+    if employee_name:
+        return employee_name
+
+    user_id = (row.get("user_id") or "").strip()
+    if user_id:
+        resolved = _resolve_user_full_name(user_id)
+        if resolved and resolved != "-":
+            return resolved
+
+    return identifier
+
+
+def _resolve_mechanic_name(service_order: frappe.Document) -> str:
+    """Extract the best available mechanic name from the service order."""
+
+    name_fields = (
+        "assigned_mechanic_display",
+        "assigned_mechanic_name",
+        "mechanic_in_charge_name",
+        "mechanic_name",
+        "technician_name",
+    )
+
+    for field in name_fields:
+        raw_value = getattr(service_order, field, None)
+        if not raw_value:
+            continue
+        value = raw_value.strip() if isinstance(raw_value, str) else str(raw_value).strip()
+        if value:
+            return value
+
+    id_fields = (
+        "assigned_mechanic",
+        "mechanic_in_charge",
+        "mechanic",
+        "technician",
+        "technician_in_charge",
+    )
+
+    for field in id_fields:
+        raw_identifier = getattr(service_order, field, None)
+        if not raw_identifier:
+            continue
+
+        identifier = (
+            raw_identifier.strip()
+            if isinstance(raw_identifier, str)
+            else str(raw_identifier).strip()
+        )
+        if not identifier:
+            continue
+
+        resolved = _resolve_employee_name(identifier)
+        if resolved and resolved != "-":
+            return resolved
+
+        return identifier
+
+    return "-"
+
+
 def build_service_estimate_context(service_order: frappe.Document) -> Dict[str, Any]:
     """Build context dictionary for PDF template rendering."""
     
@@ -480,6 +563,11 @@ def build_service_estimate_context(service_order: frappe.Document) -> Dict[str, 
         "approved_by": getattr(customer, "customer_name", None) or getattr(service_order, "customer", "-"),
     }
 
+    assigned_mechanic_name = _resolve_mechanic_name(service_order)
+    signatures["assigned_mechanic"] = assigned_mechanic_name
+
+    service_advisor_name = signatures.get("prepared_by") or "-"
+
     # Return complete context
     return {
         "title": _("ESTIMASI SERVICE KENDARAAN"),
@@ -490,6 +578,8 @@ def build_service_estimate_context(service_order: frappe.Document) -> Dict[str, 
         "notes": intake_notes,
         "signatures": signatures,
         "branch": branch_info,
+        "assigned_mechanic": assigned_mechanic_name,
+        "service_advisor_name": service_advisor_name,
     }
 
 
