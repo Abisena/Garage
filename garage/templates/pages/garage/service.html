@@ -1558,7 +1558,7 @@ body {
         <div class="stat-card">
             <div class="stat-card__header">
                 <div class="stat-card__icon completed">✅</div>
-                <div class="stat-card__label">SPK</div>
+                <div class="stat-card__label">Completed</div>
             </div>
             <div class="stat-card__value" id="stat-completed">-</div>
             <div class="stat-card__subtitle">Pekerjaan selesai & siap ditagihkan</div>
@@ -1652,7 +1652,7 @@ body {
     <div class="workflow-section">
         <div class="section-header">
             <div class="section-title">
-                <h2>🧾 SPK</h2>
+                <h2>✅ Completed</h2>
                 <span class="section-badge completed" id="badge-completed">0</span>
             </div>
             <div class="section-actions">
@@ -1664,7 +1664,7 @@ body {
             <table class="service-table">
                 <thead>
                     <tr>
-                        <th>Service Order</th>
+                        <th>Sales Order</th>
                         <th>Kendaraan</th>
                         <th>Customer</th>
                         <th>Service Summary</th>
@@ -1805,11 +1805,16 @@ body {
 
         const context = (options.context || '').toLowerCase();
 
-        if (context === 'completed') {
-            return `Sale Order #${padded}`;
+        switch (context) {
+            case 'estimate':
+                return `EST-${padded}`;
+            case 'completed':
+                return `Sales Order #${padded}`;
+            case 'progress':
+                return `SO-${padded}`;
+            default:
+                return `SO-${padded}`;
         }
-
-        return `SO-${padded}`;
     }
 
     function formatVehiclePlate(plate) {
@@ -2168,7 +2173,7 @@ body {
             return `
             <tr${classAttr}>
                 <td>
-                    <div class="cell-strong">${escapeHtml(formatServiceOrderId(order.name, { context: 'completed' }))}</div>
+                    <div class="cell-strong">${escapeHtml(formatServiceOrderId(order.name, { context: 'estimate' }))}</div>
                     <div class="cell-secondary">${order.service_order_type || '-'}</div>
                     ${order.priority ? getPriorityBadge(order.priority) : ''}
                     ${renderIntakeBadge(order)}
@@ -2263,7 +2268,7 @@ body {
         `; }).join('');
     }
 
-    // Render SPK table
+    // Render Completed table
     function renderCompletedTable() {
         const tbody = document.getElementById('table-completed');
         const orders = paginationState.completed.all || [];
@@ -2298,7 +2303,7 @@ body {
             return `
             <tr${classAttr}>
                 <td>
-                    <div class="cell-strong">${escapeHtml(formatServiceOrderId(order.name, { context: 'estimate' }))}</div>
+                    <div class="cell-strong">${escapeHtml(formatServiceOrderId(order.name, { context: 'completed' }))}</div>
                     <div class="cell-secondary">${order.service_order_type || '-'}</div>
                     ${renderIntakeBadge(order)}
                 </td>
