@@ -7,15 +7,15 @@ import frappe
 BRANCHES = [
     {
         "branch_name": "Jakarta",
-        "branch_code": "JKT",
+        "branch_code": "JKT-001",
     },
     {
         "branch_name": "Bandung",
-        "branch_code": "BDG",
+        "branch_code": "BDG-001",
     },
     {
         "branch_name": "Surabaya",
-        "branch_code": "SBY",
+        "branch_code": "SBY-001",
     },
 ]
 

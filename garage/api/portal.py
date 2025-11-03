@@ -3,18 +3,18 @@ from __future__ import annotations
 
 from collections import defaultdict
 from contextlib import contextmanager
+from functools import lru_cache
 from urllib.parse import quote
 import re
-from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Set
+from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Set, Tuple
 
 import frappe
 from frappe import _
+from frappe.exceptions import PermissionError
 from frappe.utils import cint, cstr, flt, get_datetime, get_url, now_datetime, nowdate
 
 from garage.utils import service_estimate
 import json
-import frappe
-from frappe import _
 
 # Treat blank/None statuses on tasks as active to ensure newly created tasks
 # (which default to an empty status value) are counted towards a technician's
@@ -32,6 +32,125 @@ SERVICE_ORDER_ACTIVE_STATUSES = {
 TECHNICIAN_ACTIVE_STATUS = {"Active"}
 TECHNICIAN_ROLE_NAMES = {"Technician", "Teknisi"}
 DEFAULT_TECHNICIAN_CAPACITY = 3
+
+BRANCH_FILTER_FIELDS: Mapping[str, str] = {
+    "Garage Service Order": "branch",
+    "Garage Spare Part Order": "branch",
+    "Garage Sales Invoice": "branch",
+    "Garage Payment Entry": "branch",
+    "Garage Receipt Document": "branch",
+    "Garage Branch": "name",
+}
+
+BRANCH_ADMIN_ROLES = {"System Manager"}
+
+
+def _is_branch_admin(user: str) -> bool:
+    if not user or user in {"Guest"}:
+        return False
+    if user == "Administrator":
+        return True
+    roles = set(frappe.get_roles(user) or [])
+    return bool(roles & BRANCH_ADMIN_ROLES)
+
+
+@lru_cache(maxsize=None)
+def _allowed_branches(user: str) -> Optional[Tuple[str, ...]]:
+    if _is_branch_admin(user):
+        return None
+
+    rows = frappe.get_all(
+        "Garage Branch Access",
+        filters={"user": user},
+        fields=["branch"],
+    )
+    branches = tuple(sorted({row.get("branch") for row in rows if row.get("branch")}))
+    return branches
+
+
+def _normalize_filters(filters: Optional[Any]) -> List[List[Any]]:
+    if not filters:
+        return []
+
+    if isinstance(filters, dict):
+        normalized: List[List[Any]] = []
+        for field, condition in filters.items():
+            if isinstance(condition, (list, tuple)):
+                if condition and isinstance(condition[0], (list, tuple)):
+                    for item in condition:
+                        if not item:
+                            continue
+                        if len(item) == 3:
+                            normalized.append(list(item))
+                        elif len(item) == 2:
+                            normalized.append([field, item[0], item[1]])
+                        else:
+                            normalized.append([field, "=", item])
+                elif len(condition) == 2 and isinstance(condition[0], str):
+                    normalized.append([field, condition[0], condition[1]])
+                else:
+                    normalized.append([field, "in", list(condition)])
+            else:
+                normalized.append([field, "=", condition])
+        return normalized
+
+    if isinstance(filters, (list, tuple)):
+        return [list(condition) for condition in filters]
+
+    return []
+
+
+def _apply_branch_filters(doctype: str, filters: Optional[Any]) -> List[List[Any]]:
+    normalized = _normalize_filters(filters)
+
+    user = frappe.session.user
+    allowed = _allowed_branches(user)
+
+    if allowed is None:
+        return normalized
+
+    placeholder = list(allowed) if allowed else ["__no_branch__"]
+
+    if doctype == "Garage Branch":
+        normalized.append(["name", "in", placeholder])
+        return normalized
+
+    branch_field = BRANCH_FILTER_FIELDS.get(doctype)
+    if branch_field:
+        normalized.append([branch_field, "in", placeholder])
+
+    return normalized
+
+
+def _extract_branch_value(doc: frappe.Document) -> Optional[str]:
+    branch_field = BRANCH_FILTER_FIELDS.get(doc.doctype)
+    if not branch_field:
+        return None
+    if branch_field == "name":
+        return getattr(doc, "name", None)
+    return getattr(doc, branch_field, None)
+
+
+def _ensure_branch_allowed(doc: frappe.Document) -> None:
+    allowed = _allowed_branches(frappe.session.user)
+    if allowed is None:
+        return
+
+    branch_value = _extract_branch_value(doc)
+    if not branch_value:
+        return
+
+    if not allowed or branch_value not in allowed:
+        frappe.throw(
+            _("Anda tidak memiliki akses ke cabang {0}.").format(branch_value),
+            exc=PermissionError,
+        )
+
+
+def _assert_branch_access(doc: frappe.Document) -> frappe.Document:
+    _ensure_branch_allowed(doc)
+    return doc
+
 
 # Whitelisted DocTypes that can be created/updated from the public portal along with
 # the permitted fields. The definition intentionally mirrors the JSON DocType schema
@@ -946,6 +1065,7 @@ def _new_document(doctype: str, data: Mapping[str, Any]) -> frappe.Document:
 
 def _insert_document(doctype: str, data: Mapping[str, Any]) -> frappe.Document:
     doc = _new_document(doctype, data)
+    _ensure_branch_allowed(doc)
     return _insert_doc(doc)
 
 
@@ -968,18 +1088,27 @@ def _update_document(doctype: str, name: str, data: Mapping[str, Any]) -> frappe
             for row in child_rows:
                 doc.append(table_field, row)
 
+    _ensure_branch_allowed(doc)
     _save_doc(doc)
     return doc
 
 
-def _list_dicts(doctype: str, fields: Iterable[str], *, filters: Optional[Any] = None, limit: int = DEFAULT_LIMIT) -> List[Dict[str, Any]]:
+def _list_dicts(
+    doctype: str,
+    fields: Iterable[str],
+    *,
+    filters: Optional[Any] = None,
+    limit: int = DEFAULT_LIMIT,
+    order_by: Optional[str] = None,
+) -> List[Dict[str, Any]]:
     try:
         with _ignoring_permissions():
+            applied_filters = _apply_branch_filters(doctype, filters)
             rows = frappe.db.get_all(
                 doctype,
                 fields=list(fields),
-                filters=filters or [],
-                order_by="modified desc",
+                filters=applied_filters,
+                order_by=order_by or "modified desc",
                 limit=limit,
             )
     except Exception:
@@ -1328,9 +1457,10 @@ def _group_status(doctype: str) -> Dict[str, int]:
 def _sum_field(doctype: str, field: str, filters: Optional[Any] = None) -> float:
     try:
         with _ignoring_permissions():
+            applied_filters = _apply_branch_filters(doctype, filters)
             result = frappe.db.get_all(
                 doctype,
-                filters=filters or [],
+                filters=applied_filters,
                 fields=[f"sum({field}) as total"],
                 ignore_permissions=True,
             )
@@ -1343,16 +1473,19 @@ def _sum_field(doctype: str, field: str, filters: Optional[Any] = None) -> float
 
 def _get_doc(doctype: str, name: str) -> frappe.Document:
     with _ignoring_permissions():
-        return frappe.get_doc(doctype, name)
+        doc = frappe.get_doc(doctype, name)
+    return _assert_branch_access(doc)
 
 
 def _insert_doc(doc: frappe.Document) -> frappe.Document:
+    _ensure_branch_allowed(doc)
     with _ignoring_permissions():
         doc.insert(ignore_permissions=True)
     return doc
 
 
 def _save_doc(doc: frappe.Document) -> frappe.Document:
+    _ensure_branch_allowed(doc)
     with _ignoring_permissions():
         doc.save(ignore_permissions=True)
     return doc
@@ -1942,6 +2075,8 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
         "booking_reference",
         "customer",
         "vehicle",
+        "branch",
+        "branch_code",
         "service_booking_date",
         "estimated_delivery_date",
         "actual_delivery_date",
@@ -1977,21 +2112,13 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
             db_filters["creation"] = ["<=", filter_dict["to_date"]]
     
     # Fetch service orders
-    try:
-        orders = frappe.get_all(
-            "Garage Service Order",
-            filters=db_filters,
-            fields=fields,
-            order_by="creation desc",
-            limit_page_length=100
-        )
-    except Exception as e:
-        frappe.log_error(f"Error fetching service orders: {str(e)}")
-        return {
-            "orders": [],
-            "total_count": 0,
-            "error": str(e)
-        }
+    orders = _list_dicts(
+        "Garage Service Order",
+        fields,
+        filters=db_filters,
+        limit=100,
+        order_by="creation asc",
+    )
     
     # Enrich with related data
     enriched_orders = []
@@ -2117,6 +2244,8 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
         
         enriched_orders.append(order)
     
+    enriched_orders.sort(key=lambda row: row.get("creation") or "")
+
     return {
         "orders": enriched_orders,
         "total_count": len(enriched_orders)
@@ -2402,6 +2531,8 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
         "status": doc.status,
         "customer": doc.customer,
         "vehicle": doc.vehicle,
+        "branch": getattr(doc, "branch", None),
+        "branch_code": getattr(doc, "branch_code", None),
         "service_order_type": doc.service_order_type,
         "order_category": doc.order_category,
         "priority": doc.priority,
@@ -3191,6 +3322,30 @@ def generate_service_estimate_document(service_order: str) -> Dict[str, Any]:
         response.update(pdf_attachment)
 
     return response
+
+
+@frappe.whitelist()
+def generate_service_order_spk(service_order: str) -> Dict[str, Any]:
+    """Generate an SPK document for the given service order."""
+
+    _require_login()
+
+    order_name = cstr(service_order or "").strip()
+    if not order_name:
+        frappe.throw(_("Order servis wajib dipilih."))
+
+    service_doc = _get_doc("Garage Service Order", order_name)
+
+    pdf_payload = service_estimate.create_spk_pdf(service_doc.name)
+    if not pdf_payload or not pdf_payload.get("content"):
+        frappe.throw(_("Gagal membuat dokumen SPK."))
+
+    return {
+        "service_order": service_doc.name,
+        "spk_pdf": pdf_payload,
+        "indicator": "green",
+        "message": _("Dokumen SPK siap diunduh."),
+    }
 
 
 @frappe.whitelist()

@@ -1,0 +1,130 @@
+{% set meta = meta or {} %}
+{% set vehicle = vehicle or {} %}
+{% set job_items = job_items or [] %}
+{% set summary = summary or {} %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title or 'SURAT PERINTAH KERJA' }}</title>
+    <style>
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 12px;
+            color: #111;
+            margin: 0;
+            padding: 24px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 20px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .section {
+            margin-bottom: 16px;
+        }
+        .label {
+            font-weight: bold;
+            display: inline-block;
+            min-width: 140px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        th, td {
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+        }
+        th {
+            background: #f3f4f6;
+            text-align: left;
+        }
+        .total-row td {
+            font-weight: bold;
+        }
+        .signature-grid {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 32px;
+        }
+        .signature-box {
+            width: 32%;
+            text-align: center;
+            border-top: 1px solid #444;
+            padding-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ title or 'SURAT PERINTAH KERJA' }}</h1>
+
+    <div class="section">
+        <div><span class="label">No. Dokumen</span>{{ meta.number or '-' }}</div>
+        <div><span class="label">Cabang</span>{{ meta.branch_name or '-' }}{% if meta.branch_code %} ({{ meta.branch_code }}){% endif %}</div>
+        <div><span class="label">Tanggal</span>{{ meta.date or '-' }}</div>
+    </div>
+
+    <div class="section">
+        <div><span class="label">Customer</span>{{ meta.customer or '-' }}</div>
+        <div><span class="label">Kontak</span>{{ meta.phone or '-' }}</div>
+        <div><span class="label">Kendaraan</span>{{ vehicle.description or '-' }}</div>
+        <div><span class="label">No. Polisi</span>{{ vehicle.plate or '-' }}</div>
+    </div>
+
+    <div class="section">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 60%;">Deskripsi Pekerjaan / Part</th>
+                    <th style="width: 20%; text-align:right;">Jumlah</th>
+                    <th style="width: 20%; text-align:right;">Biaya</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% if job_items %}
+                {% for item in job_items %}
+                <tr>
+                    <td>{{ item.description or '-' }}</td>
+                    <td style="text-align:right;">1</td>
+                    <td style="text-align:right;">{{ item.amount_formatted or '-' }}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="3" style="text-align:center;">Belum ada rincian pekerjaan.</td>
+                </tr>
+            {% endif %}
+            </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td colspan="2">Total Estimasi</td>
+                    <td style="text-align:right;">{{ summary.grand_total_formatted or '-' }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="section">
+        <div><span class="label">Catatan</span>{{ notes or '-' }}</div>
+    </div>
+
+    <div class="signature-grid">
+        <div class="signature-box">
+            Mekanik
+            <br><br><br>
+        </div>
+        <div class="signature-box">
+            Service Advisor
+            <br><br><br>
+        </div>
+        <div class="signature-box">
+            Customer
+            <br><br><br>
+        </div>
+    </div>
+</body>
+</html>

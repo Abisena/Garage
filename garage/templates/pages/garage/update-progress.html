@@ -546,20 +546,11 @@ body {
             return '-';
         }
 
-        if (/^SO-\d{5,}$/i.test(raw)) {
-            const [, digits] = raw.split('-');
-            return `SO-${digits}`;
-        }
+        const sequenceMatch = raw.match(/(\d{3,})$/);
+        const digits = sequenceMatch ? sequenceMatch[1] : (raw.match(/\d+/) || [])[0];
+        const padded = digits ? String(digits).padStart(5, '0') : '';
 
-        const numericMatch = raw.match(/\d+/);
-        if (numericMatch) {
-            const numeric = Number(numericMatch[0]);
-            if (!Number.isNaN(numeric)) {
-                return `SO-${numeric.toString().padStart(5, '0')}`;
-            }
-        }
-
-        return raw;
+        return padded ? `SO-${padded}` : raw;
     }
 
     function buildVehicleSummary(details) {

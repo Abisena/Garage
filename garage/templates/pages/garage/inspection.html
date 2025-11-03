@@ -1540,6 +1540,7 @@ a:hover {
         <div class="action-buttons">
             <a href="/garage/service" class="btn btn-secondary">Batal</a>
             <button type="button" class="btn btn-primary" onclick="submitInspection()">Save</button>
+            <button type="button" class="btn btn-outline" id="print_spk_button" disabled onclick="printSpkDocument()">Print SPK</button>
         </div>
         <div class="action-info">
             <div class="action-tags">
@@ -1585,6 +1586,35 @@ a:hover {
         return currencyFormatter.format(number);
     }
 
+    function downloadBase64Pdf(content, filename) {
+        if (!content) {
+            frappe.msgprint('Konten PDF tidak tersedia.');
+            return;
+        }
+
+        try {
+            const sanitized = String(content).replace(/^data:[^,]+,/, '').trim();
+            const binary = atob(sanitized);
+            const length = binary.length;
+            const bytes = new Uint8Array(length);
+            for (let i = 0; i < length; i += 1) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            const blob = new Blob([bytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename || 'dokumen.pdf';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Gagal menyiapkan PDF', error);
+            frappe.msgprint('Gagal menyiapkan file PDF untuk diunduh.');
+        }
+    }
+
     function escapeHtml(value) {
         if (value === undefined || value === null) {
             return '';
@@ -1619,20 +1649,11 @@ a:hover {
             return '-';
         }
 
-        if (/^SO-\d{5,}$/i.test(raw)) {
-            const [, digits] = raw.split('-');
-            return `SO-${digits}`;
-        }
+        const sequenceMatch = raw.match(/(\d{3,})$/);
+        const digits = sequenceMatch ? sequenceMatch[1] : (raw.match(/\d+/) || [])[0];
+        const padded = digits ? String(digits).padStart(5, '0') : '';
 
-        const numericMatch = raw.match(/\d+/);
-        if (numericMatch) {
-            const numeric = Number(numericMatch[0]);
-            if (!Number.isNaN(numeric)) {
-                return `SO-${numeric.toString().padStart(5, '0')}`;
-            }
-        }
-
-        return raw;
+        return padded ? `EST-${padded}` : raw;
     }
 
 
@@ -2374,6 +2395,14 @@ a:hover {
         let latestOrder = null;
         let baseServiceFee = 0;
         let serviceSummaryItems = [];
+        let spkButton = null;
+        let spkButtonLabel = 'Print SPK';
+
+        spkButton = document.getElementById('print_spk_button');
+        if (spkButton) {
+            spkButtonLabel = spkButton.textContent || spkButtonLabel;
+        }
+        setSpkButtonState(false);
 
         bindTechnicianSelect();
         setTechnicianRoster([]);
@@ -2420,6 +2449,20 @@ a:hover {
                     return `<li><span class="item-label">${label}</span>${meta}</li>`;
                 })
                 .join('');
+        }
+
+        function setSpkButtonState(enabled) {
+            if (!spkButton) {
+                return;
+            }
+
+            if (enabled) {
+                spkButton.disabled = false;
+                spkButton.removeAttribute('aria-disabled');
+            } else {
+                spkButton.disabled = true;
+                spkButton.setAttribute('aria-disabled', 'true');
+            }
         }
 
         function updateIntakeSummaryDisplay(summary) {
@@ -2991,6 +3034,9 @@ a:hover {
             const statusValue = order.status || order.workflow_state || order.job_card_status || 'Draft';
             applyStatusBadge(statusValue);
 
+            const spkReadyStatuses = ['Work In Progress', 'Awaiting QC', 'Completed'];
+            setSpkButtonState(spkReadyStatuses.includes(statusValue));
+
             const intakeType = (order.intake_type || 'Walk-In').toLowerCase() === 'booking' ? 'Booking' : 'Walk-In';
             document.getElementById('display_intake_type').textContent = intakeType;
 
@@ -3276,14 +3322,57 @@ a:hover {
                     type: 'POST'
                 }));
 
-                frappe.show_alert({ message: '✅ Inspeksi berhasil!', indicator: 'green' }, 3);
-                setTimeout(() => window.location.href = '/garage/service', 1000);
+                frappe.show_alert({ message: '✅ Inspeksi berhasil! Silakan cetak SPK.', indicator: 'green' }, 5);
+                applyStatusBadge('Work In Progress');
+                latestOrder = Object.assign({}, latestOrder || {}, { status: 'Work In Progress' });
+                setSpkButtonState(true);
             } catch (error) {
                 console.error('Error:', error);
                 const message = error && error.message === 'CSRF token not available'
                     ? '❌ Sesi berakhir. Silakan muat ulang halaman dan coba lagi.'
                     : '❌ Error: ' + (error.message || 'Gagal menyimpan');
                 frappe.show_alert({ message, indicator: 'red' }, 5);
+            }
+        };
+
+        window.printSpkDocument = async function() {
+            if (!orderId) {
+                frappe.show_alert({ message: '❌ Order tidak valid.', indicator: 'red' }, 5);
+                return;
+            }
+
+            if (spkButton) {
+                spkButton.disabled = true;
+                spkButton.textContent = 'Menyiapkan SPK…';
+            }
+
+            try {
+                await ensureCSRFToken();
+                const response = await frappe.call(withCSRF({
+                    method: 'garage.api.portal.generate_service_order_spk',
+                    args: { service_order: orderId },
+                    type: 'POST'
+                }));
+
+                const payload = response?.message || {};
+                const pdf = payload.spk_pdf || payload.pdf;
+                if (pdf && pdf.content) {
+                    downloadBase64Pdf(pdf.content, pdf.filename || `SPK-${orderId}.pdf`);
+                } else {
+                    frappe.msgprint('Dokumen SPK tidak tersedia.');
+                }
+
+                if (payload.message) {
+                    frappe.show_alert({ message: payload.message, indicator: payload.indicator || 'green' }, 5);
+                }
+            } catch (error) {
+                console.error('Error generating SPK:', error);
+                frappe.show_alert({ message: '❌ Gagal membuat dokumen SPK.', indicator: 'red' }, 5);
+            } finally {
+                if (spkButton) {
+                    spkButton.disabled = false;
+                    spkButton.textContent = spkButtonLabel;
+                }
             }
         };
 

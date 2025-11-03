@@ -7,6 +7,7 @@ from typing import Optional
 import frappe
 from frappe import _
 from frappe.model.naming import make_autoname
+from frappe.utils import now_datetime
 
 
 def get_branch(branch_name: Optional[str]) -> frappe._dict:
@@ -33,9 +34,19 @@ def get_branch(branch_name: Optional[str]) -> frappe._dict:
     return branch
 
 
-def make_branch_autoname(doc: frappe.model.document.Document, series: str) -> None:
+def make_branch_autoname(
+    doc: frappe.model.document.Document,
+    series: str,
+    *,
+    include_year: bool = False,
+) -> None:
     """Assign a name combining the branch code and provided series."""
 
     branch = get_branch(getattr(doc, "branch", None))
     doc.branch_code = branch.branch_code  # type: ignore[attr-defined]
-    doc.name = make_autoname(f"{branch.branch_code}-{series}-.#####")
+
+    pattern = f"{branch.branch_code}-{series}-"
+    if include_year:
+        pattern = f"{pattern}{now_datetime().year}-"
+
+    doc.name = make_autoname(f"{pattern}.#####")
