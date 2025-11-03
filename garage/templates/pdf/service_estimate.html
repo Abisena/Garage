@@ -21,7 +21,28 @@
             padding: 0;
             line-height: 1.3;
         }
-        
+
+        .branch-header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .branch-name {
+            font-size: 14pt;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .branch-details {
+            font-size: 9pt;
+            margin-top: 4px;
+        }
+
+        .branch-details + .branch-details {
+            margin-top: 2px;
+        }
+
         h1 {
             text-align: center;
             font-size: 16pt;
@@ -203,36 +224,35 @@
     </style>
 </head>
 <body>
+    <div class="branch-header">
+        <div class="branch-name">{{ branch.name }}{% if branch.code and branch.code != '-' %} ({{ branch.code }}){% endif %}</div>
+        {% if branch.address and branch.address != '-' %}
+            <div class="branch-details">{{ branch.address }}</div>
+        {% endif %}
+        {% if branch.contact and branch.contact != '-' %}
+            <div class="branch-details">{{ branch.contact }}</div>
+        {% endif %}
+    </div>
     <h1>{{ title }}</h1>
 
     <table class="meta-table">
         <tr>
-            <td class="label">Cabang</td>
-            <td class="value">{{ branch.name }}{% if branch.code and branch.code != '-' %} ({{ branch.code }}){% endif %}</td>
             <td class="label">No. Estimasi</td>
             <td class="value">{{ meta.number }}</td>
-        </tr>
-        <tr>
-            <td class="label">Alamat Cabang</td>
-            <td class="value">{{ branch.address }}</td>
             <td class="label">Tanggal</td>
             <td class="value">{{ meta.date }}</td>
         </tr>
         <tr>
-            <td class="label">Kontak Cabang</td>
-            <td class="value">{{ branch.contact }}</td>
             <td class="label">Email Cabang</td>
             <td class="value">{{ branch.email }}</td>
-        </tr>
-        <tr>
             <td class="label">Nama Customer</td>
             <td class="value">{{ meta.customer }}</td>
-            <td class="label">No. Telepon</td>
-            <td class="value">{{ meta.phone }}</td>
         </tr>
         <tr>
+            <td class="label">No. Telepon</td>
+            <td class="value">{{ meta.phone }}</td>
             <td class="label">Contact Person</td>
-            <td class="value" colspan="3">{{ meta.contact_person }}</td>
+            <td class="value">{{ meta.contact_person }}</td>
         </tr>
     </table>
 
