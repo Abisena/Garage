@@ -8,7 +8,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import frappe
 from frappe import _
-from frappe.utils import flt, format_datetime, get_datetime, get_url
+from frappe.utils import flt, format_datetime, get_datetime, get_url, now_datetime
 from frappe.utils.pdf import get_pdf
 from frappe.utils.file_manager import save_file
 
@@ -136,6 +136,12 @@ def _extract_sequence(identifier: Optional[str]) -> str:
 
     if not identifier:
         return "00000"
+
+    if not isinstance(identifier, str):
+        try:
+            identifier = str(identifier)
+        except Exception:
+            return "00000"
 
     matches = re.findall(r"(\d+)", identifier)
     if not matches:
