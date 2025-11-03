@@ -2725,6 +2725,7 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
     
     # Update main fields
     allowed_fields = {
+        "branch",
         "service_order_type",
         "order_category",
         "priority",
