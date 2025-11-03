@@ -13,7 +13,7 @@
 <style>
 /* ============================================================================
    SERVICE MANAGEMENT PAGE - WORKFLOW BASED DESIGN
-   Three-Stage Pipeline: Waiting Entry → In Progress → Sales Order
+   Three-Stage Pipeline: Waiting Entry → In Progress → SPK
    ============================================================================ */
 
 :root {
@@ -1558,7 +1558,7 @@ body {
         <div class="stat-card">
             <div class="stat-card__header">
                 <div class="stat-card__icon completed">✅</div>
-                <div class="stat-card__label">Sales Order</div>
+                <div class="stat-card__label">SPK</div>
             </div>
             <div class="stat-card__value" id="stat-completed">-</div>
             <div class="stat-card__subtitle">Pekerjaan selesai & siap ditagihkan</div>
@@ -1648,11 +1648,11 @@ body {
         <div class="table-pagination is-hidden" id="progress-pagination" aria-live="polite"></div>
     </div>
 
-    <!-- Sales Order Section -->
+    <!-- SPK Section -->
     <div class="workflow-section">
         <div class="section-header">
             <div class="section-title">
-                <h2>🧾 Sales Order</h2>
+                <h2>🧾 SPK</h2>
                 <span class="section-badge completed" id="badge-completed">0</span>
             </div>
             <div class="section-actions">
@@ -1910,7 +1910,7 @@ body {
             'In Progress': { class: 'in-progress', label: 'In Progress' },
             'Awaiting QC': { class: 'awaiting-qc', label: 'Awaiting QC' },
             'Quality Check': { class: 'awaiting-qc', label: 'Quality Check' },
-            'Completed': { class: 'completed', label: 'Sales Order' },
+            'Completed': { class: 'completed', label: 'SPK' },
             'Cancelled': { class: 'cancelled', label: 'Cancelled' }
         };
         
@@ -2263,7 +2263,7 @@ body {
         `; }).join('');
     }
 
-    // Render Sales Order table
+    // Render SPK table
     function renderCompletedTable() {
         const tbody = document.getElementById('table-completed');
         const orders = paginationState.completed.all || [];
