@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import re
 from contextlib import contextmanager
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -12,6 +13,7 @@ from frappe.utils.pdf import get_pdf
 from frappe.utils.file_manager import save_file
 
 TEMPLATE_PATH = "garage/templates/pdf/service_estimate.html"
+SPK_TEMPLATE_PATH = "garage/templates/pdf/spk.html"
 
 
 @contextmanager
@@ -113,6 +115,101 @@ def _safe_get_doc(doctype: str, name: Optional[str]) -> Optional[frappe.Document
             message=f"Could not load {doctype} {name}: {str(e)}"
         )
         return None
+
+
+def _slugify(value: Optional[str], *, fallback: str = "") -> str:
+    """Return a filesystem-friendly slug based on the provided value."""
+
+    text = (value or "").strip().lower()
+    if not text:
+        text = (fallback or "").strip().lower()
+    if not text:
+        return ""
+
+    slug = re.sub(r"[^a-z0-9]+", "-", text)
+    slug = slug.strip("-")
+    return slug or ""
+
+
+def _extract_sequence(identifier: Optional[str]) -> str:
+    """Extract the trailing numeric sequence from a document identifier."""
+
+    if not identifier:
+        return "00000"
+
+    matches = re.findall(r"(\d+)", identifier)
+    if not matches:
+        return "00000"
+
+    return matches[-1].zfill(5)
+
+
+def _resolve_branch_identifier(service_order: frappe.Document) -> str:
+    """Determine the human readable branch identifier for filenames."""
+
+    branch_code = (getattr(service_order, "branch_code", None) or "").strip()
+    if branch_code:
+        return branch_code
+
+    branch_name = getattr(service_order, "branch", None)
+    if not branch_name:
+        return "CABANG"
+
+    branch_doc = _safe_get_doc("Garage Branch", branch_name)
+    if not branch_doc:
+        return branch_name
+
+    return (
+        (getattr(branch_doc, "branch_code", None) or getattr(branch_doc, "name", None) or branch_name)
+        .strip()
+        or branch_name
+    )
+
+
+def _derive_customer_name(service_order: frappe.Document) -> str:
+    """Pick the most descriptive customer label for filenames."""
+
+    customer_name = (getattr(service_order, "customer_name", None) or "").strip()
+    if customer_name:
+        return customer_name
+
+    customer_link = getattr(service_order, "customer", None)
+    if not customer_link:
+        return ""
+
+    customer_doc = _safe_get_doc("Garage Customer", customer_link)
+    if not customer_doc:
+        return customer_link
+
+    return (getattr(customer_doc, "customer_name", None) or getattr(customer_doc, "name", None) or customer_link).strip()
+
+
+def _compose_document_filename(service_order: frappe.Document, *, suffix: str) -> str:
+    """Compose a descriptive filename for estimate-related documents."""
+
+    branch_identifier = _resolve_branch_identifier(service_order)
+    sequence = _extract_sequence(getattr(service_order, "name", None))
+
+    try:
+        creation_year = get_datetime(getattr(service_order, "creation", None)).year
+    except Exception:
+        creation_year = now_datetime().year
+
+    customer_name = _derive_customer_name(service_order)
+    customer_slug = _slugify(customer_name, fallback="customer")
+
+    parts = [
+        branch_identifier or "CABANG",
+        suffix.strip().upper() or "DOC",
+        str(creation_year),
+        sequence,
+    ]
+
+    if customer_slug:
+        parts.append(customer_slug)
+
+    base = "-".join(parts)
+    return f"{base}.pdf"
 
 
 def _collect_bundle_items(bundle: frappe.Document) -> Dict[str, Any]:
@@ -410,11 +507,70 @@ def create_service_estimate_pdf(service_order_name: str) -> Optional[Dict[str, s
         return None
 
     # Encode and return
-    filename = f"{service_order.name}-estimasi-service.pdf"
+    filename = _compose_document_filename(service_order, suffix="EST")
     encoded = base64.b64encode(pdf_content).decode("utf-8")
     
     # Log success
     frappe.logger().info(f"Successfully generated PDF for {service_order_name}, size: {len(pdf_content)} bytes")
+
+    return {
+        "filename": filename,
+        "content": encoded,
+        "mime_type": "application/pdf",
+    }
+
+
+def create_spk_pdf(service_order_name: str) -> Optional[Dict[str, str]]:
+    """Generate a simple SPK (work order) PDF for the service order."""
+
+    if not service_order_name:
+        frappe.log_error(
+            title="SPK PDF - Missing order name",
+            message="service_order_name parameter is required",
+        )
+        return None
+
+    try:
+        with _ignore_permissions():
+            service_order = frappe.get_doc("Garage Service Order", service_order_name)
+    except Exception:
+        frappe.log_error(
+            title="SPK PDF - Load failed",
+            message=f"Could not load service order {service_order_name}\n{frappe.get_traceback()}",
+        )
+        return None
+
+    try:
+        context = build_service_estimate_context(service_order)
+        context = dict(context)
+        context["title"] = _("SURAT PERINTAH KERJA")
+    except Exception:
+        frappe.log_error(
+            title="SPK PDF - Context failed",
+            message=f"Could not build context for {service_order_name}\n{frappe.get_traceback()}",
+        )
+        return None
+
+    try:
+        template = frappe.get_template(SPK_TEMPLATE_PATH)
+        html = template.render(context)
+        pdf_content = get_pdf(html)
+    except Exception:
+        frappe.log_error(
+            title="SPK PDF - Rendering failed",
+            message=f"Could not render PDF for {service_order_name}\n{frappe.get_traceback()}",
+        )
+        return None
+
+    if not pdf_content:
+        frappe.log_error(
+            title="SPK PDF - Empty PDF",
+            message=f"PDF generation returned empty content for {service_order_name}",
+        )
+        return None
+
+    filename = _compose_document_filename(service_order, suffix="SPK")
+    encoded = base64.b64encode(pdf_content).decode("utf-8")
 
     return {
         "filename": filename,
@@ -447,7 +603,13 @@ def persist_service_estimate_pdf(
     if not pdf_payload or not pdf_payload.get("content"):
         return None
 
-    filename = (pdf_payload.get("filename") or f"{service_order_name}-estimasi-service.pdf").strip()
+    filename = (pdf_payload.get("filename") or "").strip()
+    if not filename:
+        service_order = _safe_get_doc("Garage Service Order", service_order_name)
+        if service_order:
+            filename = _compose_document_filename(service_order, suffix="EST")
+        else:
+            filename = f"{service_order_name}.pdf"
     if not filename.lower().endswith(".pdf"):
         filename = f"{filename}.pdf"
 
