@@ -1565,6 +1565,8 @@ a:hover {
 (() => {
     const DEFAULT_SERVICE_FEE = 50000;
     const DEFAULT_TECHNICIAN_CAPACITY = 3;
+    const SERVICE_PAGE_URL = '/garage/service';
+    const SPK_REDIRECT_DELAY = 1200;
     const TAX_RATES = {
         ppn: 0.11,
         pph: 0.025
@@ -2384,7 +2386,7 @@ a:hover {
                 message: '❌ Order ID tidak ditemukan!',
                 indicator: 'red'
             }, 5);
-            setTimeout(() => window.location.href = '/garage/service', 2000);
+            setTimeout(() => window.location.href = SERVICE_PAGE_URL, 2000);
             return;
         }
 
@@ -3346,6 +3348,8 @@ a:hover {
                 spkButton.textContent = 'Menyiapkan SPK…';
             }
 
+            let shouldRedirectToService = false;
+
             try {
                 await ensureCSRFToken();
                 const response = await frappe.call(withCSRF({
@@ -3358,6 +3362,7 @@ a:hover {
                 const pdf = payload.spk_pdf || payload.pdf;
                 if (pdf && pdf.content) {
                     downloadBase64Pdf(pdf.content, pdf.filename || `SPK-${orderId}.pdf`);
+                    shouldRedirectToService = true;
                 } else {
                     frappe.msgprint('Dokumen SPK tidak tersedia.');
                 }
@@ -3370,8 +3375,18 @@ a:hover {
                 frappe.show_alert({ message: '❌ Gagal membuat dokumen SPK.', indicator: 'red' }, 5);
             } finally {
                 if (spkButton) {
-                    spkButton.disabled = false;
-                    spkButton.textContent = spkButtonLabel;
+                    if (shouldRedirectToService) {
+                        spkButton.textContent = spkButtonLabel;
+                    } else {
+                        spkButton.disabled = false;
+                        spkButton.textContent = spkButtonLabel;
+                    }
+                }
+
+                if (shouldRedirectToService) {
+                    setTimeout(() => {
+                        window.location.href = SERVICE_PAGE_URL;
+                    }, SPK_REDIRECT_DELAY);
                 }
             }
         };
