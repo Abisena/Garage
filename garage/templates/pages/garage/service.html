@@ -1799,7 +1799,17 @@ body {
         const digits = sequenceMatch ? sequenceMatch[1] : (raw.match(/\d+/) || [])[0];
         const padded = digits ? String(digits).padStart(5, '0') : '';
 
-        return padded ? `SPK-${padded}` : raw;
+        if (!padded) {
+            return raw;
+        }
+
+        const context = (options.context || '').toLowerCase();
+
+        if (context === 'completed') {
+            return `Sale Order #${padded}`;
+        }
+
+        return `SO-${padded}`;
     }
 
     function formatVehiclePlate(plate) {
@@ -2158,7 +2168,7 @@ body {
             return `
             <tr${classAttr}>
                 <td>
-                    <div class="cell-strong">${escapeHtml(formatServiceOrderId(order.name, { context: 'estimate' }))}</div>
+                    <div class="cell-strong">${escapeHtml(formatServiceOrderId(order.name, { context: 'completed' }))}</div>
                     <div class="cell-secondary">${order.service_order_type || '-'}</div>
                     ${order.priority ? getPriorityBadge(order.priority) : ''}
                     ${renderIntakeBadge(order)}
