@@ -164,24 +164,37 @@ def _normalize_filters(filters: Optional[Any]) -> List[List[Any]]:
     return []
 
 
-def _apply_branch_filters(doctype: str, filters: Optional[Any]) -> List[List[Any]]:
+def _apply_branch_filters(
+    doctype: str,
+    filters: Optional[Any],
+    *,
+    branch: Optional[str] = None,
+) -> List[List[Any]]:
     normalized = _normalize_filters(filters)
 
     user = frappe.session.user
     allowed = _allowed_branches(user)
 
-    if allowed is None:
-        return normalized
-
-    placeholder = list(allowed) if allowed else ["__no_branch__"]
-
-    if doctype == "Garage Branch":
-        normalized.append(["name", "in", placeholder])
-        return normalized
-
     branch_field = BRANCH_FILTER_FIELDS.get(doctype)
-    if branch_field:
-        normalized.append([branch_field, "in", placeholder])
+
+    if allowed is not None:
+        placeholder = list(allowed) if allowed else ["__no_branch__"]
+
+        if doctype == "Garage Branch":
+            normalized.append(["name", "in", placeholder])
+        elif branch_field:
+            normalized.append([branch_field, "in", placeholder])
+
+    branch_value = (branch or "").strip()
+    if branch_value:
+        if allowed is not None and branch_value not in set(allowed):
+            branch_value = ""
+
+        if branch_value:
+            if doctype == "Garage Branch":
+                normalized.append(["name", "=", branch_value])
+            elif branch_field:
+                normalized.append([branch_field, "=", branch_value])
 
     return normalized
 
@@ -1169,10 +1182,11 @@ def _list_dicts(
     filters: Optional[Any] = None,
     limit: int = DEFAULT_LIMIT,
     order_by: Optional[str] = None,
+    branch: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     try:
         with _ignoring_permissions():
-            applied_filters = _apply_branch_filters(doctype, filters)
+            applied_filters = _apply_branch_filters(doctype, filters, branch=branch)
             rows = frappe.db.get_all(
                 doctype,
                 fields=list(fields),
@@ -1574,10 +1588,37 @@ def _desk_route(doctype: str) -> Dict[str, str]:
 
 
 @frappe.whitelist()
-def portal_bootstrap() -> Dict[str, Any]:
+def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
     """Return aggregated data for the Garage website portal dashboard."""
 
     _require_login()
+
+    user = frappe.session.user
+    requested_branch = cstr(branch or "").strip()
+    allowed = _allowed_branches(user)
+    if allowed is not None and requested_branch and requested_branch not in allowed:
+        requested_branch = ""
+
+    branches = _list_dicts(
+        "Garage Branch",
+        ["name", "branch_name", "branch_code", "address_line1", "address_line2", "city", "phone", "email"],
+    )
+
+    available_branch_names = {branch_row.get("name") for branch_row in branches if branch_row.get("name")}
+    if requested_branch and available_branch_names and requested_branch not in available_branch_names:
+        requested_branch = ""
+
+    active_branch = ""
+    if requested_branch:
+        active_branch = requested_branch
+    else:
+        preferred_branch = _default_branch(user)
+        if preferred_branch and available_branch_names and preferred_branch in available_branch_names:
+            active_branch = preferred_branch
+        elif branches:
+            active_branch = branches[0].get("name") or ""
+
+    branch_filter = active_branch or None
 
     customers = _list_dicts(
         "Garage Customer",
@@ -1592,6 +1633,7 @@ def portal_bootstrap() -> Dict[str, Any]:
             "is_vip",
         ],
         limit=100,
+        branch=branch_filter,
     )
     vehicle_fields = [
         "name",
@@ -1617,17 +1659,8 @@ def portal_bootstrap() -> Dict[str, Any]:
         "Garage Vehicle",
         vehicle_fields,
         limit=100,
+        branch=branch_filter,
     )
-    branches = _list_dicts(
-        "Garage Branch",
-        ["name", "branch_name", "branch_code", "address_line1", "address_line2", "city", "phone", "email"],
-    )
-    active_branch = _default_branch(frappe.session.user)
-    available_branch_names = {branch.get("name") for branch in branches if branch.get("name")}
-    if active_branch and available_branch_names and active_branch not in available_branch_names:
-        active_branch = None
-    if not active_branch and branches:
-        active_branch = branches[0].get("name")
     service_orders = _list_dicts(
         "Garage Service Order",
         [
@@ -1648,6 +1681,7 @@ def portal_bootstrap() -> Dict[str, Any]:
             "qc_status",
             "service_notes",
         ],
+        branch=branch_filter,
     )
     open_service_orders = _list_dicts(
         "Garage Service Order",
@@ -1663,15 +1697,18 @@ def portal_bootstrap() -> Dict[str, Any]:
             "service_notes",
         ],
         filters=[["status", "not in", ["Completed", "Cancelled"]]],
+        branch=branch_filter,
     )
     spare_orders = _list_dicts(
         "Garage Spare Part Order",
         ["name", "status", "customer", "branch", "branch_code", "order_date", "delivery_date", "total_amount"],
+        branch=branch_filter,
     )
     open_spare_orders = _list_dicts(
         "Garage Spare Part Order",
         ["name", "status", "customer", "branch", "branch_code", "order_date", "delivery_date"],
         filters=[["status", "not in", ["Delivered", "Cancelled"]]],
+        branch=branch_filter,
     )
     spare_parts = _list_dicts(
         "Garage Spare Part",
@@ -1695,6 +1732,7 @@ def portal_bootstrap() -> Dict[str, Any]:
             "notes",
         ],
         limit=200,
+        branch=branch_filter,
     )
     spare_part_requests = _list_dicts(
         "Garage Service Order Part",
@@ -1718,13 +1756,39 @@ def portal_bootstrap() -> Dict[str, Any]:
             ["stock_status", "in", SPARE_REQUEST_ACTIVE_STATUSES],
         ],
         limit=200,
+        branch=branch_filter,
     )
     service_tasks = _list_dicts(
         "Garage Service Order Task",
         ["name", "parent", "task", "status", "technician"],
         filters=[["parenttype", "=", "Garage Service Order"]],
         limit=500,
+        branch=branch_filter,
     )
+
+    order_branch_map: Dict[str, Optional[str]] = {}
+    for order in service_orders:
+        name = order.get("name")
+        if name:
+            order_branch_map[name] = order.get("branch")
+    for order in open_service_orders:
+        name = order.get("name")
+        if name and name not in order_branch_map:
+            order_branch_map[name] = order.get("branch")
+
+    if branch_filter:
+        spare_part_requests = [
+            request
+            for request in spare_part_requests
+            if not request.get("parent")
+            or order_branch_map.get(request.get("parent")) in {None, branch_filter}
+        ]
+        service_tasks = [
+            task
+            for task in service_tasks
+            if not task.get("parent")
+            or order_branch_map.get(task.get("parent")) in {None, branch_filter}
+        ]
 
     technician_ids: Set[str] = set()
     tasks_by_order: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
@@ -1759,11 +1823,13 @@ def portal_bootstrap() -> Dict[str, Any]:
     procurement_orders = _list_dicts(
         "Garage Procurement Order",
         ["name", "status", "supplier", "order_date", "expected_date", "total_qty", "total_amount"],
+        branch=branch_filter,
     )
     pending_procurement = _list_dicts(
         "Garage Procurement Order",
         ["name", "status", "supplier", "expected_date", "total_qty"],
         filters=[["status", "in", ["Draft", "Ordered", "Partially Received"]]],
+        branch=branch_filter,
     )
     stock_movements = _list_dicts(
         "Garage Stock Movement",
@@ -1776,6 +1842,7 @@ def portal_bootstrap() -> Dict[str, Any]:
             "warehouse",
             "status",
         ],
+        branch=branch_filter,
     )
     invoices = _list_dicts(
         "Garage Sales Invoice",
@@ -1790,6 +1857,7 @@ def portal_bootstrap() -> Dict[str, Any]:
             "total_amount",
             "outstanding_amount",
         ],
+        branch=branch_filter,
     )
     open_invoices = _list_dicts(
         "Garage Sales Invoice",
@@ -1805,6 +1873,7 @@ def portal_bootstrap() -> Dict[str, Any]:
             "status",
         ],
         filters=[["status", "not in", ["Paid", "Cancelled"]]],
+        branch=branch_filter,
     )
     payments = _list_dicts(
         "Garage Payment Entry",
@@ -1818,6 +1887,7 @@ def portal_bootstrap() -> Dict[str, Any]:
             "mode_of_payment",
             "paid_amount",
         ],
+        branch=branch_filter,
     )
     receipts = _list_dicts(
         "Garage Receipt Document",
@@ -1830,6 +1900,7 @@ def portal_bootstrap() -> Dict[str, Any]:
             "receipt_number",
             "delivery_method",
         ],
+        branch=branch_filter,
     )
 
     service_bundles = _get_service_bundles()

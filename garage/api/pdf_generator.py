@@ -226,9 +226,9 @@ def generate_service_estimate_pdf(order_id):
         branch_token_source = branch_code or ((order.name or '').split('-', 1)[0] if order.name else '')
         branch_token = re.sub(r'[^A-Z0-9]', '', branch_token_source.upper()) or 'BRANCH'
 
-        # Format: EST-BRANCH-2025-00054-Joya.pdf
-        pdf_filename = f"EST-{branch_token}-{current_year}-{order_number}-{customer_name_clean}.pdf"
-        html_filename = f"EST-{branch_token}-{current_year}-{order_number}-{customer_name_clean}.html"
+        # Format: SPK-BRANCH-2025-00054-Joya.pdf
+        pdf_filename = f"SPK-{branch_token}-{current_year}-{order_number}-{customer_name_clean}.pdf"
+        html_filename = f"SPK-{branch_token}-{current_year}-{order_number}-{customer_name_clean}.html"
 
         frappe.logger().info(f"PDF filename: {pdf_filename}")
         # ========================================
