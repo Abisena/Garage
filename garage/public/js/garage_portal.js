@@ -279,18 +279,183 @@ function cloneBrandModelMap(map) {
             this.branchPreferenceKey = 'garage.portal.branch';
             this.preferredBranch = '';
             try {
-                this.preferredBranch = window.localStorage ? window.localStorage.getItem(this.branchPreferenceKey) || '' : '';
+                this.preferredBranch = window.localStorage
+                    ? window.localStorage.getItem(this.branchPreferenceKey) || ''
+                    : '';
             } catch (error) {
                 this.preferredBranch = '';
             }
-            this.branchSelects = [];
+            this.branchControls = [];
+            this.branchDisplays = new Map();
+            this.branchLabelMap = new Map();
+            this.branchStylesInjected = false;
+            this.globalBranchSelect = null;
+            this.globalBranchWrapper = null;
+            this.branchContainerKind = null;
         }
 
         init() {
+            this.setupGlobalBranchSelector();
             this.cacheDom();
             this.bindEvents();
             this.initRepeaters();
             this.fetchBootstrap(false);
+        }
+
+        setupGlobalBranchSelector() {
+            if (this.globalBranchSelect && document.body.contains(this.globalBranchSelect)) {
+                return this.globalBranchSelect;
+            }
+
+            const existing = document.getElementById('portal_branch_selector');
+            if (existing) {
+                this.globalBranchSelect = existing;
+                this.globalBranchWrapper = existing.closest('.portal-branch-switcher');
+                this.ensureBranchSwitcherStyles();
+                return existing;
+            }
+
+            const container = this.findBranchSelectorContainer();
+            if (!container) {
+                return null;
+            }
+
+            this.ensureBranchSwitcherStyles(container);
+
+            const wrapper = this.branchContainerKind === 'list'
+                ? document.createElement('li')
+                : document.createElement('div');
+            wrapper.className =
+                this.branchContainerKind === 'list'
+                    ? 'portal-branch-switcher portal-branch-switcher--nav'
+                    : 'portal-branch-switcher portal-branch-switcher--standalone';
+
+            const label = document.createElement('label');
+            label.className = 'portal-branch-switcher__label';
+            label.setAttribute('for', 'portal_branch_selector');
+            label.textContent = 'Cabang';
+
+            const select = document.createElement('select');
+            select.id = 'portal_branch_selector';
+            select.className = 'portal-branch-switcher__select';
+            select.setAttribute('aria-label', 'Pilih cabang aktif');
+
+            wrapper.appendChild(label);
+            wrapper.appendChild(select);
+
+            this.globalBranchWrapper = wrapper;
+
+            if (this.branchContainerKind === 'list') {
+                container.insertBefore(wrapper, container.firstChild);
+            } else {
+                container.appendChild(wrapper);
+            }
+
+            this.globalBranchSelect = select;
+            return select;
+        }
+
+        findBranchSelectorContainer() {
+            const navList = document.querySelector('.navbar-nav.navbar-right');
+            if (navList) {
+                this.branchContainerKind = 'list';
+                return navList;
+            }
+            const navContainer = document.querySelector('.navbar .container');
+            if (navContainer) {
+                this.branchContainerKind = 'container';
+                return navContainer;
+            }
+            const headerContainer = document.querySelector('.portal-header .container');
+            if (headerContainer) {
+                this.branchContainerKind = 'container';
+                return headerContainer;
+            }
+            const heroContainer = document.querySelector('.portal-hero--sub .container');
+            if (heroContainer) {
+                this.branchContainerKind = 'container';
+                return heroContainer;
+            }
+            this.branchContainerKind = null;
+            return null;
+        }
+
+        ensureBranchSwitcherStyles(container) {
+            if (!this.branchStylesInjected) {
+                const style = document.createElement('style');
+                style.dataset.garageBranchStyles = '1';
+                style.textContent = `
+                    .portal-branch-switcher {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        color: var(--text-primary, #1a2332);
+                        font-family: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+                    }
+                    .portal-branch-switcher.is-hidden {
+                        display: none !important;
+                    }
+                    .portal-branch-switcher--standalone {
+                        margin-left: auto;
+                        padding: 0.25rem 0;
+                    }
+                    .portal-branch-switcher--nav {
+                        padding: 0.5rem 0.75rem;
+                    }
+                    .portal-branch-switcher__label {
+                        font-size: 0.8125rem;
+                        font-weight: 600;
+                        color: inherit;
+                        margin: 0;
+                        letter-spacing: -0.01em;
+                    }
+                    .portal-branch-switcher__select {
+                        min-width: 12rem;
+                        padding: 0.35rem 2rem 0.35rem 0.75rem;
+                        border-radius: 999px;
+                        border: 1.5px solid var(--border-base, #d4dae4);
+                        background: var(--bg-surface, #ffffff);
+                        font-size: 0.875rem;
+                        font-weight: 500;
+                        color: inherit;
+                        box-shadow: none;
+                        appearance: none;
+                        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%235E6C84' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+                        background-repeat: no-repeat;
+                        background-position: right 0.75rem center;
+                    }
+                    .portal-branch-switcher__select:focus {
+                        outline: none;
+                        border-color: var(--primary, #0066ff);
+                        box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.15);
+                    }
+                    .portal-branch-switcher__select.is-disabled {
+                        opacity: 0.7;
+                        cursor: not-allowed;
+                    }
+                    @media (max-width: 767px) {
+                        .portal-branch-switcher {
+                            width: 100%;
+                            justify-content: flex-start;
+                        }
+                        .portal-branch-switcher__select {
+                            width: 100%;
+                            min-width: 0;
+                        }
+                    }
+                `;
+                document.head.appendChild(style);
+                this.branchStylesInjected = true;
+            }
+
+            if (container && this.branchContainerKind !== 'list') {
+                container.classList.add('portal-navbar-with-branch');
+                if (getComputedStyle(container).display !== 'flex') {
+                    container.style.display = 'flex';
+                    container.style.alignItems = 'center';
+                    container.style.gap = '1rem';
+                }
+            }
         }
 
         cacheDom() {
@@ -334,10 +499,24 @@ function cloneBrandModelMap(map) {
                 invoiceBranch: document.getElementById('invoice_branch'),
                 paymentBranch: document.getElementById('payment_branch'),
                 receiptBranch: document.getElementById('receipt_branch'),
+                globalBranch: document.getElementById('portal_branch_selector'),
                 brand: document.getElementById('brand'),
                 model: document.getElementById('model'),
                 modelVariant: document.getElementById('model_variant'),
             };
+
+            this.globalBranchSelect = this.selects.globalBranch;
+            if (this.globalBranchSelect) {
+                this.globalBranchWrapper = this.globalBranchSelect.closest('.portal-branch-switcher');
+            }
+
+            this.branchDisplays = new Map();
+            document.querySelectorAll('[data-role="branch-display"]').forEach((element) => {
+                const target = element.getAttribute('data-target');
+                if (target) {
+                    this.branchDisplays.set(target, element);
+                }
+            });
 
             this.tables = {
                 customerVehicles: document.querySelector('[data-role="customer-vehicle-table"]'),
@@ -444,7 +623,8 @@ function cloneBrandModelMap(map) {
         }
 
         syncBranchSelectReferences() {
-            const selects = [
+            const controls = [
+                this.selects.globalBranch,
                 this.selects.intakeBranch,
                 this.selects.serviceBranch,
                 this.selects.spareBranch,
@@ -452,61 +632,139 @@ function cloneBrandModelMap(map) {
                 this.selects.paymentBranch,
                 this.selects.receiptBranch,
             ].filter(Boolean);
-            this.branchSelects = selects;
-            selects.forEach((select) => {
-                if (!select.dataset.branchListenerAttached) {
-                    select.addEventListener('change', () => {
-                        this.onBranchChanged(select.value);
+            this.branchControls = controls;
+            controls.forEach((control) => {
+                if (control.tagName === 'SELECT' && !control.dataset.branchListenerAttached) {
+                    control.addEventListener('change', () => {
+                        this.onBranchChanged(control.value);
                     });
-                    select.dataset.branchListenerAttached = '1';
+                    control.dataset.branchListenerAttached = '1';
                 }
             });
         }
 
-        onBranchChanged(value) {
+        onBranchChanged(value, options = {}) {
             const normalized = (value || '').trim();
-            this.preferredBranch = normalized;
-            try {
-                if (window.localStorage) {
-                    window.localStorage.setItem(this.branchPreferenceKey, normalized);
+            const { skipFetch = false } = options || {};
+
+            const previous =
+                this.state && typeof this.state.active_branch === 'string'
+                    ? this.state.active_branch.trim()
+                    : '';
+
+            if (normalized) {
+                this.preferredBranch = normalized;
+                try {
+                    if (window.localStorage) {
+                        window.localStorage.setItem(this.branchPreferenceKey, normalized);
+                    }
+                } catch (error) {
+                    // ignore persistence failures
                 }
-            } catch (error) {
-                // ignore persistence failures
+            } else {
+                this.preferredBranch = '';
+                try {
+                    if (window.localStorage) {
+                        window.localStorage.removeItem(this.branchPreferenceKey);
+                    }
+                } catch (error) {
+                    // ignore persistence failures
+                }
             }
-            if (!normalized) {
-                return;
-            }
+
             if (this.state && typeof this.state === 'object') {
                 this.state.active_branch = normalized;
             }
-            (this.branchSelects || []).forEach((select) => {
-                if (select && select.value !== normalized) {
-                    this.setSelectValue(select, normalized);
+
+            (this.branchControls || []).forEach((control) => {
+                if (!control) {
+                    return;
+                }
+                if (control.tagName === 'SELECT') {
+                    if (control.value !== normalized) {
+                        this.setSelectValue(control, normalized);
+                    }
+                } else if ('value' in control && control.value !== normalized) {
+                    control.value = normalized;
                 }
             });
+
+            this.updateBranchDisplays(normalized);
+
+            if (!skipFetch && normalized && normalized !== previous) {
+                this.fetchBootstrap(false);
+            }
+
+            try {
+                document.dispatchEvent(
+                    new CustomEvent('garage-portal:branch-changed', {
+                        detail: { branch: normalized },
+                    })
+                );
+            } catch (error) {
+                // Ignore event dispatch failures
+            }
         }
 
         updateBranchSelects() {
             this.syncBranchSelectReferences();
             const branches = this.asArray(this.state.branches);
-            const selects = [
-                [this.selects.intakeBranch, '— Pilih cabang —'],
-                [this.selects.serviceBranch, '— Pilih cabang —'],
-                [this.selects.spareBranch, '— Pilih cabang —'],
-                [this.selects.invoiceBranch, '— Pilih cabang —'],
-                [this.selects.paymentBranch, '— Pilih cabang —'],
-                [this.selects.receiptBranch, '— Pilih cabang —'],
-            ];
-            selects.forEach(([select, blank]) => {
-                if (!select) {
-                    return;
+            const branchOptions = branches.map((branch) => ({
+                ...branch,
+                display_label: this.formatBranchLabel(branch),
+            }));
+
+            const labelMap = new Map();
+            branchOptions.forEach((branch) => {
+                if (branch && branch.name) {
+                    labelMap.set(branch.name, branch.display_label);
                 }
-                this.populateSelect(select, branches, {
-                    valueKey: 'name',
-                    labelKey: 'branch_name',
-                    blankLabel: blank,
-                });
             });
+            this.branchLabelMap = labelMap;
+
+            if (this.selects.globalBranch) {
+                this.populateSelect(this.selects.globalBranch, branchOptions, {
+                    valueKey: 'name',
+                    labelKey: 'display_label',
+                    blankLabel: branchOptions.length > 1 ? '— Pilih cabang —' : 'Tidak ada cabang',
+                });
+                const disabled = branchOptions.length <= 1;
+                this.selects.globalBranch.disabled = disabled;
+                this.selects.globalBranch.classList.toggle('is-disabled', disabled);
+                if (this.globalBranchWrapper) {
+                    this.globalBranchWrapper.classList.toggle('is-hidden', disabled);
+                }
+                if (disabled) {
+                    this.selects.globalBranch.setAttribute('title', 'Anda hanya memiliki akses ke satu cabang.');
+                } else {
+                    this.selects.globalBranch.removeAttribute('title');
+                }
+            }
+
+            [
+                this.selects.intakeBranch,
+                this.selects.serviceBranch,
+                this.selects.spareBranch,
+                this.selects.invoiceBranch,
+                this.selects.paymentBranch,
+                this.selects.receiptBranch,
+            ]
+                .filter(Boolean)
+                .forEach((control) => {
+                    if (!control) {
+                        return;
+                    }
+                    if (control.tagName === 'SELECT') {
+                        this.populateSelect(control, branchOptions, {
+                            valueKey: 'name',
+                            labelKey: 'display_label',
+                            blankLabel: '— Pilih cabang —',
+                        });
+                    } else if ('value' in control) {
+                        control.value = '';
+                    }
+                });
+
             const available = new Set(branches.map((branch) => branch.name).filter(Boolean));
             const serverBranch =
                 this.state && typeof this.state.active_branch === 'string'
@@ -520,12 +778,41 @@ function cloneBrandModelMap(map) {
             } else if (branches.length) {
                 defaultBranch = branches[0].name || '';
             }
-            if (defaultBranch) {
-                if (this.state && typeof this.state === 'object') {
-                    this.state.active_branch = defaultBranch;
-                }
-                this.onBranchChanged(defaultBranch);
+            if (this.state && typeof this.state === 'object') {
+                this.state.active_branch = defaultBranch;
             }
+            this.onBranchChanged(defaultBranch, { skipFetch: true });
+        }
+
+        formatBranchLabel(branch) {
+            if (!branch || typeof branch !== 'object') {
+                return '';
+            }
+            const code = (branch.branch_code || '').toString().trim();
+            const name = (branch.branch_name || branch.name || '').toString().trim();
+            if (code && name) {
+                return `${code} — ${name}`;
+            }
+            return name || code || '';
+        }
+
+        getBranchDisplayLabel(branchName) {
+            if (!branchName) {
+                return '—';
+            }
+            return this.branchLabelMap.get(branchName) || branchName || '—';
+        }
+
+        updateBranchDisplays(branchName) {
+            const label = this.getBranchDisplayLabel(branchName);
+            if (!(this.branchDisplays instanceof Map)) {
+                return;
+            }
+            this.branchDisplays.forEach((element) => {
+                if (element) {
+                    element.textContent = label || '—';
+                }
+            });
         }
 
         bindEvents() {
@@ -1996,8 +2283,15 @@ function cloneBrandModelMap(map) {
         }
 
         fetchBootstrap(showNotification = true, freezeRequest = true) {
+            const activeBranch =
+                (this.state && typeof this.state.active_branch === 'string'
+                    ? this.state.active_branch.trim()
+                    : '')
+                    || this.preferredBranch
+                    || (this.selects.globalBranch ? this.selects.globalBranch.value : '');
             frappe.call({
                 method: 'garage.api.portal.portal_bootstrap',
+                args: activeBranch ? { branch: activeBranch } : {},
                 freeze: freezeRequest,
                 callback: (response) => {
                     if (response?.exc || response?.exception) {

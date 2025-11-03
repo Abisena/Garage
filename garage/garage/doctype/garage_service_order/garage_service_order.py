@@ -11,4 +11,4 @@ class GarageServiceOrder(Document):
     """Ensure branch-prefixed naming for service orders."""
 
     def autoname(self) -> None:
-        naming.make_branch_autoname(self, "EST", include_year=True)
+        naming.make_branch_autoname(self, "SPK", include_year=True)

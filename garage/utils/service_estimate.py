@@ -190,7 +190,7 @@ def format_service_order_document_number(service_order: frappe.Document) -> str:
         year = now_datetime().year
 
     parts: List[str] = branch_parts or ["CABANG"]
-    parts.append("EST")
+    parts.append("SPK")
     parts.append(sequence)
     parts.append(str(year))
 
@@ -538,7 +538,7 @@ def create_service_estimate_pdf(service_order_name: str) -> Optional[Dict[str, s
         return None
 
     # Encode and return
-    filename = _compose_document_filename(service_order, suffix="EST")
+    filename = _compose_document_filename(service_order, suffix="SPK")
     encoded = base64.b64encode(pdf_content).decode("utf-8")
     
     # Log success
@@ -638,7 +638,7 @@ def persist_service_estimate_pdf(
     if not filename:
         service_order = _safe_get_doc("Garage Service Order", service_order_name)
         if service_order:
-            filename = _compose_document_filename(service_order, suffix="EST")
+            filename = _compose_document_filename(service_order, suffix="SPK")
         else:
             filename = f"{service_order_name}.pdf"
     if not filename.lower().endswith(".pdf"):

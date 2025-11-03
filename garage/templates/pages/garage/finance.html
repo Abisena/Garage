@@ -594,6 +594,25 @@ body {
     line-height: var(--line-height-relaxed) !important;
 }
 
+.form-field__value {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    padding: var(--space-3) var(--space-4) !important;
+    border-radius: var(--radius-md) !important;
+    border: 1.5px dashed var(--border-base) !important;
+    background: var(--gray-100) !important;
+    color: var(--text-secondary) !important;
+    font-size: var(--font-size-base) !important;
+    font-weight: var(--font-weight-medium) !important;
+    letter-spacing: -0.01em;
+}
+
+.form-field__value--readonly {
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
 /* === REPEATING GROUPS === */
 .repeat-group {
     background: var(--gray-50) !important;
@@ -1255,9 +1274,15 @@ button:disabled {
                     <div class="form-grid two-column">
                         <div class="form-field">
                             <label for="invoice_branch">Cabang</label>
-                            <select id="invoice_branch" name="branch" required>
-                                <option value="">— Pilih cabang —</option>
-                            </select>
+                            <div
+                                class="form-field__value form-field__value--readonly"
+                                data-role="branch-display"
+                                data-target="invoice_branch"
+                                aria-live="polite"
+                            >
+                                Memuat cabang aktif…
+                            </div>
+                            <input type="hidden" id="invoice_branch" name="branch" required />
                         </div>
                         <div class="form-field">
                             <label for="invoice_customer">Customer</label>
@@ -1374,9 +1399,15 @@ button:disabled {
                     <div class="form-grid two-column">
                         <div class="form-field">
                             <label for="payment_branch">Cabang</label>
-                            <select id="payment_branch" name="branch" required>
-                                <option value="">— Pilih cabang —</option>
-                            </select>
+                            <div
+                                class="form-field__value form-field__value--readonly"
+                                data-role="branch-display"
+                                data-target="payment_branch"
+                                aria-live="polite"
+                            >
+                                Memuat cabang aktif…
+                            </div>
+                            <input type="hidden" id="payment_branch" name="branch" required />
                         </div>
                         <div class="form-field">
                             <label for="payment_customer">Customer</label>
@@ -1454,9 +1485,15 @@ button:disabled {
                     <div class="form-grid two-column">
                         <div class="form-field">
                             <label for="receipt_branch">Cabang</label>
-                            <select id="receipt_branch" name="branch" required>
-                                <option value="">— Pilih cabang —</option>
-                            </select>
+                            <div
+                                class="form-field__value form-field__value--readonly"
+                                data-role="branch-display"
+                                data-target="receipt_branch"
+                                aria-live="polite"
+                            >
+                                Memuat cabang aktif…
+                            </div>
+                            <input type="hidden" id="receipt_branch" name="branch" required />
                         </div>
                         <div class="form-field">
                             <label for="receipt_payment_entry">Payment Entry</label>

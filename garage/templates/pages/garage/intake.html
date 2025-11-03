@@ -686,6 +686,25 @@ header .navbar-nav li button {
     appearance: none;
 }
 
+.form-field__value {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    padding: var(--space-3) var(--space-4) !important;
+    border-radius: var(--radius-md) !important;
+    border: 1.5px dashed var(--border-base) !important;
+    background: var(--gray-100) !important;
+    color: var(--text-secondary) !important;
+    font-size: var(--font-size-base) !important;
+    font-weight: var(--font-weight-medium) !important;
+    letter-spacing: -0.01em;
+}
+
+.form-field__value--readonly {
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
 .form-field input[type="checkbox"],
 .form-field input[type="radio"] {
     width: auto;
@@ -1558,10 +1577,16 @@ button:disabled {
                             <div class="form-section__grid two-column">
                                 <div class="form-field">
                                     <label for="intake_branch">Cabang</label>
-                                    <select id="intake_branch" name="branch" required>
-                                        <option value="">— Pilih Cabang —</option>
-                                    </select>
-                                    <p class="form-hint">Pilih cabang bengkel tempat dokumen ini diterbitkan.</p>
+                                    <div
+                                        class="form-field__value form-field__value--readonly"
+                                        data-role="branch-display"
+                                        data-target="intake_branch"
+                                        aria-live="polite"
+                                    >
+                                        Memuat cabang aktif…
+                                    </div>
+                                    <input type="hidden" id="intake_branch" name="branch" required />
+                                    <p class="form-hint">Cabang mengikuti pilihan di bagian atas portal.</p>
                                 </div>
 
                                 <div class="form-field">

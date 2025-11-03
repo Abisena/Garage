@@ -1655,7 +1655,7 @@ a:hover {
         const digits = sequenceMatch ? sequenceMatch[1] : (raw.match(/\d+/) || [])[0];
         const padded = digits ? String(digits).padStart(5, '0') : '';
 
-        return padded ? `EST-${padded}` : raw;
+        return padded ? `SPK-${padded}` : raw;
     }
 
 
