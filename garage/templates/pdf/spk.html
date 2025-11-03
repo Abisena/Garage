@@ -54,13 +54,27 @@
         .signature-grid {
             display: flex;
             justify-content: space-between;
+            gap: 16px;
             margin-top: 32px;
         }
         .signature-box {
             width: 32%;
             text-align: center;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+        }
+        .signature-role {
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+        .signature-space {
+            flex: 1 1 auto;
+        }
+        .signature-name {
             border-top: 1px solid #444;
             padding-top: 8px;
+            font-weight: bold;
         }
         .signature-space {
             height: 48px;

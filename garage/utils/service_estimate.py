@@ -102,6 +102,25 @@ def _format_branch_contact(branch: Optional[frappe.Document]) -> str:
     return " | ".join(contacts) if contacts else "-"
 
 
+def _resolve_mechanic_name(service_order: frappe.Document) -> str:
+    """Determine the mechanic name associated with the service order."""
+
+    for field in (
+        "assigned_mechanic_name",
+        "mechanic_in_charge_name",
+        "assigned_mechanic",
+        "mechanic_in_charge",
+        "technician_name",
+    ):
+        value = getattr(service_order, field, None)
+        if value:
+            text = str(value).strip()
+            if text:
+                return text
+
+    return "-"
+
+
 def _safe_get_doc(doctype: str, name: Optional[str]) -> Optional[frappe.Document]:
     """Safely retrieve a document with permission bypass."""
     if not (doctype and name):
@@ -524,6 +543,7 @@ def build_service_estimate_context(service_order: frappe.Document) -> Dict[str, 
             or "-"
         ),
         "contact_person": getattr(customer, "customer_name", None) or getattr(service_order, "customer", "-"),
+        "mechanic": _resolve_mechanic_name(service_order),
         "branch_name": branch_info["name"],
         "branch_code": branch_info["code"],
         "branch_contact": branch_info["contact"],
