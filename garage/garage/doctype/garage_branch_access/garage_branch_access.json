@@ -16,6 +16,7 @@
   "field_order": [
     "branch",
     "user",
+    "is_default",
     "notes"
   ],
   "fields": [
@@ -33,6 +34,15 @@
       "label": "User",
       "options": "User",
       "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "is_default",
+      "fieldtype": "Check",
+      "label": "Default",
+      "default": "0",
+      "depends_on": "eval:doc.user",
+      "description": "Tandai untuk menjadikan cabang ini sebagai default bagi pengguna ini.",
       "in_list_view": 1
     },
     {

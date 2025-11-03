@@ -33,6 +33,8 @@ class GarageBranchAccess(Document):
                 )
             )
 
+        self._sync_default_flag()
+
     def after_insert(self) -> None:
         _clear_branch_cache()
 
@@ -41,6 +43,36 @@ class GarageBranchAccess(Document):
 
     def on_trash(self) -> None:
         _clear_branch_cache()
+
+
+    def _sync_default_flag(self) -> None:
+        if not self.user:
+            return
+
+        defaults = frappe.get_all(
+            "Garage Branch Access",
+            filters={
+                "user": self.user,
+                "is_default": 1,
+                "name": ("!=", self.name) if self.name else ("!=", ""),
+            },
+            pluck="name",
+        )
+
+        if self.is_default:
+            changed = False
+            for other in defaults:
+                frappe.db.set_value("Garage Branch Access", other, "is_default", 0, update_modified=False)
+                changed = True
+            if changed:
+                _clear_branch_cache()
+            return
+
+        if defaults:
+            return
+
+        # No other default configured; automatically make the current record default.
+        self.is_default = 1
 
 
 def _clear_branch_cache() -> None:
