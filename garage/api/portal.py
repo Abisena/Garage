@@ -12,6 +12,7 @@ import frappe
 from frappe import _
 from frappe.exceptions import PermissionError
 from frappe.utils import cint, cstr, flt, get_datetime, get_url, now_datetime, nowdate
+from frappe.defaults import get_user_default
 
 from garage.utils import service_estimate
 import json
@@ -66,6 +67,69 @@ def _allowed_branches(user: str) -> Optional[Tuple[str, ...]]:
     )
     branches = tuple(sorted({row.get("branch") for row in rows if row.get("branch")}))
     return branches
+
+
+@lru_cache(maxsize=None)
+def _branch_access_has_default_flag() -> bool:
+    try:
+        return frappe.db.has_column("Garage Branch Access", "is_default")
+    except Exception:
+        return False
+
+
+def _resolve_branch_preference(user: str, allowed: Optional[Tuple[str, ...]]) -> Optional[str]:
+    """Return the branch preference stored against the user if valid."""
+
+    if not user or user in {"Guest"}:
+        return None
+
+    preference = ""
+    try:
+        preference = cstr(
+            get_user_default("garage_branch", user)
+            or get_user_default("branch", user)
+            or ""
+        ).strip()
+    except Exception:
+        preference = ""
+
+    allowed_set: Optional[Set[str]] = set(allowed) if allowed else None
+
+    if preference:
+        if allowed_set is None or preference in allowed_set:
+            return preference
+
+    if _branch_access_has_default_flag():
+        try:
+            row = frappe.get_all(
+                "Garage Branch Access",
+                filters={"user": user, "is_default": 1},
+                fields=["branch"],
+                limit=1,
+            )
+        except Exception:
+            row = []
+        if row:
+            branch_value = cstr(row[0].get("branch") or "").strip()
+            if branch_value and (allowed_set is None or branch_value in allowed_set):
+                return branch_value
+
+    return None
+
+
+@lru_cache(maxsize=None)
+def _default_branch(user: str) -> Optional[str]:
+    allowed = _allowed_branches(user)
+    if allowed is None:
+        return _resolve_branch_preference(user, None)
+    if not allowed:
+        return None
+
+    preference = _resolve_branch_preference(user, allowed)
+    if preference:
+        return preference
+
+    return allowed[0]
 
 
 def _normalize_filters(filters: Optional[Any]) -> List[List[Any]]:
@@ -1025,6 +1089,11 @@ def _sanitize_child_rows(table_field: str, rows: Any, config: Mapping[str, Any])
 
 
 def _apply_defaults(doctype: str, doc: frappe.Document) -> None:
+    if hasattr(doc, "branch") and not getattr(doc, "branch", None):
+        default_branch = _default_branch(frappe.session.user)
+        if default_branch:
+            doc.branch = default_branch
+
     if doctype == "Garage Service Order":
         if not doc.service_booking_date:
             doc.service_booking_date = now_datetime()
@@ -1553,6 +1622,12 @@ def portal_bootstrap() -> Dict[str, Any]:
         "Garage Branch",
         ["name", "branch_name", "branch_code", "address_line1", "address_line2", "city", "phone", "email"],
     )
+    active_branch = _default_branch(frappe.session.user)
+    available_branch_names = {branch.get("name") for branch in branches if branch.get("name")}
+    if active_branch and available_branch_names and active_branch not in available_branch_names:
+        active_branch = None
+    if not active_branch and branches:
+        active_branch = branches[0].get("name")
     service_orders = _list_dicts(
         "Garage Service Order",
         [
@@ -1794,6 +1869,7 @@ def portal_bootstrap() -> Dict[str, Any]:
         "payment_entries": payments,
         "receipt_documents": receipts,
         "branches": branches,
+        "active_branch": active_branch,
         "status_summary": status_summary,
         "totals": totals,
         "desk_routes": desk_routes,
@@ -3116,6 +3192,8 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
 
     branch_name = (data.get("branch") or "").strip()
     if not branch_name:
+        branch_name = _default_branch(frappe.session.user) or ""
+    if not branch_name:
         frappe.throw(_("Cabang bengkel wajib dipilih."))
     _get_doc("Garage Branch", branch_name)
 
@@ -3680,12 +3758,19 @@ def create_service_intake(data):
         # Parse data jika masih string
         if isinstance(data, str):
             data = json.loads(data)
-        
+
+        branch_name = cstr(data.get('branch') or '').strip()
+        if not branch_name:
+            branch_name = _default_branch(frappe.session.user) or ""
+        if not branch_name:
+            frappe.throw(_("Cabang bengkel wajib dipilih."))
+        _get_doc("Garage Branch", branch_name)
+
         # Validasi required fields
         license_plate = data.get('license_plate', '').strip().upper()
         if not license_plate:
             frappe.throw(_("License plate is required"))
-        
+
         service_order_type = data.get('service_order_type')
         if not service_order_type:
             frappe.throw(_("Service order type is required"))
@@ -3882,7 +3967,8 @@ def create_service_intake(data):
             'total_estimated_amount': float(data.get('total_estimated_amount', 0)),
             'notes': data.get('notes', ''),
             'status': 'Draft',
-            'workflow_state': 'Draft'
+            'workflow_state': 'Draft',
+            'branch': branch_name,
         })
         
         # 3.5. Add parts to child table

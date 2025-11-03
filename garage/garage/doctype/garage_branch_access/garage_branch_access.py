@@ -48,5 +48,7 @@ def _clear_branch_cache() -> None:
         from garage.api import portal
 
         portal._allowed_branches.cache_clear()
+        portal._default_branch.cache_clear()
+        portal._branch_access_has_default_flag.cache_clear()
     except Exception:
         pass
