@@ -1,3 +1,11 @@
+{% set meta = meta or {} %}
+{% set vehicle = vehicle or {} %}
+{% set branch = branch or {} %}
+{% set job_items = job_items or [] %}
+{% set summary = summary or {} %}
+{% set taxes = taxes or {} %}
+{% set notes = notes or '-' %}
+{% set signatures = signatures or {} %}
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -5,331 +13,437 @@
     <title>{{ title }}</title>
     <style>
         @page {
-            size: A5;
-            margin: 1.5cm 1.2cm;
+            size: A4;
+            margin: 18mm 16mm;
         }
-        
+
         * {
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: "Arial", "Helvetica", sans-serif;
+            font-family: 'Calibri', 'Helvetica Neue', Arial, sans-serif;
             font-size: 11pt;
             color: #000;
             margin: 0;
             padding: 0;
-            line-height: 1.3;
+            line-height: 1.4;
         }
 
-        .branch-header {
-            text-align: center;
-            margin-bottom: 15px;
+        .page {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
 
-        .branch-name {
-            font-size: 14pt;
-            font-weight: bold;
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #000;
+        }
+
+        .header-left {
+            max-width: 65%;
+        }
+
+        .brand-name {
+            font-size: 20pt;
+            font-weight: 700;
             letter-spacing: 1px;
             text-transform: uppercase;
         }
 
-        .branch-details {
+        .branch-detail {
             font-size: 9pt;
             margin-top: 4px;
         }
 
-        .branch-details + .branch-details {
+        .header-right {
+            text-align: right;
+            font-size: 10pt;
+            font-weight: 600;
+        }
+
+        .doc-label {
+            text-transform: uppercase;
+            font-size: 9pt;
+            color: #555;
+        }
+
+        .doc-value {
+            font-size: 12pt;
+            font-weight: 700;
             margin-top: 2px;
         }
 
-        h1 {
-            text-align: center;
-            font-size: 16pt;
-            font-weight: bold;
-            margin: 0 0 20px 0;
-            letter-spacing: 0.5px;
-            text-decoration: underline;
+        .doc-branch {
+            margin-top: 6px;
+            font-size: 10pt;
         }
-        
-        table {
+
+        .title-block {
+            text-align: center;
+            margin: 24px 0 18px 0;
+        }
+
+        .title-block .title {
+            font-size: 16pt;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .info-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
-        
-        /* Meta table - Info dasar estimasi */
-        .meta-table td,
-        .meta-table th {
-            border: 2px solid #000;
+
+        .info-table th,
+        .info-table td {
+            border: 1.5px solid #000;
             padding: 8px 10px;
-            vertical-align: top;
             font-size: 10pt;
-        }
-        
-        .meta-table td.label {
-            width: 30%;
-            font-weight: bold;
-            background: #f0f0f0;
-        }
-        
-        .meta-table td.value {
-            width: 70%;
-        }
-        
-        /* Vehicle table */
-        .vehicle-table td {
-            border: 2px solid #000;
-            padding: 8px 10px;
             vertical-align: top;
-            font-size: 10pt;
         }
-        
-        .vehicle-table td.label {
-            width: 30%;
-            font-weight: bold;
-            background: #f0f0f0;
+
+        .info-table th {
+            background: #f3f4f6;
+            text-align: left;
+            font-weight: 700;
+            width: 25%;
         }
-        
-        /* Section titles */
+
         .section-title {
-            font-weight: bold;
+            margin: 18px 0 10px 0;
             font-size: 11pt;
-            margin: 18px 0 8px 0;
+            font-weight: 700;
             text-transform: uppercase;
-            color: #000;
         }
-        
-        /* Job table - Rincian pekerjaan */
-        .job-table {
-            border: 2px solid #000;
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
         }
-        
-        .job-table th {
-            border: 2px solid #000;
+
+        .items-table th {
+            border: 1.5px solid #000;
+            background: #1f2937;
+            color: #fff;
+            font-size: 9pt;
+            padding: 8px 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .items-table td {
+            border: 1px solid #000;
+            font-size: 9pt;
+            padding: 6px 8px;
             text-align: center;
-            background: #d9d9d9;
-            font-weight: bold;
-            padding: 8px 10px;
-            font-size: 10pt;
         }
-        
-        .job-table td {
-            border: 2px solid #000;
-            padding: 7px 10px;
-            font-size: 10pt;
-        }
-        
-        .job-table td.number {
-            width: 50px;
-            text-align: center;
-            font-weight: normal;
-        }
-        
-        .job-table td.description {
-            width: auto;
+
+        .items-table td.text-left {
             text-align: left;
         }
-        
-        .job-table td.amount {
-            width: 150px;
+
+        .items-table td.text-right {
             text-align: right;
-            white-space: nowrap;
-            font-weight: normal;
         }
-        
-        .job-table td.empty {
+
+        .items-empty {
             text-align: center;
             font-style: italic;
-            color: #666;
+            color: #777;
+            padding: 14px 0;
         }
-        
-        /* Summary table */
+
+        .summary-notes {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .summary-wrapper {
+            flex: 1 1 40%;
+        }
+
         .summary-table {
-            border: 2px solid #000;
+            width: 100%;
+            border-collapse: collapse;
         }
-        
+
         .summary-table td {
-            border: 2px solid #000;
+            border: 1.5px solid #000;
             padding: 8px 10px;
             font-size: 10pt;
         }
-        
-        .summary-table td.label {
-            width: 70%;
-            font-weight: bold;
-            background: #f0f0f0;
-            text-align: left;
+
+        .summary-table .label {
+            font-weight: 700;
+            background: #f3f4f6;
         }
-        
-        .summary-table td.amount {
-            width: 30%;
+
+        .summary-table .value {
             text-align: right;
-            white-space: nowrap;
-            font-weight: bold;
+            font-weight: 700;
         }
-        
-        .summary-table tr.grand-total td {
-            background: #d9d9d9;
-            font-weight: bold;
-            font-size: 11pt;
+
+        .summary-table .grand {
+            background: #111827;
+            color: #fff;
         }
-        
-        /* Notes section */
+
+        .notes-wrapper {
+            flex: 1 1 60%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .notes-title {
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 10pt;
+            text-transform: uppercase;
+        }
+
         .notes-box {
-            border: 2px solid #000;
-            min-height: 100px;
-            padding: 10px;
+            border: 1.5px solid #000;
+            padding: 12px;
+            min-height: 120px;
             font-size: 10pt;
             background: #fff;
         }
-        
-        /* Signature table */
-        .signature-table {
-            margin-top: 25px;
-            border: none;
-        }
-        
-        .signature-table td {
-            border: 2px solid #000;
-            padding: 10px;
-            vertical-align: top;
-            height: 100px;
-            width: 50%;
-        }
-        
-        .signature-role {
-            font-size: 10pt;
-            text-align: center;
-            margin-bottom: 60px;
-            font-weight: normal;
-        }
-        
-        .signature-name {
-            text-align: center;
-            font-weight: bold;
-            font-size: 11pt;
-            border-bottom: 1px solid #000;
-            padding-bottom: 3px;
-            margin: 0 auto;
-            width: 80%;
-        }
-        
-        .signature-title {
-            text-align: center;
+
+        .terms-section {
+            border: 1.5px solid #000;
+            padding: 12px 14px;
+            margin-bottom: 24px;
             font-size: 9pt;
-            margin-top: 5px;
-            font-style: italic;
+            line-height: 1.5;
+        }
+
+        .terms-section strong {
+            display: block;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .terms-section ol {
+            margin: 0;
+            padding-left: 16px;
+        }
+
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-top: 10px;
+            margin-bottom: 30px;
+        }
+
+        .signature-box {
+            flex: 1 1 33%;
+            border: 1.5px solid #000;
+            padding: 12px 10px 16px 10px;
+            min-height: 140px;
+            text-align: center;
+        }
+
+        .signature-role {
+            font-weight: 700;
+            margin-bottom: 60px;
+            font-size: 10pt;
+            text-transform: uppercase;
+        }
+
+        .signature-name {
+            border-top: 1px solid #000;
+            padding-top: 6px;
+            font-weight: 700;
+            font-size: 10pt;
+            margin-top: 40px;
+        }
+
+        .signature-note {
+            font-size: 9pt;
+            margin-top: 4px;
+        }
+
+        .footer {
+            margin-top: auto;
+            padding-top: 12px;
+            border-top: 2px solid #000;
+            font-size: 8pt;
+            text-align: center;
+            color: #555;
         }
     </style>
 </head>
 <body>
-    <div class="branch-header">
-        <div class="branch-name">{{ branch.name }}{% if branch.code and branch.code != '-' %} ({{ branch.code }}){% endif %}</div>
-        {% if branch.address and branch.address != '-' %}
-            <div class="branch-details">{{ branch.address }}</div>
-        {% endif %}
-        {% if branch.contact and branch.contact != '-' %}
-            <div class="branch-details">{{ branch.contact }}</div>
-        {% endif %}
-    </div>
-    <h1>{{ title }}</h1>
+    <div class="page">
+        <div class="header">
+            <div class="header-left">
+                <div class="brand-name">{{ branch.name or 'Bengkel Garasi' }}</div>
+                {% if branch.address and branch.address != '-' %}
+                    <div class="branch-detail">{{ branch.address }}</div>
+                {% endif %}
+                {% if branch.contact and branch.contact != '-' %}
+                    <div class="branch-detail">{{ branch.contact }}</div>
+                {% endif %}
+                {% if branch.email and branch.email != '-' %}
+                    <div class="branch-detail">Email: {{ branch.email }}</div>
+                {% endif %}
+            </div>
+            <div class="header-right">
+                <div class="doc-label">No. Dokumen</div>
+                <div class="doc-value">{{ meta.number or '-' }}</div>
+                <div class="doc-branch">Cabang: {{ meta.branch_name or '-' }}{% if meta.branch_code and meta.branch_code != '-' %} ({{ meta.branch_code }}){% endif %}</div>
+            </div>
+        </div>
 
-    <table class="meta-table">
-        <tr>
-            <td class="label">No. Estimasi</td>
-            <td class="value">{{ meta.number }}</td>
-            <td class="label">Tanggal</td>
-            <td class="value">{{ meta.date }}</td>
-        </tr>
-        <tr>
-            <td class="label">Email Cabang</td>
-            <td class="value">{{ branch.email }}</td>
-            <td class="label">Nama Customer</td>
-            <td class="value">{{ meta.customer }}</td>
-        </tr>
-        <tr>
-            <td class="label">No. Telepon</td>
-            <td class="value">{{ meta.phone }}</td>
-            <td class="label">Contact Person</td>
-            <td class="value">{{ meta.contact_person }}</td>
-        </tr>
-    </table>
+        <div class="title-block">
+            <div class="title">{{ title }}</div>
+        </div>
 
-    <div class="section-title">Informasi Kendaraan</div>
-    <table class="vehicle-table">
-        <tr>
-            <td class="label">Jenis Kendaraan</td>
-            <td>{{ vehicle.description }}</td>
-        </tr>
-        <tr>
-            <td class="label">No. Polisi</td>
-            <td>{{ vehicle.plate }}</td>
-        </tr>
-    </table>
-
-    <div class="section-title">Rincian Pekerjaan & Estimasi Biaya</div>
-    <table class="job-table">
-        <thead>
+        <table class="info-table">
             <tr>
-                <th>No</th>
-                <th>Deskripsi Pekerjaan</th>
-                <th>Estimasi Biaya (Rp)</th>
+                <th>Tanggal Estimasi</th>
+                <td>{{ meta.date or '-' }}</td>
+                <th>Nama Pelanggan</th>
+                <td>{{ meta.customer or '-' }}</td>
             </tr>
-        </thead>
-        <tbody>
-            {% if job_items %}
-                {% for item in job_items %}
-                    <tr>
-                        <td class="number">{{ loop.index }}</td>
-                        <td class="description">{{ item.description }}</td>
-                        <td class="amount">{{ item.amount_formatted }}</td>
-                    </tr>
-                {% endfor %}
-            {% else %}
+            <tr>
+                <th>No. Estimasi</th>
+                <td>{{ meta.number or '-' }}</td>
+                <th>No. Telepon</th>
+                <td>{{ meta.phone or '-' }}</td>
+            </tr>
+            <tr>
+                <th>Merk / Model Kendaraan</th>
+                <td>{{ vehicle.description or '-' }}</td>
+                <th>No. Polisi</th>
+                <td>{{ vehicle.plate or '-' }}</td>
+            </tr>
+            <tr>
+                <th>Cabang</th>
+                <td>{{ meta.branch_name or '-' }}{% if meta.branch_code and meta.branch_code != '-' %} ({{ meta.branch_code }}){% endif %}</td>
+                <th>Mekanik Penanggung Jawab</th>
+                <td>{{ meta.mechanic or '-' }}</td>
+            </tr>
+            <tr>
+                <th>Contact Person</th>
+                <td>{{ meta.contact_person or '-' }}</td>
+                <th>Email Cabang</th>
+                <td>{{ meta.branch_email or branch.email or '-' }}</td>
+            </tr>
+        </table>
+
+        <div class="section-title">Rincian Biaya Sparepart dan Material</div>
+        <table class="items-table">
+            <thead>
                 <tr>
-                    <td colspan="3" class="empty">Belum ada rincian pekerjaan yang dicatat.</td>
+                    <th style="width: 5%;">No</th>
+                    <th style="width: 15%;">Kode Item</th>
+                    <th style="width: 38%;">Deskripsi / Nama Item</th>
+                    <th style="width: 10%;">Qty</th>
+                    <th style="width: 10%;">Satuan</th>
+                    <th style="width: 12%;">Harga Satuan</th>
+                    <th style="width: 10%;">Jumlah</th>
                 </tr>
-            {% endif %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                {% if job_items %}
+                    {% for item in job_items %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ item.code or '-' }}</td>
+                            <td class="text-left">{{ item.description or '-' }}</td>
+                            <td>{{ item.qty_formatted or '-' }}</td>
+                            <td>{{ item.uom or '-' }}</td>
+                            <td class="text-right">{{ item.rate_formatted or '-' }}</td>
+                            <td class="text-right">{{ item.amount_formatted or '-' }}</td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="items-empty">Belum ada rincian sparepart atau material.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
 
-    <div class="section-title">Ringkasan Estimasi</div>
-    <table class="summary-table">
-        <tr>
-            <td class="label">Total Biaya Jasa</td>
-            <td class="amount">{{ summary.service_total_formatted }}</td>
-        </tr>
-        <tr>
-            <td class="label">Total Biaya Spare Part</td>
-            <td class="amount">{{ summary.spare_total_formatted }}</td>
-        </tr>
-        <tr>
-            <td class="label">Total Biaya Material</td>
-            <td class="amount">{{ summary.material_total_formatted }}</td>
-        </tr>
-        <tr class="grand-total">
-            <td class="label">TOTAL ESTIMASI</td>
-            <td class="amount">{{ summary.grand_total_formatted }}</td>
-        </tr>
-    </table>
+        <div class="summary-notes">
+            <div class="summary-wrapper">
+                <table class="summary-table">
+                    <tr>
+                        <td class="label">Subtotal Sparepart &amp; Material</td>
+                        <td class="value">{{ taxes.parts_material_formatted or summary.spare_total_formatted or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Biaya Jasa Service / Tenaga Kerja</td>
+                        <td class="value">{{ taxes.service_fee_formatted or summary.service_total_formatted or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">DPP (Dasar Pengenaan Pajak)</td>
+                        <td class="value">{{ taxes.dpp_formatted or summary.grand_total_formatted or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">PPN 11%</td>
+                        <td class="value">{{ taxes.ppn_formatted or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">PPh Pasal 23 (2,5%)</td>
+                        <td class="value">{{ taxes.pph_formatted or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label grand">TOTAL ESTIMASI BIAYA</td>
+                        <td class="value grand">{{ taxes.total_formatted or summary.grand_total_formatted or '-' }}</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="notes-wrapper">
+                <div class="notes-title">Catatan / Keluhan Customer</div>
+                <div class="notes-box">{{ (notes or '-') | replace('\n', '<br/>') | safe }}</div>
+            </div>
+        </div>
 
-    <div class="section-title">Catatan / Keluhan Customer</div>
-    <div class="notes-box">{{ notes }}</div>
+        <div class="terms-section">
+            <strong>Syarat dan Ketentuan:</strong>
+            <ol>
+                <li>Estimasi biaya ini berlaku selama 7 (tujuh) hari kalender sejak tanggal penerbitan.</li>
+                <li>Harga dapat berubah sesuai kondisi pasar dan ketersediaan sparepart atau material.</li>
+                <li>Biaya tambahan dapat timbul apabila ditemukan kerusakan lain saat proses perbaikan.</li>
+                <li>Pembayaran dapat dilakukan secara tunai, transfer bank, atau kartu kredit/debit.</li>
+                <li>Kendaraan wajib diambil maksimal 3 (tiga) hari setelah pemberitahuan pekerjaan selesai.</li>
+            </ol>
+        </div>
 
-    <table class="signature-table">
-        <tr>
-            <td>
-                <div class="signature-role">Dibuat oleh:</div>
-                <div class="signature-name">{{ signatures.prepared_by }}</div>
-                <div class="signature-title">Service Advisor</div>
-            </td>
-            <td>
-                <div class="signature-role">Disetujui oleh:</div>
-                <div class="signature-name">{{ signatures.approved_by }}</div>
-                <div class="signature-title">Customer</div>
-            </td>
-        </tr>
-    </table>
+        <div class="signature-section">
+            <div class="signature-box">
+                <div class="signature-role">Disetujui oleh<br/>Pelanggan</div>
+                <div class="signature-name">({{ signatures.approved_by or meta.customer or '-' }})</div>
+                <div class="signature-note">Tanggal: __________________</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-role">Diperiksa oleh<br/>Service Advisor</div>
+                <div class="signature-name">({{ signatures.prepared_by or service_advisor_name or '-' }})</div>
+                <div class="signature-note">Tanggal: __________________</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-role">Dikerjakan oleh<br/>Kepala Mekanik</div>
+                <div class="signature-name">({{ signatures.assigned_mechanic or assigned_mechanic or meta.mechanic or '-' }})</div>
+                <div class="signature-note">Tanggal: __________________</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Dokumen ini digenerate secara otomatis oleh Sistem Manajemen Bengkel Garasi.<br/>
+            Dicetak pada: {{ meta.date or '-' }}
+        </div>
+    </div>
 </body>
 </html>

@@ -42,6 +42,19 @@ def _format_currency(value: Any) -> str:
     return f"Rp{rounded:,.0f}".replace(",", ".")
 
 
+def _format_quantity(value: Any) -> str:
+    """Format quantity values for human friendly display."""
+
+    qty = flt(value or 0)
+    if qty == 0:
+        return "-"
+
+    if float(qty).is_integer():
+        return str(int(qty))
+
+    return f"{qty:.2f}".rstrip("0").rstrip(".")
+
+
 def _format_date(value: Any) -> str:
     """Format date to Indonesian format."""
     if not value:
@@ -269,38 +282,56 @@ def _collect_bundle_items(bundle: frappe.Document) -> Dict[str, Any]:
     material_rows: List[Dict[str, Any]] = []
 
     for row in getattr(bundle, "spare_parts", []) or []:
+        qty = flt(getattr(row, "quantity", 0)) or flt(getattr(row, "qty", 0)) or 0
+        rate = flt(getattr(row, "unit_price", 0)) or flt(getattr(row, "rate", 0)) or 0
         amount = flt(getattr(row, "amount", 0))
-        if not amount:
-            qty = flt(getattr(row, "quantity", 0)) or 0
-            rate = flt(getattr(row, "unit_price", 0)) or 0
+        if not amount and qty and rate:
             amount = qty * rate
+        if amount and qty and not rate:
+            rate = amount / qty
         description = (
             getattr(row, "item_name", None)
             or getattr(row, "part_name", None)
             or getattr(row, "spare_part", None)
             or _("Spare Part")
         )
-        spare_rows.append({
-            "description": description,
-            "amount": amount,
-        })
+        spare_rows.append(
+            {
+                "code": getattr(row, "item_code", None) or getattr(row, "spare_part", None),
+                "description": description,
+                "qty": qty,
+                "uom": getattr(row, "uom", None) or getattr(row, "unit", None),
+                "rate": rate,
+                "amount": amount,
+                "category": "spare_part",
+            }
+        )
 
     for row in getattr(bundle, "materials", []) or []:
+        qty = flt(getattr(row, "quantity", 0)) or flt(getattr(row, "qty", 0)) or 0
+        rate = flt(getattr(row, "unit_price", 0)) or flt(getattr(row, "rate", 0)) or 0
         amount = flt(getattr(row, "amount", 0))
-        if not amount:
-            qty = flt(getattr(row, "quantity", 0)) or 0
-            rate = flt(getattr(row, "unit_price", 0)) or 0
+        if not amount and qty and rate:
             amount = qty * rate
+        if amount and qty and not rate:
+            rate = amount / qty
         description = (
             getattr(row, "item_name", None)
             or getattr(row, "part_name", None)
             or getattr(row, "material", None)
             or _("Material")
         )
-        material_rows.append({
-            "description": description,
-            "amount": amount,
-        })
+        material_rows.append(
+            {
+                "code": getattr(row, "item_code", None) or getattr(row, "material", None),
+                "description": description,
+                "qty": qty,
+                "uom": getattr(row, "uom", None) or getattr(row, "unit", None),
+                "rate": rate,
+                "amount": amount,
+                "category": "material",
+            }
+        )
 
     return {
         "service_fee": service_fee,
@@ -313,20 +344,29 @@ def _collect_required_parts(parts: Iterable[Any]) -> List[Dict[str, Any]]:
     """Extract required parts from service order."""
     items: List[Dict[str, Any]] = []
     for row in parts or []:
+        qty = flt(getattr(row, "qty", 0)) or flt(getattr(row, "quantity", 0)) or 0
+        rate = flt(getattr(row, "rate", 0)) or flt(getattr(row, "unit_price", 0)) or 0
         amount = flt(getattr(row, "amount", 0))
-        if not amount:
-            qty = flt(getattr(row, "qty", 0)) or 0
-            rate = flt(getattr(row, "rate", 0)) or 0
+        if not amount and qty and rate:
             amount = qty * rate
+        if amount and qty and not rate:
+            rate = amount / qty
         description = (
             getattr(row, "item_name", None)
             or getattr(row, "item_code", None)
             or _("Komponen")
         )
-        items.append({
-            "description": description,
-            "amount": amount,
-        })
+        items.append(
+            {
+                "code": getattr(row, "item_code", None),
+                "description": description,
+                "qty": qty,
+                "uom": getattr(row, "uom", None) or getattr(row, "unit", None),
+                "rate": rate,
+                "amount": amount,
+                "category": "spare_part",
+            }
+        )
     return items
 
 
@@ -473,12 +513,21 @@ def build_service_estimate_context(service_order: frappe.Document) -> Dict[str, 
             description = _("Biaya Jasa - {name}").format(name=label)
         else:
             description = _("Biaya Jasa")
-        job_items.append({"description": description, "amount": service_fee})
+        job_items.append(
+            {
+                "description": description,
+                "amount": service_fee,
+                "qty": 1,
+                "uom": _("Jasa"),
+                "rate": service_fee,
+                "category": "service",
+            }
+        )
 
     for row in spare_rows:
-        job_items.append({"description": row["description"], "amount": row["amount"]})
+        job_items.append(row)
     for row in material_rows:
-        job_items.append({"description": row["description"], "amount": row["amount"]})
+        job_items.append(row)
 
     # Calculate totals
     spare_total = sum(row["amount"] for row in spare_rows)
@@ -489,9 +538,28 @@ def build_service_estimate_context(service_order: frappe.Document) -> Dict[str, 
         estimated_amount = flt(getattr(service_order, "total_estimated_amount", 0))
         if estimated_amount and estimated_amount > (spare_total + material_total):
             service_fee = estimated_amount - (spare_total + material_total)
-            job_items.insert(0, {"description": _("Biaya Jasa"), "amount": service_fee})
+            job_items.insert(
+                0,
+                {
+                    "description": _("Biaya Jasa"),
+                    "amount": service_fee,
+                    "qty": 1,
+                    "uom": _("Jasa"),
+                    "rate": service_fee,
+                    "category": "service",
+                },
+            )
         elif estimated_amount and not job_items:
-            job_items.append({"description": _("Estimasi Service"), "amount": estimated_amount})
+            job_items.append(
+                {
+                    "description": _("Estimasi Service"),
+                    "amount": estimated_amount,
+                    "qty": 1,
+                    "uom": _("Jasa"),
+                    "rate": estimated_amount,
+                    "category": "service",
+                }
+            )
             service_fee = estimated_amount
 
     # Calculate grand total
@@ -504,13 +572,30 @@ def build_service_estimate_context(service_order: frappe.Document) -> Dict[str, 
     # Format job items with currency
     def enrich(item: Dict[str, Any]) -> Dict[str, Any]:
         value = flt(item.get("amount") or 0)
+        qty_value = flt(item.get("qty") or 0)
+        rate_value = flt(item.get("rate") or 0)
+        if not rate_value and qty_value and value:
+            rate_value = value / qty_value
         return {
+            "code": item.get("code") or "-",
             "description": item.get("description") or "-",
+            "qty": qty_value,
+            "qty_formatted": _format_quantity(qty_value),
+            "uom": item.get("uom") or "-",
+            "rate": rate_value,
+            "rate_formatted": _format_currency(rate_value) if rate_value else "-",
             "amount": value,
             "amount_formatted": _format_currency(value),
+            "category": item.get("category") or "",
         }
 
     job_items = [enrich(item) for item in job_items]
+
+    parts_material_total = sum(
+        item["amount"]
+        for item in job_items
+        if item.get("category") in {"spare_part", "material"}
+    )
 
     # Build summary
     summary = {
@@ -522,6 +607,30 @@ def build_service_estimate_context(service_order: frappe.Document) -> Dict[str, 
         "material_total_formatted": _format_currency(material_total),
         "grand_total": flt(grand_total),
         "grand_total_formatted": _format_currency(grand_total),
+    }
+
+    estimated_amount = flt(getattr(service_order, "total_estimated_amount", 0))
+    if not estimated_amount:
+        estimated_amount = summary["grand_total"]
+
+    dpp = estimated_amount
+    ppn = dpp * 0.11 if dpp else 0
+    pph = dpp * 0.025 if dpp else 0
+    total_with_tax = dpp + ppn + pph
+
+    taxes = {
+        "parts_material": parts_material_total,
+        "parts_material_formatted": _format_currency(parts_material_total),
+        "service_fee": summary["service_total"],
+        "service_fee_formatted": _format_currency(summary["service_total"]),
+        "dpp": dpp,
+        "dpp_formatted": _format_currency(dpp),
+        "ppn": ppn,
+        "ppn_formatted": _format_currency(ppn),
+        "pph": pph,
+        "pph_formatted": _format_currency(pph),
+        "total": total_with_tax,
+        "total_formatted": _format_currency(total_with_tax),
     }
 
     # Get intake notes
@@ -570,7 +679,7 @@ def build_service_estimate_context(service_order: frappe.Document) -> Dict[str, 
 
     # Return complete context
     return {
-        "title": _("ESTIMASI SERVICE KENDARAAN"),
+        "title": _("ESTIMASI BIAYA PERBAIKAN KENDARAAN"),
         "meta": meta,
         "vehicle": vehicle_info,
         "job_items": job_items,
@@ -580,6 +689,7 @@ def build_service_estimate_context(service_order: frappe.Document) -> Dict[str, 
         "branch": branch_info,
         "assigned_mechanic": assigned_mechanic_name,
         "service_advisor_name": service_advisor_name,
+        "taxes": taxes,
     }
 
 
