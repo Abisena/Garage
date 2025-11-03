@@ -1437,6 +1437,64 @@ body {
     color: var(--text-muted);
     font-size: 13px;
 }
+
+/* Pagination */
+.table-pagination {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+.table-pagination.is-hidden {
+    display: none;
+}
+
+.pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    width: 100%;
+}
+
+.pagination__info {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.pagination__controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pagination__btn {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-base);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.pagination__btn:hover:not([disabled]) {
+    background: var(--gray-50);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.pagination__btn[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.pagination__state {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
 </style>
 {% endblock %}
 
@@ -1549,6 +1607,7 @@ body {
                 </tbody>
             </table>
         </div>
+        <div class="table-pagination is-hidden" id="inspection-pagination" aria-live="polite"></div>
     </div>
 
     <!-- In Progress Section -->
@@ -1586,46 +1645,48 @@ body {
                 </tbody>
             </table>
         </div>
+        <div class="table-pagination is-hidden" id="progress-pagination" aria-live="polite"></div>
     </div>
 
-            <!-- Completed Section -->
-            <div class="workflow-section">
-                <div class="section-header">
-                    <div class="section-title">
-                        <h2>✅ Completed</h2>
-                        <span class="section-badge completed" id="badge-completed">0</span>
-                    </div>
-                    <div class="section-actions">
-                        <button class="btn btn-secondary" onclick="refreshData()">🔄 Refresh</button>
-                    </div>
-                </div>
+    <!-- Completed Section -->
+    <div class="workflow-section">
+        <div class="section-header">
+            <div class="section-title">
+                <h2>✅ Completed</h2>
+                <span class="section-badge completed" id="badge-completed">0</span>
+            </div>
+            <div class="section-actions">
+                <button class="btn btn-secondary" onclick="refreshData()">🔄 Refresh</button>
+            </div>
+        </div>
 
-                <div class="service-table-wrapper">
-                    <table class="service-table">
-                        <thead>
-                            <tr>
-                                <th>Service Order</th>
-                                <th>Kendaraan</th>
-                                <th>Customer</th>
-                                <th>Service Summary</th>
-                                <th>Total Biaya</th>
-                                <th>Tgl. Selesai</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-completed">
-                            <tr>
-                                <td colspan="7">
-                                    <div class="loading-state">
-                                        <div class="loading-spinner"></div>
-                                        <p>Loading data...</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-</div>
+        <div class="service-table-wrapper">
+            <table class="service-table">
+                <thead>
+                    <tr>
+                        <th>Service Order</th>
+                        <th>Kendaraan</th>
+                        <th>Customer</th>
+                        <th>Service Summary</th>
+                        <th>Total Biaya</th>
+                        <th>Tgl. Selesai</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="table-completed">
+                    <tr>
+                        <td colspan="7">
+                            <div class="loading-state">
+                                <div class="loading-spinner"></div>
+                                <p>Loading data...</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="table-pagination is-hidden" id="completed-pagination" aria-live="polite"></div>
+    </div>
 </div>
 </div>
 </div>
@@ -1648,7 +1709,14 @@ body {
     };
 
     const orderLookup = {};
-    let inspectionOrdersCache = [];
+    const PAGE_SIZE = 5;
+
+    const paginationState = {
+        inspection: { all: [], filtered: [], page: 1 },
+        progress: { all: [], page: 1 },
+        completed: { all: [], page: 1 }
+    };
+
     let inspectionSearchQuery = '';
 
     // ============================================================================
@@ -1910,7 +1978,7 @@ body {
         });
     }
 
-    function updateInspectionSearchMeta(visibleCount, totalCount) {
+    function updateInspectionSearchMeta(visibleCount, filteredCount) {
         const metaElement = document.getElementById('inspection-search-meta');
         if (!metaElement) {
             return;
@@ -1923,14 +1991,35 @@ body {
             return;
         }
 
-        metaElement.textContent = `Menampilkan ${visibleCount} dari ${totalCount} order`;
+        if (!filteredCount) {
+            metaElement.textContent = 'Tidak ada hasil yang cocok';
+            metaElement.classList.add('is-visible');
+            return;
+        }
+
+        const startIndex = (paginationState.inspection.page - 1) * PAGE_SIZE + 1;
+        const endIndex = startIndex + visibleCount - 1;
+
+        metaElement.textContent = `Menampilkan ${startIndex}-${endIndex} dari ${filteredCount} hasil`;
         metaElement.classList.add('is-visible');
     }
 
-    function applyInspectionSearch() {
-        const filtered = filterInspectionOrders(inspectionOrdersCache, inspectionSearchQuery);
-        renderInspectionTable(filtered);
-        updateInspectionSearchMeta(filtered.length, inspectionOrdersCache.length);
+    function applyInspectionSearch(options = {}) {
+        const preservePage = Boolean(options.preservePage);
+        const previousPage = paginationState.inspection.page || 1;
+        const targetPage = preservePage ? previousPage : 1;
+
+        const filtered = filterInspectionOrders(paginationState.inspection.all, inspectionSearchQuery);
+        paginationState.inspection.filtered = filtered;
+
+        if (!filtered.length) {
+            paginationState.inspection.page = 1;
+        } else {
+            const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+            paginationState.inspection.page = Math.min(Math.max(targetPage, 1), totalPages);
+        }
+
+        renderInspectionTable();
     }
 
     window.handleInspectionSearch = function(event) {
@@ -1939,14 +2028,113 @@ body {
     };
 
     // ============================================================================
+    // PAGINATION HELPERS
+    // ============================================================================
+
+    function ensureValidPage(state, totalItems) {
+        if (!state) {
+            return 1;
+        }
+
+        if (!state.page || state.page < 1) {
+            state.page = 1;
+        }
+
+        if (!totalItems) {
+            state.page = 1;
+            return 1;
+        }
+
+        const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+        if (state.page > totalPages) {
+            state.page = totalPages;
+        }
+
+        return totalPages;
+    }
+
+    function updatePaginationControls(key, totalItems) {
+        const container = document.getElementById(`${key}-pagination`);
+        if (!container) {
+            return;
+        }
+
+        if (!totalItems || totalItems <= PAGE_SIZE) {
+            container.innerHTML = '';
+            container.classList.add('is-hidden');
+            return;
+        }
+
+        const state = paginationState[key];
+        if (!state || !state.page) {
+            paginationState[key].page = 1;
+        }
+
+        const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+        const page = Math.min(Math.max(paginationState[key].page, 1), totalPages);
+        const start = (page - 1) * PAGE_SIZE + 1;
+        const end = Math.min(totalItems, start + PAGE_SIZE - 1);
+
+        paginationState[key].page = page;
+
+        container.classList.remove('is-hidden');
+        container.innerHTML = `
+            <div class="pagination">
+                <div class="pagination__info">Menampilkan ${start}-${end} dari ${totalItems} data</div>
+                <div class="pagination__controls">
+                    <button class="pagination__btn" type="button" onclick="changePage('${key}', -1)" ${page <= 1 ? 'disabled' : ''} aria-label="Halaman sebelumnya">‹</button>
+                    <span class="pagination__state">Halaman ${page} dari ${totalPages}</span>
+                    <button class="pagination__btn" type="button" onclick="changePage('${key}', 1)" ${page >= totalPages ? 'disabled' : ''} aria-label="Halaman selanjutnya">›</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function changePage(key, step) {
+        const state = paginationState[key];
+        if (!state) {
+            return;
+        }
+
+        const list = key === 'inspection' ? state.filtered : state.all;
+        const totalItems = Array.isArray(list) ? list.length : 0;
+        if (!totalItems) {
+            return;
+        }
+
+        const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+        const nextPage = Math.min(Math.max((state.page || 1) + step, 1), totalPages);
+        if (nextPage === state.page) {
+            return;
+        }
+
+        state.page = nextPage;
+
+        if (key === 'inspection') {
+            renderInspectionTable();
+        } else if (key === 'progress') {
+            renderProgressTable();
+        } else if (key === 'completed') {
+            renderCompletedTable();
+        }
+    }
+
+    window.changePage = changePage;
+
+    // ============================================================================
     // TABLE RENDERING FUNCTIONS
     // ============================================================================
 
     // Render Waiting Entry table
-    function renderInspectionTable(orders) {
+    function renderInspectionTable() {
         const tbody = document.getElementById('table-inspection');
+        const filtered = paginationState.inspection.filtered || [];
+        const total = filtered.length;
 
-        if (!orders || orders.length === 0) {
+        if (!total) {
+            paginationState.inspection.page = 1;
+            updatePaginationControls('inspection', 0);
+            updateInspectionSearchMeta(0, 0);
             const hasQuery = (inspectionSearchQuery || '').trim().length > 0;
             tbody.innerHTML = `
                 <tr>
@@ -1962,7 +2150,14 @@ body {
             return;
         }
 
-        tbody.innerHTML = orders.map(order => {
+        ensureValidPage(paginationState.inspection, total);
+        const start = (paginationState.inspection.page - 1) * PAGE_SIZE;
+        const visibleOrders = filtered.slice(start, start + PAGE_SIZE);
+
+        updatePaginationControls('inspection', total);
+        updateInspectionSearchMeta(visibleOrders.length, total);
+
+        tbody.innerHTML = visibleOrders.map(order => {
             const rowClass = getRowClass(order);
             const classAttr = rowClass ? ` class="${rowClass}"` : '';
             return `
@@ -2002,10 +2197,14 @@ body {
     }
 
     // Render In Progress table
-    function renderProgressTable(orders) {
+    function renderProgressTable() {
         const tbody = document.getElementById('table-progress');
-        
-        if (!orders || orders.length === 0) {
+        const orders = paginationState.progress.all || [];
+        const total = orders.length;
+
+        if (!total) {
+            paginationState.progress.page = 1;
+            updatePaginationControls('progress', 0);
             tbody.innerHTML = `
                 <tr>
                     <td colspan="5">
@@ -2020,7 +2219,13 @@ body {
             return;
         }
 
-        tbody.innerHTML = orders.map(order => {
+        ensureValidPage(paginationState.progress, total);
+        const start = (paginationState.progress.page - 1) * PAGE_SIZE;
+        const visibleOrders = orders.slice(start, start + PAGE_SIZE);
+
+        updatePaginationControls('progress', total);
+
+        tbody.innerHTML = visibleOrders.map(order => {
             const rowClass = getRowClass(order);
             const classAttr = rowClass ? ` class="${rowClass}"` : '';
             return `
@@ -2054,10 +2259,14 @@ body {
     }
 
     // Render Completed table
-    function renderCompletedTable(orders) {
+    function renderCompletedTable() {
         const tbody = document.getElementById('table-completed');
-        
-        if (!orders || orders.length === 0) {
+        const orders = paginationState.completed.all || [];
+        const total = orders.length;
+
+        if (!total) {
+            paginationState.completed.page = 1;
+            updatePaginationControls('completed', 0);
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7">
@@ -2072,7 +2281,13 @@ body {
             return;
         }
 
-        tbody.innerHTML = orders.map(order => {
+        ensureValidPage(paginationState.completed, total);
+        const start = (paginationState.completed.page - 1) * PAGE_SIZE;
+        const visibleOrders = orders.slice(start, start + PAGE_SIZE);
+
+        updatePaginationControls('completed', total);
+
+        tbody.innerHTML = visibleOrders.map(order => {
             const rowClass = getRowClass(order);
             const classAttr = rowClass ? ` class="${rowClass}"` : '';
             return `
@@ -2110,6 +2325,42 @@ body {
                 </td>
             </tr>
         `; }).join('');
+    }
+
+    function setInspectionOrders(orders, options = {}) {
+        const state = paginationState.inspection;
+        const preservePage = Boolean(options.preservePage);
+        state.all = Array.isArray(orders) ? orders : [];
+
+        if (!preservePage) {
+            state.page = 1;
+        }
+
+        applyInspectionSearch({ preservePage });
+    }
+
+    function setProgressOrders(orders, options = {}) {
+        const state = paginationState.progress;
+        const preservePage = options.preservePage !== undefined ? Boolean(options.preservePage) : true;
+        state.all = Array.isArray(orders) ? orders : [];
+
+        if (!preservePage) {
+            state.page = 1;
+        }
+
+        renderProgressTable();
+    }
+
+    function setCompletedOrders(orders, options = {}) {
+        const state = paginationState.completed;
+        const preservePage = options.preservePage !== undefined ? Boolean(options.preservePage) : true;
+        state.all = Array.isArray(orders) ? orders : [];
+
+        if (!preservePage) {
+            state.page = 1;
+        }
+
+        renderCompletedTable();
     }
 
     function renderBookingAlerts(orders) {
@@ -2237,10 +2488,9 @@ body {
             renderBookingAlerts(allOrders);
             updateStats(categorized);
 
-            inspectionOrdersCache = categorized.inspection || [];
-            applyInspectionSearch();
-            renderProgressTable(categorized.progress);
-            renderCompletedTable(categorized.completed);
+            setInspectionOrders(categorized.inspection || [], { preservePage: true });
+            setProgressOrders(categorized.progress || [], { preservePage: true });
+            setCompletedOrders(categorized.completed || [], { preservePage: true });
 
             console.log('[API] Data loaded successfully');
 
@@ -2261,13 +2511,26 @@ body {
                 </tr>
             `;
 
-            inspectionOrdersCache = [];
             inspectionSearchQuery = '';
             const searchInput = document.getElementById('inspection-search');
             if (searchInput) {
                 searchInput.value = '';
             }
+
+            paginationState.inspection.all = [];
+            paginationState.inspection.filtered = [];
+            paginationState.inspection.page = 1;
+            updatePaginationControls('inspection', 0);
             updateInspectionSearchMeta(0, 0);
+
+            paginationState.progress.all = [];
+            paginationState.progress.page = 1;
+            updatePaginationControls('progress', 0);
+
+            paginationState.completed.all = [];
+            paginationState.completed.page = 1;
+            updatePaginationControls('completed', 0);
+
             document.getElementById('table-inspection').innerHTML = buildErrorRow(7);
             document.getElementById('table-progress').innerHTML = buildErrorRow(4);
             document.getElementById('table-completed').innerHTML = buildErrorRow(7);
