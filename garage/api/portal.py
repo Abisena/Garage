@@ -40,6 +40,9 @@ BRANCH_FILTER_FIELDS: Mapping[str, str] = {
     "Garage Sales Invoice": "branch",
     "Garage Payment Entry": "branch",
     "Garage Receipt Document": "branch",
+    "Garage Customer": "branch",
+    "Garage Vehicle": "branch",
+    "Garage Technician": "branch",
     "Garage Branch": "name",
 }
 
@@ -118,6 +121,14 @@ def _resolve_branch_preference(user: str, allowed: Optional[Tuple[str, ...]]) ->
 
 
 @lru_cache(maxsize=None)
+def _doctype_has_field(doctype: str, field: str) -> bool:
+    try:
+        return bool(frappe.db.has_column(doctype, field))
+    except Exception:
+        return False
+
+
+@lru_cache(maxsize=None)
 def _default_branch(user: str) -> Optional[str]:
     allowed = _allowed_branches(user)
     if allowed is None:
@@ -176,6 +187,8 @@ def _apply_branch_filters(
     allowed = _allowed_branches(user)
 
     branch_field = BRANCH_FILTER_FIELDS.get(doctype)
+    if branch_field and not _doctype_has_field(doctype, branch_field):
+        branch_field = None
 
     if allowed is not None:
         placeholder = list(allowed) if allowed else ["__no_branch__"]
@@ -1253,7 +1266,29 @@ def _employee_display_map(employee_ids: Iterable[str]) -> Dict[str, str]:
     return display_map
 
 
-def _technician_load_map(exclude_order: Optional[str] = None) -> Dict[str, int]:
+def _employee_branch_map(employee_ids: Iterable[str]) -> Dict[str, Optional[str]]:
+    unique_ids = sorted({emp for emp in employee_ids if emp})
+    if not unique_ids or not _doctype_has_field("Employee", "branch"):
+        return {}
+
+    try:
+        with _ignoring_permissions():
+            rows = frappe.db.get_all(
+                "Employee",
+                filters=[["name", "in", unique_ids]],
+                fields=["name", "branch"],
+            )
+    except Exception:
+        return {}
+
+    return {row.get("name"): row.get("branch") for row in rows if row.get("name")}
+
+
+def _technician_load_map(
+    exclude_order: Optional[str] = None,
+    *,
+    branch: Optional[str] = None,
+) -> Dict[str, int]:
     statuses = tuple(TECHNICIAN_ACTIVE_TASK_STATUSES)
     order_statuses = tuple(SERVICE_ORDER_ACTIVE_STATUSES)
     if not statuses:
@@ -1276,6 +1311,11 @@ def _technician_load_map(exclude_order: Optional[str] = None) -> Dict[str, int]:
     if exclude_order:
         conditions.append("task.parent != %s")
         params.append(exclude_order)
+
+    branch_value = (branch or "").strip()
+    if branch_value and _doctype_has_field("Garage Service Order", "branch"):
+        conditions.append("COALESCE(so.branch, '') = %s")
+        params.append(branch_value)
 
     query = f"""
         select task.technician, count(*) as total
@@ -1311,7 +1351,46 @@ def _update_roster_capacity(technician: MutableMapping[str, Any]) -> None:
     )
 
 
-def _get_technician_roster(*, only_active: bool = False, exclude_order: Optional[str] = None) -> List[Dict[str, Any]]:
+def _filter_technicians_by_branch(
+    roster: List[Dict[str, Any]],
+    branch: Optional[str],
+) -> List[Dict[str, Any]]:
+    branch_value = (branch or "").strip()
+    if not branch_value or not roster:
+        return roster
+
+    filtered: List[Dict[str, Any]] = []
+    employee_ids = [
+        entry.get("employee") or entry.get("name")
+        for entry in roster
+        if entry.get("employee") or entry.get("name")
+    ]
+    branch_map = _employee_branch_map(employee_ids)
+
+    for technician in roster:
+        identifier = technician.get("employee") or technician.get("name")
+        if not identifier:
+            filtered.append(technician)
+            continue
+
+        employee_branch = branch_map.get(identifier)
+        if employee_branch and employee_branch != branch_value:
+            continue
+
+        if employee_branch and not technician.get("branch"):
+            technician["branch"] = employee_branch
+
+        filtered.append(technician)
+
+    return filtered
+
+
+def _get_technician_roster(
+    *,
+    only_active: bool = False,
+    exclude_order: Optional[str] = None,
+    branch: Optional[str] = None,
+) -> List[Dict[str, Any]]:
     filters = [["status", "=", "Active"]] if only_active else None
 
     try:
@@ -1331,13 +1410,20 @@ def _get_technician_roster(*, only_active: bool = False, exclude_order: Optional
             ],
             filters=filters,
             limit=200,
+            branch=branch,
         )
     except Exception:
         return []
 
-    roster = _merge_technicians_with_role_assignments(roster, only_active=only_active)
+    roster = _merge_technicians_with_role_assignments(
+        roster,
+        only_active=only_active,
+        branch=branch,
+    )
 
-    loads = _technician_load_map(exclude_order=exclude_order)
+    roster = _filter_technicians_by_branch(roster, branch)
+
+    loads = _technician_load_map(exclude_order=exclude_order, branch=branch)
     for technician in roster:
         employee = technician.get("employee") or technician.get("name")
         technician["active_task_count"] = loads.get(employee, 0)
@@ -1347,14 +1433,16 @@ def _get_technician_roster(*, only_active: bool = False, exclude_order: Optional
 
 
 def _merge_technicians_with_role_assignments(
-    roster: List[Dict[str, Any]], *, only_active: bool
+    roster: List[Dict[str, Any]], *, only_active: bool, branch: Optional[str]
 ) -> List[Dict[str, Any]]:
     employees_in_roster = {
         entry.get("employee") or entry.get("name") for entry in roster if entry.get("employee") or entry.get("name")
     }
 
     fallback_profiles = _technician_profiles_from_roles(
-        exclude_employees=employees_in_roster, only_active=only_active
+        exclude_employees=employees_in_roster,
+        only_active=only_active,
+        branch=branch,
     )
 
     if not fallback_profiles:
@@ -1364,7 +1452,7 @@ def _merge_technicians_with_role_assignments(
 
 
 def _technician_profiles_from_roles(
-    *, exclude_employees: Set[str], only_active: bool
+    *, exclude_employees: Set[str], only_active: bool, branch: Optional[str]
 ) -> List[Dict[str, Any]]:
     users_with_roles = _technician_role_user_ids()
     if not users_with_roles:
@@ -1378,6 +1466,10 @@ def _technician_profiles_from_roles(
             if only_active:
                 employee_filters["status"] = "Active"
 
+            branch_value = (branch or "").strip()
+            if branch_value and _doctype_has_field("Employee", "branch"):
+                employee_filters["branch"] = branch_value
+
             employees = frappe.db.get_all(
                 "Employee",
                 fields=[
@@ -1387,6 +1479,7 @@ def _technician_profiles_from_roles(
                     "status",
                     "cell_number",
                     "company_email",
+                    "branch",
                 ],
                 filters=employee_filters,
                 limit=200,
@@ -1419,6 +1512,7 @@ def _technician_profiles_from_roles(
                 "phone": employee.get("cell_number"),
                 "email": employee.get("company_email"),
                 "notes": "",
+                "branch": employee.get("branch"),
             }
         )
 
@@ -1450,11 +1544,16 @@ def _auto_assign_technicians(
     tasks: List[Dict[str, Any]],
     *,
     current_order: Optional[str] = None,
+    branch: Optional[str] = None,
 ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     if not tasks:
         return tasks, []
 
-    roster = _get_technician_roster(only_active=False, exclude_order=current_order)
+    roster = _get_technician_roster(
+        only_active=False,
+        exclude_order=current_order,
+        branch=branch,
+    )
     if not roster:
         return tasks, []
 
@@ -1620,18 +1719,22 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
 
     branch_filter = active_branch or None
 
+    customer_fields = [
+        "name",
+        "customer_name",
+        "customer_type",
+        "phone",
+        "email",
+        "preferred_contact_method",
+        "marketing_source",
+        "is_vip",
+    ]
+    if _doctype_has_field("Garage Customer", "branch"):
+        customer_fields.append("branch")
+
     customers = _list_dicts(
         "Garage Customer",
-        [
-            "name",
-            "customer_name",
-            "customer_type",
-            "phone",
-            "email",
-            "preferred_contact_method",
-            "marketing_source",
-            "is_vip",
-        ],
+        customer_fields,
         limit=100,
         branch=branch_filter,
     )
@@ -1655,6 +1758,8 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
     ]
     if frappe.db.has_column("Garage Vehicle", "last_service_logged_at"):
         vehicle_fields.append("last_service_logged_at")
+    if _doctype_has_field("Garage Vehicle", "branch"):
+        vehicle_fields.append("branch")
     vehicles = _list_dicts(
         "Garage Vehicle",
         vehicle_fields,
@@ -2850,6 +2955,7 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
 
     result["available_technicians"] = _get_technician_roster(
         exclude_order=doc.name,
+        branch=getattr(doc, "branch", None),
     )
 
     return result
@@ -2927,7 +3033,11 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
                 doc.service_tasks = []
                 child_config = ALLOWED_DOCS["Garage Service Order"]["children"]["service_tasks"]
                 tasks = _sanitize_child_rows("service_tasks", data["service_tasks"], child_config)
-                tasks, auto_assignments = _auto_assign_technicians(tasks, current_order=doc.name)
+                tasks, auto_assignments = _auto_assign_technicians(
+                    tasks,
+                    current_order=doc.name,
+                    branch=getattr(doc, "branch", None),
+                )
                 for task in tasks:
                     doc.append("service_tasks", task)
         except Exception as e:
@@ -2965,6 +3075,7 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
         "message": _("Inspection data berhasil disimpan."),
         "available_technicians": _get_technician_roster(
             exclude_order=doc.name,
+            branch=getattr(doc, "branch", None),
         ),
     }
 
