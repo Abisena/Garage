@@ -33,6 +33,10 @@
     "job_card_status",
     "work_order_status",
     "qc_status",
+    "part_charge_status",
+    "note_status",
+    "invoice_status",
+    "sikk_status",
     "estimated_delivery_date",
     "actual_delivery_date",
     "total_estimated_amount",
@@ -179,6 +183,34 @@
       "label": "QC Status",
       "options": "Not Required\nPending\nPassed\nFailed",
       "default": "Not Required"
+    },
+    {
+      "fieldname": "part_charge_status",
+      "fieldtype": "Select",
+      "label": "Status Pembebanan Sparepart & Bahan",
+      "options": "Not Started\nPending\nPartial Approve\nApproved\nRejected",
+      "default": "Not Started"
+    },
+    {
+      "fieldname": "note_status",
+      "fieldtype": "Select",
+      "label": "Status Nota",
+      "options": "Not Started\nPending\nApproved\nCompleted\nCancelled",
+      "default": "Not Started"
+    },
+    {
+      "fieldname": "invoice_status",
+      "fieldtype": "Select",
+      "label": "Status Invoice",
+      "options": "Not Started\nPending\nApproved\nCompleted\nCancelled",
+      "default": "Not Started"
+    },
+    {
+      "fieldname": "sikk_status",
+      "fieldtype": "Select",
+      "label": "Status SIKK",
+      "options": "Not Started\nPending\nApproved\nCompleted\nCancelled",
+      "default": "Not Started"
     },
     {
       "fieldname": "estimated_delivery_date",
