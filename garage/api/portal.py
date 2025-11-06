@@ -1284,6 +1284,80 @@ def _employee_branch_map(employee_ids: Iterable[str]) -> Dict[str, Optional[str]
     return {row.get("name"): row.get("branch") for row in rows if row.get("name")}
 
 
+def _customer_display_map(customer_ids: Iterable[str]) -> Dict[str, Dict[str, Any]]:
+    unique_ids = sorted({customer for customer in customer_ids if customer})
+    if not unique_ids:
+        return {}
+
+    try:
+        with _ignoring_permissions():
+            rows = frappe.db.get_all(
+                "Garage Customer",
+                filters=[["name", "in", unique_ids]],
+                fields=["name", "customer_name", "customer_type"],
+            )
+    except Exception:
+        return {customer: {"customer_name": customer} for customer in unique_ids}
+
+    display_map: Dict[str, Dict[str, Any]] = {}
+    for row in rows:
+        record = dict(row)
+        record.setdefault("customer_name", record.get("name"))
+        display_map[record.get("name")] = record
+
+    for customer in unique_ids:
+        display_map.setdefault(customer, {"customer_name": customer})
+
+    return display_map
+
+
+def _vehicle_display_map(vehicle_ids: Iterable[str]) -> Dict[str, Dict[str, Any]]:
+    unique_ids = sorted({vehicle for vehicle in vehicle_ids if vehicle})
+    if not unique_ids:
+        return {}
+
+    try:
+        with _ignoring_permissions():
+            rows = frappe.db.get_all(
+                "Garage Vehicle",
+                filters=[["name", "in", unique_ids]],
+                fields=[
+                    "name",
+                    "license_plate",
+                    "brand",
+                    "model",
+                    "type_model",
+                    "vehicle_year",
+                    "color",
+                ],
+            )
+    except Exception:
+        return {vehicle: {"display": vehicle} for vehicle in unique_ids}
+
+    display_map: Dict[str, Dict[str, Any]] = {}
+    for row in rows:
+        record = dict(row)
+        plate = (record.get("license_plate") or "").strip()
+        descriptors = [record.get("brand"), record.get("model") or record.get("type_model")]
+        descriptors = [value for value in descriptors if value]
+        if record.get("vehicle_year"):
+            descriptors.append(str(record.get("vehicle_year")))
+        descriptor_text = " ".join(descriptors).strip()
+        if descriptor_text:
+            display_label = plate or record.get("name")
+            display = f"{display_label} – {descriptor_text}" if display_label else descriptor_text
+        else:
+            display = plate or record.get("name")
+
+        record["display"] = display
+        display_map[record.get("name")] = record
+
+    for vehicle in unique_ids:
+        display_map.setdefault(vehicle, {"display": vehicle})
+
+    return display_map
+
+
 def _technician_load_map(
     exclude_order: Optional[str] = None,
     *,
@@ -2593,11 +2667,13 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
             "stock_status",
             "warehouse",
             "source",
+            "creation",
         ],
         filters=[
             ["parenttype", "=", "Garage Service Order"],
             ["stock_status", "in", SPARE_REQUEST_ACTIVE_STATUSES],
         ],
+        order_by="creation asc",
         limit=200,
     )
 
@@ -2610,11 +2686,31 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
     if parent_order_names:
         service_orders = _list_dicts(
             "Garage Service Order",
-            ["name", "customer", "vehicle", "priority", "service_advisor"],
+            [
+                "name",
+                "customer",
+                "vehicle",
+                "priority",
+                "service_advisor",
+            ],
             filters=[["name", "in", parent_order_names]],
             limit=len(parent_order_names),
         )
         service_order_map = {row.get("name"): row for row in service_orders}
+
+        customer_ids = {
+            row.get("customer")
+            for row in service_orders
+            if row.get("customer")
+        }
+        vehicle_ids = {
+            row.get("vehicle")
+            for row in service_orders
+            if row.get("vehicle")
+        }
+
+        customer_display = _customer_display_map(customer_ids)
+        vehicle_display = _vehicle_display_map(vehicle_ids)
 
         service_tasks = _list_dicts(
             "Garage Service Order Task",
@@ -2640,8 +2736,21 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
                 continue
 
             order_info = service_order_map.get(parent, {})
-            request["service_customer"] = order_info.get("customer")
-            request["service_vehicle"] = order_info.get("vehicle")
+
+            customer_id = order_info.get("customer")
+            vehicle_id = order_info.get("vehicle")
+
+            customer_info = customer_display.get(customer_id, {})
+            vehicle_info = vehicle_display.get(vehicle_id, {})
+
+            request["service_customer_id"] = customer_id
+            request["service_customer_name"] = customer_info.get("customer_name") or customer_id
+            request["service_customer"] = request["service_customer_name"]
+
+            request["service_vehicle_id"] = vehicle_id
+            request["service_vehicle_name"] = vehicle_info.get("display") or vehicle_id
+            request["service_vehicle_plate"] = vehicle_info.get("license_plate")
+            request["service_vehicle"] = request["service_vehicle_name"]
             request["service_priority"] = order_info.get("priority")
             request["service_advisor"] = order_info.get("service_advisor")
 
