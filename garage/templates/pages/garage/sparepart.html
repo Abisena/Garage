@@ -477,7 +477,42 @@ body {
 }
 
 .service-table td.request-actions-cell {
-    width: 280px;
+    width: 220px;
+}
+
+.service-table td.status-cell {
+    width: 220px;
+}
+
+.vehicle-info,
+.customer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.vehicle-plate {
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+}
+
+.vehicle-model {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.customer-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.customer-contact,
+.customer-meta {
+    color: var(--text-secondary);
+    font-size: 13px;
 }
 
 .request-actions {
@@ -1029,7 +1064,10 @@ body .frappe-confirm {
                 <thead>
                     <tr>
                         <th>Service Order</th>
-                        <th>Tindakan &amp; Status</th>
+                        <th>Kendaraan</th>
+                        <th>Customer</th>
+                        <th>Status</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody data-role="spare-request-table"></tbody>
@@ -1172,6 +1210,65 @@ body .frappe-confirm {
         }) || '';
     }
 
+    function parseVehicleName(value) {
+        if (!value) {
+            return { plate: '', model: '' };
+        }
+
+        const text = String(value).trim();
+        if (!text) {
+            return { plate: '', model: '' };
+        }
+
+        const separators = [' - ', ' – ', ' | '];
+        for (let index = 0; index < separators.length; index += 1) {
+            const separator = separators[index];
+            if (text.includes(separator)) {
+                const [first, ...rest] = text.split(separator);
+                return {
+                    plate: (first || '').trim(),
+                    model: rest.join(separator).trim(),
+                };
+            }
+        }
+
+        return { plate: '', model: text };
+    }
+
+    function getVehicleInfo(request = {}) {
+        const directPlateCandidates = [
+            request.vehicle_plate,
+            request.service_vehicle_plate,
+            request.license_plate,
+            request.vehicle_registration_no,
+        ];
+
+        const directModelCandidates = [
+            [request.vehicle_brand, request.vehicle_model, request.vehicle_model_variant].filter(Boolean).join(' ').trim(),
+            request.vehicle_model,
+            request.vehicle_name,
+            request.service_vehicle_model,
+        ];
+
+        const displayCandidates = [
+            request.service_vehicle_name,
+            request.service_vehicle,
+            request.vehicle_name,
+        ];
+
+        const displayValue = displayCandidates.find(value => value && String(value).trim()) || '';
+        const parsedDisplay = parseVehicleName(displayValue);
+
+        const plate = directPlateCandidates.find(value => value && String(value).trim()) || parsedDisplay.plate;
+        const model = directModelCandidates.find(value => value && String(value).trim()) || parsedDisplay.model;
+
+        return {
+            plate: plate || '',
+            model: model || '',
+            display: displayValue || '',
+        };
+    }
+
     function getStatusBadge(status) {
         const badges = {
             'Active': '<span class="badge success">Active</span>',
@@ -1296,11 +1393,23 @@ body .frappe-confirm {
             }
 
             const customerName = getCustomerDisplayName(request);
+            const customerPhone = [
+                request.service_customer_phone,
+                request.customer_phone,
+                request.customer_mobile,
+                request.customer_mobile_no,
+                request.customer_contact,
+            ].find(value => value && String(value).trim()) || '';
+
+            const vehicleInfo = getVehicleInfo(request);
             if (!groups.has(serviceOrder)) {
                 groups.set(serviceOrder, {
                     serviceOrder,
                     customer: customerName || '-',
-                    vehicle: request.service_vehicle_name || request.service_vehicle || '',
+                    customerPhone: customerPhone || '',
+                    vehiclePlate: vehicleInfo.plate || '',
+                    vehicleModel: vehicleInfo.model || '',
+                    vehicleDisplay: vehicleInfo.display || '',
                     requests: [],
                     technicians: new Set(),
                     serviceAdvisor: request.service_advisor || '',
@@ -1314,11 +1423,21 @@ body .frappe-confirm {
             if (customerName) {
                 group.customer = customerName;
             }
-            if (request.service_vehicle_name || request.service_vehicle) {
-                group.vehicle = request.service_vehicle_name || request.service_vehicle;
+            if (customerPhone) {
+                group.customerPhone = customerPhone;
             }
             if (request.service_advisor) {
                 group.serviceAdvisor = request.service_advisor;
+            }
+
+            if (vehicleInfo.plate && !group.vehiclePlate) {
+                group.vehiclePlate = vehicleInfo.plate;
+            }
+            if (vehicleInfo.model) {
+                group.vehicleModel = vehicleInfo.model;
+            }
+            if (vehicleInfo.display && !group.vehicleDisplay) {
+                group.vehicleDisplay = vehicleInfo.display;
             }
 
             const creationValue = request.creation ? Date.parse(request.creation) : NaN;
@@ -1410,14 +1529,21 @@ body .frappe-confirm {
 
             const otherStatuses = statuses.filter(status => status && status !== primaryStatus);
 
-            const customerLine = group.customer ? escapeHTML(group.customer) : '-';
-            const vehicleLine = group.vehicle ? `<div class="cell-muted">${escapeHTML(group.vehicle)}</div>` : '';
-
             const requestNamesAttr = escapeHTML(requestNames.join(','));
             const primaryRequestName = requestNames[0] ? escapeHTML(requestNames[0]) : '';
-            const advisorLine = group.serviceAdvisor ? `<div class="cell-muted">SA: ${escapeHTML(group.serviceAdvisor)}</div>` : '';
+            const parsedDisplay = parseVehicleName(group.vehicleDisplay || '');
+            const vehiclePlate = group.vehiclePlate || parsedDisplay.plate;
+            const vehicleModel = group.vehicleModel || parsedDisplay.model || group.vehicleDisplay;
+
+            const customerLine = group.customer ? escapeHTML(group.customer) : '-';
+            const customerContact = group.customerPhone
+                ? `<div class="customer-contact">${escapeHTML(group.customerPhone)}</div>`
+                : '';
+            const advisorLine = group.serviceAdvisor
+                ? `<div class="customer-meta">SA: ${escapeHTML(group.serviceAdvisor)}</div>`
+                : '';
             const technicianLine = group.technicians.size
-                ? `<div class="cell-muted">Teknisi: ${escapeHTML(Array.from(group.technicians).join(', '))}</div>`
+                ? `<div class="customer-meta">Teknisi: ${escapeHTML(Array.from(group.technicians).join(', '))}</div>`
                 : '';
             const serviceOrderDisplay = formatServiceOrderId(group.serviceOrder);
             const serviceOrderLink = group.serviceOrder
@@ -1445,19 +1571,31 @@ body .frappe-confirm {
                 <tr class="spare-request-row" data-service-order="${escapeHTML(group.serviceOrder)}" data-request-names="${requestNamesAttr}" data-request-name="${primaryRequestName}">
                     <td>
                         <div class="cell-strong">${serviceOrderHtml}</div>
-                        <div class="cell-secondary">${customerLine}</div>
-                        ${vehicleLine}
+                        ${summaryLine}
                         ${advisorLine}
                         ${technicianLine}
-                        ${summaryLine}
                     </td>
-                    <td class="request-actions-cell">
-                        <div class="request-actions">${actionButtons.join('')}</div>
+                    <td>
+                        <div class="vehicle-info">
+                            <div class="vehicle-plate">${vehiclePlate ? escapeHTML(vehiclePlate) : '-'}</div>
+                            <div class="vehicle-model">${vehicleModel ? escapeHTML(vehicleModel) : '-'}</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="customer-info">
+                            <div class="customer-name">${customerLine}</div>
+                            ${customerContact}
+                        </div>
+                    </td>
+                    <td class="status-cell">
                         <div class="request-status">
                             <div class="status-badges">${getRequestStatusBadge(primaryStatus)}</div>
                             ${queueMeta}
                             ${otherStatusMeta}
                         </div>
+                    </td>
+                    <td class="request-actions-cell">
+                        <div class="request-actions">${actionButtons.join('')}</div>
                     </td>
                 </tr>
             `;
@@ -1659,10 +1797,26 @@ body .frappe-confirm {
                 const technicianLine = group.technicians.size
                     ? `<div>Teknisi: ${escapeHTML(Array.from(group.technicians).join(', '))}</div>`
                     : '';
-                const vehicleLine = group.vehicle ? `<div>Kendaraan: ${escapeHTML(group.vehicle)}</div>` : '';
+                const parsedDisplay = parseVehicleName(group.vehicleDisplay || '');
+                const vehiclePlate = group.vehiclePlate || parsedDisplay.plate;
+                const vehicleModel = group.vehicleModel || parsedDisplay.model || group.vehicleDisplay;
+                const vehicleParts = [];
+                if (vehiclePlate) {
+                    vehicleParts.push(vehiclePlate);
+                }
+                if (vehicleModel) {
+                    vehicleParts.push(vehicleModel);
+                }
+                const vehicleLine = vehicleParts.length
+                    ? `<div><strong>Kendaraan:</strong> ${escapeHTML(vehicleParts.join(' • '))}</div>`
+                    : '';
+                const customerContactLine = group.customerPhone
+                    ? `<div><strong>Kontak Customer:</strong> ${escapeHTML(group.customerPhone)}</div>`
+                    : '';
                 summary.innerHTML = `
                     <div><strong>Service Order:</strong> ${escapeHTML(formatServiceOrderId(serviceOrder))}</div>
                     <div><strong>Customer:</strong> ${escapeHTML(group.customer || '-')}</div>
+                    ${customerContactLine}
                     ${vehicleLine}
                     <div><strong>Total Permintaan:</strong> ${breakdown}</div>
                     ${advisorLine}
