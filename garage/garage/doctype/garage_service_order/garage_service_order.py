@@ -32,7 +32,6 @@ class GarageServiceOrder(Document):
         naming.make_branch_autoname(self, "SPK", include_year=True)
 
     def validate(self) -> None:
-        super().validate()
         self._update_part_charge_status()
 
     def _update_part_charge_status(self) -> None:
