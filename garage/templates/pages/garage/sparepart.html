@@ -734,6 +734,10 @@ body {
     padding: 24px;
 }
 
+body .frappe-alert {
+    z-index: 2000 !important;
+}
+
 .portal-modal.is-open {
     display: flex;
 }
@@ -1144,6 +1148,25 @@ body {
             .replace(/'/g, '&#39;');
     }
 
+    function getCustomerDisplayName(request = {}) {
+        const candidates = [
+            request.service_customer_name,
+            request.customer_name,
+            request.customer_full_name,
+            request.customer_display_name,
+            request.service_customer,
+            request.customer,
+        ];
+
+        return candidates.find(name => {
+            if (!name) {
+                return false;
+            }
+            const trimmed = String(name).trim();
+            return Boolean(trimmed);
+        }) || '';
+    }
+
     function getStatusBadge(status) {
         const badges = {
             'Active': '<span class="badge success">Active</span>',
@@ -1267,10 +1290,11 @@ body {
                 return;
             }
 
+            const customerName = getCustomerDisplayName(request);
             if (!groups.has(serviceOrder)) {
                 groups.set(serviceOrder, {
                     serviceOrder,
-                    customer: request.service_customer_name || request.service_customer || '-',
+                    customer: customerName || '-',
                     vehicle: request.service_vehicle_name || request.service_vehicle || '',
                     requests: [],
                     technicians: new Set(),
@@ -1282,8 +1306,8 @@ body {
             const group = groups.get(serviceOrder);
             group.requests.push(request);
 
-            if (request.service_customer_name || request.service_customer) {
-                group.customer = request.service_customer_name || request.service_customer;
+            if (customerName) {
+                group.customer = customerName;
             }
             if (request.service_vehicle_name || request.service_vehicle) {
                 group.vehicle = request.service_vehicle_name || request.service_vehicle;
@@ -1652,7 +1676,7 @@ body {
                         ? '<div class="spare-request-modal__item-warning">Sparepart belum terdaftar di master gudang.</div>'
                         : '';
                     const rejectAction = req.name
-                        ? `<div class="spare-request-modal__item-actions"><button type="button" class="btn-inline" data-role="spare-request-modal-reject" data-request-name="${escapeHTML(req.name)}">❌ Reject Partial</button></div>`
+                        ? `<div class="spare-request-modal__item-actions"><button type="button" class="btn-inline" data-role="spare-request-modal-reject" data-request-name="${escapeHTML(req.name)}">❌ Reject</button></div>`
                         : '';
 
                     return `
