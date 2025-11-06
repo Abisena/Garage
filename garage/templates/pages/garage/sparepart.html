@@ -730,12 +730,17 @@ body {
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 1100;
+    z-index: 1050;
     padding: 24px;
 }
 
 body .frappe-alert {
-    z-index: 2000 !important;
+    z-index: 9999 !important;
+}
+
+
+body .frappe-confirm {
+    z-index: 9998 !important; 
 }
 
 .portal-modal.is-open {

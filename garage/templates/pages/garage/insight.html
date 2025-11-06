@@ -11,16 +11,22 @@
     --primary: #0066FF;
     --primary-dark: #0052CC;
     --primary-darker: #003D99;
+    --text-inverse: #FFFFFF;
+    --radius-md: 12px;
+    --radius-lg: 14px;
+    --radius-full: 9999px;
 }
 
+/* === UNIFIED HEADER SECTION === */
 .portal-hero--sub {
     position: relative;
-    padding: 4rem 0 3.5rem !important;
     background: linear-gradient(160deg,
         var(--primary-darker) 0%,
         var(--primary-dark) 40%,
         var(--primary) 100%) !important;
+    padding: 3rem 0 2.5rem 0 !important;
     overflow: hidden;
+    box-shadow: none !important;
 }
 
 .portal-hero--sub::before {
@@ -39,48 +45,53 @@
 }
 
 .portal-hero__brand {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 1rem !important;
 }
 
 .portal-hero__icon {
-    width: 3rem;
-    height: 3rem;
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(10px);
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    width: 3rem !important;
+    height: 3rem !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(10px) !important;
+    border-radius: var(--radius-lg) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.5rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
 }
 
 .portal-hero--sub h1 {
-    color: #ffffff !important;
-    font-size: 2.25rem !important;
+    color: var(--text-inverse) !important;
+    font-size: 2rem !important;
     font-weight: 700 !important;
-    margin-bottom: 0.75rem !important;
+    line-height: 1.25 !important;
+    margin: 0 0 0.25rem 0 !important;
+    letter-spacing: -0.02em !important;
 }
 
 .portal-hero--sub p {
     color: rgba(255, 255, 255, 0.85) !important;
     margin: 0 !important;
-    font-size: 1rem !important;
+    font-size: 0.9375rem !important;
     line-height: 1.6 !important;
 }
 
+/* === UNIFIED NAVIGATION WRAPPER === */
 .portal-nav-wrapper {
     background: linear-gradient(160deg,
         var(--primary-darker) 0%,
         var(--primary-dark) 40%,
-        var(--primary) 100%);
-    padding: 0 0 2.5rem 0;
-    box-shadow: 0 10px 30px rgba(0, 46, 102, 0.3);
+        var(--primary) 100%) !important;
+    padding: 0 0 2.5rem 0 !important;
+    box-shadow: 0 10px 30px rgba(0, 46, 102, 0.3) !important;
+    margin-bottom: 0 !important;
 }
 
+/* === UNIFIED NAVIGATION === */
 .portal-nav {
     display: flex !important;
     justify-content: center !important;
@@ -88,11 +99,26 @@
     background: rgba(255, 255, 255, 0.12) !important;
     backdrop-filter: blur(20px) !important;
     padding: 0.5rem !important;
-    border-radius: 14px !important;
+    border-radius: var(--radius-lg) !important;
     border: 1px solid rgba(255, 255, 255, 0.18) !important;
     overflow-x: auto !important;
-    max-width: fit-content;
-    margin: 0 auto;
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent !important;
+    max-width: fit-content !important;
+    margin: 0 auto !important;
+}
+
+.portal-nav::-webkit-scrollbar {
+    height: 6px !important;
+}
+
+.portal-nav::-webkit-scrollbar-track {
+    background: transparent !important;
+}
+
+.portal-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3) !important;
+    border-radius: var(--radius-full) !important;
 }
 
 .portal-nav a {
@@ -100,34 +126,36 @@
     align-items: center !important;
     gap: 0.5rem !important;
     padding: 0.6rem 1.1rem !important;
-    border-radius: 12px !important;
-    font-size: 0.95rem !important;
+    border-radius: var(--radius-md) !important;
+    font-size: 0.9375rem !important;
     font-weight: 500 !important;
     text-decoration: none !important;
     color: rgba(255, 255, 255, 0.9) !important;
+    background: transparent !important;
     border: 1px solid transparent !important;
-    position: relative;
+    position: relative !important;
     transition: all 0.2s ease !important;
+    white-space: nowrap !important;
 }
 
 .portal-nav a::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    opacity: 0;
-    transition: opacity 0.2s ease;
+    content: '' !important;
+    position: absolute !important;
+    inset: 0 !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-radius: var(--radius-md) !important;
+    opacity: 0 !important;
+    transition: opacity 0.2s ease !important;
 }
 
 .portal-nav a:hover::before {
-    opacity: 1;
+    opacity: 1 !important;
 }
 
 .portal-nav a:hover {
-    color: #ffffff !important;
+    color: var(--text-inverse) !important;
     border-color: rgba(255, 255, 255, 0.25) !important;
-    transform: translateY(-1px);
+    transform: translateY(-1px) !important;
 }
 
 .portal-nav a.active {
@@ -138,13 +166,32 @@
 }
 
 .portal-nav a.active::before {
-    display: none;
+    display: none !important;
 }
 
+/* === RESPONSIVE === */
 @media (max-width: 768px) {
+    .portal-hero--sub {
+        padding: 2rem 0 2rem 0 !important;
+    }
+    
     .portal-hero__brand {
-        flex-direction: column;
-        text-align: center;
+        flex-direction: column !important;
+        text-align: center !important;
+    }
+    
+    .portal-nav-wrapper {
+        padding: 0 0 1.5rem 0 !important;
+    }
+    
+    .portal-nav {
+        gap: 0.375rem !important;
+        padding: 0.375rem !important;
+    }
+    
+    .portal-nav a {
+        padding: 0.5rem 0.875rem !important;
+        font-size: 0.875rem !important;
     }
 }
 </style>
