@@ -1281,6 +1281,73 @@ def _list_dicts(
     return [dict(row) for row in rows]
 
 
+def _list_spare_part_approvals(
+    branch: Optional[str],
+    order_branch_map: Optional[Mapping[str, Optional[str]]] = None,
+    limit: int = DEFAULT_LIMIT,
+) -> List[Dict[str, Any]]:
+    """Fetch spare part approval records including legacy entries without branch data."""
+
+    branch_value = cstr(branch or "").strip()
+    allowed = _allowed_branches(frappe.session.user)
+    allowed_set = {value for value in (allowed or []) if value}
+
+    try:
+        with _ignoring_permissions():
+            rows = frappe.db.get_all(
+                "Garage Spare Part Approval",
+                fields=[
+                    "name",
+                    "service_order",
+                    "branch",
+                    "document_number",
+                    "approved_on",
+                    "approved_by",
+                    "approval_count",
+                    "document_url",
+                    "document_file",
+                ],
+                order_by="approved_on desc, modified desc",
+                limit=max(limit * 2, limit),
+            )
+    except Exception:
+        return []
+
+    approvals: List[Dict[str, Any]] = []
+    service_branches = order_branch_map or {}
+
+    for row in rows:
+        record = dict(row)
+        record_branch = cstr(record.get("branch") or "").strip()
+
+        if allowed is not None:
+            if record_branch:
+                if allowed_set and record_branch not in allowed_set:
+                    continue
+                if not allowed_set:
+                    continue
+            else:
+                order_branch = cstr(service_branches.get(record.get("service_order")) or "").strip()
+                if allowed_set and order_branch and order_branch not in allowed_set:
+                    continue
+                if not allowed_set:
+                    continue
+
+        if branch_value:
+            if record_branch and record_branch != branch_value:
+                continue
+            if not record_branch:
+                order_branch = cstr(service_branches.get(record.get("service_order")) or "").strip()
+                if order_branch and order_branch != branch_value:
+                    continue
+
+        approvals.append(record)
+        if len(approvals) >= limit:
+            break
+
+    return approvals
+
+
 def _user_display_map(user_ids: Iterable[str]) -> Dict[str, str]:
     unique_ids = sorted({user for user in user_ids if user})
     if not unique_ids:
@@ -2025,22 +2092,6 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
         limit=200,
         branch=branch_filter,
     )
-    spare_part_approvals = _list_dicts(
-        "Garage Spare Part Approval",
-        [
-            "name",
-            "service_order",
-            "branch",
-            "document_number",
-            "approved_on",
-            "approved_by",
-            "approval_count",
-            "document_url",
-            "document_file",
-        ],
-        limit=200,
-        branch=branch_filter,
-    )
     service_tasks = _list_dicts(
         "Garage Service Order Task",
         ["name", "parent", "task", "status", "technician"],
@@ -2058,6 +2109,8 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
         name = order.get("name")
         if name and name not in order_branch_map:
             order_branch_map[name] = order.get("branch")
+
+    spare_part_approvals = _list_spare_part_approvals(branch_filter, order_branch_map, limit=200)
 
     if branch_filter:
         spare_part_requests = [
