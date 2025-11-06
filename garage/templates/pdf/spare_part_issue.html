@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <title>{{ title or 'Form Pengeluaran Sparepart' }}</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 11px;
+            color: #222;
+            margin: 0;
+            padding: 12px;
+        }
+
+        .document {
+            border: 1px solid #ccc;
+            padding: 12px 16px;
+            border-radius: 6px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .title {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+            text-transform: uppercase;
+            color: #1b5e20;
+        }
+
+        .meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+        }
+
+        .meta-table td {
+            padding: 4px 6px;
+            vertical-align: top;
+        }
+
+        .meta-table td.label {
+            width: 32%;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .meta-table td.value {
+            width: 68%;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        .items-table th,
+        .items-table td {
+            border: 1px solid #999;
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        .items-table th {
+            background-color: #f5f5f5;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        .items-table td.qty {
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 18px;
+            font-size: 10px;
+        }
+
+        .signature {
+            width: 48%;
+            text-align: center;
+        }
+
+        .signature-line {
+            margin-top: 32px;
+            border-top: 1px solid #666;
+            padding-top: 4px;
+        }
+
+        .branch-info {
+            font-size: 10px;
+            line-height: 1.4;
+            color: #444;
+        }
+
+        .document-number {
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 4px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="document">
+        <header>
+            <div>
+                <h1 class="title">{{ title or 'Form Pengeluaran Sparepart' }}</h1>
+                <div class="document-number">No: {{ issue_number or '-' }}</div>
+                <div>Tanggal Cetak: {{ generated_on or '-' }}</div>
+            </div>
+            <div class="branch-info">
+                <strong>{{ service_order.branch.name or 'Cabang' }}</strong><br />
+                {% if service_order.branch.code %}
+                Kode: {{ service_order.branch.code }}<br />
+                {% endif %}
+                {{ service_order.branch.address or '-' }}<br />
+                {{ service_order.branch.contact or '-' }}
+            </div>
+        </header>
+
+        <table class="meta-table">
+            <tr>
+                <td class="label">Service Order</td>
+                <td class="value">{{ service_order.name or '-' }}</td>
+            </tr>
+            <tr>
+                <td class="label">Customer</td>
+                <td class="value">{{ service_order.customer or '-' }}</td>
+            </tr>
+            <tr>
+                <td class="label">Kendaraan</td>
+                <td class="value">{{ service_order.vehicle or '-' }}</td>
+            </tr>
+            <tr>
+                <td class="label">Mechanic</td>
+                <td class="value">{{ service_order.mechanic or '-' }}</td>
+            </tr>
+            <tr>
+                <td class="label">Service Advisor</td>
+                <td class="value">{{ service_order.service_advisor or '-' }}</td>
+            </tr>
+        </table>
+
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 8%;">No</th>
+                    <th style="width: 22%;">Kode</th>
+                    <th>Nama Sparepart</th>
+                    <th style="width: 18%;">Qty</th>
+                    <th style="width: 20%;">Gudang</th>
+                    <th style="width: 16%;">Sumber</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in items %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ row.item_code }}</td>
+                    <td>{{ row.item_name }}</td>
+                    <td class="qty">{{ row.qty_display }} {{ row.uom }}</td>
+                    <td>{{ row.warehouse or '-' }}</td>
+                    <td>{{ row.source or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <footer>
+            <div class="signature">
+                Dikeluarkan oleh<br />
+                <div class="signature-line">Spare Part</div>
+            </div>
+            <div class="signature">
+                Diterima oleh<br />
+                <div class="signature-line">Service</div>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>
