@@ -1243,6 +1243,11 @@ body .frappe-confirm {
         },
         activeServiceOrder: null,
         pendingOrderFocus: null,
+        metrics: {
+            total_count: 0,
+            request_count: 0,
+            low_stock_count: 0,
+        },
     };
 
     function escapeHTML(value) {
@@ -1408,7 +1413,15 @@ body .frappe-confirm {
 
             state.pagination['spare-requests'].page = 1;
 
-            updateMetrics(data);
+            state.metrics = {
+                total_count: data.total_count || 0,
+                request_count: typeof data.request_count === 'number'
+                    ? data.request_count
+                    : state.spareRequests.length,
+                low_stock_count: data.low_stock_count || 0,
+            };
+
+            updateMetrics(state.metrics);
             renderSpareRequests(state.spareRequests);
         } catch (error) {
             console.error('[Sparepart] Error:', error);
@@ -1424,7 +1437,7 @@ body .frappe-confirm {
         };
         Object.entries(metrics).forEach(([key, value]) => {
             document.querySelectorAll(`[data-metric="${key}"]`).forEach(el => {
-                el.textContent = value || 0;
+                el.textContent = value ?? 0;
             });
         });
     }
@@ -1776,12 +1789,18 @@ body .frappe-confirm {
                     ? `Berhasil memproses ${requestNames.length} permintaan pada ${serviceOrder || 'order ini'}.`
                     : 'Permintaan diperbarui.';
                 frappe.show_alert({ message, indicator }, 5);
-                await loadSpareParts();
+                const removedCount = applyLocalRequestUpdates(requestNames);
+                if (removedCount === 0) {
+                    await loadSpareParts();
+                }
                 if (closeModalOnSuccess) {
                     closeSpareRequestModal();
+                } else {
+                    refreshActiveSpareRequestModal();
                 }
             } catch (error) {
                 frappe.show_alert({ message: 'Gagal memproses: ' + (error.message || error), indicator: 'red' }, 7);
+                await loadSpareParts();
             } finally {
                 if (button) {
                     button.disabled = false;
@@ -1849,9 +1868,7 @@ body .frappe-confirm {
             return;
         }
 
-        processGroupAction([requestName], 'reject', state.activeServiceOrder, button, {
-            closeModalOnSuccess: true,
-        });
+        processGroupAction([requestName], 'reject', state.activeServiceOrder, button);
     }
 
     function openSpareRequestModal(serviceOrder) {
@@ -1991,6 +2008,51 @@ body .frappe-confirm {
         modal.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
         state.activeServiceOrder = null;
+    }
+
+    function refreshActiveSpareRequestModal() {
+        const modal = document.getElementById('spare-request-modal');
+        if (!modal) {
+            return;
+        }
+
+        const isOpen = modal.classList.contains('is-open') && modal.getAttribute('aria-hidden') === 'false';
+        if (!isOpen) {
+            return;
+        }
+
+        if (!state.activeServiceOrder) {
+            return;
+        }
+
+        openSpareRequestModal(state.activeServiceOrder);
+    }
+
+    function applyLocalRequestUpdates(requestNames) {
+        if (!Array.isArray(requestNames) || requestNames.length === 0) {
+            return 0;
+        }
+
+        const processed = new Set(requestNames.map(name => String(name)));
+        const beforeCount = state.spareRequests.length;
+
+        state.spareRequests = state.spareRequests.filter(request => {
+            const name = request?.name;
+            if (!name) {
+                return true;
+            }
+            return !processed.has(name);
+        });
+
+        const removedCount = beforeCount - state.spareRequests.length;
+
+        state.metrics = state.metrics || { total_count: 0, request_count: 0, low_stock_count: 0 };
+        state.metrics.request_count = state.spareRequests.length;
+        updateMetrics(state.metrics);
+
+        renderSpareRequests(state.spareRequests);
+
+        return removedCount;
     }
 
     function updatePaginationControls(type, totalItems) {
