@@ -1329,6 +1329,30 @@ body {
     gap: 4px;
 }
 
+.service-order-link {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.service-order-link:hover {
+    text-decoration: underline;
+}
+
+.cell-link {
+    margin-top: 6px;
+    font-size: 12px;
+}
+
+.cell-link__anchor {
+    color: var(--primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.cell-link__anchor:hover {
+    text-decoration: underline;
+}
+
 .vehicle-plate {
     font-weight: 600;
     color: var(--text-primary);
@@ -1356,6 +1380,86 @@ body {
 .customer-contact {
     color: var(--text-muted);
     font-size: 13px;
+}
+
+.tracking-grid {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.tracking-badge {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-base);
+    background: var(--bg-surface);
+}
+
+.tracking-badge__label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.tracking-badge__value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.tracking-badge--idle {
+    background: var(--gray-50);
+}
+
+.tracking-badge--pending {
+    background: rgba(255, 176, 32, 0.14);
+    border-color: rgba(255, 176, 32, 0.3);
+}
+
+.tracking-badge--warning {
+    background: rgba(250, 204, 21, 0.2);
+    border-color: rgba(250, 204, 21, 0.35);
+    color: #92400e;
+}
+
+.tracking-badge--warning .tracking-badge__value {
+    color: #92400e;
+}
+
+.tracking-badge--pending .tracking-badge__value {
+    color: #b45309;
+}
+
+.tracking-badge--success {
+    background: rgba(15, 157, 88, 0.15);
+    border-color: rgba(15, 157, 88, 0.28);
+}
+
+.tracking-badge--success .tracking-badge__value {
+    color: #0f9d58;
+}
+
+.tracking-badge--danger {
+    background: rgba(225, 29, 72, 0.18);
+    border-color: rgba(225, 29, 72, 0.32);
+}
+
+.tracking-badge--danger .tracking-badge__value {
+    color: #be123c;
+}
+
+.tracking-badge--muted {
+    background: rgba(100, 116, 139, 0.16);
+    border-color: rgba(100, 116, 139, 0.32);
+}
+
+.tracking-badge--muted .tracking-badge__value {
+    color: #475569;
 }
 
 /* Action Buttons */
@@ -1703,6 +1807,7 @@ body {
                         <th>Service Order</th>
                         <th>Kendaraan</th>
                         <th>Customer</th>
+                        <th>Tracking Dokumen</th>
                         <th>Status</th>
                         <th>Action</th>
                     </tr>
@@ -1784,6 +1889,17 @@ body {
 
     const orderLookup = {};
     const PAGE_SIZE = 5;
+    const DEFAULT_TRACKING_STATUS = 'Not Started';
+    const TRACKING_STATUS_META = {
+        default: { label: DEFAULT_TRACKING_STATUS, className: 'tracking-badge tracking-badge--idle' },
+        'not started': { label: 'Not Started', className: 'tracking-badge tracking-badge--idle' },
+        pending: { label: 'Pending', className: 'tracking-badge tracking-badge--pending' },
+        'partial approve': { label: 'Partial Approve', className: 'tracking-badge tracking-badge--warning' },
+        approved: { label: 'Approved', className: 'tracking-badge tracking-badge--success' },
+        completed: { label: 'Completed', className: 'tracking-badge tracking-badge--success' },
+        rejected: { label: 'Rejected', className: 'tracking-badge tracking-badge--danger' },
+        cancelled: { label: 'Cancelled', className: 'tracking-badge tracking-badge--muted' },
+    };
 
     const paginationState = {
         inspection: { all: [], filtered: [], page: 1 },
@@ -1857,6 +1973,54 @@ body {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    function renderServiceOrderLink(order) {
+        if (!order || !order.name) {
+            return escapeHtml(formatServiceOrderId(order?.name, { context: 'progress' }) || '-');
+        }
+
+        const label = escapeHtml(formatServiceOrderId(order.name, { context: 'progress' }) || order.name);
+        const target = `/garage/sparepart?order=${encodeURIComponent(order.name)}`;
+        return `<a class="service-order-link" href="${target}">${label}</a>`;
+    }
+
+    function renderSparepartShortcut(order) {
+        if (!order || !order.name) {
+            return '';
+        }
+
+        const target = `/garage/sparepart?order=${encodeURIComponent(order.name)}`;
+        return `<div class="cell-link"><a class="cell-link__anchor" href="${target}" title="Pantau permintaan sparepart">🔗 Sparepart</a></div>`;
+    }
+
+    function buildTrackingBadge(label, value) {
+        const normalized = (value || DEFAULT_TRACKING_STATUS).toLowerCase();
+        const meta = TRACKING_STATUS_META[normalized] || TRACKING_STATUS_META.default;
+        const className = meta.className || TRACKING_STATUS_META.default.className;
+        const displayLabel = meta.label || (value || DEFAULT_TRACKING_STATUS);
+        return `
+            <div class="${className}">
+                <div class="tracking-badge__label">${escapeHtml(label)}</div>
+                <div class="tracking-badge__value">${escapeHtml(displayLabel)}</div>
+            </div>
+        `;
+    }
+
+    function renderTrackingBadges(order) {
+        if (!order) {
+            return buildTrackingBadge('Sparepart & Bahan', DEFAULT_TRACKING_STATUS);
+        }
+
+        const items = [
+            { label: 'Sparepart & Bahan', value: order.part_charge_status },
+            { label: 'Nota', value: order.note_status },
+            { label: 'Invoice', value: order.invoice_status },
+            { label: 'SIKK', value: order.sikk_status },
+        ];
+
+        const badges = items.map(item => buildTrackingBadge(item.label, item.value)).join('');
+        return `<div class="tracking-grid">${badges}</div>`;
     }
 
     function formatServiceOrderId(value, options = {}) {
@@ -2291,7 +2455,7 @@ body {
             updatePaginationControls('progress', 0);
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="5">
+                    <td colspan="6">
                         <div class="empty-state">
                             <div class="empty-state__icon">⚙️</div>
                             <div class="empty-state__title">Tidak ada service dalam pengerjaan</div>
@@ -2315,10 +2479,11 @@ body {
             return `
             <tr${classAttr}>
                 <td>
-                    <div class="cell-strong">${escapeHtml(formatServiceOrderId(order.name, { context: 'progress' }))}</div>
+                    <div class="cell-strong">${renderServiceOrderLink(order)}</div>
                     <div class="cell-secondary">${order.service_order_type || '-'}</div>
                     ${order.priority ? getPriorityBadge(order.priority) : ''}
                     ${renderIntakeBadge(order)}
+                    ${renderSparepartShortcut(order)}
                 </td>
                 <td>
                     <div class="vehicle-info">
@@ -2332,6 +2497,7 @@ body {
                         <div class="customer-contact">${order.customer_phone || '-'}</div>
                     </div>
                 </td>
+                <td>${renderTrackingBadges(order)}</td>
                 <td>${getStatusBadge(order.status)}</td>
                 <td>
                     <button class="action-btn" data-order="${escapeAttribute(order.name || '')}" onclick="openStatusUpdateModal(this.dataset.order)">
@@ -2616,7 +2782,7 @@ body {
             updatePaginationControls('completed', 0);
 
             document.getElementById('table-inspection').innerHTML = buildErrorRow(7);
-            document.getElementById('table-progress').innerHTML = buildErrorRow(4);
+            document.getElementById('table-progress').innerHTML = buildErrorRow(6);
             document.getElementById('table-completed').innerHTML = buildErrorRow(7);
         }
     }
