@@ -2578,6 +2578,115 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
     }
     
 @frappe.whitelist()
+def get_spare_part_detail(name: str) -> Dict[str, Any]:
+    """Return a single spare part record with contextual portal information."""
+
+    _require_login()
+
+    identifier = cstr(name or "").strip()
+    if not identifier:
+        frappe.throw(_("Nama sparepart wajib diisi."))
+
+    fields = [
+        "name",
+        "part_code",
+        "part_name",
+        "description",
+        "category",
+        "brand",
+        "uom",
+        "unit_price",
+        "stock_qty",
+        "reserved_qty",
+        "reorder_level",
+        "warehouse_location",
+        "managed_by",
+        "status",
+        "last_restocked_on",
+        "image",
+        "notes",
+    ]
+
+    spare_parts = _list_dicts(
+        "Garage Spare Part",
+        fields,
+        filters=[["name", "=", identifier]],
+        limit=1,
+    )
+
+    if not spare_parts:
+        spare_parts = _list_dicts(
+            "Garage Spare Part",
+            fields,
+            filters=[["part_code", "=", identifier]],
+            limit=1,
+        )
+
+    if not spare_parts:
+        return {"spare_part": None, "open_requests": []}
+
+    spare_part = spare_parts[0]
+
+    request_filters: List[List[Any]] = [
+        ["parenttype", "=", "Garage Service Order"],
+        ["stock_status", "in", SPARE_REQUEST_ACTIVE_STATUSES],
+    ]
+
+    part_code = spare_part.get("part_code")
+    part_name = spare_part.get("part_name")
+
+    if part_code:
+        request_filters.append(["item_code", "=", part_code])
+    elif part_name:
+        request_filters.append(["item_name", "=", part_name])
+
+    open_requests: List[Dict[str, Any]] = []
+    if len(request_filters) > 2:
+        open_requests = _list_dicts(
+            "Garage Service Order Part",
+            [
+                "name",
+                "parent",
+                "item_code",
+                "item_name",
+                "qty",
+                "uom",
+                "stock_status",
+                "source",
+                "warehouse",
+                "creation",
+            ],
+            filters=request_filters,
+            order_by="creation desc",
+            limit=50,
+        )
+
+        parent_names = sorted({req.get("parent") for req in open_requests if req.get("parent")})
+        if parent_names:
+            service_orders = _list_dicts(
+                "Garage Service Order",
+                [
+                    "name",
+                    "customer",
+                    "customer_name",
+                    "vehicle",
+                    "vehicle_plate",
+                    "service_advisor",
+                ],
+                filters=[["name", "in", parent_names]],
+                limit=len(parent_names),
+            )
+            service_order_map = {row.get("name"): row for row in service_orders}
+            for request in open_requests:
+                context = service_order_map.get(request.get("parent")) or {}
+                request["customer"] = context.get("customer_name") or context.get("customer")
+                request["vehicle"] = context.get("vehicle_plate") or context.get("vehicle")
+                request["service_advisor"] = context.get("service_advisor")
+
+    return {"spare_part": spare_part, "open_requests": open_requests}
+
+
+@frappe.whitelist()
 def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
     """
     List all spare parts with filtering and search capabilities.

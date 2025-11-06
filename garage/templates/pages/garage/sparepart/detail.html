@@ -1,0 +1,997 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Detail Sparepart - Garage{% endblock %}
+
+{% set required_roles = ['Sparepart', 'Spare Part', 'Inventory', 'Inventory Controller'] %}
+{% include "garage/templates/includes/role_guard.html" %}
+
+{% block head_include %}
+<style>
+:root {
+    --primary: #0066FF;
+    --primary-dark: #0052CC;
+    --primary-darker: #003D99;
+    --primary-light: #4D94FF;
+    --primary-subtle: #F0F7FF;
+
+    --status-success: #00C853;
+    --status-warning: #FFB300;
+    --status-danger: #FF3D00;
+    --status-info: #00B8D4;
+
+    --status-success-bg: #E8F5E9;
+    --status-warning-bg: #FFF8E1;
+    --status-danger-bg: #FFE8E6;
+    --status-info-bg: #E0F7FA;
+
+    --gray-50: #FAFBFC;
+    --gray-100: #F5F7FA;
+    --gray-200: #E9ECF1;
+    --gray-300: #D4DAE4;
+    --gray-400: #B8C1D3;
+    --gray-500: #8896AB;
+    --gray-600: #5E6C84;
+    --gray-700: #3E4C5E;
+    --gray-800: #2A3647;
+    --gray-900: #1A2332;
+
+    --text-primary: #1A2332;
+    --text-secondary: #5E6C84;
+    --text-muted: #8896AB;
+    --text-inverse: #FFFFFF;
+
+    --bg-body: #F5F7FA;
+    --bg-surface: #FFFFFF;
+
+    --border-light: #E9ECF1;
+    --border-base: #D4DAE4;
+
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+body {
+    font-family: var(--font-sans) !important;
+    background: var(--bg-body) !important;
+    color: var(--text-primary) !important;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.portal-hero--sub {
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+    padding: 32px 0;
+    box-shadow: var(--shadow-lg);
+}
+
+.portal-hero__brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: white;
+}
+
+.portal-hero__icon {
+    width: 56px;
+    height: 56px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    border: 1px solid rgba(255,255,255,0.3);
+}
+
+.portal-hero__brand h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 4px 0;
+}
+
+.portal-hero__brand p {
+    margin: 0;
+    color: rgba(255,255,255,0.85);
+}
+
+.detail-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 96px 24px;
+    font-size: 18px;
+    color: var(--text-secondary);
+}
+
+.detail-state--error {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+}
+
+.detail-wrapper[hidden] {
+    display: none !important;
+}
+
+.detail-layout {
+    margin: 48px auto;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.detail-header {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    padding: 32px;
+    border-radius: var(--radius-xl);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.detail-header__media {
+    width: 160px;
+    height: 160px;
+    border-radius: 16px;
+    background: var(--gray-100);
+    border: 1px solid var(--border-light);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    color: var(--gray-400);
+}
+
+.detail-header__media:not(.is-empty) {
+    color: transparent;
+}
+
+.detail-header__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.detail-header__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.detail-header__chip {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--primary-subtle);
+    color: var(--primary-dark);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.detail-header__chip[hidden] {
+    display: none;
+}
+
+.detail-header__title {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.detail-header__description {
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.detail-header__description[hidden] {
+    display: none;
+}
+
+.detail-header__status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.detail-card {
+    background: var(--bg-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.detail-card h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.detail-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.detail-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.detail-card--full {
+    grid-column: 1 / -1;
+}
+
+.detail-chip {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--gray-100);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.detail-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+}
+
+.detail-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px;
+    border-radius: var(--radius-lg);
+    background: var(--gray-50);
+    border: 1px solid var(--border-light);
+}
+
+.detail-metric__label {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.detail-metric__value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.detail-metric__hint {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.detail-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.detail-info div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detail-info dt {
+    font-size: 13px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.detail-info dd {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.detail-notes h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.detail-notes p {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.request-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.request-item {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: var(--gray-50);
+}
+
+.request-item__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.request-item__order {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.request-item__meta {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.request-item__qty {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.request-item__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.request-item__link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.request-item__link:hover {
+    text-decoration: underline;
+}
+
+.detail-loading {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 32px;
+    border-radius: var(--radius-lg);
+    border: 1px dashed var(--border-base);
+    background: var(--gray-50);
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.empty-state[hidden] {
+    display: none;
+}
+
+.empty-state__icon {
+    font-size: 36px;
+}
+
+.empty-state__title {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.empty-state__message {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    padding: 10px 18px;
+    cursor: pointer;
+    text-decoration: none;
+    border: none;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 102, 255, 0.25);
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-light);
+}
+
+.btn-secondary:hover {
+    background: var(--gray-200);
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--gray-100);
+    color: var(--text-secondary);
+}
+
+.badge.success {
+    background: var(--status-success-bg);
+    color: var(--status-success);
+}
+
+.badge.warning {
+    background: var(--status-warning-bg);
+    color: var(--status-warning);
+}
+
+.badge.info {
+    background: var(--status-info-bg);
+    color: var(--status-info);
+}
+
+.badge.danger {
+    background: var(--status-danger-bg);
+    color: var(--status-danger);
+}
+
+.badge.muted {
+    background: var(--gray-200);
+    color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+    .portal-hero__brand {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .detail-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .detail-header__media {
+        margin-right: 0;
+    }
+
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .request-item__footer {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="detail-state" data-role="detail-loading">Memuat detail sparepart…</div>
+<div class="detail-state detail-state--error" data-role="detail-error" hidden>
+    <div data-role="detail-error-message">Sparepart tidak ditemukan.</div>
+    <a href="/garage/sparepart" class="btn btn-secondary">Kembali ke daftar Sparepart</a>
+</div>
+
+<div class="detail-wrapper" data-role="detail-content" hidden>
+    <header class="portal-hero--sub">
+        <div class="container">
+            <div class="portal-hero__brand">
+                <div class="portal-hero__icon">🧩</div>
+                <div>
+                    <h1>Detail Sparepart</h1>
+                    <p>Lihat ringkasan stok dan permintaan aktif dari bengkel.</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container detail-layout">
+        <a href="/garage/sparepart" class="back-link">⬅ Kembali ke daftar Sparepart</a>
+
+        <section class="detail-header">
+            <div class="detail-header__media is-empty" data-role="part-image">🧩</div>
+            <div class="detail-header__content">
+                <div class="detail-header__meta">
+                    <span class="detail-header__chip" data-role="part-code" hidden></span>
+                    <span class="detail-header__chip" data-role="part-category" hidden></span>
+                    <span class="detail-header__chip" data-role="part-brand" hidden></span>
+                </div>
+                <h1 class="detail-header__title" data-role="part-name">Memuat…</h1>
+                <p class="detail-header__description" data-role="part-description" hidden></p>
+                <div class="detail-header__status" data-role="part-status"></div>
+            </div>
+        </section>
+
+        <div class="detail-grid">
+            <section class="detail-card">
+                <h2>Ringkasan Stok</h2>
+                <div class="detail-metrics">
+                    <div class="detail-metric">
+                        <span class="detail-metric__label">Stok tersedia</span>
+                        <span class="detail-metric__value" data-role="stock-available">0</span>
+                        <span class="detail-metric__hint" data-role="stock-status"></span>
+                    </div>
+                    <div class="detail-metric">
+                        <span class="detail-metric__label">Reservasi</span>
+                        <span class="detail-metric__value" data-role="stock-reserved">0</span>
+                    </div>
+                    <div class="detail-metric">
+                        <span class="detail-metric__label">Batas reorder</span>
+                        <span class="detail-metric__value" data-role="stock-reorder">-</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="detail-card">
+                <h2>Informasi Harga &amp; Gudang</h2>
+                <dl class="detail-info">
+                    <div>
+                        <dt>Harga satuan</dt>
+                        <dd data-role="unit-price">Rp 0</dd>
+                    </div>
+                    <div>
+                        <dt>Lokasi gudang</dt>
+                        <dd data-role="warehouse-location">-</dd>
+                    </div>
+                    <div>
+                        <dt>Penanggung jawab</dt>
+                        <dd data-role="managed-by">-</dd>
+                    </div>
+                    <div>
+                        <dt>Terakhir restock</dt>
+                        <dd data-role="last-restocked">-</dd>
+                    </div>
+                </dl>
+                <div class="detail-notes">
+                    <h3>Catatan</h3>
+                    <p data-role="part-notes">Belum ada catatan tambahan.</p>
+                </div>
+            </section>
+
+            <section class="detail-card detail-card--full">
+                <div class="detail-card__header">
+                    <h2>Permintaan Aktif</h2>
+                    <span class="detail-chip" data-role="request-count">0</span>
+                </div>
+                <div class="detail-card__body">
+                    <div class="detail-loading" data-role="request-loading">Memuat permintaan dari servis…</div>
+                    <ul class="request-list" data-role="request-list"></ul>
+                    <div class="empty-state" data-role="request-empty" hidden>
+                        <div class="empty-state__icon">📭</div>
+                        <div class="empty-state__title">Belum ada permintaan.</div>
+                        <p class="empty-state__message">Permintaan sparepart dari servis akan tampil di sini.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+(function () {
+    'use strict';
+
+    const params = new URLSearchParams(window.location.search);
+    const partId = params.get('part');
+
+    const loadingState = document.querySelector('[data-role="detail-loading"]');
+    const errorState = document.querySelector('[data-role="detail-error"]');
+    const errorMessageEl = document.querySelector('[data-role="detail-error-message"]');
+    const contentWrapper = document.querySelector('[data-role="detail-content"]');
+
+    const partImageEl = document.querySelector('[data-role="part-image"]');
+    const partNameEl = document.querySelector('[data-role="part-name"]');
+    const partDescriptionEl = document.querySelector('[data-role="part-description"]');
+    const partCodeEl = document.querySelector('[data-role="part-code"]');
+    const partCategoryEl = document.querySelector('[data-role="part-category"]');
+    const partBrandEl = document.querySelector('[data-role="part-brand"]');
+    const partStatusEl = document.querySelector('[data-role="part-status"]');
+
+    const stockAvailableEl = document.querySelector('[data-role="stock-available"]');
+    const stockReservedEl = document.querySelector('[data-role="stock-reserved"]');
+    const stockReorderEl = document.querySelector('[data-role="stock-reorder"]');
+    const stockStatusEl = document.querySelector('[data-role="stock-status"]');
+
+    const unitPriceEl = document.querySelector('[data-role="unit-price"]');
+    const warehouseLocationEl = document.querySelector('[data-role="warehouse-location"]');
+    const managedByEl = document.querySelector('[data-role="managed-by"]');
+    const lastRestockEl = document.querySelector('[data-role="last-restocked"]');
+    const notesEl = document.querySelector('[data-role="part-notes"]');
+
+    const requestCountEl = document.querySelector('[data-role="request-count"]');
+    const requestLoadingEl = document.querySelector('[data-role="request-loading"]');
+    const requestListEl = document.querySelector('[data-role="request-list"]');
+    const requestEmptyEl = document.querySelector('[data-role="request-empty"]');
+
+    if (!partId) {
+        showError('Parameter sparepart tidak ditemukan.');
+        return;
+    }
+
+    function setLoading(isLoading) {
+        if (loadingState) {
+            loadingState.hidden = !isLoading;
+        }
+        if (contentWrapper) {
+            contentWrapper.hidden = isLoading;
+        }
+    }
+
+    function showError(message) {
+        if (loadingState) {
+            loadingState.hidden = true;
+        }
+        if (contentWrapper) {
+            contentWrapper.hidden = true;
+        }
+        if (errorState) {
+            errorState.hidden = false;
+        }
+        if (errorMessageEl) {
+            errorMessageEl.textContent = message || 'Gagal memuat detail sparepart.';
+        }
+    }
+
+    function formatCurrency(value) {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(value || 0);
+    }
+
+    function formatQuantity(value, uom) {
+        const numeric = parseFloat(value);
+        if (!Number.isNaN(numeric)) {
+            const formatted = Number.isInteger(numeric)
+                ? numeric.toLocaleString('id-ID')
+                : numeric.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return `${formatted} ${uom || ''}`.trim();
+        }
+        if (value && uom) {
+            return `${value} ${uom}`.trim();
+        }
+        return value || '0';
+    }
+
+    function escapeHTML(value) {
+        if (value === undefined || value === null) {
+            return '';
+        }
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function getStatusBadge(status) {
+        const badges = {
+            Active: '<span class="badge success">Active</span>',
+            Inactive: '<span class="badge muted">Inactive</span>',
+            Discontinued: '<span class="badge danger">Discontinued</span>',
+        };
+        return badges[status] || badges.Active;
+    }
+
+    function getStockStatus(stockQty, reorderLevel) {
+        const stock = parseFloat(stockQty) || 0;
+        const reorder = parseFloat(reorderLevel) || 0;
+        if (stock === 0) {
+            return '<span class="badge danger">Habis</span>';
+        }
+        if (stock <= reorder && reorder > 0) {
+            return '<span class="badge warning">Menipis</span>';
+        }
+        return '<span class="badge success">Cukup</span>';
+    }
+
+    function getRequestStatusBadge(status) {
+        const normalized = (status || '').toLowerCase();
+        const badges = {
+            request: '<span class="badge warning">Request</span>',
+            'pending check': '<span class="badge warning">Request</span>',
+            pending: '<span class="badge warning">Pending</span>',
+            available: '<span class="badge success">Available</span>',
+            'to order': '<span class="badge warning">To Order</span>',
+            ordered: '<span class="badge info">Ordered</span>',
+            'in transit': '<span class="badge info">In Transit</span>',
+            backordered: '<span class="badge danger">Backordered</span>',
+            received: '<span class="badge success">Received</span>',
+            issued: '<span class="badge success">Issued</span>',
+            approved: '<span class="badge success">Approved</span>',
+            rejected: '<span class="badge danger">Rejected</span>',
+            cancelled: '<span class="badge muted">Cancelled</span>',
+        };
+        return badges[normalized] || '<span class="badge muted">Draft</span>';
+    }
+
+    function formatServiceOrderId(value) {
+        if (!value) {
+            return '-';
+        }
+        const raw = String(value).trim();
+        const sequenceMatch = raw.match(/(\d{3,})$/);
+        const digits = sequenceMatch ? sequenceMatch[1] : (raw.match(/\d+/) || [])[0];
+        const padded = digits ? String(digits).padStart(5, '0') : '';
+        return padded ? `Sales Order-${padded}` : raw;
+    }
+
+    function formatDateTime(value) {
+        if (!value) {
+            return '-';
+        }
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+            return value;
+        }
+        return date.toLocaleString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    }
+
+    function updateChip(element, value) {
+        if (!element) {
+            return;
+        }
+        if (value) {
+            element.textContent = value;
+            element.hidden = false;
+        } else {
+            element.textContent = '';
+            element.hidden = true;
+        }
+    }
+
+    function renderPart(part) {
+        const name = part.part_name || part.part_code || '-';
+        if (partNameEl) {
+            partNameEl.textContent = name;
+        }
+        if (partDescriptionEl) {
+            const description = (part.description || '').trim();
+            partDescriptionEl.textContent = description;
+            partDescriptionEl.hidden = !description;
+        }
+        updateChip(partCodeEl, part.part_code);
+        updateChip(partCategoryEl, part.category);
+        updateChip(partBrandEl, part.brand);
+
+        if (partStatusEl) {
+            partStatusEl.innerHTML = getStatusBadge(part.status);
+        }
+
+        if (partImageEl) {
+            if (part.image) {
+                partImageEl.classList.remove('is-empty');
+                partImageEl.style.backgroundImage = `url('${encodeURI(part.image)}')`;
+                partImageEl.textContent = '';
+            } else {
+                partImageEl.classList.add('is-empty');
+                partImageEl.style.backgroundImage = '';
+                partImageEl.textContent = '🧩';
+            }
+        }
+
+        if (stockAvailableEl) {
+            stockAvailableEl.textContent = formatQuantity(part.stock_qty, part.uom);
+        }
+        if (stockReservedEl) {
+            stockReservedEl.textContent = formatQuantity(part.reserved_qty, part.uom);
+        }
+        if (stockReorderEl) {
+            stockReorderEl.textContent = part.reorder_level
+                ? formatQuantity(part.reorder_level, part.uom)
+                : 'Tidak ditentukan';
+        }
+        if (stockStatusEl) {
+            stockStatusEl.innerHTML = getStockStatus(part.stock_qty, part.reorder_level);
+        }
+
+        if (unitPriceEl) {
+            unitPriceEl.textContent = formatCurrency(part.unit_price);
+        }
+        if (warehouseLocationEl) {
+            warehouseLocationEl.textContent = part.warehouse_location || '-';
+        }
+        if (managedByEl) {
+            managedByEl.textContent = part.managed_by || '-';
+        }
+        if (lastRestockEl) {
+            lastRestockEl.textContent = part.last_restocked_on
+                ? formatDateTime(part.last_restocked_on)
+                : 'Belum pernah restock';
+        }
+        if (notesEl) {
+            const notes = (part.notes || '').trim();
+            notesEl.textContent = notes || 'Belum ada catatan tambahan.';
+        }
+    }
+
+    function renderRequests(requests) {
+        if (requestLoadingEl) {
+            requestLoadingEl.hidden = true;
+        }
+        if (!requestListEl) {
+            return;
+        }
+        const total = Array.isArray(requests) ? requests.length : 0;
+        if (requestCountEl) {
+            requestCountEl.textContent = total;
+        }
+        if (!total) {
+            requestListEl.innerHTML = '';
+            if (requestEmptyEl) {
+                requestEmptyEl.hidden = false;
+            }
+            return;
+        }
+
+        if (requestEmptyEl) {
+            requestEmptyEl.hidden = true;
+        }
+
+        requestListEl.innerHTML = requests
+            .map(request => {
+                const orderDisplay = formatServiceOrderId(request.parent);
+                const customerLine = request.customer
+                    ? `<div class="request-item__meta">${escapeHTML(request.customer)}</div>`
+                    : '';
+                const vehicleLine = request.vehicle
+                    ? `<div class="request-item__meta">${escapeHTML(request.vehicle)}</div>`
+                    : '';
+                const advisorLine = request.service_advisor
+                    ? `<div class="request-item__meta">SA: ${escapeHTML(request.service_advisor)}</div>`
+                    : '';
+                const sourceLine = request.source
+                    ? `<div class="request-item__meta">Sumber: ${escapeHTML(request.source)}</div>`
+                    : '';
+                const warehouseLine = request.warehouse
+                    ? `<div class="request-item__meta">Gudang: ${escapeHTML(request.warehouse)}</div>`
+                    : '';
+                const qtyDisplay = formatQuantity(request.qty || request.stock_qty, request.uom);
+                const created = formatDateTime(request.creation);
+                const orderLink = request.parent
+                    ? `<a class="request-item__link" href="/app/garage-service-order/${encodeURIComponent(request.parent)}" target="_blank" rel="noopener">Buka Service Order</a>`
+                    : '';
+
+                return `
+                    <li class="request-item">
+                        <div class="request-item__header">
+                            <div>
+                                <div class="request-item__order">${escapeHTML(orderDisplay)}</div>
+                                ${customerLine}
+                                ${vehicleLine}
+                                ${advisorLine}
+                            </div>
+                            <div>${getRequestStatusBadge(request.stock_status)}</div>
+                        </div>
+                        <div class="request-item__body">
+                            <div>${escapeHTML(request.item_name || request.item_code || '-')}</div>
+                            <div class="request-item__qty">${escapeHTML(qtyDisplay)}</div>
+                            ${sourceLine}
+                            ${warehouseLine}
+                        </div>
+                        <div class="request-item__footer">
+                            <span>${escapeHTML(created)}</span>
+                            ${orderLink}
+                        </div>
+                    </li>
+                `;
+            })
+            .join('');
+    }
+
+    async function loadDetail() {
+        setLoading(true);
+        try {
+            const response = await frappe.call({
+                method: 'garage.api.portal.get_spare_part_detail',
+                args: { name: partId },
+                freeze: false,
+            });
+            const data = response?.message || {};
+            const part = data.spare_part;
+            if (!part) {
+                showError('Sparepart tidak ditemukan atau sudah dihapus.');
+                return;
+            }
+            renderPart(part);
+            renderRequests(data.open_requests || []);
+            if (errorState) {
+                errorState.hidden = true;
+            }
+            if (contentWrapper) {
+                contentWrapper.hidden = false;
+            }
+            if (loadingState) {
+                loadingState.hidden = true;
+            }
+        } catch (error) {
+            console.error('[Sparepart Detail] Gagal memuat detail', error);
+            showError(error?.message || 'Terjadi kesalahan saat memuat data.');
+        }
+    }
+
+    loadDetail();
+})();
+</script>
+{% endblock %}

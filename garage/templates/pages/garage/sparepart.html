@@ -591,6 +591,132 @@ body {
     text-decoration: underline;
 }
 
+.inventory-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.inventory-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.inventory-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.inventory-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.inventory-card__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.inventory-card__subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.inventory-card__badge {
+    flex-shrink: 0;
+}
+
+.inventory-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.inventory-card__meta span::before {
+    content: '•';
+    margin-right: 4px;
+    color: var(--gray-300);
+}
+
+.inventory-card__meta span:first-child::before {
+    content: '';
+    margin-right: 0;
+}
+
+.inventory-card__stock {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.inventory-card__metric {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.inventory-card__hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+}
+
+.inventory-card__status {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.inventory-card__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+}
+
+.inventory-card__price {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text-primary);
+}
+
+.inventory-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.inventory-card__tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--gray-100);
+}
+
+.inventory-card__action {
+    white-space: nowrap;
+}
+
 .cell-strong {
     font-weight: 600;
     color: var(--text-primary);
@@ -944,6 +1070,10 @@ body {
         grid-template-columns: 1fr;
     }
 
+    .inventory-card-grid {
+        grid-template-columns: 1fr;
+    }
+
     .workflow-section {
         padding: 24px;
     }
@@ -1045,19 +1175,7 @@ body {
                 <a class="btn btn-secondary" data-desk-link="Garage Spare Part" target="_blank">Buka Master Sparepart</a>
             </div>
         </div>
-        <div class="service-table-wrapper">
-            <table class="service-table">
-                <thead>
-                    <tr>
-                        <th>Sparepart</th>
-                        <th>Stok</th>
-                        <th>Harga</th>
-                        <th>Gudang &amp; Status</th>
-                    </tr>
-                </thead>
-                <tbody data-role="spare-inventory-table"></tbody>
-            </table>
-        </div>
+        <div class="inventory-card-grid" data-role="spare-inventory-grid"></div>
         <div class="table-pagination" data-pagination="spare-inventory" hidden></div>
         <div class="empty-state" data-empty="spare-inventory">
             <div class="empty-state__icon">📦</div>
@@ -1129,6 +1247,23 @@ body {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
         }).format(value || 0);
+    }
+
+    function formatQuantity(value, uom) {
+        const numeric = parseFloat(value);
+        if (!Number.isNaN(numeric)) {
+            const formatted = Number.isInteger(numeric)
+                ? numeric.toLocaleString('id-ID')
+                : numeric.toLocaleString('id-ID', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                  });
+            return `${formatted} ${uom || ''}`.trim();
+        }
+        if (value && uom) {
+            return `${value} ${uom}`.trim();
+        }
+        return value || '0';
     }
 
     function escapeHTML(value) {
@@ -1706,15 +1841,15 @@ body {
     }
 
     function renderInventoryTable(spareParts) {
-        const tbody = document.querySelector('[data-role="spare-inventory-table"]');
+        const grid = document.querySelector('[data-role="spare-inventory-grid"]');
         const emptyState = document.querySelector('[data-empty="spare-inventory"]');
         const paginationState = state.pagination['spare-inventory'];
-        if (!tbody) {
+        if (!grid) {
             return;
         }
 
         if (!spareParts || spareParts.length === 0) {
-            tbody.innerHTML = '';
+            grid.innerHTML = '';
             if (emptyState) emptyState.style.display = 'block';
             updatePaginationControls('spare-inventory', 0);
             return;
@@ -1730,30 +1865,104 @@ body {
 
         updatePaginationControls('spare-inventory', total);
 
-        tbody.innerHTML = visibleParts.map(part => `
-            <tr>
-                <td>
-                    <div class="cell-strong">${part.part_code || '-'}</div>
-                    <div class="cell-secondary">${part.part_name || '-'}</div>
-                    ${part.description ? `<div class="cell-muted">${escapeHTML(part.description)}</div>` : ''}
-                    ${part.category ? `<div class="cell-muted">${part.category}</div>` : ''}
-                    ${part.brand ? `<div class="cell-muted">Brand: ${part.brand}</div>` : ''}
-                </td>
-                <td>
-                    <div class="metric-text">${part.stock_qty || 0} ${part.uom || 'Unit'}</div>
-                    ${part.reserved_qty ? `<div class="cell-muted">Reserved: ${part.reserved_qty}</div>` : ''}
-                    <div class="status-badges">${getStockStatus(part.stock_qty, part.reorder_level)}</div>
-                </td>
-                <td>
-                    <div class="metric-text">${formatCurrency(part.unit_price)}</div>
-                </td>
-                <td>
-                    <div class="cell-secondary">${part.warehouse_location || '-'}</div>
-                    ${part.managed_by ? `<div class="cell-muted">👤 ${part.managed_by}</div>` : ''}
-                    <div class="status-badges">${getStatusBadge(part.status)}</div>
-                </td>
-            </tr>
-        `).join('');
+        grid.innerHTML = visibleParts
+            .map(part => {
+                const name = part.part_name || part.part_code || '-';
+                const description = part.description
+                    ? `<div class="inventory-card__subtitle">${escapeHTML(part.description)}</div>`
+                    : '';
+                const metaPieces = [];
+                if (part.part_code) {
+                    metaPieces.push(`<span>${escapeHTML(part.part_code)}</span>`);
+                }
+                if (part.category) {
+                    metaPieces.push(`<span>${escapeHTML(part.category)}</span>`);
+                }
+                if (part.brand) {
+                    metaPieces.push(`<span>Brand: ${escapeHTML(part.brand)}</span>`);
+                }
+                const metaHtml = metaPieces.length
+                    ? metaPieces.join('')
+                    : '<span>Kode sparepart belum diisi</span>';
+                const reservedLine = parseFloat(part.reserved_qty)
+                    ? `<div class="inventory-card__hint">Reservasi: ${formatQuantity(part.reserved_qty, part.uom)}</div>`
+                    : '';
+                const reorderLine = parseFloat(part.reorder_level)
+                    ? `<div class="inventory-card__hint">Batas Reorder: ${formatQuantity(part.reorder_level, part.uom)}</div>`
+                    : '';
+                const tags = [
+                    part.warehouse_location
+                        ? `<span class="inventory-card__tag">📍 ${escapeHTML(part.warehouse_location)}</span>`
+                        : '',
+                    part.managed_by
+                        ? `<span class="inventory-card__tag">👤 ${escapeHTML(part.managed_by)}</span>`
+                        : '',
+                ]
+                    .filter(Boolean)
+                    .join('');
+                const identifier = escapeHTML(part.name || part.part_code || '');
+
+                return `
+                    <article class="inventory-card" data-role="inventory-card" data-part="${identifier}" data-part-code="${escapeHTML(
+                    part.part_code || ''
+                )}">
+                        <div class="inventory-card__header">
+                            <div>
+                                <div class="inventory-card__title">${escapeHTML(name)}</div>
+                                ${description}
+                            </div>
+                            <div class="inventory-card__badge">${getStatusBadge(part.status)}</div>
+                        </div>
+                        <div class="inventory-card__meta">
+                            ${metaHtml}
+                        </div>
+                        <div class="inventory-card__stock">
+                            <div>
+                                <div class="inventory-card__metric">${formatQuantity(part.stock_qty, part.uom)}</div>
+                                ${reservedLine}
+                                ${reorderLine}
+                            </div>
+                            <div class="inventory-card__status">${getStockStatus(part.stock_qty, part.reorder_level)}</div>
+                        </div>
+                        <div class="inventory-card__footer">
+                            <div class="inventory-card__price">${formatCurrency(part.unit_price)}</div>
+                            <button type="button" class="btn btn-primary inventory-card__action" data-action="open-spare-detail" data-part="${identifier}">
+                                Kelola Stok
+                            </button>
+                        </div>
+                        ${tags ? `<div class="inventory-card__tags">${tags}</div>` : ''}
+                    </article>
+                `;
+            })
+            .join('');
+    }
+
+    function openSpareDetail(partIdentifier) {
+        const value = (partIdentifier || '').trim();
+        if (!value) {
+            return;
+        }
+        const url = `/garage/sparepart/detail?part=${encodeURIComponent(value)}`;
+        window.location.href = url;
+    }
+
+    function handleInventoryCardClick(event) {
+        const actionButton = event.target.closest('[data-action="open-spare-detail"]');
+        if (actionButton) {
+            const value = actionButton.dataset.part
+                || actionButton.closest('[data-role="inventory-card"]')?.dataset.part
+                || actionButton.closest('[data-role="inventory-card"]')?.dataset.partCode;
+            openSpareDetail(value);
+            return;
+        }
+
+        const card = event.target.closest('[data-role="inventory-card"]');
+        if (!card || event.target.closest('button')) {
+            return;
+        }
+
+        const value = card.dataset.part || card.dataset.partCode;
+        openSpareDetail(value);
     }
 
     function updatePaginationControls(type, totalItems) {
@@ -1865,6 +2074,7 @@ body {
 
         document.querySelector('[data-role="spare-search"]')?.addEventListener('input', handleSearch);
         document.querySelector('[data-role="spare-request-table"]')?.addEventListener('click', handleRequestAction);
+        document.querySelector('[data-role="spare-inventory-grid"]')?.addEventListener('click', handleInventoryCardClick);
 
         document.querySelectorAll('[data-pagination]').forEach(container => {
             container.addEventListener('click', handlePaginationClick);
