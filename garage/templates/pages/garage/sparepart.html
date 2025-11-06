@@ -590,6 +590,12 @@ body {
     color: var(--text-muted);
 }
 
+.spare-request-row--highlight {
+    background: rgba(0, 102, 255, 0.08);
+    outline: 2px solid rgba(0, 102, 255, 0.35);
+    outline-offset: -2px;
+}
+
 .request-summary {
     margin-top: 6px;
     color: var(--text-muted);
@@ -1209,6 +1215,7 @@ body .frappe-confirm {
             'spare-requests': { page: 1 },
         },
         activeServiceOrder: null,
+        pendingOrderFocus: null,
     };
 
     function escapeHTML(value) {
@@ -1222,6 +1229,43 @@ body .frappe-confirm {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    function escapeSelector(value) {
+        if (!value) {
+            return '';
+        }
+
+        if (window.CSS && typeof window.CSS.escape === 'function') {
+            return window.CSS.escape(value);
+        }
+
+        return value.replace(/([ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, '\\$1');
+    }
+
+    function highlightSpareRequestRow(serviceOrder) {
+        const safeValue = escapeSelector(serviceOrder);
+        if (!safeValue) {
+            return false;
+        }
+
+        const row = document.querySelector(`tr.spare-request-row[data-service-order="${safeValue}"]`);
+        if (!row) {
+            return false;
+        }
+
+        row.classList.add('spare-request-row--highlight');
+        try {
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } catch (error) {
+            row.scrollIntoView();
+        }
+
+        window.setTimeout(() => {
+            row.classList.remove('spare-request-row--highlight');
+        }, 2000);
+
+        return true;
     }
 
     function getCustomerDisplayName(request = {}) {
@@ -1500,6 +1544,14 @@ body .frappe-confirm {
 
         const total = groupsArray.length;
         const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+        if (state.pendingOrderFocus) {
+            const focusIndex = groupsArray.findIndex(group => group.serviceOrder === state.pendingOrderFocus);
+            if (focusIndex >= 0) {
+                paginationState.page = Math.floor(focusIndex / PAGE_SIZE) + 1;
+            }
+        }
+
         paginationState.page = Math.min(Math.max(paginationState.page, 1), totalPages);
         const start = (paginationState.page - 1) * PAGE_SIZE;
         const currentGroups = groupsArray.slice(start, start + PAGE_SIZE);
@@ -1613,6 +1665,17 @@ body .frappe-confirm {
                 </tr>
             `;
         }).join('');
+
+        if (state.pendingOrderFocus) {
+            const focusOrder = state.pendingOrderFocus;
+            if (currentGroups.some(group => group.serviceOrder === focusOrder)) {
+                window.setTimeout(() => {
+                    highlightSpareRequestRow(focusOrder);
+                    openSpareRequestModal(focusOrder);
+                }, 150);
+                state.pendingOrderFocus = null;
+            }
+        }
     }
 
     function handleRequestAction(event) {
@@ -2028,7 +2091,9 @@ body .frappe-confirm {
             link.href = `/app/${link.dataset.deskLink.toLowerCase().replace(/ /g, '-')}`;
         });
 
-        setInterval(loadSpareParts, 30000);
+        setInterval(() => {
+            loadSpareParts();
+        }, 30000);
     }
 
     if (document.readyState === 'loading') {

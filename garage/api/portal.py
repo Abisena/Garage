@@ -15,6 +15,9 @@ from frappe.utils import cint, cstr, flt, get_datetime, get_url, now_datetime, n
 from frappe.defaults import get_user_default
 
 from garage.utils import service_estimate
+from garage.garage.doctype.garage_service_order.garage_service_order import (
+    derive_part_charge_status,
+)
 import json
 
 # Treat blank/None statuses on tasks as active to ensure newly created tasks
@@ -349,6 +352,10 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "inspection_summary",
             "service_notes",
             "assigned_mechanic",
+            "part_charge_status",
+            "note_status",
+            "invoice_status",
+            "sikk_status",
         },
         "children": {
             "inspection_items": {
@@ -438,6 +445,10 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "service_notes",
             "service_bundle",
             "service_bundle_name",
+            "part_charge_status",
+            "note_status",
+            "invoice_status",
+            "sikk_status",
         },
     },
     "Garage Spare Part Order": {
@@ -2432,6 +2443,10 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
         "job_card_status",
         "work_order_status",
         "qc_status",
+        "part_charge_status",
+        "note_status",
+        "invoice_status",
+        "sikk_status",
         "creation",
         "modified"
     ]
@@ -2469,6 +2484,28 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
     enriched_orders = []
     
     current_timestamp = now_datetime()
+
+    order_names = [order.get("name") for order in orders if order.get("name")]
+    part_status_map: Dict[str, List[str]] = defaultdict(list)
+
+    if order_names:
+        part_rows = _list_dicts(
+            "Garage Service Order Part",
+            ["parent", "stock_status"],
+            filters=[
+                ["parenttype", "=", "Garage Service Order"],
+                ["parent", "in", order_names],
+            ],
+            limit=max(500, len(order_names) * 25),
+        )
+
+        for row in part_rows:
+            parent = row.get("parent")
+            if not parent:
+                continue
+            status_value = cstr(row.get("stock_status") or "").strip()
+            if status_value:
+                part_status_map[parent].append(status_value)
 
     for order in orders:
         intake_type = (order.get("intake_type") or "Walk-In").strip() or "Walk-In"
@@ -2568,7 +2605,13 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
                 )
         except Exception:
             pass
-        
+
+        base_part_status = order.get("part_charge_status")
+        order["part_charge_status"] = derive_part_charge_status(
+            part_status_map.get(order.get("name"), []),
+            base_part_status,
+        )
+
         # Technician count - dari service tasks yang punya technician
         try:
             if frappe.db.table_exists("Garage Service Task"):
@@ -3054,6 +3097,10 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
         "qc_status": doc.qc_status,
         "service_bundle": getattr(doc, "service_bundle", None),
         "service_bundle_name": getattr(doc, "service_bundle_name", None),
+        "part_charge_status": getattr(doc, "part_charge_status", None),
+        "note_status": getattr(doc, "note_status", None),
+        "invoice_status": getattr(doc, "invoice_status", None),
+        "sikk_status": getattr(doc, "sikk_status", None),
     }
 
     assigned_mechanic = getattr(doc, "assigned_mechanic", None) or getattr(doc, "mechanic_in_charge", None)
@@ -3119,6 +3166,18 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
             result["required_parts"] = [part.as_dict() for part in doc.required_parts]
     except Exception:
         pass
+
+    required_parts = result.get("required_parts") or []
+    base_part_status = result.get("part_charge_status")
+    result["part_charge_status"] = derive_part_charge_status(
+        [
+            cstr(part.get("stock_status"))
+            if isinstance(part, Mapping)
+            else cstr(getattr(part, "stock_status", ""))
+            for part in required_parts
+        ],
+        base_part_status,
+    )
     
     try:
         if hasattr(doc, "payment_schedule") and doc.payment_schedule:

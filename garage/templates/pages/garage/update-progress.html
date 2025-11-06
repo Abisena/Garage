@@ -209,6 +209,56 @@ body {
     min-height: 120px;
 }
 
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    text-transform: none;
+}
+
+.status-chip--idle {
+    background: rgba(148, 163, 184, 0.12);
+    color: var(--gray-600);
+    border-color: rgba(148, 163, 184, 0.28);
+}
+
+.status-chip--pending {
+    background: rgba(255, 176, 32, 0.16);
+    color: #b45309;
+    border-color: rgba(255, 176, 32, 0.28);
+}
+
+.status-chip--warning {
+    background: rgba(250, 204, 21, 0.2);
+    color: #92400e;
+    border-color: rgba(250, 204, 21, 0.34);
+}
+
+.status-chip--success {
+    background: rgba(15, 157, 88, 0.15);
+    color: #0f9d58;
+    border-color: rgba(15, 157, 88, 0.28);
+}
+
+.status-chip--danger {
+    background: rgba(225, 29, 72, 0.16);
+    color: #be123c;
+    border-color: rgba(225, 29, 72, 0.3);
+}
+
+.status-chip--muted {
+    background: rgba(100, 116, 139, 0.12);
+    color: #475569;
+    border-color: rgba(100, 116, 139, 0.28);
+}
+
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
@@ -219,6 +269,11 @@ body {
 .helper-text {
     font-size: 12px;
     color: var(--gray-500);
+}
+
+.helper-text--warning {
+    color: var(--warning);
+    font-weight: 500;
 }
 
 .btn-primary {
@@ -405,6 +460,26 @@ body {
                     <div class="form-group">
                         <label for="progress-status">Status Pengerjaan</label>
                         <select id="progress-status"></select>
+                        <div id="completion-locked-message" class="helper-text helper-text--warning" hidden>
+                            Status <strong>Completed</strong> akan aktif setelah semua permintaan sparepart disetujui.
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Status Pembebanan Sparepart &amp; Bahan</label>
+                        <div id="part-charge-status-display" class="status-chip status-chip--idle">Not Started</div>
+                        <span class="helper-text">Status diperbarui otomatis dari permintaan sparepart.</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="note-status">Status Nota</label>
+                        <select id="note-status"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="invoice-status">Status Invoice</label>
+                        <select id="invoice-status"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="sikk-status">Status SIKK</label>
+                        <select id="sikk-status"></select>
                     </div>
                     <div class="form-group">
                         <label for="progress-notes">Catatan Progress</label>
@@ -467,7 +542,12 @@ body {
             element: document.getElementById('progress-form'),
             status: document.getElementById('progress-status'),
             notes: document.getElementById('progress-notes'),
-            submit: document.getElementById('progress-submit')
+            submit: document.getElementById('progress-submit'),
+            noteStatus: document.getElementById('note-status'),
+            invoiceStatus: document.getElementById('invoice-status'),
+            sikkStatus: document.getElementById('sikk-status'),
+            partStatus: document.getElementById('part-charge-status-display'),
+            completionWarning: document.getElementById('completion-locked-message')
         },
         history: document.getElementById('progress-history'),
         historyEmpty: document.getElementById('progress-empty')
@@ -479,6 +559,26 @@ body {
         { value: 'Completed', label: 'Completed' },
         { value: 'Cancelled', label: 'Cancelled' }
     ];
+
+    const DEFAULT_TRACKING_STATUS = 'Not Started';
+    const TRACKING_STATUS_OPTIONS = [
+        { value: 'Not Started', label: 'Not Started' },
+        { value: 'Pending', label: 'Pending' },
+        { value: 'Approved', label: 'Approved' },
+        { value: 'Completed', label: 'Completed' },
+        { value: 'Cancelled', label: 'Cancelled' },
+    ];
+
+    const PART_STATUS_META = {
+        default: { label: 'Not Started', className: 'status-chip status-chip--idle' },
+        'not started': { label: 'Not Started', className: 'status-chip status-chip--idle' },
+        pending: { label: 'Pending', className: 'status-chip status-chip--pending' },
+        'partial approve': { label: 'Partial Approve', className: 'status-chip status-chip--warning' },
+        approved: { label: 'Approved', className: 'status-chip status-chip--success' },
+        completed: { label: 'Completed', className: 'status-chip status-chip--success' },
+        rejected: { label: 'Rejected', className: 'status-chip status-chip--danger' },
+        cancelled: { label: 'Cancelled', className: 'status-chip status-chip--muted' },
+    };
 
     function setPageState({ loading = false, error = false }) {
         if (ui.loading) {
@@ -590,12 +690,16 @@ body {
         }
     }
 
-    function populateStatusOptions(currentStatus) {
+    function populateStatusOptions(order) {
         if (!ui.form.status) {
             return;
         }
 
         ui.form.status.innerHTML = '';
+
+        const currentStatus = order && order.status ? order.status : '';
+        const partStatus = order && order.part_charge_status ? order.part_charge_status.toLowerCase() : '';
+        const shouldDisableCompleted = partStatus === 'partial approve' && currentStatus !== 'Completed';
 
         STATUS_OPTIONS.forEach((option) => {
             const element = document.createElement('option');
@@ -604,12 +708,73 @@ body {
             if (option.value === currentStatus) {
                 element.selected = true;
             }
+            if (option.value === 'Completed' && shouldDisableCompleted) {
+                element.disabled = true;
+                element.textContent = `${option.label} (Menunggu approval sparepart)`;
+            }
             ui.form.status.appendChild(element);
         });
 
         if (!ui.form.status.value && STATUS_OPTIONS.length) {
             ui.form.status.selectedIndex = 0;
         }
+
+        if (ui.form.completionWarning) {
+            ui.form.completionWarning.hidden = !shouldDisableCompleted;
+        }
+    }
+
+    function updatePartChargeDisplay(status) {
+        if (!ui.form.partStatus) {
+            return;
+        }
+
+        const normalized = (status || DEFAULT_TRACKING_STATUS).toLowerCase();
+        const meta = PART_STATUS_META[normalized] || PART_STATUS_META.default;
+        ui.form.partStatus.textContent = meta.label;
+        ui.form.partStatus.className = meta.className || PART_STATUS_META.default.className;
+    }
+
+    function populateTrackingSelect(select, value) {
+        if (!select) {
+            return;
+        }
+
+        const normalizedValue = value || DEFAULT_TRACKING_STATUS;
+        const hasOption = TRACKING_STATUS_OPTIONS.some(option => option.value === normalizedValue);
+        const options = hasOption
+            ? TRACKING_STATUS_OPTIONS
+            : [...TRACKING_STATUS_OPTIONS, { value: normalizedValue, label: normalizedValue }];
+
+        select.innerHTML = '';
+        options.forEach(option => {
+            const element = document.createElement('option');
+            element.value = option.value;
+            element.textContent = option.label;
+            if (option.value === normalizedValue) {
+                element.selected = true;
+            }
+            select.appendChild(element);
+        });
+
+        if (!select.value && options.length) {
+            select.selectedIndex = 0;
+        }
+    }
+
+    function renderTrackingStatuses(order) {
+        if (!order) {
+            updatePartChargeDisplay(DEFAULT_TRACKING_STATUS);
+            populateTrackingSelect(ui.form.noteStatus, DEFAULT_TRACKING_STATUS);
+            populateTrackingSelect(ui.form.invoiceStatus, DEFAULT_TRACKING_STATUS);
+            populateTrackingSelect(ui.form.sikkStatus, DEFAULT_TRACKING_STATUS);
+            return;
+        }
+
+        updatePartChargeDisplay(order.part_charge_status || DEFAULT_TRACKING_STATUS);
+        populateTrackingSelect(ui.form.noteStatus, order.note_status || DEFAULT_TRACKING_STATUS);
+        populateTrackingSelect(ui.form.invoiceStatus, order.invoice_status || DEFAULT_TRACKING_STATUS);
+        populateTrackingSelect(ui.form.sikkStatus, order.sikk_status || DEFAULT_TRACKING_STATUS);
     }
 
     function renderSummary(order) {
@@ -650,7 +815,8 @@ body {
         }
 
         updateStatusBadge(order.status);
-        populateStatusOptions(order.status);
+        populateStatusOptions(order);
+        renderTrackingStatuses(order);
     }
 
     function renderProgressHistory(progressLogs) {
@@ -738,8 +904,28 @@ body {
         const newStatus = ui.form.status ? ui.form.status.value : '';
         const notes = ui.form.notes ? ui.form.notes.value.trim() : '';
         const currentStatus = state.order ? state.order.status : '';
+        const noteStatus = ui.form.noteStatus ? ui.form.noteStatus.value || DEFAULT_TRACKING_STATUS : DEFAULT_TRACKING_STATUS;
+        const invoiceStatus = ui.form.invoiceStatus ? ui.form.invoiceStatus.value || DEFAULT_TRACKING_STATUS : DEFAULT_TRACKING_STATUS;
+        const sikkStatus = ui.form.sikkStatus ? ui.form.sikkStatus.value || DEFAULT_TRACKING_STATUS : DEFAULT_TRACKING_STATUS;
+        const currentNoteStatus = state.order && state.order.note_status ? state.order.note_status : DEFAULT_TRACKING_STATUS;
+        const currentInvoiceStatus = state.order && state.order.invoice_status ? state.order.invoice_status : DEFAULT_TRACKING_STATUS;
+        const currentSikkStatus = state.order && state.order.sikk_status ? state.order.sikk_status : DEFAULT_TRACKING_STATUS;
 
-        if (!notes && newStatus === currentStatus) {
+        const updates = {};
+        if (newStatus && newStatus !== currentStatus) {
+            updates.status = newStatus;
+        }
+        if (noteStatus !== currentNoteStatus) {
+            updates.note_status = noteStatus;
+        }
+        if (invoiceStatus !== currentInvoiceStatus) {
+            updates.invoice_status = invoiceStatus;
+        }
+        if (sikkStatus !== currentSikkStatus) {
+            updates.sikk_status = sikkStatus;
+        }
+
+        if (!notes && Object.keys(updates).length === 0) {
             frappe.msgprint({
                 title: 'Tidak ada perubahan',
                 message: 'Ubah status atau tulis catatan progress sebelum menyimpan.',
@@ -758,12 +944,12 @@ body {
                 frappe.dom.freeze('Menyimpan update progress...');
             }
 
-            if (newStatus && newStatus !== currentStatus) {
+            if (Object.keys(updates).length) {
                 await frappe.call({
                     method: API_CONFIG.updateServiceOrder,
                     args: {
                         name: state.orderId,
-                        updates: { status: newStatus }
+                        updates
                     }
                 });
             }
@@ -796,8 +982,17 @@ body {
             }
 
             const successMessage = [];
-            if (newStatus && newStatus !== currentStatus) {
+            if (updates.status) {
                 successMessage.push(`Status diperbarui ke <b>${escapeHTML(newStatus)}</b>`);
+            }
+            if (updates.note_status) {
+                successMessage.push(`Status nota diperbarui ke <b>${escapeHTML(noteStatus)}</b>`);
+            }
+            if (updates.invoice_status) {
+                successMessage.push(`Status invoice diperbarui ke <b>${escapeHTML(invoiceStatus)}</b>`);
+            }
+            if (updates.sikk_status) {
+                successMessage.push(`Status SIKK diperbarui ke <b>${escapeHTML(sikkStatus)}</b>`);
             }
             if (notes) {
                 successMessage.push('Catatan progress tersimpan');
