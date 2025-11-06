@@ -188,7 +188,7 @@
       "fieldname": "part_charge_status",
       "fieldtype": "Select",
       "label": "Status Pembebanan Sparepart & Bahan",
-      "options": "Not Started\nPending\nPartial Approve\nApproved\nRejected",
+      "options": "Not Started\nPending\nPartial Approve\nPartial Reject\nApproved\nRejected",
       "default": "Not Started"
     },
     {
