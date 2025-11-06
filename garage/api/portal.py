@@ -1294,7 +1294,15 @@ def _customer_display_map(customer_ids: Iterable[str]) -> Dict[str, Dict[str, An
             rows = frappe.db.get_all(
                 "Garage Customer",
                 filters=[["name", "in", unique_ids]],
-                fields=["name", "customer_name", "customer_type"],
+                fields=[
+                    "name",
+                    "customer_name",
+                    "customer_type",
+                    "phone",
+                    "mobile",
+                    "mobile_no",
+                    "email",
+                ],
             )
     except Exception:
         return {customer: {"customer_name": customer} for customer in unique_ids}
@@ -1303,6 +1311,17 @@ def _customer_display_map(customer_ids: Iterable[str]) -> Dict[str, Dict[str, An
     for row in rows:
         record = dict(row)
         record.setdefault("customer_name", record.get("name"))
+
+        phone_candidates = [
+            record.get("phone"),
+            record.get("mobile"),
+            record.get("mobile_no"),
+        ]
+        for candidate in phone_candidates:
+            if candidate:
+                record["phone"] = candidate
+                break
+
         display_map[record.get("name")] = record
 
     for customer in unique_ids:
@@ -2855,11 +2874,25 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
             request["service_customer_id"] = customer_id
             request["service_customer_name"] = customer_info.get("customer_name") or customer_id
             request["service_customer"] = request["service_customer_name"]
+            request["customer_name"] = request["service_customer_name"]
+            request["customer_type"] = customer_info.get("customer_type")
+            request["service_customer_phone"] = customer_info.get("phone")
+            if customer_info.get("email"):
+                request["service_customer_email"] = customer_info.get("email")
 
             request["service_vehicle_id"] = vehicle_id
             request["service_vehicle_name"] = vehicle_info.get("display") or vehicle_id
             request["service_vehicle_plate"] = vehicle_info.get("license_plate")
+            request["service_vehicle_brand"] = vehicle_info.get("brand")
+            request["service_vehicle_model"] = vehicle_info.get("model") or vehicle_info.get("type_model")
+            request["service_vehicle_year"] = vehicle_info.get("vehicle_year")
+            request["service_vehicle_color"] = vehicle_info.get("color")
             request["service_vehicle"] = request["service_vehicle_name"]
+            request["vehicle_name"] = request["service_vehicle_name"]
+            request["vehicle_plate"] = request["service_vehicle_plate"]
+            request["vehicle_brand"] = request.get("service_vehicle_brand")
+            request["vehicle_model"] = request.get("service_vehicle_model")
+            request["vehicle_model_variant"] = request.get("service_vehicle_model")
             request["service_priority"] = order_info.get("priority")
             request["service_advisor"] = order_info.get("service_advisor")
 
