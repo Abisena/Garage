@@ -8,7 +8,7 @@
 {% block head_include %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
 :root {
@@ -59,7 +59,7 @@
     --radius-lg: 12px;
     --radius-xl: 16px;
 
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-sans: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 * {
@@ -77,42 +77,65 @@ body {
 
 /* Header */
 .portal-hero--sub {
-    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
-    padding: 32px 0;
+    position: relative;
+    background: linear-gradient(160deg,
+        var(--primary-darker) 0%,
+        var(--primary-dark) 40%,
+        var(--primary) 100%);
+    padding: 24px 0 16px;
+    margin-top: 24px;
+    overflow: hidden;
     box-shadow: var(--shadow-lg);
+}
+
+.portal-hero--sub::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+    z-index: 0;
+}
+
+.portal-hero--sub .container {
+    position: relative;
+    z-index: 1;
 }
 
 .portal-hero__brand {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 16px;
+    gap: 12px;
 }
 
 .portal-hero__icon {
-    width: 56px;
-    height: 56px;
+    width: 48px;
+    height: 48px;
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(10px);
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 28px;
+    font-size: 24px;
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .portal-hero__brand h1 {
-    font-size: 32px;
+    font-size: 24px;
     font-weight: 700;
-    color: white;
-    margin: 0 0 4px 0;
+    color: var(--text-inverse);
+    margin: 0;
     letter-spacing: -0.02em;
+    line-height: 1.3;
 }
 
 .portal-hero__brand p {
-    font-size: 16px;
-    color: rgba(255,255,255,0.9);
+    font-size: 15px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.85);
     font-weight: 400;
     margin: 0;
 }
@@ -123,7 +146,7 @@ body {
         var(--primary-darker) 0%,
         var(--primary-dark) 40%,
         var(--primary) 100%);
-    padding: 0 0 32px 0;
+    padding: 0 0 24px 0;
     box-shadow: var(--shadow-lg);
     margin-bottom: 0;
 }
@@ -132,19 +155,17 @@ body {
 .portal-nav {
     display: flex !important;
     justify-content: center !important;
-    align-items: center !important;
-    gap: 12px !important;
-    background: rgba(255, 255, 255, 0.12) !important;
-    backdrop-filter: blur(24px) !important;
-    padding: 12px 20px !important;
-    border-radius: 16px !important;
-    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    gap: 8px !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(20px) !important;
+    padding: 8px !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
     overflow-x: auto !important;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    max-width: fit-content;
     margin: 0 auto;
-    max-width: min(960px, 100%);
-    min-height: 72px;
 }
 
 .portal-nav::-webkit-scrollbar {
@@ -163,19 +184,18 @@ body {
 .portal-nav a {
     display: inline-flex !important;
     align-items: center !important;
-    gap: 10px !important;
-    padding: 14px 28px !important;
-    border-radius: 12px !important;
-    font-size: 16px !important;
-    font-weight: 600 !important;
+    gap: 8px !important;
+    padding: 12px 20px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
     text-decoration: none !important;
     color: rgba(255, 255, 255, 0.9) !important;
     background: transparent !important;
     border: 1px solid transparent !important;
-    transition: all 0.2s ease !important;
+    transition: all 0.25s ease !important;
     white-space: nowrap !important;
     position: relative;
-    line-height: 1.1;
 }
 
 .portal-nav a::before {
@@ -185,7 +205,7 @@ body {
     background: rgba(255, 255, 255, 0.08);
     border-radius: 8px;
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.25s ease;
 }
 
 .portal-nav a:hover::before {
@@ -216,8 +236,9 @@ body {
     padding: 0 24px 48px;
 }
 
-.page-content {
-    padding-top: 32px;
+.portal-content {
+    padding-top: 48px;
+    padding-bottom: 64px;
 }
 
 /* Stats */
@@ -1105,9 +1126,48 @@ body .frappe-confirm {
 }
 
 @media (max-width: 768px) {
+    .portal-hero--sub {
+        margin-top: 16px;
+        padding: 20px 0 12px;
+    }
+
     .portal-hero__brand {
         flex-direction: column;
         text-align: center;
+        gap: 10px;
+    }
+
+    .portal-hero__icon {
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+    }
+
+    .portal-hero__brand h1 {
+        font-size: 20px;
+    }
+
+    .portal-hero__brand p {
+        font-size: 14px;
+    }
+
+    .portal-nav-wrapper {
+        padding-bottom: 20px;
+    }
+
+    .portal-nav {
+        justify-content: flex-start !important;
+        margin: 0 16px;
+    }
+
+    .portal-nav a {
+        padding: 10px 16px !important;
+        font-size: 13px !important;
+    }
+
+    .portal-content {
+        padding-top: 32px;
+        padding-bottom: 48px;
     }
 
     .stats-grid {
@@ -1151,7 +1211,7 @@ body .frappe-confirm {
     </div>
 </div>
 
-<div class="container page-content">
+<div class="container portal-content">
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-card__header">
