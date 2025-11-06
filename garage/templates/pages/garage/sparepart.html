@@ -1162,6 +1162,33 @@ body .frappe-confirm {
             <p class="empty-state__message">Permintaan dari tim servis akan ditampilkan di sini untuk ditindaklanjuti.</p>
         </div>
     </section>
+
+    <section class="workflow-section">
+        <div class="section-header">
+            <div class="section-title">
+                <h2>Riwayat Approve Sparepart</h2>
+            </div>
+        </div>
+        <div class="service-table-wrapper">
+            <table class="service-table">
+                <thead>
+                    <tr>
+                        <th>Dokumen</th>
+                        <th>Service Order</th>
+                        <th>Disetujui Pada</th>
+                        <th>Oleh</th>
+                        <th>Unduh</th>
+                    </tr>
+                </thead>
+                <tbody data-role="spare-approval-table"></tbody>
+            </table>
+        </div>
+        <div class="empty-state" data-empty="spare-approvals">
+            <div class="empty-state__icon">🗂️</div>
+            <div class="empty-state__title">Belum ada riwayat approve.</div>
+            <p class="empty-state__message">Daftar servis yang sudah pernah di-approve akan muncul di sini.</p>
+        </div>
+    </section>
 </div>
 
 <div class="portal-modal" id="spare-request-modal" aria-hidden="true">

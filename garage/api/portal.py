@@ -14,7 +14,7 @@ from frappe.exceptions import PermissionError
 from frappe.utils import cint, cstr, flt, get_datetime, get_url, now_datetime, nowdate
 from frappe.defaults import get_user_default
 
-from garage.utils import service_estimate
+from garage.utils import service_estimate, spare_part_issue
 from garage.garage.doctype.garage_service_order.garage_service_order import (
     derive_part_charge_status,
 )
@@ -40,6 +40,7 @@ DEFAULT_TECHNICIAN_CAPACITY = 3
 BRANCH_FILTER_FIELDS: Mapping[str, str] = {
     "Garage Service Order": "branch",
     "Garage Spare Part Order": "branch",
+    "Garage Spare Part Approval": "branch",
     "Garage Sales Invoice": "branch",
     "Garage Payment Entry": "branch",
     "Garage Receipt Document": "branch",
@@ -213,6 +214,63 @@ def _apply_branch_filters(
                 normalized.append([branch_field, "=", branch_value])
 
     return normalized
+
+
+def _all_spare_requests_issued(service_order: str) -> bool:
+    if not service_order:
+        return False
+
+    try:
+        with _ignoring_permissions():
+            rows = frappe.db.get_all(
+                "Garage Service Order Part",
+                fields=["stock_status"],
+                filters=[
+                    ["parent", "=", service_order],
+                    ["parenttype", "=", "Garage Service Order"],
+                    ["docstatus", "<", 2],
+                ],
+            )
+    except Exception:
+        return False
+
+    if not rows:
+        return False
+
+    for row in rows:
+        status = cstr(row.get("stock_status") or "").strip()
+        if status != "Issued":
+            return False
+
+    return True
+
+
+def _finalize_spare_part_approval(service_order: str) -> Optional[Dict[str, Any]]:
+    if not service_order or not _all_spare_requests_issued(service_order):
+        return None
+
+    pdf_payload = spare_part_issue.create_spare_part_issue_pdf(service_order)
+
+    try:
+        approval_record = spare_part_issue.record_spare_part_approval(
+            service_order,
+            pdf_payload=pdf_payload,
+            approved_by=frappe.session.user if frappe.session.user not in {"Guest"} else None,
+        )
+    except Exception:
+        approval_record = None
+        frappe.log_error(
+            title="Spare part approval history failed",
+            message=f"Could not record approval for {service_order}\n{frappe.get_traceback()}",
+        )
+
+    return {
+        "issue_document": pdf_payload,
+        "approval_record": approval_record,
+        "group_message": _(
+            "Semua permintaan sparepart untuk {0} disetujui."
+        ).format(service_order),
+    }
 
 
 def _extract_branch_value(doc: frappe.Document) -> Optional[str]:
@@ -1967,6 +2025,22 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
         limit=200,
         branch=branch_filter,
     )
+    spare_part_approvals = _list_dicts(
+        "Garage Spare Part Approval",
+        [
+            "name",
+            "service_order",
+            "branch",
+            "document_number",
+            "approved_on",
+            "approved_by",
+            "approval_count",
+            "document_url",
+            "document_file",
+        ],
+        limit=200,
+        branch=branch_filter,
+    )
     service_tasks = _list_dicts(
         "Garage Service Order Task",
         ["name", "parent", "task", "status", "technician"],
@@ -2141,6 +2215,7 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
         "spare_parts": spare_parts,
         "service_bundles": service_bundles,
         "spare_part_requests": spare_part_requests,
+        "spare_part_approvals": spare_part_approvals,
         "procurement_orders": procurement_orders,
         "pending_procurement": pending_procurement,
         "stock_movements": stock_movements,
@@ -4079,6 +4154,23 @@ def update_spare_part_request_status(name: str, action: str) -> Dict[str, Any]:
         response["message"] = (
             _("Permintaan sparepart ditolak.") if new_status == "Rejected" else _("Permintaan sparepart dibatalkan.")
         )
+
+    parent_order = cstr(request.get("parent") or "").strip()
+    if parent_order and new_status == "Issued":
+        finalize_payload = _finalize_spare_part_approval(parent_order)
+        if finalize_payload:
+            issue_document = finalize_payload.get("issue_document")
+            approval_record = finalize_payload.get("approval_record")
+            group_message = finalize_payload.get("group_message")
+
+            if issue_document:
+                response["issue_document"] = issue_document
+            if approval_record:
+                response["approval_record"] = approval_record
+            if group_message:
+                response["group_message"] = group_message
+                if not response.get("message"):
+                    response["message"] = group_message
 
     return response
 

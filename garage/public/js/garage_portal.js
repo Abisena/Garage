@@ -523,6 +523,7 @@ function cloneBrandModelMap(map) {
                 openService: document.querySelector('[data-role="open-service-table"]'),
                 spareOrders: document.querySelector('[data-role="spare-table"]'),
                 spareRequests: document.querySelector('[data-role="spare-request-table"]'),
+                spareApprovals: document.querySelector('[data-role="spare-approval-table"]'),
                 spareInventory: document.querySelector('[data-role="spare-inventory-table"]'),
                 pendingProcurement: document.querySelector('[data-role="pending-procurement-table"]'),
                 openInvoices: document.querySelector('[data-role="open-invoice-table"]'),
@@ -534,6 +535,7 @@ function cloneBrandModelMap(map) {
                 openService: document.querySelector('[data-empty="open-service"]'),
                 spare: document.querySelector('[data-empty="spare"]'),
                 spareRequests: document.querySelector('[data-empty="spare-requests"]'),
+                spareApprovals: document.querySelector('[data-empty="spare-approvals"]'),
                 spareInventory: document.querySelector('[data-empty="spare-inventory"]'),
                 pendingProcurement: document.querySelector('[data-empty="pending-procurement"]'),
                 openInvoice: document.querySelector('[data-empty="open-invoice"]'),
@@ -2542,6 +2544,7 @@ function cloneBrandModelMap(map) {
 
             const serviceOrders = this.asArray(this.state.service_orders);
             this.renderSpareRequestsTable(serviceOrders);
+            this.renderSpareApprovals();
 
             this.updateSpareMetrics();
 
@@ -2841,6 +2844,77 @@ function cloneBrandModelMap(map) {
             });
         }
 
+        renderSpareApprovals() {
+            const table = this.tables.spareApprovals;
+            if (!table) {
+                return;
+            }
+
+            const rows = this.asArray(this.state.spare_part_approvals);
+            table.innerHTML = '';
+
+            if (!rows.length) {
+                if (this.emptyStates.spareApprovals) {
+                    this.emptyStates.spareApprovals.style.display = 'block';
+                }
+                return;
+            }
+
+            if (this.emptyStates.spareApprovals) {
+                this.emptyStates.spareApprovals.style.display = 'none';
+            }
+
+            rows.forEach((row) => {
+                if (!row) {
+                    return;
+                }
+                const tr = document.createElement('tr');
+
+                const docCell = document.createElement('td');
+                docCell.appendChild(
+                    this.renderLink(
+                        'Garage Spare Part Approval',
+                        row.name,
+                        row.document_number || row.name || '-'
+                    )
+                );
+                tr.appendChild(docCell);
+
+                const orderCell = document.createElement('td');
+                if (row.service_order) {
+                    orderCell.appendChild(
+                        this.renderLink('Garage Service Order', row.service_order, row.service_order)
+                    );
+                } else {
+                    orderCell.textContent = '-';
+                }
+                tr.appendChild(orderCell);
+
+                const approvedCell = document.createElement('td');
+                approvedCell.textContent = this.formatTimestamp(row.approved_on);
+                tr.appendChild(approvedCell);
+
+                const userCell = document.createElement('td');
+                userCell.textContent = row.approved_by || '-';
+                tr.appendChild(userCell);
+
+                const downloadCell = document.createElement('td');
+                if (row.document_url) {
+                    const link = document.createElement('a');
+                    link.href = row.document_url;
+                    link.target = '_blank';
+                    link.rel = 'noopener';
+                    link.textContent = __('Download');
+                    downloadCell.appendChild(link);
+                } else {
+                    downloadCell.textContent = __('Belum tersedia');
+                }
+                tr.appendChild(downloadCell);
+
+                table.appendChild(tr);
+            });
+        }
+
         handleSpareRequestAction(requestOrGroup, action, button) {
             const requests = Array.isArray(requestOrGroup)
                 ? requestOrGroup.filter((item) => item?.name)
@@ -2887,6 +2961,7 @@ function cloneBrandModelMap(map) {
                     }
                     const indicatorMap = { approve: 'green', reject: 'red', cancel: 'orange' };
                     let lastPayload = null;
+                    let issueDocument = null;
                     for (const request of requests) {
                         const response = await frappe.call({
                             method: 'garage.api.portal.update_spare_part_request_status',
@@ -2894,19 +2969,42 @@ function cloneBrandModelMap(map) {
                             freeze: true,
                             freeze_message: __('Memproses permintaan...'),
                         });
-                        lastPayload = response?.message || lastPayload;
+                        const payload = response?.message || {};
+                        lastPayload = payload || lastPayload;
+                        if (payload.issue_document) {
+                            issueDocument = payload.issue_document;
+                        }
                     }
+                    const alertMessage =
+                        lastPayload?.group_message ||
+                        lastPayload?.message ||
+                        (requests.length > 1
+                            ? __('{0} permintaan diperbarui.', [requests.length])
+                            : __('Permintaan diperbarui.'));
                     frappe.show_alert(
                         {
-                            message:
-                                lastPayload?.message ||
-                                (requests.length > 1
-                                    ? __('{0} permintaan diperbarui.', [requests.length])
-                                    : __('Permintaan diperbarui.')),
+                            message: alertMessage,
                             indicator: indicatorMap[action] || 'green',
                         },
                         5,
                     );
+                    if (issueDocument?.content) {
+                        this.downloadBase64File(
+                            issueDocument.content,
+                            issueDocument.filename || 'pengeluaran-sparepart.pdf',
+                            issueDocument.mime_type || 'application/pdf'
+                        );
+                        frappe.show_alert(
+                            {
+                                message:
+                                    issueDocument.filename
+                                        ? __('Dokumen {0} siap diunduh.', [issueDocument.filename])
+                                        : __('Dokumen pengeluaran sparepart siap diunduh.'),
+                                indicator: 'green',
+                            },
+                            5
+                        );
+                    }
                     this.fetchBootstrap(false);
                 } catch (error) {
                     frappe.show_alert({ message: __('Gagal memproses: {0}', [error.message || error]), indicator: 'red' }, 5);
