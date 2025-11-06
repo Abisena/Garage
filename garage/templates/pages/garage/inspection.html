@@ -1,6 +1,8 @@
 {% extends "templates/web.html" %}
 
-{% block title %}Inspeksi Service Order - Garage{% endblock %}
+{% set is_partial_reject_mode = (frappe.form_dict.get('mode') or '').lower() == 'partial-reject' %}
+
+{% block title %}{{ 'Inspeksi Partial Reject - Garage' if is_partial_reject_mode else 'Inspeksi Service Order - Garage' }}{% endblock %}
 
 {% set required_roles = ['Service', 'Servis', 'Service Advisor', 'Technician', 'Teknisi'] %}
 {% include "garage/templates/includes/role_guard.html" %}
@@ -1022,6 +1024,44 @@ a:hover {
     padding: 6px 10px;
 }
 
+.parts-table .actions .btn-remove[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.part-row--locked {
+    opacity: 0.7;
+}
+
+.part-row--rejected {
+    background: rgba(255, 61, 0, 0.08);
+}
+
+.part-row--re-request {
+    background: rgba(255, 179, 0, 0.08);
+}
+
+.part-status-note {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.partial-reject-banner {
+    border: 1px solid rgba(255, 179, 0, 0.4);
+    background: rgba(255, 179, 0, 0.12);
+    color: var(--text-primary);
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.partial-reject-banner strong {
+    font-weight: 600;
+}
+
 .item-header {
     display: flex;
     justify-content: space-between;
@@ -1432,8 +1472,8 @@ a:hover {
         </div>
         <div class="hero-body">
             <div class="hero-text">
-                <h1>🔍 Inspeksi Service Order</h1>
-                <p>Lengkapi hasil pemeriksaan kendaraan dan bagikan update terbaru untuk tim bengkel.</p>
+                <h1>{{ '🛠️ Inspeksi Partial Reject' if is_partial_reject_mode else '🔍 Inspeksi Service Order' }}</h1>
+                <p>{{ 'Beberapa permintaan sparepart ditolak. Hapus item yang ditolak, kemudian ajukan pengganti sebelum mengirim ulang.' if is_partial_reject_mode else 'Lengkapi hasil pemeriksaan kendaraan dan bagikan update terbaru untuk tim bengkel.' }}</p>
             </div>
             <div class="hero-meta">
                 <div class="meta-item">
@@ -1521,15 +1561,22 @@ a:hover {
                         </div>
                     </div>
 
+                    {% if is_partial_reject_mode %}
+                    <div class="partial-reject-banner" role="status">
+                        <strong>Partial Reject</strong>
+                        <span>Beberapa item ditolak oleh tim sparepart. Gunakan tombol <strong>Trash</strong> pada baris berstatus <em>Rejected</em>, lalu tambahkan item pengganti sebelum mengirim ulang.</span>
+                    </div>
+                    {% endif %}
+
                     <div class="repeating-list" id="requiredPartsList">
                         <div class="empty-state">
-                            <strong>Belum ada sparepart atau bahan.</strong>
-                            <span>Tambahkan kebutuhan untuk perbaikan.</span>
+                            <strong>{{ 'Belum ada item pengganti.' if is_partial_reject_mode else 'Belum ada sparepart atau bahan.' }}</strong>
+                            <span>{{ 'Tambahkan pengganti untuk item yang ditolak sebelum melanjutkan.' if is_partial_reject_mode else 'Tambahkan kebutuhan untuk perbaikan.' }}</span>
                         </div>
                     </div>
 
                     <div class="section-actions">
-                        <button type="button" class="btn btn-add" onclick="addRequiredPart()">+ Tambah Part</button>
+                        <button type="button" class="btn btn-add" onclick="addRequiredPart()">{{ '➕ Tambah Pengganti' if is_partial_reject_mode else '+ Tambah Part' }}</button>
                     </div>
                 </section>
             </form>
@@ -2380,6 +2427,11 @@ a:hover {
 
         const urlParams = new URLSearchParams(window.location.search);
         const orderId = urlParams.get('order_id');
+        const isPartialRejectMode = (urlParams.get('mode') || '').toLowerCase() === 'partial-reject';
+
+        if (isPartialRejectMode && typeof document !== 'undefined' && document.body && document.body.classList) {
+            document.body.classList.add('partial-reject-mode');
+        }
 
         if (!orderId) {
             frappe.show_alert({
@@ -2397,6 +2449,7 @@ a:hover {
         let latestOrder = null;
         let baseServiceFee = 0;
         let serviceSummaryItems = [];
+        const LOCKED_PART_MESSAGE = 'Item ini tidak dapat diubah karena sudah diproses oleh tim sparepart.';
         let spkButton = null;
         let spkButtonLabel = 'Print SPK';
 
@@ -2431,6 +2484,56 @@ a:hover {
                 }
                 return sum + amount;
             }, 0);
+        }
+
+        function normalizeStatusValue(value) {
+            if (value === undefined || value === null) {
+                return '';
+            }
+            return String(value).trim().toLowerCase();
+        }
+
+        function resolvePartStatusLabel(status) {
+            const normalized = normalizeStatusValue(status);
+            const labels = {
+                rejected: 'Rejected',
+                're-request': 'Request Ulang',
+                'pending check': 'Pending Check',
+                pending: 'Pending',
+                available: 'Available',
+                'to order': 'To Order',
+                ordered: 'Ordered',
+                'in transit': 'In Transit',
+                received: 'Received',
+                issued: 'Issued',
+                approved: 'Approved',
+                cancelled: 'Cancelled',
+            };
+            if (!normalized) {
+                return 'Draft';
+            }
+            return labels[normalized] || status || 'Draft';
+        }
+
+        function canModifyPart(part) {
+            if (!isPartialRejectMode) {
+                return true;
+            }
+            const status = normalizeStatusValue(part?.stock_status);
+            if (!status) {
+                return true;
+            }
+            return ['rejected', 'draft', 're-request'].includes(status);
+        }
+
+        function isPartLocked(part) {
+            return !canModifyPart(part);
+        }
+
+        function showLockedPartAlert() {
+            if (window.frappe && typeof frappe.show_alert === 'function') {
+                frappe.show_alert({ message: LOCKED_PART_MESSAGE, indicator: 'orange' }, 5);
+            }
         }
 
         function renderSummaryList(elementId, items, placeholder) {
@@ -2707,6 +2810,17 @@ a:hover {
         }
 
         function normalizeStockStatus(value) {
+            if (isPartialRejectMode) {
+                const normalized = value === undefined || value === null ? '' : String(value).trim();
+                if (!normalized) {
+                    return 'Re-Request';
+                }
+                const lowered = normalized.toLowerCase();
+                if (['draft', 'planned', 'pending check', 'pending', 're-request'].includes(lowered)) {
+                    return 'Re-Request';
+                }
+                return normalized;
+            }
             if (value === undefined || value === null) {
                 return 'Pending Check';
             }
@@ -2735,10 +2849,16 @@ a:hover {
                 return;
             }
             if (requiredParts.length === 0) {
+                const emptyTitle = isPartialRejectMode
+                    ? 'Belum ada item pengganti.'
+                    : 'Belum ada sparepart atau bahan.';
+                const emptyMessage = isPartialRejectMode
+                    ? 'Tambahkan pengganti untuk item yang ditolak sebelum melanjutkan.'
+                    : 'Tambahkan kebutuhan untuk perbaikan.';
                 container.innerHTML = `
                     <div class="empty-state">
-                        <strong>Belum ada sparepart atau bahan.</strong>
-                        <span>Tambahkan kebutuhan untuk perbaikan.</span>
+                        <strong>${escapeHtml(emptyTitle)}</strong>
+                        <span>${escapeHtml(emptyMessage)}</span>
                     </div>
                 `;
                 recalculateTotals();
@@ -2756,11 +2876,19 @@ a:hover {
                     { qty: normalizedQty, rate: normalizedRate },
                     merged.discount_amount ?? merged.discount ?? 0
                 );
+                let currentStatus = merged.stock_status || '';
+                const statusNormalized = normalizeStatusValue(currentStatus);
+                if (isPartialRejectMode) {
+                    if (!statusNormalized || ['draft', 'planned', 'pending check', 'pending'].includes(statusNormalized)) {
+                        currentStatus = 'Re-Request';
+                    }
+                }
                 return {
                     ...merged,
                     qty: normalizedQty,
                     rate: normalizedRate,
                     discount_amount: normalizedDiscount,
+                    stock_status: currentStatus,
                     amount: computePartAmount({
                         ...merged,
                         qty: normalizedQty,
@@ -2771,6 +2899,26 @@ a:hover {
             });
 
             const rows = requiredParts.map((part, i) => {
+                const normalizedStatus = normalizeStatusValue(part.stock_status);
+                const locked = isPartLocked(part);
+                const rowClasses = ['part-row'];
+                if (normalizedStatus === 'rejected') {
+                    rowClasses.push('part-row--rejected');
+                }
+                if (normalizedStatus === 're-request') {
+                    rowClasses.push('part-row--re-request');
+                }
+                if (locked) {
+                    rowClasses.push('part-row--locked');
+                }
+                const rowClassAttr = rowClasses.join(' ');
+
+                const selectDisabledAttr = locked ? ' disabled' : '';
+                const selectRequiredAttr = part.catalog_name || part.item_code ? '' : ' required';
+                const inputDisabledAttr = locked ? ' disabled' : '';
+                const removeDisabledAttr = locked ? ' disabled' : '';
+                const removeTitleAttr = locked ? ' title="Item tidak dapat dihapus"' : '';
+
                 const catalogOptions = sparePartCatalog
                     .map((catalog) => {
                         const isSelected = catalog.name === part.catalog_name;
@@ -2800,32 +2948,35 @@ a:hover {
                 const stockWarning = availableStock <= 0 && part.catalog_name
                     ? '<p class="sparepart-hint">Stok gudang habis. Pilih sumber lain atau lakukan pemesanan.</p>'
                     : '';
-                const itemCodeDisplay = escapeHtml(part.item_code || part.catalog_part_code || '-');
+                const statusNote = isPartialRejectMode
+                    ? `<div class="part-status-note">Status: ${escapeHtml(resolvePartStatusLabel(part.stock_status))}</div>`
+                    : '';
 
                 return `
-                    <tr>
+                    <tr class="${rowClassAttr}">
                         <td>
                             <div class="part-details">
                                 <div class="part-select">
-                                    <select onchange="selectRequiredPart(${i}, this.value)" ${part.catalog_name || part.item_code ? '' : 'required'}>
+                                    <select onchange="selectRequiredPart(${i}, this.value)"${selectDisabledAttr}${selectRequiredAttr}>
                                         <option value="">— Pilih sparepart atau bahan —</option>
                                         ${manualOption}
                                         ${catalogOptions}
                                     </select>
                                     ${catalogHint}
                                     ${stockWarning}
+                                    ${statusNote}
                                 </div>
                             </div>
                         </td>
                         <td>
-                            <textarea onchange="updateRequiredPartDescription(${i}, this.value)">${escapeHtml(part.description || '')}</textarea>
+                            <textarea onchange="updateRequiredPartDescription(${i}, this.value)"${inputDisabledAttr}>${escapeHtml(part.description || '')}</textarea>
                         </td>
-                        <td><input type="number" value="${part.qty}" min="0" step="0.01" onchange="updateRequiredPartQty(${i}, this.value)" required></td>
-                        <td><input type="text" value="${escapeHtml(part.uom || '')}" onchange="updateRequiredPartUom(${i}, this.value)"></td>
-                        <td><input type="text" value="${escapeHtml(formatCurrency(part.rate || 0))}" inputmode="numeric" onchange="updateRequiredPartRate(${i}, this.value)"></td>
-                        <td><input type="text" value="${escapeHtml(formatCurrency(part.discount_amount || 0))}" inputmode="numeric" onchange="updateRequiredPartDiscount(${i}, this.value)"></td>
+                        <td><input type="number" value="${part.qty}" min="0" step="0.01" onchange="updateRequiredPartQty(${i}, this.value)" required${inputDisabledAttr}></td>
+                        <td><input type="text" value="${escapeHtml(part.uom || '')}" onchange="updateRequiredPartUom(${i}, this.value)"${inputDisabledAttr}></td>
+                        <td><input type="text" value="${escapeHtml(formatCurrency(part.rate || 0))}" inputmode="numeric" onchange="updateRequiredPartRate(${i}, this.value)"${inputDisabledAttr}></td>
+                        <td><input type="text" value="${escapeHtml(formatCurrency(part.discount_amount || 0))}" inputmode="numeric" onchange="updateRequiredPartDiscount(${i}, this.value)"${inputDisabledAttr}></td>
                         <td class="numeric">${formatCurrency(part.amount || 0)}</td>
-                        <td class="actions"><button type="button" class="btn-remove" onclick="removeRequiredPart(${i})">🗑️</button></td>
+                        <td class="actions"><button type="button" class="btn-remove" onclick="removeRequiredPart(${i})"${removeDisabledAttr}${removeTitleAttr}>🗑️ Trash</button></td>
                     </tr>
                 `;
             }).join('');
@@ -2860,7 +3011,7 @@ a:hover {
                 qty: 1,
                 rate: 0,
                 uom: 'Unit',
-                stock_status: 'Draft',
+                stock_status: isPartialRejectMode ? 'Re-Request' : 'Draft',
                 source: 'On Hand',
                 warehouse: '',
                 catalog_name: null,
@@ -2877,6 +3028,14 @@ a:hover {
         };
 
         window.removeRequiredPart = function(index) {
+            const part = requiredParts[index];
+            if (!part) {
+                return;
+            }
+            if (isPartLocked(part)) {
+                showLockedPartAlert();
+                return;
+            }
             requiredParts.splice(index, 1);
             renderRequiredParts();
         };
@@ -2884,6 +3043,11 @@ a:hover {
         window.selectRequiredPart = function(index, value) {
             const part = requiredParts[index];
             if (!part) {
+                return;
+            }
+            if (isPartLocked(part)) {
+                showLockedPartAlert();
+                renderRequiredParts();
                 return;
             }
             if (!value || value.startsWith('__manual__')) {
@@ -2918,6 +3082,11 @@ a:hover {
             if (!requiredParts[index]) {
                 return;
             }
+            if (isPartLocked(requiredParts[index])) {
+                showLockedPartAlert();
+                renderRequiredParts();
+                return;
+            }
             const qty = Number(value);
             requiredParts[index].qty = Number.isNaN(qty) ? 0 : Math.max(0, qty);
             requiredParts[index].discount_amount = normalizeDiscount(requiredParts[index], requiredParts[index].discount_amount || 0);
@@ -2927,6 +3096,11 @@ a:hover {
 
         window.updateRequiredPartRate = function(index, value) {
             if (!requiredParts[index]) {
+                return;
+            }
+            if (isPartLocked(requiredParts[index])) {
+                showLockedPartAlert();
+                renderRequiredParts();
                 return;
             }
             const rate = normaliseCurrencyInput(value);
@@ -2940,6 +3114,11 @@ a:hover {
             if (!requiredParts[index]) {
                 return;
             }
+            if (isPartLocked(requiredParts[index])) {
+                showLockedPartAlert();
+                renderRequiredParts();
+                return;
+            }
             const discount = normaliseCurrencyInput(value);
             requiredParts[index].discount_amount = normalizeDiscount(requiredParts[index], discount);
             requiredParts[index].amount = computePartAmount(requiredParts[index]);
@@ -2949,6 +3128,11 @@ a:hover {
         window.updateRequiredPartDescription = function(index, value) {
             const part = requiredParts[index];
             if (!part) {
+                return;
+            }
+            if (isPartLocked(part)) {
+                showLockedPartAlert();
+                renderRequiredParts();
                 return;
             }
             part.description = value;
@@ -2964,6 +3148,11 @@ a:hover {
 
         window.updateRequiredPartUom = function(index, value) {
             if (!requiredParts[index]) {
+                return;
+            }
+            if (isPartLocked(requiredParts[index])) {
+                showLockedPartAlert();
+                renderRequiredParts();
                 return;
             }
             requiredParts[index].uom = value;

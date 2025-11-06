@@ -19,6 +19,7 @@ PART_PENDING_STATUSES = {
     "ordered",
     "in transit",
     "backordered",
+    "re-request",
 }
 PART_COMPLETED_STATUSES = {"received", "issued", "approved"}
 PART_REJECTED_STATUSES = {"rejected"}
@@ -38,7 +39,7 @@ class GarageServiceOrder(Document):
         """Derive the aggregated sparepart/material charge status."""
 
         computed = self._compute_part_charge_status()
-        if computed in {"Partial Approve", "Rejected"}:
+        if computed in {"Partial Approve", "Partial Reject", "Rejected"}:
             self.part_charge_status = computed
         elif not getattr(self, "part_charge_status", None):
             self.part_charge_status = computed
@@ -69,14 +70,18 @@ def derive_part_charge_status(
     has_active = any(status not in PART_REJECTED_STATUSES | PART_CANCELLED_STATUSES for status in normalized)
     has_rejected = any(status in PART_REJECTED_STATUSES for status in normalized)
     has_cancelled = any(status in PART_CANCELLED_STATUSES for status in normalized)
+    has_completed = any(status in PART_COMPLETED_STATUSES for status in normalized)
+    has_pending = any(status in PART_PENDING_STATUSES for status in normalized)
 
     if has_rejected and has_active:
-        return "Partial Approve"
+        return "Partial Reject"
     if has_rejected and not has_active:
         return "Rejected"
     if has_cancelled and not has_active:
         return "Rejected"
-    if any(status in PART_PENDING_STATUSES for status in normalized):
+    if has_completed and has_pending:
+        return "Partial Approve"
+    if has_pending:
         return "Pending"
     if all(status in PART_COMPLETED_STATUSES or status in PART_CANCELLED_STATUSES for status in normalized):
         return "Approved"

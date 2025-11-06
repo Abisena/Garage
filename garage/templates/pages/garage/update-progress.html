@@ -564,6 +564,8 @@ body {
     const TRACKING_STATUS_OPTIONS = [
         { value: 'Not Started', label: 'Not Started' },
         { value: 'Pending', label: 'Pending' },
+        { value: 'Partial Reject', label: 'Partial Reject' },
+        { value: 'Re-Request', label: 'Request Ulang' },
         { value: 'Approved', label: 'Approved' },
         { value: 'Completed', label: 'Completed' },
         { value: 'Cancelled', label: 'Cancelled' },
@@ -574,6 +576,8 @@ body {
         'not started': { label: 'Not Started', className: 'status-chip status-chip--idle' },
         pending: { label: 'Pending', className: 'status-chip status-chip--pending' },
         'partial approve': { label: 'Partial Approve', className: 'status-chip status-chip--warning' },
+        'partial reject': { label: 'Partial Reject', className: 'status-chip status-chip--danger' },
+        're-request': { label: 'Request Ulang', className: 'status-chip status-chip--warning' },
         approved: { label: 'Approved', className: 'status-chip status-chip--success' },
         completed: { label: 'Completed', className: 'status-chip status-chip--success' },
         rejected: { label: 'Rejected', className: 'status-chip status-chip--danger' },
@@ -699,7 +703,7 @@ body {
 
         const currentStatus = order && order.status ? order.status : '';
         const partStatus = order && order.part_charge_status ? order.part_charge_status.toLowerCase() : '';
-        const shouldDisableCompleted = partStatus === 'partial approve' && currentStatus !== 'Completed';
+        const shouldDisableCompleted = ['partial approve', 'partial reject'].includes(partStatus) && currentStatus !== 'Completed';
 
         STATUS_OPTIONS.forEach((option) => {
             const element = document.createElement('option');

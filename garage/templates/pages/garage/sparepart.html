@@ -1434,6 +1434,7 @@ body .frappe-confirm {
         const badges = {
             'request': '<span class="badge warning">Request</span>',
             'pending check': '<span class="badge warning">Request</span>',
+            're-request': '<span class="badge warning">Request Ulang</span>',
             'pending': '<span class="badge warning">Pending</span>',
             'available': '<span class="badge success">Available</span>',
             'to order': '<span class="badge warning">To Order</span>',
@@ -1556,17 +1557,18 @@ body .frappe-confirm {
         state.requestGroups = groupsArray;
 
         const statusPriority = {
-            'pending check': 0,
-            'pending': 1,
-            'to order': 2,
-            'ordered': 3,
-            'in transit': 4,
-            'available': 5,
-            'received': 6,
-            'issued': 7,
-            'approved': 8,
-            'rejected': 9,
-            'cancelled': 10,
+            're-request': 0,
+            'pending check': 1,
+            'pending': 2,
+            'to order': 3,
+            'ordered': 4,
+            'in transit': 5,
+            'available': 6,
+            'received': 7,
+            'issued': 8,
+            'approved': 9,
+            'rejected': 10,
+            'cancelled': 11,
         };
 
         const total = groupsArray.length;
