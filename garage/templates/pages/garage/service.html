@@ -1894,7 +1894,8 @@ body {
         default: { label: DEFAULT_TRACKING_STATUS, className: 'tracking-badge tracking-badge--idle' },
         'not started': { label: 'Not Started', className: 'tracking-badge tracking-badge--idle' },
         pending: { label: 'Pending', className: 'tracking-badge tracking-badge--pending' },
-        'partial approve': { label: 'Partial Approve', className: 'tracking-badge tracking-badge--warning' },
+        'partial approve': { label: 'Partial Approved', className: 'tracking-badge tracking-badge--warning' },
+        'partial approved': { label: 'Partial Approved', className: 'tracking-badge tracking-badge--warning' },
         'partial reject': { label: 'Partial Reject', className: 'tracking-badge tracking-badge--danger' },
         're-request': { label: 'Request Ulang', className: 'tracking-badge tracking-badge--warning' },
         approved: { label: 'Approved', className: 'tracking-badge tracking-badge--success' },
@@ -1983,7 +1984,7 @@ body {
         }
 
         const label = escapeHtml(formatServiceOrderId(order.name, { context: 'progress' }) || order.name);
-        const target = `/garage/sparepart?order=${encodeURIComponent(order.name)}`;
+        const target = `/garage/inspection?order_id=${encodeURIComponent(order.name)}&mode=sa-review`;
         return `<a class="service-order-link" href="${target}">${label}</a>`;
     }
 
@@ -1992,7 +1993,7 @@ body {
             return '';
         }
 
-        const target = `/garage/sparepart?order=${encodeURIComponent(order.name)}`;
+        const target = `/garage/inspection?order_id=${encodeURIComponent(order.name)}&mode=sa-review`;
         return `<div class="cell-link"><a class="cell-link__anchor" href="${target}" title="Pantau permintaan sparepart">🔗 Sparepart</a></div>`;
     }
 
@@ -2185,8 +2186,9 @@ body {
         }
 
         const statusValue = (partStatus || '').toString().toLowerCase();
-        if (statusValue === 'partial reject') {
-            const targetUrl = `/garage/inspection?order_id=${encodeURIComponent(orderId)}&mode=partial-reject`;
+        const shouldOpenSparepartReview = ['partial reject', 'partial approve', 'partial approved'].includes(statusValue);
+        if (shouldOpenSparepartReview) {
+            const targetUrl = `/garage/inspection?order_id=${encodeURIComponent(orderId)}&mode=sa-review`;
             window.location.href = targetUrl;
             return;
         }
