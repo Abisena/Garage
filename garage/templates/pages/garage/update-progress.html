@@ -575,7 +575,8 @@ body {
         default: { label: 'Not Started', className: 'status-chip status-chip--idle' },
         'not started': { label: 'Not Started', className: 'status-chip status-chip--idle' },
         pending: { label: 'Pending', className: 'status-chip status-chip--pending' },
-        'partial approve': { label: 'Partial Approve', className: 'status-chip status-chip--warning' },
+        'partial approve': { label: 'Partial Approved', className: 'status-chip status-chip--warning' },
+        'partial approved': { label: 'Partial Approved', className: 'status-chip status-chip--warning' },
         'partial reject': { label: 'Partial Reject', className: 'status-chip status-chip--danger' },
         're-request': { label: 'Request Ulang', className: 'status-chip status-chip--warning' },
         'request ulang': { label: 'Request Ulang', className: 'status-chip status-chip--warning' },
@@ -704,7 +705,7 @@ body {
 
         const currentStatus = order && order.status ? order.status : '';
         const partStatus = order && order.part_charge_status ? order.part_charge_status.toLowerCase() : '';
-        const shouldDisableCompleted = ['partial approve', 'partial reject'].includes(partStatus) && currentStatus !== 'Completed';
+        const shouldDisableCompleted = ['partial approve', 'partial approved', 'partial reject'].includes(partStatus) && currentStatus !== 'Completed';
 
         STATUS_OPTIONS.forEach((option) => {
             const element = document.createElement('option');

@@ -1,6 +1,7 @@
 {% extends "templates/web.html" %}
 
-{% set is_partial_reject_mode = (frappe.form_dict.get('mode') or '').lower() == 'partial-reject' %}
+{% set _inspection_mode = (frappe.form_dict.get('mode') or '').lower() %}
+{% set is_partial_reject_mode = _inspection_mode in ['partial-reject', 'sa-review'] %}
 
 {% block title %}{{ 'Inspeksi Partial Reject - Garage' if is_partial_reject_mode else 'Inspeksi Service Order - Garage' }}{% endblock %}
 
@@ -1576,7 +1577,7 @@ a:hover {
                     </div>
 
                     <div class="section-actions">
-                        <button type="button" class="btn btn-add" onclick="addRequiredPart()">{{ '➕ Tambah Pengganti' if is_partial_reject_mode else '+ Tambah Part' }}</button>
+                        <button type="button" class="btn btn-add" id="addRequiredPartButton" onclick="addRequiredPart()">{{ '➕ Tambah Pengganti' if is_partial_reject_mode else '+ Tambah Part' }}</button>
                     </div>
                 </section>
             </form>
@@ -2427,9 +2428,12 @@ a:hover {
 
         const urlParams = new URLSearchParams(window.location.search);
         const orderId = urlParams.get('order_id');
-        const isPartialRejectMode = (urlParams.get('mode') || '').toLowerCase() === 'partial-reject';
+        const modeParam = (urlParams.get('mode') || '').toLowerCase();
+        const isPartialRejectMode = modeParam === 'partial-reject';
+        const isServiceAdvisorReviewMode = modeParam === 'sa-review';
+        const isPartialReviewMode = isPartialRejectMode || isServiceAdvisorReviewMode;
 
-        if (isPartialRejectMode && typeof document !== 'undefined' && document.body && document.body.classList) {
+        if (isPartialReviewMode && typeof document !== 'undefined' && document.body && document.body.classList) {
             document.body.classList.add('partial-reject-mode');
         }
 
@@ -2452,6 +2456,7 @@ a:hover {
         const LOCKED_PART_MESSAGE = 'Item ini tidak dapat diubah karena sudah diproses oleh tim sparepart.';
         let spkButton = null;
         let spkButtonLabel = 'Print SPK';
+        const addPartButton = document.getElementById('addRequiredPartButton');
 
         spkButton = document.getElementById('print_spk_button');
         if (spkButton) {
@@ -2516,7 +2521,7 @@ a:hover {
         }
 
         function canModifyPart(part) {
-            if (!isPartialRejectMode) {
+            if (!isPartialReviewMode) {
                 return true;
             }
             const status = normalizeStatusValue(part?.stock_status);
@@ -2810,7 +2815,7 @@ a:hover {
         }
 
         function normalizeStockStatus(value) {
-            if (isPartialRejectMode) {
+            if (isPartialReviewMode) {
                 const normalized = value === undefined || value === null ? '' : String(value).trim();
                 if (!normalized) {
                     return 'Re-Request';
@@ -2849,10 +2854,10 @@ a:hover {
                 return;
             }
             if (requiredParts.length === 0) {
-                const emptyTitle = isPartialRejectMode
+                const emptyTitle = isPartialReviewMode
                     ? 'Belum ada item pengganti.'
                     : 'Belum ada sparepart atau bahan.';
-                const emptyMessage = isPartialRejectMode
+                const emptyMessage = isPartialReviewMode
                     ? 'Tambahkan pengganti untuk item yang ditolak sebelum melanjutkan.'
                     : 'Tambahkan kebutuhan untuk perbaikan.';
                 container.innerHTML = `
@@ -2862,6 +2867,7 @@ a:hover {
                     </div>
                 `;
                 recalculateTotals();
+                updateAddPartButtonState();
                 return;
             }
 
@@ -2878,7 +2884,7 @@ a:hover {
                 );
                 let currentStatus = merged.stock_status || '';
                 const statusNormalized = normalizeStatusValue(currentStatus);
-                if (isPartialRejectMode) {
+                if (isPartialReviewMode) {
                     if (!statusNormalized || ['draft', 'planned', 'pending check', 'pending'].includes(statusNormalized)) {
                         currentStatus = 'Re-Request';
                     }
@@ -2948,7 +2954,7 @@ a:hover {
                 const stockWarning = availableStock <= 0 && part.catalog_name
                     ? '<p class="sparepart-hint">Stok gudang habis. Pilih sumber lain atau lakukan pemesanan.</p>'
                     : '';
-                const statusNote = isPartialRejectMode
+                const statusNote = isPartialReviewMode
                     ? `<div class="part-status-note">Status: ${escapeHtml(resolvePartStatusLabel(part.stock_status))}</div>`
                     : '';
 
@@ -3001,9 +3007,37 @@ a:hover {
                 </div>
             `;
             recalculateTotals();
+            updateAddPartButtonState();
         }
 
+        function updateAddPartButtonState() {
+            if (!addPartButton) {
+                return;
+            }
+
+            if (!isPartialReviewMode) {
+                addPartButton.disabled = false;
+                addPartButton.removeAttribute('title');
+                return;
+            }
+
+            const hasEditablePart = requiredParts.some((part) => canModifyPart(part));
+            if (hasEditablePart) {
+                addPartButton.disabled = false;
+                addPartButton.removeAttribute('title');
+            } else {
+                addPartButton.disabled = true;
+                addPartButton.setAttribute('title', 'Tidak ada item yang ditolak untuk diganti.');
+            }
+        }
+
+        updateAddPartButtonState();
+
         window.addRequiredPart = function() {
+            if (isPartialReviewMode && addPartButton && addPartButton.disabled) {
+                showLockedPartAlert();
+                return;
+            }
             requiredParts.push({
                 item_code: 'Oli Mesin',
                 item_name: 'Oli Mesin',
@@ -3011,7 +3045,7 @@ a:hover {
                 qty: 1,
                 rate: 0,
                 uom: 'Unit',
-                stock_status: isPartialRejectMode ? 'Re-Request' : 'Draft',
+                stock_status: isPartialReviewMode ? 'Re-Request' : 'Draft',
                 source: 'On Hand',
                 warehouse: '',
                 catalog_name: null,
