@@ -1959,6 +1959,16 @@ body {
         appendProgressLog: 'garage.api.portal.append_service_progress'
     };
 
+    const PROGRESS_STAGE_STATUSES = [
+        'Work In Progress',
+        'Awaiting QC',
+        'In Progress',
+        'Quality Check'
+    ];
+    const PROGRESS_STAGE_STATUS_SET = new Set(
+        PROGRESS_STAGE_STATUSES.map(status => status.toLowerCase())
+    );
+
     const orderLookup = {};
     const PAGE_SIZE = 5;
     const paginationState = {
@@ -2040,7 +2050,14 @@ body {
         }
 
         const label = escapeHtml(formatServiceOrderId(order.name, { context: 'progress' }) || order.name);
-        const target = `/garage/inspection?order_id=${encodeURIComponent(order.name)}`;
+        const normalizedStatus = (order.status || '').toString().toLowerCase();
+        const queryParams = [`order_id=${encodeURIComponent(order.name)}`];
+
+        if (PROGRESS_STAGE_STATUS_SET.has(normalizedStatus)) {
+            queryParams.push('mode=parts-detail');
+        }
+
+        const target = `/garage/inspection?${queryParams.join('&')}`;
         return `<a class="service-order-link" href="${target}">${label}</a>`;
     }
 
@@ -2830,14 +2847,12 @@ body {
             });
 
             const inspectionStageStatuses = ['Draft', 'Inspection', 'Estimate', 'Awaiting Approval', 'Approved', 'Pending Inspection', 'Planning'];
-            const progressStageStatuses = ['Work In Progress', 'Awaiting QC', 'In Progress', 'Quality Check'];
-
             const inspection = allOrders.filter(o =>
                 inspectionStageStatuses.includes(o.status)
             );
 
             const progress = allOrders.filter(o =>
-                progressStageStatuses.includes(o.status)
+                PROGRESS_STAGE_STATUSES.includes(o.status)
             );
 
             const completed = allOrders.filter(o =>

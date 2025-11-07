@@ -1042,6 +1042,11 @@ a:hover {
     cursor: not-allowed;
 }
 
+body.parts-detail-mode .parts-table th.actions,
+body.parts-detail-mode .parts-table td.actions {
+    display: none;
+}
+
 .part-row--locked {
     opacity: 0.7;
 }
@@ -3076,6 +3081,9 @@ a:hover {
                 const inputDisabledAttr = locked ? ' disabled' : '';
                 const removeDisabledAttr = locked ? ' disabled' : '';
                 const removeTitleAttr = locked && !isPartsDetailMode ? ' title="Item tidak dapat dihapus"' : '';
+                const actionButton = !isPartsDetailMode
+                    ? `<button type="button" class="btn-remove" onclick="removeRequiredPart(${i})"${removeDisabledAttr}${removeTitleAttr}>🗑️ Trash</button>`
+                    : '';
 
                 const catalogOptions = sparePartCatalog
                     .map((catalog) => {
@@ -3134,7 +3142,7 @@ a:hover {
                         <td><input type="text" value="${escapeHtml(formatCurrency(part.rate || 0))}" inputmode="numeric" onchange="updateRequiredPartRate(${i}, this.value)"${inputDisabledAttr}></td>
                         <td><input type="text" value="${escapeHtml(formatCurrency(part.discount_amount || 0))}" inputmode="numeric" onchange="updateRequiredPartDiscount(${i}, this.value)"${inputDisabledAttr}></td>
                         <td class="numeric">${formatCurrency(part.amount || 0)}</td>
-                        <td class="actions"><button type="button" class="btn-remove" onclick="removeRequiredPart(${i})"${removeDisabledAttr}${removeTitleAttr}>🗑️ Trash</button></td>
+                        <td class="actions">${actionButton}</td>
                     </tr>
                 `;
             }).join('');
