@@ -1245,6 +1245,7 @@ body .frappe-confirm {
         <div class="section-header">
             <div class="section-title">
                 <h2>Riwayat Approve Sparepart</h2>
+                <span class="section-badge success" data-metric="spare-approval-count">0</span>
             </div>
         </div>
         <div class="service-table-wrapper">
@@ -1261,6 +1262,7 @@ body .frappe-confirm {
                 <tbody data-role="spare-approval-table"></tbody>
             </table>
         </div>
+        <div class="table-pagination" data-pagination="spare-approvals" hidden></div>
         <div class="empty-state" data-empty="spare-approvals">
             <div class="empty-state__icon">🗂️</div>
             <div class="empty-state__title">Belum ada riwayat approve.</div>
@@ -1313,11 +1315,14 @@ body .frappe-confirm {
     const state = {
         spareParts: [],
         spareRequests: [],
+        spareApprovals: [],
+        filteredApprovals: [],
         partIndex: new Map(),
         groupedRequests: new Map(),
         requestGroups: [],
         pagination: {
             'spare-requests': { page: 1 },
+            'spare-approvals': { page: 1 },
         },
         activeServiceOrder: null,
         pendingOrderFocus: null,
@@ -1326,6 +1331,7 @@ body .frappe-confirm {
             total_count: 0,
             request_count: 0,
             low_stock_count: 0,
+            approval_count: 0,
         },
     };
 
@@ -1594,6 +1600,10 @@ body .frappe-confirm {
             const data = response.message || {};
             state.spareParts = data.spare_parts || [];
             state.spareRequests = data.spare_part_requests || [];
+            state.spareApprovals = data.spare_part_approvals || [];
+            state.filteredApprovals = Array.isArray(state.spareApprovals)
+                ? state.spareApprovals.slice()
+                : [];
             state.partIndex = new Map();
             state.spareParts.forEach(part => {
                 if (part?.name) state.partIndex.set(part.name, part);
@@ -1601,6 +1611,7 @@ body .frappe-confirm {
             });
 
             state.pagination['spare-requests'].page = 1;
+            state.pagination['spare-approvals'].page = 1;
 
             state.metrics = {
                 total_count: data.total_count || 0,
@@ -1608,10 +1619,14 @@ body .frappe-confirm {
                     ? data.request_count
                     : state.spareRequests.length,
                 low_stock_count: data.low_stock_count || 0,
+                approval_count: typeof data.approval_count === 'number'
+                    ? data.approval_count
+                    : state.filteredApprovals.length,
             };
 
             updateMetrics(state.metrics);
             renderSpareRequests(state.spareRequests);
+            renderSpareApprovals();
         } catch (error) {
             console.error('[Sparepart] Error:', error);
             frappe.show_alert({ message: 'Gagal memuat data: ' + (error.message || error), indicator: 'red' }, 5);
@@ -1623,6 +1638,7 @@ body .frappe-confirm {
             'spare-count': data.total_count,
             'spare-request-count': data.request_count,
             'spare-low-stock': data.low_stock_count,
+            'spare-approval-count': data.approval_count,
         };
         Object.entries(metrics).forEach(([key, value]) => {
             document.querySelectorAll(`[data-metric="${key}"]`).forEach(el => {
@@ -1650,6 +1666,25 @@ body .frappe-confirm {
             'cancelled': '<span class="badge muted">Cancelled</span>',
         };
         return badges[normalized] || '<span class="badge subtle">Draft</span>';
+    }
+
+    function formatApprovalTimestamp(value) {
+        if (!value) {
+            return '-';
+        }
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+            return '-';
+        }
+
+        return date.toLocaleString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
     }
 
     function renderSpareRequests(requests) {
@@ -1943,6 +1978,79 @@ body .frappe-confirm {
         }
     }
 
+    function renderSpareApprovals() {
+        const table = document.querySelector('[data-role="spare-approval-table"]');
+        const emptyState = document.querySelector('[data-empty="spare-approvals"]');
+        if (!table) {
+            return;
+        }
+
+        const approvals = Array.isArray(state.filteredApprovals)
+            ? state.filteredApprovals
+            : Array.isArray(state.spareApprovals)
+                ? state.spareApprovals
+                : [];
+
+        const total = approvals.length;
+        const paginationState = state.pagination['spare-approvals'] || { page: 1 };
+
+        if (!total) {
+            table.innerHTML = '';
+            if (emptyState) {
+                emptyState.style.display = 'block';
+            }
+            updatePaginationControls('spare-approvals', 0);
+            return;
+        }
+
+        if (emptyState) {
+            emptyState.style.display = 'none';
+        }
+
+        const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        paginationState.page = Math.min(Math.max(paginationState.page || 1, 1), totalPages);
+        state.pagination['spare-approvals'] = paginationState;
+
+        const start = (paginationState.page - 1) * PAGE_SIZE;
+        const currentRows = approvals.slice(start, start + PAGE_SIZE);
+
+        table.innerHTML = currentRows.map(row => {
+            if (!row) {
+                return '';
+            }
+
+            const docLabel = escapeHTML(row.document_number || row.name || '-');
+            const docLink = row.name
+                ? `<a href="/app/garage-spare-part-approval/${encodeURIComponent(row.name)}" target="_blank" rel="noopener">${docLabel}</a>`
+                : docLabel;
+
+            const serviceDisplay = row.service_order
+                ? escapeHTML(formatServiceOrderId(row.service_order))
+                : '-';
+            const serviceLink = row.service_order
+                ? `<a href="/app/garage-service-order/${encodeURIComponent(row.service_order)}" target="_blank" rel="noopener">${serviceDisplay}</a>`
+                : serviceDisplay;
+
+            const approvedOn = escapeHTML(formatApprovalTimestamp(row.approved_on));
+            const approvedBy = escapeHTML(row.approved_by || '-');
+            const downloadCell = row.document_url
+                ? `<a href="${escapeHTML(row.document_url)}" target="_blank" rel="noopener">Download</a>`
+                : '<span class="text-muted">Belum tersedia</span>';
+
+            return `
+                <tr>
+                    <td>${docLink}</td>
+                    <td>${serviceLink}</td>
+                    <td>${approvedOn}</td>
+                    <td>${approvedBy}</td>
+                    <td>${downloadCell}</td>
+                </tr>
+            `;
+        }).join('');
+
+        updatePaginationControls('spare-approvals', total);
+    }
+
     function handleRequestAction(event) {
         const button = event.target.closest('button[data-request-action]');
         if (!button) {
@@ -1997,23 +2105,36 @@ body .frappe-confirm {
                     button.disabled = true;
                 }
 
+                let finalPayload = null;
                 for (let index = 0; index < requestNames.length; index += 1) {
                     const name = requestNames[index];
-                    await frappe.call({
+                    const response = await frappe.call({
                         method: API.updateSpareRequest,
                         args: { name, action: normalized },
                         freeze: index === 0,
                         freeze_message: 'Memproses permintaan...',
                     });
+                    const payload = response?.message || null;
+                    if (
+                        payload
+                        && (payload.issue_document || payload.approval_record || payload.group_message)
+                    ) {
+                        finalPayload = payload;
+                    } else if (!finalPayload && payload) {
+                        finalPayload = payload;
+                    }
                 }
 
                 const indicator = indicatorMap[normalized] || 'green';
-                const message = isBulk
-                    ? `Berhasil memproses ${requestNames.length} permintaan pada ${serviceOrder || 'order ini'}.`
-                    : 'Permintaan diperbarui.';
+                const message = finalPayload?.group_message
+                    || (isBulk
+                        ? `Berhasil memproses ${requestNames.length} permintaan pada ${serviceOrder || 'order ini'}.`
+                        : 'Permintaan diperbarui.');
                 frappe.show_alert({ message, indicator }, 5);
                 const removedCount = applyLocalRequestUpdates(requestNames);
-                if (removedCount === 0) {
+                const shouldReload = removedCount === 0
+                    || Boolean(finalPayload?.approval_record || finalPayload?.issue_document);
+                if (shouldReload) {
                     await loadSpareParts();
                 }
                 if (closeModalOnSuccess) {
@@ -2322,7 +2443,23 @@ body .frappe-confirm {
         }
 
         const paginationState = state.pagination[type];
-        const totalItems = state.requestGroups.length;
+        let totalItems = 0;
+        if (type === 'spare-requests') {
+            totalItems = state.requestGroups.length;
+        } else if (type === 'spare-approvals') {
+            const approvals = Array.isArray(state.filteredApprovals)
+                ? state.filteredApprovals
+                : Array.isArray(state.spareApprovals)
+                    ? state.spareApprovals
+                    : [];
+            totalItems = approvals.length;
+        }
+
+        if (!totalItems) {
+            paginationState.page = 1;
+            return;
+        }
+
         const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
 
         if (button.dataset.page === 'prev' && paginationState.page > 1) {
@@ -2333,7 +2470,11 @@ body .frappe-confirm {
             return;
         }
 
-        renderSpareRequests(state.spareRequests);
+        if (type === 'spare-requests') {
+            renderSpareRequests(state.spareRequests);
+        } else if (type === 'spare-approvals') {
+            renderSpareApprovals();
+        }
     }
 
     async function generateApprovalDocument(requestName, serviceOrder, button) {
