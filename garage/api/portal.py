@@ -805,13 +805,13 @@ SPARE_REQUEST_CLOSED_STATUSES = [
     "Issued",
     "Rejected",
     "Cancelled",
-    "Farsal Reject",
+    "Partial Reject",
 ]
 SPARE_REQUEST_ACTIVE_STATUSES = [
     "Pending Check",
     "Request",
     "Pending",
-    "Farsal Approve",
+    "Partial Approve",
     "Available",
     "To Order",
     "Ordered",
