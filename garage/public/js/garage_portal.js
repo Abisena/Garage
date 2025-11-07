@@ -2591,11 +2591,27 @@ function cloneBrandModelMap(map) {
                 const key = request.parent || request.name || `orphan-${request.item_code || request.item_name || ''}`;
                 if (!groupIndex.has(key)) {
                     const order = serviceIndex.get(request.parent) || {};
-                    const group = { key, order, requests: [] };
+                    const group = { key, order, requests: [], requestKeys: new Set() };
                     groupIndex.set(key, group);
                     groupedRequests.push(group);
                 }
-                groupIndex.get(key).requests.push(request);
+
+                const group = groupIndex.get(key);
+                const uniqueKey =
+                    request.name ||
+                    [
+                        request.item_code || request.item_name || 'unknown',
+                        request.source || '',
+                        request.warehouse || '',
+                        request.description || '',
+                    ].join('|');
+
+                if (group.requestKeys.has(uniqueKey)) {
+                    return;
+                }
+
+                group.requestKeys.add(uniqueKey);
+                group.requests.push(request);
             });
 
             groupedRequests.forEach((group) => {
