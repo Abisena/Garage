@@ -400,6 +400,15 @@ body {
     text-decoration: underline;
 }
 
+.request-item__link--warning {
+    color: var(--status-danger);
+}
+
+.request-item__link--warning:hover {
+    color: var(--status-danger);
+    text-decoration: underline;
+}
+
 .detail-loading {
     font-size: 14px;
     color: var(--text-muted);
@@ -913,6 +922,12 @@ body {
         requestListEl.innerHTML = requests
             .map(request => {
                 const orderDisplay = formatServiceOrderId(request.parent);
+                const partChargeStatus = (request.part_charge_status || '').trim();
+                const normalizedPartCharge = partChargeStatus.toLowerCase();
+                const isPartialReject = normalizedPartCharge === 'partial reject';
+                const statusBadge = partChargeStatus
+                    ? `<span class="badge ${isPartialReject ? 'danger' : 'info'}">${escapeHTML(partChargeStatus)}</span>`
+                    : '';
                 const customerLine = request.customer
                     ? `<div class="request-item__meta">${escapeHTML(request.customer)}</div>`
                     : '';
@@ -931,14 +946,16 @@ body {
                 const qtyDisplay = formatQuantity(request.qty || request.stock_qty, request.uom);
                 const created = formatDateTime(request.creation);
                 const orderLink = request.parent
-                    ? `<a class="request-item__link" href="/app/garage-service-order/${encodeURIComponent(request.parent)}" target="_blank" rel="noopener">Buka Service Order</a>`
+                    ? `<a class="request-item__link${isPartialReject ? ' request-item__link--warning' : ''}" href="${isPartialReject
+                        ? `/garage/inspection?order_id=${encodeURIComponent(request.parent)}&mode=partial-reject`
+                        : `/garage/inspection?order_id=${encodeURIComponent(request.parent)}&mode=parts-detail`}">${isPartialReject ? 'Lanjutkan Partial Reject' : 'Lihat Detail Sparepart'}</a>`
                     : '';
 
                 return `
                     <li class="request-item">
                         <div class="request-item__header">
                             <div>
-                                <div class="request-item__order">${escapeHTML(orderDisplay)}</div>
+                                <div class="request-item__order">${escapeHTML(orderDisplay)} ${statusBadge}</div>
                                 ${customerLine}
                                 ${vehicleLine}
                                 ${advisorLine}
