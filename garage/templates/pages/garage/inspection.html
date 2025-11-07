@@ -2520,15 +2520,21 @@ a:hover {
             return labels[normalized] || status || 'Draft';
         }
 
-        function canModifyPart(part) {
-            if (!isPartialReviewMode) {
-                return true;
+        function resolveEditableStatuses() {
+            if (isPartialReviewMode) {
+                return ['rejected', 'draft', 're-request'];
             }
+            return ['draft', 'planned', 'pending check', 're-request', 'rejected'];
+        }
+
+        function canModifyPart(part) {
             const status = normalizeStatusValue(part?.stock_status);
             if (!status) {
                 return true;
             }
-            return ['rejected', 'draft', 're-request'].includes(status);
+
+            const editableStatuses = resolveEditableStatuses();
+            return editableStatuses.includes(status);
         }
 
         function isPartLocked(part) {
