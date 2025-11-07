@@ -1335,6 +1335,49 @@ body .frappe-confirm {
         },
     };
 
+    function parseTimestamp(value) {
+        if (!value) {
+            return null;
+        }
+
+        const timestamp = new Date(value).getTime();
+        return Number.isFinite(timestamp) ? timestamp : null;
+    }
+
+    function getApprovalTimestamp(approval) {
+        if (!approval || typeof approval !== 'object') {
+            return Number.POSITIVE_INFINITY;
+        }
+
+        const candidates = [approval.approved_on, approval.creation, approval.modified];
+        for (const candidate of candidates) {
+            const parsed = parseTimestamp(candidate);
+            if (parsed !== null) {
+                return parsed;
+            }
+        }
+
+        return Number.POSITIVE_INFINITY;
+    }
+
+    function sortApprovalsFIFO(approvals) {
+        if (!Array.isArray(approvals)) {
+            return [];
+        }
+
+        return approvals.slice().sort((a, b) => {
+            const timeA = getApprovalTimestamp(a);
+            const timeB = getApprovalTimestamp(b);
+            if (timeA !== timeB) {
+                return timeA - timeB;
+            }
+
+            const docA = (a?.document_number || a?.name || '').toString();
+            const docB = (b?.document_number || b?.name || '').toString();
+            return docA.localeCompare(docB);
+        });
+    }
+
     function escapeHTML(value) {
         if (value === undefined || value === null) {
             return '';
@@ -1600,10 +1643,9 @@ body .frappe-confirm {
             const data = response.message || {};
             state.spareParts = data.spare_parts || [];
             state.spareRequests = data.spare_part_requests || [];
-            state.spareApprovals = data.spare_part_approvals || [];
-            state.filteredApprovals = Array.isArray(state.spareApprovals)
-                ? state.spareApprovals.slice()
-                : [];
+            const approvals = sortApprovalsFIFO(data.spare_part_approvals || []);
+            state.spareApprovals = approvals;
+            state.filteredApprovals = approvals.slice();
             state.partIndex = new Map();
             state.spareParts.forEach(part => {
                 if (part?.name) state.partIndex.set(part.name, part);
@@ -1985,11 +2027,12 @@ body .frappe-confirm {
             return;
         }
 
-        const approvals = Array.isArray(state.filteredApprovals)
+        const sourceApprovals = Array.isArray(state.filteredApprovals) && state.filteredApprovals.length
             ? state.filteredApprovals
             : Array.isArray(state.spareApprovals)
                 ? state.spareApprovals
                 : [];
+        const approvals = sortApprovalsFIFO(sourceApprovals);
 
         const total = approvals.length;
         const paginationState = state.pagination['spare-approvals'] || { page: 1 };
