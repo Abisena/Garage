@@ -1207,8 +1207,8 @@ body .frappe-confirm {
                         <th>Service Order</th>
                         <th>Kendaraan</th>
                         <th>Customer</th>
-                        <th>Status</th>
                         <th>Action</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody data-role="spare-request-table"></tbody>
@@ -1968,15 +1968,15 @@ body .frappe-confirm {
                             ${customerContact}
                         </div>
                     </td>
+                    <td class="request-actions-cell">
+                        <div class="request-actions">${actionButtons.join('')}</div>
+                    </td>
                     <td class="status-cell">
                         <div class="request-status">
                             <div class="status-badges">${getRequestStatusBadge(primaryStatus)}</div>
                             ${queueMeta}
                             ${otherStatusMeta}
                         </div>
-                    </td>
-                    <td class="request-actions-cell">
-                        <div class="request-actions">${actionButtons.join('')}</div>
                     </td>
                 </tr>
             `;
