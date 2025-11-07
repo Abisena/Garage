@@ -962,25 +962,6 @@ body .frappe-confirm {
     gap: 10px;
 }
 
-.spare-request-modal__item-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-}
-
-.spare-request-modal__item-name {
-    font-weight: 600;
-    font-size: 15px;
-    color: var(--text-primary);
-}
-
-.spare-request-modal__item-code {
-    font-size: 13px;
-    color: var(--text-secondary);
-    font-weight: 500;
-}
-
 .spare-request-modal__item-meta {
     font-size: 13px;
     color: var(--text-secondary);
@@ -2306,15 +2287,9 @@ body .frappe-confirm {
 
                     return `
                         <div class="spare-request-modal__item">
-                            <div class="spare-request-modal__item-header">
-                                <div>
-                                    <div class="spare-request-modal__item-name">${escapeHTML(req.item_name || req.item_code || '-')}</div>
-                                    <div class="spare-request-modal__item-code">${escapeHTML(req.item_code || part?.part_code || 'Manual')}</div>
-                                </div>
-                                <div class="spare-request-modal__item-status">
-                                    ${getRequestStatusBadge(req.stock_status)}
-                                    <span>${escapeHTML(`${qty} ${uom}`)}</span>
-                                </div>
+                            <div class="spare-request-modal__item-status">
+                                ${getRequestStatusBadge(req.stock_status)}
+                                <span>${escapeHTML(`${qty} ${uom}`)}</span>
                             </div>
                             ${description}
                             ${warning}
