@@ -392,6 +392,75 @@ body {
     flex-wrap: wrap;
 }
 
+.page-search {
+    margin: 24px 0 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.page-search__control {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.page-search__icon {
+    position: absolute;
+    left: 14px;
+    font-size: 16px;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.page-search__input {
+    width: 100%;
+    min-width: 0;
+    padding: 12px 44px 12px 40px;
+    border: 1px solid var(--border-base);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    color: var(--text-primary);
+    background: white;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.page-search__input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.12);
+}
+
+.page-search__clear {
+    position: absolute;
+    right: 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    display: none;
+}
+
+.page-search__clear:is(:hover, :focus-visible) {
+    color: var(--text-secondary);
+}
+
+.page-search__clear.is-visible {
+    display: inline-flex;
+}
+
+.page-search__meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    min-height: 16px;
+}
+
+.page-search__meta.is-visible {
+    color: var(--text-secondary);
+}
+
 .btn {
     display: inline-flex;
     align-items: center;
@@ -1131,6 +1200,15 @@ body .frappe-confirm {
         </div>
     </div>
 
+    <div class="page-search" role="search">
+        <div class="page-search__control">
+            <span class="page-search__icon">🔍</span>
+            <input type="search" id="spare-global-search" class="page-search__input" placeholder="Cari permintaan, service order, customer, atau kendaraan" aria-label="Cari permintaan sparepart" autocomplete="off">
+            <button type="button" class="page-search__clear" data-role="spare-search-clear" aria-label="Hapus pencarian">✕</button>
+        </div>
+        <div class="page-search__meta" id="spare-search-meta"></div>
+    </div>
+
     <section class="workflow-section">
         <div class="section-header">
             <div class="section-title">
@@ -1243,6 +1321,7 @@ body .frappe-confirm {
         },
         activeServiceOrder: null,
         pendingOrderFocus: null,
+        searchQuery: '',
         metrics: {
             total_count: 0,
             request_count: 0,
@@ -1378,6 +1457,116 @@ body .frappe-confirm {
         };
     }
 
+    function collectRequestSearchFields(request = {}) {
+        const technicianNames = Array.isArray(request.technicians)
+            ? request.technicians
+                .map(tech => tech?.technician_name || tech?.technician)
+                .filter(Boolean)
+            : [];
+
+        return [
+            request.parent,
+            request.service_order,
+            request.name,
+            request.item_code,
+            request.item_name,
+            request.item_group,
+            request.item_description,
+            request.service_item_name,
+            request.brand,
+            request.model,
+            request.stock_status,
+            request.status,
+            request.service_advisor,
+            request.service_customer_name,
+            request.customer_name,
+            request.customer,
+            request.customer_phone,
+            request.service_customer_phone,
+            request.vehicle_plate,
+            request.vehicle_name,
+            request.vehicle_model,
+            request.vehicle_brand,
+            ...technicianNames,
+        ];
+    }
+
+    function filterSpareRequests(requests, query) {
+        if (!Array.isArray(requests)) {
+            return [];
+        }
+
+        const normalizedQuery = (query || '').trim().toLowerCase();
+        if (!normalizedQuery) {
+            return requests.slice();
+        }
+
+        return requests.filter(request => {
+            return collectRequestSearchFields(request).some(value => {
+                if (value === undefined || value === null) {
+                    return false;
+                }
+                return value.toString().toLowerCase().includes(normalizedQuery);
+            });
+        });
+    }
+
+    function updateSpareRequestSearchMeta(meta = {}) {
+        const { hasQuery = false, visibleGroups = 0, totalGroups = 0, matchedRequests = 0 } = meta;
+        const metaElement = document.getElementById('spare-search-meta');
+        const clearButton = document.querySelector('[data-role="spare-search-clear"]');
+
+        if (clearButton) {
+            clearButton.classList.toggle('is-visible', hasQuery);
+        }
+
+        if (!metaElement) {
+            return;
+        }
+
+        if (!hasQuery) {
+            metaElement.textContent = '';
+            metaElement.classList.remove('is-visible');
+            return;
+        }
+
+        if (!matchedRequests) {
+            metaElement.textContent = 'Tidak ada hasil yang cocok';
+            metaElement.classList.add('is-visible');
+            return;
+        }
+
+        const orderLabel = 'order servis';
+        metaElement.textContent = `Menampilkan ${visibleGroups} dari ${totalGroups} ${orderLabel} (${matchedRequests} permintaan cocok)`;
+        metaElement.classList.add('is-visible');
+    }
+
+    function handleSpareGlobalSearch(event) {
+        state.searchQuery = event?.target?.value || '';
+        state.pagination['spare-requests'].page = 1;
+        renderSpareRequests(state.spareRequests);
+    }
+
+    function clearSpareGlobalSearch() {
+        if (!state.searchQuery) {
+            const input = document.getElementById('spare-global-search');
+            if (input) {
+                input.value = '';
+            }
+            updateSpareRequestSearchMeta({ hasQuery: false });
+            return;
+        }
+
+        state.searchQuery = '';
+        const input = document.getElementById('spare-global-search');
+        if (input) {
+            input.value = '';
+            input.focus();
+        }
+        state.pagination['spare-requests'].page = 1;
+        renderSpareRequests(state.spareRequests);
+    }
+
     function formatServiceOrderId(value) {
         if (value === undefined || value === null) {
             return '-';
@@ -1471,12 +1660,39 @@ body .frappe-confirm {
             return;
         }
 
-        if (!requests || requests.length === 0) {
+        const allRequests = Array.isArray(requests) ? requests : [];
+        const query = (state.searchQuery || '').trim();
+        const hasQuery = query.length > 0;
+
+        if (!allRequests.length) {
             tbody.innerHTML = '';
             if (emptyState) emptyState.style.display = 'block';
             state.groupedRequests = new Map();
             state.requestGroups = [];
             updatePaginationControls('spare-requests', 0);
+            updateSpareRequestSearchMeta({ hasQuery, visibleGroups: 0, totalGroups: 0, matchedRequests: 0 });
+            return;
+        }
+
+        const filteredRequests = filterSpareRequests(allRequests, query);
+
+        if (!filteredRequests.length) {
+            if (emptyState) emptyState.style.display = 'none';
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state">
+                            <div class="empty-state__icon">🔍</div>
+                            <div class="empty-state__title">Tidak ada hasil pencarian</div>
+                            <div class="empty-state__message">Coba ubah kata kunci pencarian Anda untuk menemukan permintaan yang relevan.</div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            state.groupedRequests = new Map();
+            state.requestGroups = [];
+            updatePaginationControls('spare-requests', 0);
+            updateSpareRequestSearchMeta({ hasQuery: true, visibleGroups: 0, totalGroups: 0, matchedRequests: 0 });
             return;
         }
 
@@ -1484,7 +1700,7 @@ body .frappe-confirm {
 
         const groups = new Map();
 
-        requests.forEach(request => {
+        filteredRequests.forEach(request => {
             const serviceOrder = request.parent || request.name || '';
             if (!serviceOrder) {
                 return;
@@ -1707,6 +1923,13 @@ body .frappe-confirm {
                 </tr>
             `;
         }).join('');
+
+        updateSpareRequestSearchMeta({
+            hasQuery,
+            visibleGroups: currentGroups.length,
+            totalGroups: total,
+            matchedRequests: filteredRequests.length,
+        });
 
         if (state.pendingOrderFocus) {
             const focusOrder = state.pendingOrderFocus;
@@ -2151,6 +2374,13 @@ body .frappe-confirm {
 
     function init() {
         loadSpareParts();
+
+        const searchInput = document.getElementById('spare-global-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', handleSpareGlobalSearch);
+        }
+
+        document.querySelector('[data-role="spare-search-clear"]')?.addEventListener('click', clearSpareGlobalSearch);
 
         document.querySelector('[data-role="spare-request-table"]')?.addEventListener('click', handleRequestAction);
 
