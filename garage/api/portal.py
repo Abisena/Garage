@@ -800,11 +800,18 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
     },
 }
 
-SPARE_REQUEST_CLOSED_STATUSES = ["Received", "Issued", "Rejected", "Cancelled"]
+SPARE_REQUEST_CLOSED_STATUSES = [
+    "Received",
+    "Issued",
+    "Rejected",
+    "Cancelled",
+    "Farsal Reject",
+]
 SPARE_REQUEST_ACTIVE_STATUSES = [
     "Pending Check",
     "Request",
     "Pending",
+    "Farsal Approve",
     "Available",
     "To Order",
     "Ordered",
