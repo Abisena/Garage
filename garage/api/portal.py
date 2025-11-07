@@ -3002,6 +3002,10 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
         limit=200,
     )
 
+    # Fetch recently approved spare part issues so the portal can expose
+    # the approval history without requiring a Desk login.
+    spare_part_approvals = _list_spare_part_approvals(None, limit=100)
+
     # Enrich requests with service order context and technician information to
     # make the UI rendering straightforward.
     parent_order_names = sorted(
@@ -3137,10 +3141,12 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
     return {
         "spare_parts": spare_parts,
         "spare_part_requests": spare_part_requests,
+        "spare_part_approvals": spare_part_approvals,
         "total_count": len(spare_parts),
         "active_count": len(active_parts),
         "low_stock_count": len(low_stock_parts),
         "request_count": len(spare_part_requests),
+        "approval_count": len(spare_part_approvals),
     }
 
 
