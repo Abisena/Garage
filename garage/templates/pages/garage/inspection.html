@@ -1,8 +1,10 @@
 {% extends "templates/web.html" %}
 
-{% set is_partial_reject_mode = (frappe.form_dict.get('mode') or '').lower() == 'partial-reject' %}
+{% set inspection_mode = (frappe.form_dict.get('mode') or '').lower() %}
+{% set is_partial_reject_mode = inspection_mode == 'partial-reject' %}
+{% set is_parts_detail_mode = inspection_mode == 'parts-detail' %}
 
-{% block title %}{{ 'Inspeksi Partial Reject - Garage' if is_partial_reject_mode else 'Inspeksi Service Order - Garage' }}{% endblock %}
+{% block title %}{% if is_partial_reject_mode %}Inspeksi Partial Reject - Garage{% elif is_parts_detail_mode %}Detail Sparepart - Garage{% else %}Inspeksi Service Order - Garage{% endif %}{% endblock %}
 
 {% set required_roles = ['Service', 'Servis', 'Service Advisor', 'Technician', 'Teknisi'] %}
 {% include "garage/templates/includes/role_guard.html" %}
@@ -78,6 +80,17 @@ body {
     background: var(--bg-body) !important;
     color: var(--text-primary) !important;
     line-height: 1.6;
+}
+
+body.parts-detail-mode .btn[disabled] {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+body.parts-detail-mode .btn.btn-primary[disabled] {
+    background: var(--gray-300);
+    border-color: var(--gray-300);
+    color: var(--text-muted);
 }
 
 a {
@@ -1472,8 +1485,24 @@ a:hover {
         </div>
         <div class="hero-body">
             <div class="hero-text">
-                <h1>{{ '🛠️ Inspeksi Partial Reject' if is_partial_reject_mode else '🔍 Inspeksi Service Order' }}</h1>
-                <p>{{ 'Beberapa permintaan sparepart ditolak. Hapus item yang ditolak, kemudian ajukan pengganti sebelum mengirim ulang.' if is_partial_reject_mode else 'Lengkapi hasil pemeriksaan kendaraan dan bagikan update terbaru untuk tim bengkel.' }}</p>
+                <h1 data-role="inspection-title">
+                    {% if is_partial_reject_mode %}
+                        🛠️ Inspeksi Partial Reject
+                    {% elif is_parts_detail_mode %}
+                        🧾 Detail Sparepart
+                    {% else %}
+                        🔍 Inspeksi Service Order
+                    {% endif %}
+                </h1>
+                <p data-role="inspection-subtitle">
+                    {% if is_partial_reject_mode %}
+                        Beberapa permintaan sparepart ditolak. Hapus item yang ditolak, kemudian ajukan pengganti sebelum mengirim ulang.
+                    {% elif is_parts_detail_mode %}
+                        Permintaan sparepart telah aman. Gunakan halaman ini untuk meninjau detail tanpa melakukan perubahan.
+                    {% else %}
+                        Lengkapi hasil pemeriksaan kendaraan dan bagikan update terbaru untuk tim bengkel.
+                    {% endif %}
+                </p>
             </div>
             <div class="hero-meta">
                 <div class="meta-item">
@@ -1561,22 +1590,36 @@ a:hover {
                         </div>
                     </div>
 
-                    {% if is_partial_reject_mode %}
-                    <div class="partial-reject-banner" role="status">
+                    <div class="partial-reject-banner" role="status" data-role="partial-reject-banner"{% if not (is_partial_reject_mode and not is_parts_detail_mode) %} hidden{% endif %}>
                         <strong>Partial Reject</strong>
                         <span>Beberapa item ditolak oleh tim sparepart. Gunakan tombol <strong>Trash</strong> pada baris berstatus <em>Rejected</em>, lalu tambahkan item pengganti sebelum mengirim ulang.</span>
                     </div>
-                    {% endif %}
 
                     <div class="repeating-list" id="requiredPartsList">
                         <div class="empty-state">
-                            <strong>{{ 'Belum ada item pengganti.' if is_partial_reject_mode else 'Belum ada sparepart atau bahan.' }}</strong>
-                            <span>{{ 'Tambahkan pengganti untuk item yang ditolak sebelum melanjutkan.' if is_partial_reject_mode else 'Tambahkan kebutuhan untuk perbaikan.' }}</span>
+                            <strong>
+                                {% if is_partial_reject_mode %}
+                                    Belum ada item pengganti.
+                                {% elif is_parts_detail_mode %}
+                                    Belum ada sparepart untuk ditampilkan.
+                                {% else %}
+                                    Belum ada sparepart atau bahan.
+                                {% endif %}
+                            </strong>
+                            <span>
+                                {% if is_partial_reject_mode %}
+                                    Tambahkan pengganti untuk item yang ditolak sebelum melanjutkan.
+                                {% elif is_parts_detail_mode %}
+                                    Semua sparepart aman. Tidak ada tindakan yang perlu dilakukan.
+                                {% else %}
+                                    Tambahkan kebutuhan untuk perbaikan.
+                                {% endif %}
+                            </span>
                         </div>
                     </div>
 
                     <div class="section-actions">
-                        <button type="button" class="btn btn-add" onclick="addRequiredPart()">{{ '➕ Tambah Pengganti' if is_partial_reject_mode else '+ Tambah Part' }}</button>
+                        <button type="button" class="btn btn-add" data-role="parts-add-button" onclick="addRequiredPart()"{% if is_parts_detail_mode %} disabled aria-disabled="true"{% endif %}>{{ '➕ Tambah Pengganti' if is_partial_reject_mode else '+ Tambah Part' }}</button>
                     </div>
                 </section>
             </form>
@@ -1586,7 +1629,7 @@ a:hover {
     <div class="action-bar">
         <div class="action-buttons">
             <a href="/garage/service" class="btn btn-secondary">Batal</a>
-            <button type="button" class="btn btn-primary" onclick="submitInspection()">Save</button>
+            <button type="button" class="btn btn-primary" data-role="parts-save-button" onclick="submitInspection()"{% if is_parts_detail_mode %} disabled aria-disabled="true"{% endif %}>Save</button>
             <button type="button" class="btn btn-outline" id="print_spk_button" disabled onclick="printSpkDocument()">Print SPK</button>
         </div>
         <div class="action-info">
@@ -2427,10 +2470,13 @@ a:hover {
 
         const urlParams = new URLSearchParams(window.location.search);
         const orderId = urlParams.get('order_id');
-        const isPartialRejectMode = (urlParams.get('mode') || '').toLowerCase() === 'partial-reject';
+        const requestedMode = (urlParams.get('mode') || '').toLowerCase();
+        let isPartialRejectMode = requestedMode === 'partial-reject';
+        let isPartsDetailMode = requestedMode === 'parts-detail';
 
-        if (isPartialRejectMode && typeof document !== 'undefined' && document.body && document.body.classList) {
-            document.body.classList.add('partial-reject-mode');
+        if (typeof document !== 'undefined' && document.body && document.body.classList) {
+            document.body.classList.toggle('partial-reject-mode', isPartialRejectMode);
+            document.body.classList.toggle('parts-detail-mode', isPartsDetailMode);
         }
 
         if (!orderId) {
@@ -2461,6 +2507,9 @@ a:hover {
 
         bindTechnicianSelect();
         setTechnicianRoster([]);
+
+        updateModeCopy();
+        applyReadOnlyState();
 
         function resolveBaseServiceFee(partsTotal) {
             const normalizedBase = Math.max(0, Math.round(baseServiceFee || 0));
@@ -2516,6 +2565,10 @@ a:hover {
         }
 
         function canModifyPart(part) {
+            if (isPartsDetailMode) {
+                return false;
+            }
+
             if (!isPartialRejectMode) {
                 return true;
             }
@@ -2567,6 +2620,109 @@ a:hover {
             } else {
                 spkButton.disabled = true;
                 spkButton.setAttribute('aria-disabled', 'true');
+            }
+        }
+
+        function updateModeCopy() {
+            const titleEl = document.querySelector('[data-role="inspection-title"]');
+            const subtitleEl = document.querySelector('[data-role="inspection-subtitle"]');
+            const addButton = document.querySelector('[data-role="parts-add-button"]');
+            const saveButton = document.querySelector('[data-role="parts-save-button"]');
+            const partialBanner = document.querySelector('[data-role="partial-reject-banner"]');
+
+            if (titleEl) {
+                const titleText = isPartialRejectMode
+                    ? '🛠️ Inspeksi Partial Reject'
+                    : (isPartsDetailMode ? '🧾 Detail Sparepart' : '🔍 Inspeksi Service Order');
+                titleEl.textContent = titleText;
+            }
+
+            if (subtitleEl) {
+                const subtitleText = isPartialRejectMode
+                    ? 'Beberapa permintaan sparepart ditolak. Hapus item yang ditolak, kemudian ajukan pengganti sebelum mengirim ulang.'
+                    : (isPartsDetailMode
+                        ? 'Permintaan sparepart telah aman. Gunakan halaman ini untuk meninjau detail tanpa melakukan perubahan.'
+                        : 'Lengkapi hasil pemeriksaan kendaraan dan bagikan update terbaru untuk tim bengkel.');
+                subtitleEl.textContent = subtitleText;
+            }
+
+            if (addButton) {
+                if (isPartsDetailMode) {
+                    addButton.disabled = true;
+                    addButton.setAttribute('aria-disabled', 'true');
+                } else {
+                    addButton.disabled = false;
+                    addButton.removeAttribute('aria-disabled');
+                }
+            }
+
+            if (saveButton) {
+                if (isPartsDetailMode) {
+                    saveButton.disabled = true;
+                    saveButton.setAttribute('aria-disabled', 'true');
+                } else {
+                    saveButton.disabled = false;
+                    saveButton.removeAttribute('aria-disabled');
+                }
+            }
+
+            if (partialBanner) {
+                partialBanner.hidden = !isPartialRejectMode;
+            }
+
+            if (typeof document !== 'undefined') {
+                const nextTitle = isPartialRejectMode
+                    ? 'Inspeksi Partial Reject - Garage'
+                    : (isPartsDetailMode ? 'Detail Sparepart - Garage' : 'Inspeksi Service Order - Garage');
+                document.title = nextTitle;
+            }
+        }
+
+        function applyReadOnlyState() {
+            const form = document.getElementById('inspectionForm');
+            if (!form) {
+                return;
+            }
+
+            const controls = form.querySelectorAll('input, select, textarea');
+            controls.forEach((control) => {
+                if (!control.dataset.initialDisabled) {
+                    control.dataset.initialDisabled = control.disabled ? 'true' : 'false';
+                }
+
+                if (isPartsDetailMode) {
+                    control.disabled = true;
+                    control.setAttribute('aria-disabled', 'true');
+                } else if (control.dataset.initialDisabled === 'false') {
+                    control.disabled = false;
+                    control.removeAttribute('aria-disabled');
+                }
+            });
+        }
+
+        function setPageMode(mode) {
+            if (mode === 'partial-reject') {
+                isPartialRejectMode = true;
+                isPartsDetailMode = false;
+            } else if (mode === 'parts-detail') {
+                isPartialRejectMode = false;
+                isPartsDetailMode = true;
+            } else {
+                isPartialRejectMode = false;
+                isPartsDetailMode = false;
+            }
+
+            if (typeof document !== 'undefined' && document.body && document.body.classList) {
+                document.body.classList.toggle('partial-reject-mode', isPartialRejectMode);
+                document.body.classList.toggle('parts-detail-mode', isPartsDetailMode);
+            }
+
+            updateModeCopy();
+            renderRequiredParts();
+            applyReadOnlyState();
+
+            if (isPartsDetailMode) {
+                setSpkButtonState(false);
             }
         }
 
@@ -2810,7 +2966,7 @@ a:hover {
         }
 
         function normalizeStockStatus(value) {
-            if (isPartialRejectMode) {
+            if (isPartialRejectMode && !isPartsDetailMode) {
                 const normalized = value === undefined || value === null ? '' : String(value).trim();
                 if (!normalized) {
                     return 'Re-Request';
@@ -2851,10 +3007,12 @@ a:hover {
             if (requiredParts.length === 0) {
                 const emptyTitle = isPartialRejectMode
                     ? 'Belum ada item pengganti.'
-                    : 'Belum ada sparepart atau bahan.';
+                    : (isPartsDetailMode ? 'Belum ada sparepart untuk ditampilkan.' : 'Belum ada sparepart atau bahan.');
                 const emptyMessage = isPartialRejectMode
                     ? 'Tambahkan pengganti untuk item yang ditolak sebelum melanjutkan.'
-                    : 'Tambahkan kebutuhan untuk perbaikan.';
+                    : (isPartsDetailMode
+                        ? 'Semua sparepart aman. Tidak ada tindakan yang perlu dilakukan.'
+                        : 'Tambahkan kebutuhan untuk perbaikan.');
                 container.innerHTML = `
                     <div class="empty-state">
                         <strong>${escapeHtml(emptyTitle)}</strong>
@@ -2878,7 +3036,7 @@ a:hover {
                 );
                 let currentStatus = merged.stock_status || '';
                 const statusNormalized = normalizeStatusValue(currentStatus);
-                if (isPartialRejectMode) {
+                if (isPartialRejectMode && !isPartsDetailMode) {
                     if (!statusNormalized || ['draft', 'planned', 'pending check', 'pending'].includes(statusNormalized)) {
                         currentStatus = 'Re-Request';
                     }
@@ -2900,7 +3058,7 @@ a:hover {
 
             const rows = requiredParts.map((part, i) => {
                 const normalizedStatus = normalizeStatusValue(part.stock_status);
-                const locked = isPartLocked(part);
+                const locked = isPartLocked(part) || isPartsDetailMode;
                 const rowClasses = ['part-row'];
                 if (normalizedStatus === 'rejected') {
                     rowClasses.push('part-row--rejected');
@@ -2917,7 +3075,7 @@ a:hover {
                 const selectRequiredAttr = part.catalog_name || part.item_code ? '' : ' required';
                 const inputDisabledAttr = locked ? ' disabled' : '';
                 const removeDisabledAttr = locked ? ' disabled' : '';
-                const removeTitleAttr = locked ? ' title="Item tidak dapat dihapus"' : '';
+                const removeTitleAttr = locked && !isPartsDetailMode ? ' title="Item tidak dapat dihapus"' : '';
 
                 const catalogOptions = sparePartCatalog
                     .map((catalog) => {
@@ -2948,7 +3106,7 @@ a:hover {
                 const stockWarning = availableStock <= 0 && part.catalog_name
                     ? '<p class="sparepart-hint">Stok gudang habis. Pilih sumber lain atau lakukan pemesanan.</p>'
                     : '';
-                const statusNote = isPartialRejectMode
+                const statusNote = isPartialRejectMode && !isPartsDetailMode
                     ? `<div class="part-status-note">Status: ${escapeHtml(resolvePartStatusLabel(part.stock_status))}</div>`
                     : '';
 
@@ -3004,6 +3162,12 @@ a:hover {
         }
 
         window.addRequiredPart = function() {
+            if (isPartsDetailMode) {
+                if (window.frappe && typeof frappe.show_alert === 'function') {
+                    frappe.show_alert({ message: 'Order ini sudah aman. Tidak perlu menambah sparepart.', indicator: 'blue' }, 5);
+                }
+                return;
+            }
             requiredParts.push({
                 item_code: 'Oli Mesin',
                 item_name: 'Oli Mesin',
@@ -3028,6 +3192,9 @@ a:hover {
         };
 
         window.removeRequiredPart = function(index) {
+            if (isPartsDetailMode) {
+                return;
+            }
             const part = requiredParts[index];
             if (!part) {
                 return;
@@ -3041,6 +3208,9 @@ a:hover {
         };
 
         window.selectRequiredPart = function(index, value) {
+            if (isPartsDetailMode) {
+                return;
+            }
             const part = requiredParts[index];
             if (!part) {
                 return;
@@ -3079,6 +3249,9 @@ a:hover {
         };
 
         window.updateRequiredPartQty = function(index, value) {
+            if (isPartsDetailMode) {
+                return;
+            }
             if (!requiredParts[index]) {
                 return;
             }
@@ -3095,6 +3268,9 @@ a:hover {
         };
 
         window.updateRequiredPartRate = function(index, value) {
+            if (isPartsDetailMode) {
+                return;
+            }
             if (!requiredParts[index]) {
                 return;
             }
@@ -3111,6 +3287,9 @@ a:hover {
         };
 
         window.updateRequiredPartDiscount = function(index, value) {
+            if (isPartsDetailMode) {
+                return;
+            }
             if (!requiredParts[index]) {
                 return;
             }
@@ -3126,6 +3305,9 @@ a:hover {
         };
 
         window.updateRequiredPartDescription = function(index, value) {
+            if (isPartsDetailMode) {
+                return;
+            }
             const part = requiredParts[index];
             if (!part) {
                 return;
@@ -3147,6 +3329,9 @@ a:hover {
         };
 
         window.updateRequiredPartUom = function(index, value) {
+            if (isPartsDetailMode) {
+                return;
+            }
             if (!requiredParts[index]) {
                 return;
             }
@@ -3220,13 +3405,26 @@ a:hover {
             const customerDetails = order.customer_details || {};
             const vehicleDetails = order.vehicle_details || {};
 
+            const normalizedPartCharge = normalizeStatusValue(order?.part_charge_status);
+            if (normalizedPartCharge === 'partial reject') {
+                setPageMode('partial-reject');
+            } else if (isPartialRejectMode || isPartsDetailMode) {
+                setPageMode('parts-detail');
+            } else {
+                setPageMode('default');
+            }
+
             document.getElementById('display_order_id').textContent = formatServiceOrderId(order.name || order.order_id);
 
             const statusValue = order.status || order.workflow_state || order.job_card_status || 'Draft';
             applyStatusBadge(statusValue);
 
             const spkReadyStatuses = ['Work In Progress', 'Awaiting QC', 'Completed'];
-            setSpkButtonState(spkReadyStatuses.includes(statusValue));
+            if (isPartsDetailMode) {
+                setSpkButtonState(false);
+            } else {
+                setSpkButtonState(spkReadyStatuses.includes(statusValue));
+            }
 
             const intakeType = (order.intake_type || 'Walk-In').toLowerCase() === 'booking' ? 'Booking' : 'Walk-In';
             document.getElementById('display_intake_type').textContent = intakeType;
@@ -3453,6 +3651,12 @@ a:hover {
         }
 
         window.submitInspection = async function() {
+            if (isPartsDetailMode) {
+                if (window.frappe && typeof frappe.show_alert === 'function') {
+                    frappe.show_alert({ message: 'Sparepart sudah aman. Tidak ada aksi yang diperlukan.', indicator: 'blue' }, 5);
+                }
+                return;
+            }
             const form = document.getElementById('inspectionForm');
             if (form && !form.checkValidity()) {
                 form.reportValidity();

@@ -2889,16 +2889,42 @@ def get_spare_part_detail(name: str) -> Dict[str, Any]:
                     "vehicle",
                     "vehicle_plate",
                     "service_advisor",
+                    "part_charge_status",
                 ],
                 filters=[["name", "in", parent_names]],
                 limit=len(parent_names),
             )
             service_order_map = {row.get("name"): row for row in service_orders}
+
+            part_status_rows = _list_dicts(
+                "Garage Service Order Part",
+                ["parent", "stock_status"],
+                filters=[
+                    ["parenttype", "=", "Garage Service Order"],
+                    ["parent", "in", parent_names],
+                ],
+                limit=max(200, len(parent_names) * 25),
+            )
+
+            part_status_map: Dict[str, List[str]] = defaultdict(list)
+            for row in part_status_rows:
+                parent = row.get("parent")
+                if not parent:
+                    continue
+                status = cstr(row.get("stock_status") or "").strip()
+                if status:
+                    part_status_map[parent].append(status)
+
             for request in open_requests:
-                context = service_order_map.get(request.get("parent")) or {}
+                parent = request.get("parent")
+                context = service_order_map.get(parent) or {}
                 request["customer"] = context.get("customer_name") or context.get("customer")
                 request["vehicle"] = context.get("vehicle_plate") or context.get("vehicle")
                 request["service_advisor"] = context.get("service_advisor")
+                request["part_charge_status"] = derive_part_charge_status(
+                    part_status_map.get(parent, []),
+                    context.get("part_charge_status"),
+                )
 
     return {"spare_part": spare_part, "open_requests": open_requests}
 
