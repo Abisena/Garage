@@ -3146,7 +3146,7 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
         "total_count": len(spare_parts),
         "active_count": len(active_parts),
         "low_stock_count": len(low_stock_parts),
-        "request_count": len(spare_part_requests),
+        "request_count": len(parent_order_names),
         "approval_count": len(spare_part_approvals),
     }
 
