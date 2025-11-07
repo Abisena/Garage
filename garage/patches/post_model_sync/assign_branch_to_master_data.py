@@ -1,6 +1,7 @@
-"""Assign branch information to existing master data records."""
+"""Assign branch information to existing master data records.
 
-"""Backfill branch ownership on customers, vehicles, technicians, and approvals."""
+Backfill branch ownership on customers, vehicles, technicians, and approvals.
+"""
 
 from __future__ import annotations
 
