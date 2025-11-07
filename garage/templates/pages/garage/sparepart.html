@@ -392,6 +392,12 @@ body {
     flex-wrap: wrap;
 }
 
+.section-search {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 .btn {
     display: inline-flex;
     align-items: center;
@@ -459,6 +465,16 @@ body {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.12);
+}
+
+.search-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: none;
+}
+
+.search-meta.is-visible {
+    display: block;
 }
 
 /* Tables */
@@ -1137,9 +1153,13 @@ body .frappe-confirm {
                 <h2>Permintaan dari Servis</h2>
                 <span class="section-badge warning" data-metric="spare-request-count">0</span>
             </div>
-            <div class="section-actions">
-                <a class="btn btn-secondary" data-desk-link="Garage Service Order" target="_blank">Buka Service Order</a>
+        <div class="section-actions">
+            <div class="section-search">
+                <input type="search" class="search-input" id="spare-search" placeholder="Cari service order, customer, atau item" aria-label="Cari permintaan sparepart" oninput="handleSpareSearch(event)">
+                <div class="search-meta" data-role="spare-search-meta"></div>
             </div>
+            <a class="btn btn-secondary" data-desk-link="Garage Service Order" target="_blank">Buka Service Order</a>
+        </div>
         </div>
         <div class="service-table-wrapper">
             <table class="service-table">
@@ -1238,6 +1258,7 @@ body .frappe-confirm {
         partIndex: new Map(),
         groupedRequests: new Map(),
         requestGroups: [],
+        searchQuery: '',
         pagination: {
             'spare-requests': { page: 1 },
         },
@@ -1378,6 +1399,77 @@ body .frappe-confirm {
         };
     }
 
+    function matchesRequestGroup(group, query) {
+        if (!group) {
+            return false;
+        }
+
+        const normalizedQuery = String(query || '').trim().toLowerCase();
+        if (!normalizedQuery) {
+            return true;
+        }
+
+        const fields = [
+            group.serviceOrder,
+            group.customer,
+            group.customerPhone,
+            group.vehiclePlate,
+            group.vehicleModel,
+            group.vehicleDisplay,
+            group.serviceAdvisor,
+        ];
+
+        (group.requests || []).forEach(request => {
+            fields.push(
+                request.item_code,
+                request.item_name,
+                request.description,
+                request.stock_status,
+                request.source,
+                request.warehouse,
+            );
+        });
+
+        return fields.some(value => {
+            if (value === undefined || value === null) {
+                return false;
+            }
+
+            try {
+                return value.toString().toLowerCase().includes(normalizedQuery);
+            } catch (error) {
+                return false;
+            }
+        });
+    }
+
+    function updateSpareSearchMeta(visibleCount, totalCount) {
+        const meta = document.querySelector('[data-role="spare-search-meta"]');
+        if (!meta) {
+            return;
+        }
+
+        const activeQuery = (state.searchQuery || '').trim();
+        if (!activeQuery) {
+            meta.textContent = '';
+            meta.classList.remove('is-visible');
+            return;
+        }
+
+        if (!totalCount) {
+            meta.textContent = 'Tidak ada hasil yang cocok';
+            meta.classList.add('is-visible');
+            return;
+        }
+
+        const paginationInfo = state.pagination['spare-requests'] || { page: 1 };
+        const startIndex = (paginationInfo.page - 1) * PAGE_SIZE + 1;
+        const endIndex = startIndex + visibleCount - 1;
+
+        meta.textContent = `Menampilkan ${startIndex}-${endIndex} dari ${totalCount} hasil`;
+        meta.classList.add('is-visible');
+    }
+
     function formatServiceOrderId(value) {
         if (value === undefined || value === null) {
             return '-';
@@ -1477,6 +1569,7 @@ body .frappe-confirm {
             state.groupedRequests = new Map();
             state.requestGroups = [];
             updatePaginationControls('spare-requests', 0);
+            updateSpareSearchMeta(0, 0);
             return;
         }
 
@@ -1553,7 +1646,7 @@ body .frappe-confirm {
 
         state.groupedRequests = groups;
 
-        const groupsArray = Array.from(groups.values()).map(group => {
+        let groupsArray = Array.from(groups.values()).map(group => {
             if (!isFinite(group.createdAt)) {
                 group.createdAt = Date.now();
             }
@@ -1566,6 +1659,11 @@ body .frappe-confirm {
             }
             return (a.serviceOrder || '').localeCompare(b.serviceOrder || '');
         });
+
+        const activeQuery = (state.searchQuery || '').trim().toLowerCase();
+        if (activeQuery) {
+            groupsArray = groupsArray.filter(group => matchesRequestGroup(group, activeQuery));
+        }
 
         state.requestGroups = groupsArray;
 
@@ -1594,11 +1692,30 @@ body .frappe-confirm {
             }
         }
 
+        if (!total) {
+            paginationState.page = 1;
+            updatePaginationControls('spare-requests', 0);
+            updateSpareSearchMeta(0, 0);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state">
+                            <div class="empty-state__icon">🔍</div>
+                            <div class="empty-state__title">Tidak ada hasil pencarian</div>
+                            <div class="empty-state__message">Coba ubah kata kunci pencarian Anda</div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
         paginationState.page = Math.min(Math.max(paginationState.page, 1), totalPages);
         const start = (paginationState.page - 1) * PAGE_SIZE;
         const currentGroups = groupsArray.slice(start, start + PAGE_SIZE);
 
         updatePaginationControls('spare-requests', total);
+        updateSpareSearchMeta(currentGroups.length, total);
 
         tbody.innerHTML = currentGroups.map(group => {
             const requestNames = group.requests.map(req => req.name).filter(Boolean);
@@ -1719,6 +1836,15 @@ body .frappe-confirm {
             }
         }
     }
+
+    window.handleSpareSearch = function(event) {
+        state.searchQuery = event?.target?.value || '';
+        const paginationState = state.pagination['spare-requests'];
+        if (paginationState) {
+            paginationState.page = 1;
+        }
+        renderSpareRequests(state.spareRequests);
+    };
 
     function handleRequestAction(event) {
         const button = event.target.closest('button[data-request-action]');

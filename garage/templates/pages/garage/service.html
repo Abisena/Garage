@@ -1753,8 +1753,8 @@ body {
             <div class="section-actions">
                 <div class="section-search">
                     <span class="section-search__icon">🔍</span>
-                    <input type="search" id="inspection-search" placeholder="Cari order, customer, atau kendaraan" aria-label="Cari Waiting Entry" oninput="handleInspectionSearch(event)">
-                    <div class="section-search__meta" id="inspection-search-meta"></div>
+                    <input type="search" id="service-search" placeholder="Cari order di semua status" aria-label="Cari order servis" oninput="handleServiceSearch(event)">
+                    <div class="section-search__meta" id="service-search-meta"></div>
                 </div>
                 <button class="btn btn-secondary" onclick="refreshData()">🔄 Refresh</button>
             </div>
@@ -1807,7 +1807,6 @@ body {
                         <th>Service Order</th>
                         <th>Kendaraan</th>
                         <th>Customer</th>
-                        <th>Tracking Dokumen</th>
                         <th>Status</th>
                         <th>Action</th>
                     </tr>
@@ -1889,28 +1888,14 @@ body {
 
     const orderLookup = {};
     const PAGE_SIZE = 5;
-    const DEFAULT_TRACKING_STATUS = 'Not Started';
-    const TRACKING_STATUS_META = {
-        default: { label: DEFAULT_TRACKING_STATUS, className: 'tracking-badge tracking-badge--idle' },
-        'not started': { label: 'Not Started', className: 'tracking-badge tracking-badge--idle' },
-        pending: { label: 'Pending', className: 'tracking-badge tracking-badge--pending' },
-        'partial approve': { label: 'Partial Approved', className: 'tracking-badge tracking-badge--warning' },
-        'partial approved': { label: 'Partial Approved', className: 'tracking-badge tracking-badge--warning' },
-        'partial reject': { label: 'Partial Reject', className: 'tracking-badge tracking-badge--danger' },
-        're-request': { label: 'Request Ulang', className: 'tracking-badge tracking-badge--warning' },
-        approved: { label: 'Approved', className: 'tracking-badge tracking-badge--success' },
-        completed: { label: 'Completed', className: 'tracking-badge tracking-badge--success' },
-        rejected: { label: 'Rejected', className: 'tracking-badge tracking-badge--danger' },
-        cancelled: { label: 'Cancelled', className: 'tracking-badge tracking-badge--muted' },
-    };
 
     const paginationState = {
         inspection: { all: [], filtered: [], page: 1 },
-        progress: { all: [], page: 1 },
-        completed: { all: [], page: 1 }
+        progress: { all: [], filtered: [], page: 1 },
+        completed: { all: [], filtered: [], page: 1 }
     };
 
-    let inspectionSearchQuery = '';
+    let serviceSearchQuery = '';
 
     // ============================================================================
     // UTILITY FUNCTIONS
@@ -1995,35 +1980,6 @@ body {
 
         const target = `/garage/inspection?order_id=${encodeURIComponent(order.name)}&mode=sa-review`;
         return `<div class="cell-link"><a class="cell-link__anchor" href="${target}" title="Pantau permintaan sparepart">🔗 Sparepart</a></div>`;
-    }
-
-    function buildTrackingBadge(label, value) {
-        const normalized = (value || DEFAULT_TRACKING_STATUS).toLowerCase();
-        const meta = TRACKING_STATUS_META[normalized] || TRACKING_STATUS_META.default;
-        const className = meta.className || TRACKING_STATUS_META.default.className;
-        const displayLabel = meta.label || (value || DEFAULT_TRACKING_STATUS);
-        return `
-            <div class="${className}">
-                <div class="tracking-badge__label">${escapeHtml(label)}</div>
-                <div class="tracking-badge__value">${escapeHtml(displayLabel)}</div>
-            </div>
-        `;
-    }
-
-    function renderTrackingBadges(order) {
-        if (!order) {
-            return buildTrackingBadge('Sparepart & Bahan', DEFAULT_TRACKING_STATUS);
-        }
-
-        const items = [
-            { label: 'Sparepart & Bahan', value: order.part_charge_status },
-            { label: 'Nota', value: order.note_status },
-            { label: 'Invoice', value: order.invoice_status },
-            { label: 'SIKK', value: order.sikk_status },
-        ];
-
-        const badges = items.map(item => buildTrackingBadge(item.label, item.value)).join('');
-        return `<div class="tracking-grid">${badges}</div>`;
     }
 
     function formatServiceOrderId(value, options = {}) {
@@ -2199,14 +2155,14 @@ body {
 
     window.openStatusUpdateModal = openStatusUpdateModal;
 
-    function filterInspectionOrders(orders, query) {
+    function filterOrders(orders, query) {
         if (!Array.isArray(orders)) {
             return [];
         }
 
         const normalizedQuery = (query || '').trim().toLowerCase();
         if (!normalizedQuery) {
-            return orders;
+            return orders.slice();
         }
 
         return orders.filter(order => {
@@ -2219,31 +2175,46 @@ body {
                 order.customer_name,
                 order.customer,
                 order.customer_phone,
+                order.customer_mobile,
+                order.customer_mobile_no,
                 order.vehicle_plate,
                 formatVehiclePlate(order.vehicle_plate),
                 order.vehicle_brand,
                 order.vehicle_model,
                 order.vehicle_model_variant,
                 order.service_order_type,
-                order.service_notes
+                order.service_notes,
+                order.inspection_summary,
+                order.status,
+                order.part_charge_status,
+                order.note_status,
+                order.invoice_status,
+                order.sikk_status,
+                order.booking_reference,
+                order.service_booking_reference
             ];
 
             return fields.some(value => {
                 if (value === undefined || value === null) {
                     return false;
                 }
-                return value.toString().toLowerCase().includes(normalizedQuery);
+
+                try {
+                    return value.toString().toLowerCase().includes(normalizedQuery);
+                } catch (error) {
+                    return false;
+                }
             });
         });
     }
 
-    function updateInspectionSearchMeta(visibleCount, filteredCount) {
-        const metaElement = document.getElementById('inspection-search-meta');
+    function updateServiceSearchMeta(visibleCount, filteredCount) {
+        const metaElement = document.getElementById('service-search-meta');
         if (!metaElement) {
             return;
         }
 
-        const activeQuery = inspectionSearchQuery.trim();
+        const activeQuery = serviceSearchQuery.trim();
         if (!activeQuery) {
             metaElement.textContent = '';
             metaElement.classList.remove('is-visible');
@@ -2263,27 +2234,41 @@ body {
         metaElement.classList.add('is-visible');
     }
 
-    function applyInspectionSearch(options = {}) {
-        const preservePage = Boolean(options.preservePage);
-        const previousPage = paginationState.inspection.page || 1;
-        const targetPage = preservePage ? previousPage : 1;
-
-        const filtered = filterInspectionOrders(paginationState.inspection.all, inspectionSearchQuery);
-        paginationState.inspection.filtered = filtered;
-
-        if (!filtered.length) {
-            paginationState.inspection.page = 1;
-        } else {
-            const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-            paginationState.inspection.page = Math.min(Math.max(targetPage, 1), totalPages);
+    function syncFilteredState(key, options = {}) {
+        const state = paginationState[key];
+        if (!state) {
+            return;
         }
 
-        renderInspectionTable();
+        const preservePage = Boolean(options.preservePage);
+        const filtered = filterOrders(state.all, serviceSearchQuery);
+        state.filtered = filtered;
+
+        if (!filtered.length) {
+            state.page = 1;
+            return;
+        }
+
+        if (!preservePage) {
+            state.page = 1;
+            return;
+        }
+
+        const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+        const currentPage = Math.min(Math.max(state.page || 1, 1), totalPages);
+        state.page = currentPage;
     }
 
-    window.handleInspectionSearch = function(event) {
-        inspectionSearchQuery = event?.target?.value || '';
-        applyInspectionSearch();
+    window.handleServiceSearch = function(event) {
+        serviceSearchQuery = event?.target?.value || '';
+
+        syncFilteredState('inspection', { preservePage: false });
+        syncFilteredState('progress', { preservePage: false });
+        syncFilteredState('completed', { preservePage: false });
+
+        renderInspectionTable();
+        renderProgressTable();
+        renderCompletedTable();
     };
 
     // ============================================================================
@@ -2355,7 +2340,7 @@ body {
             return;
         }
 
-        const list = key === 'inspection' ? state.filtered : state.all;
+        const list = Array.isArray(state.filtered) ? state.filtered : state.all;
         const totalItems = Array.isArray(list) ? list.length : 0;
         if (!totalItems) {
             return;
@@ -2393,8 +2378,8 @@ body {
         if (!total) {
             paginationState.inspection.page = 1;
             updatePaginationControls('inspection', 0);
-            updateInspectionSearchMeta(0, 0);
-            const hasQuery = (inspectionSearchQuery || '').trim().length > 0;
+            updateServiceSearchMeta(0, 0);
+            const hasQuery = (serviceSearchQuery || '').trim().length > 0;
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7">
@@ -2414,7 +2399,7 @@ body {
         const visibleOrders = filtered.slice(start, start + PAGE_SIZE);
 
         updatePaginationControls('inspection', total);
-        updateInspectionSearchMeta(visibleOrders.length, total);
+        updateServiceSearchMeta(visibleOrders.length, total);
 
         tbody.innerHTML = visibleOrders.map(order => {
             const rowClass = getRowClass(order);
@@ -2458,7 +2443,7 @@ body {
     // Render In Progress table
     function renderProgressTable() {
         const tbody = document.getElementById('table-progress');
-        const orders = paginationState.progress.all || [];
+        const orders = paginationState.progress.filtered || [];
         const total = orders.length;
 
         if (!total) {
@@ -2466,11 +2451,11 @@ body {
             updatePaginationControls('progress', 0);
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6">
+                    <td colspan="5">
                         <div class="empty-state">
                             <div class="empty-state__icon">⚙️</div>
-                            <div class="empty-state__title">Tidak ada service dalam pengerjaan</div>
-                            <div class="empty-state__message">Service yang sudah diinspeksi akan masuk ke sini</div>
+                            <div class="empty-state__title">${serviceSearchQuery.trim() ? 'Tidak ada hasil pencarian' : 'Tidak ada service dalam pengerjaan'}</div>
+                            <div class="empty-state__message">${serviceSearchQuery.trim() ? 'Coba ubah kata kunci pencarian Anda' : 'Service yang sudah diinspeksi akan masuk ke sini'}</div>
                         </div>
                     </td>
                 </tr>
@@ -2508,7 +2493,6 @@ body {
                         <div class="customer-contact">${order.customer_phone || '-'}</div>
                     </div>
                 </td>
-                <td>${renderTrackingBadges(order)}</td>
                 <td>${getStatusBadge(order.status)}</td>
                 <td>
                     <button class="action-btn" data-order="${escapeAttribute(order.name || '')}" data-part-status="${escapeAttribute(order.part_charge_status || '')}" onclick="openStatusUpdateModal(this.dataset.order, this.dataset.partStatus)">
@@ -2522,7 +2506,7 @@ body {
     // Render Completed table
     function renderCompletedTable() {
         const tbody = document.getElementById('table-completed');
-        const orders = paginationState.completed.all || [];
+        const orders = paginationState.completed.filtered || [];
         const total = orders.length;
 
         if (!total) {
@@ -2533,8 +2517,8 @@ body {
                     <td colspan="7">
                         <div class="empty-state">
                             <div class="empty-state__icon">✅</div>
-                            <div class="empty-state__title">Belum ada service yang selesai</div>
-                            <div class="empty-state__message">Service yang sudah selesai akan muncul di sini</div>
+                            <div class="empty-state__title">${serviceSearchQuery.trim() ? 'Tidak ada hasil pencarian' : 'Belum ada service yang selesai'}</div>
+                            <div class="empty-state__message">${serviceSearchQuery.trim() ? 'Coba ubah kata kunci pencarian Anda' : 'Service yang sudah selesai akan muncul di sini'}</div>
                         </div>
                     </td>
                 </tr>
@@ -2597,7 +2581,8 @@ body {
             state.page = 1;
         }
 
-        applyInspectionSearch({ preservePage });
+        syncFilteredState('inspection', { preservePage });
+        renderInspectionTable();
     }
 
     function setProgressOrders(orders, options = {}) {
@@ -2609,6 +2594,7 @@ body {
             state.page = 1;
         }
 
+        syncFilteredState('progress', { preservePage });
         renderProgressTable();
     }
 
@@ -2621,6 +2607,7 @@ body {
             state.page = 1;
         }
 
+        syncFilteredState('completed', { preservePage });
         renderCompletedTable();
     }
 
@@ -2772,8 +2759,8 @@ body {
                 </tr>
             `;
 
-            inspectionSearchQuery = '';
-            const searchInput = document.getElementById('inspection-search');
+            serviceSearchQuery = '';
+            const searchInput = document.getElementById('service-search');
             if (searchInput) {
                 searchInput.value = '';
             }
@@ -2782,18 +2769,20 @@ body {
             paginationState.inspection.filtered = [];
             paginationState.inspection.page = 1;
             updatePaginationControls('inspection', 0);
-            updateInspectionSearchMeta(0, 0);
+            updateServiceSearchMeta(0, 0);
 
             paginationState.progress.all = [];
+            paginationState.progress.filtered = [];
             paginationState.progress.page = 1;
             updatePaginationControls('progress', 0);
 
             paginationState.completed.all = [];
+            paginationState.completed.filtered = [];
             paginationState.completed.page = 1;
             updatePaginationControls('completed', 0);
 
             document.getElementById('table-inspection').innerHTML = buildErrorRow(7);
-            document.getElementById('table-progress').innerHTML = buildErrorRow(6);
+            document.getElementById('table-progress').innerHTML = buildErrorRow(5);
             document.getElementById('table-completed').innerHTML = buildErrorRow(7);
         }
     }
