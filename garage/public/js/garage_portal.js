@@ -3131,21 +3131,6 @@ function cloneBrandModelMap(map) {
                     const row = document.createElement('div');
                     row.className = 'spare-request-modal__item';
 
-                    const header = document.createElement('div');
-                    header.className = 'spare-request-modal__item-header';
-
-                    const name = document.createElement('div');
-                    name.className = 'spare-request-modal__item-name';
-                    name.textContent = item.request.item_name || item.part.part_name || item.request.item_code || '-';
-                    header.appendChild(name);
-
-                    const code = document.createElement('div');
-                    code.className = 'spare-request-modal__item-code';
-                    code.textContent = item.request.item_code || item.part.part_code || __('Manual');
-                    header.appendChild(code);
-
-                    row.appendChild(header);
-
                     const qtyMeta = document.createElement('div');
                     qtyMeta.className = 'spare-request-modal__item-meta';
                     const qtyLabel = this.formatQuantityDisplay(
