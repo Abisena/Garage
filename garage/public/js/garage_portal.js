@@ -1765,7 +1765,13 @@ function cloneBrandModelMap(map) {
             }
             frappe.call({
                 method: 'garage.api.portal.lookup_customer',
-                args: { name },
+                args: {
+                    name,
+                    branch:
+                        (this.state && typeof this.state.active_branch === 'string'
+                            ? this.state.active_branch.trim()
+                            : '') || this.preferredBranch || '',
+                },
                 callback: (response) => {
                     const data = response?.message || {};
                     const customer = data.customer;
@@ -1916,7 +1922,13 @@ function cloneBrandModelMap(map) {
             }
             frappe.call({
                 method: 'garage.api.portal.lookup_customer',
-                args: { query },
+                args: {
+                    query,
+                    branch:
+                        (this.state && typeof this.state.active_branch === 'string'
+                            ? this.state.active_branch.trim()
+                            : '') || this.preferredBranch || '',
+                },
                 callback: (response) => {
                     const data = response?.message || {};
                     const customer = data.customer;

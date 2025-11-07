@@ -311,6 +311,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
         "fields": {
             "customer_name",
             "customer_type",
+            "branch",
             "phone",
             "email",
             "preferred_contact_method",
@@ -346,6 +347,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
     "Garage Vehicle": {
         "fields": {
             "customer",
+            "branch",
             "license_plate",
             "vin",
             "brand",
@@ -364,6 +366,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
         },
         "update_fields": {
             "license_plate",
+            "branch",
             "vin",
             "brand",
             "type_model",
@@ -1120,14 +1123,25 @@ def _normalized_plate_expression(column: str) -> str:
     return expr
 
 
-def _find_vehicle_by_plate(license_plate: str, *, fields: Sequence[str] = ("name",)) -> Optional[Dict[str, Any]]:
+def _find_vehicle_by_plate(
+    license_plate: str,
+    *,
+    branch: Optional[str] = None,
+    fields: Sequence[str] = ("name",),
+) -> Optional[Dict[str, Any]]:
     normalized = _normalize_license_plate(license_plate or "")
     if not normalized:
         return None
 
     selected_fields = tuple(dict.fromkeys(fields)) or ("name",)
+    if "branch" not in selected_fields:
+        selected_fields = selected_fields + ("branch",)
     columns = ", ".join(f"`tabGarage Vehicle`.`{field}`" for field in selected_fields)
     normalized_expr = _normalized_plate_expression("`tabGarage Vehicle`.license_plate")
+
+    branch_value = cstr(branch or frappe.form_dict.get("branch") or "").strip()
+    allowed = _allowed_branches(frappe.session.user)
+    allowed_set = {value for value in (allowed or []) if value}
 
     with _ignoring_permissions():
         rows = frappe.db.sql(
@@ -1145,7 +1159,19 @@ def _find_vehicle_by_plate(license_plate: str, *, fields: Sequence[str] = ("name
     if not rows:
         return None
 
-    return rows[0]
+    for row in rows:
+        value = cstr(row.get("branch") or "").strip()
+        if branch_value:
+            if not value or value != branch_value:
+                continue
+        if allowed is not None:
+            if not value:
+                continue
+            if allowed_set and value not in allowed_set:
+                continue
+        return row
+
+    return None
 
 
 def _is_blank(value: Any) -> bool:
@@ -3678,6 +3704,7 @@ def get_service_statistics() -> Dict[str, Any]:
 VEHICLE_LOOKUP_FIELDS = [
     "name",
     "customer",
+    "branch",
     "license_plate",
     "vin",
     "brand",
@@ -3695,7 +3722,11 @@ VEHICLE_LOOKUP_FIELDS = [
 
 
 @frappe.whitelist()
-def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> Dict[str, Any]:
+def lookup_customer(
+    query: Optional[str] = None,
+    name: Optional[str] = None,
+    branch: Optional[str] = None,
+) -> Dict[str, Any]:
     """Fetch a customer (and their vehicles) by identifier or partial name.
 
     The lookup now prioritises matching a license plate so the associated
@@ -3709,6 +3740,22 @@ def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> 
 
     normalized_identifier = _normalize_license_plate(identifier)
 
+    branch_value = cstr(branch or frappe.form_dict.get("branch") or "").strip()
+    allowed = _allowed_branches(frappe.session.user)
+    allowed_set = {value for value in (allowed or []) if value}
+
+    def _branch_allowed(record_branch: Optional[str]) -> bool:
+        value = cstr(record_branch or "").strip()
+        if branch_value:
+            if not value or value != branch_value:
+                return False
+        if allowed is not None:
+            if not value:
+                return False
+            if allowed_set and value not in allowed_set:
+                return False
+        return True
+
     customer_fields = [
         "name",
         "customer_name",
@@ -3719,6 +3766,8 @@ def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> 
         "marketing_source",
         "is_vip",
     ]
+    if _doctype_has_field("Garage Customer", "branch"):
+        customer_fields.append("branch")
 
     customer_doc: Optional[Dict[str, Any]] = None
     matched_vehicle: Optional[Dict[str, Any]] = None
@@ -3740,8 +3789,12 @@ def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> 
             )
 
             if vehicle_rows:
-                matched_vehicle = vehicle_rows[0]
-                if matched_vehicle.get("customer"):
+                for candidate in vehicle_rows:
+                    if _branch_allowed(candidate.get("branch")):
+                        matched_vehicle = candidate
+                        break
+
+                if matched_vehicle and matched_vehicle.get("customer"):
                     customer_doc = frappe.db.get_value(
                         "Garage Customer",
                         matched_vehicle["customer"],
@@ -3751,6 +3804,8 @@ def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> 
                     if customer_doc:
                         customer_doc = dict(customer_doc)
                         customer_doc.setdefault("name", matched_vehicle["customer"])
+                        if not _branch_allowed(customer_doc.get("branch")):
+                            customer_doc = None
 
         if not customer_doc:
             customer_doc = frappe.db.get_value(
@@ -3762,41 +3817,54 @@ def lookup_customer(query: Optional[str] = None, name: Optional[str] = None) -> 
             if customer_doc:
                 customer_doc = dict(customer_doc)
                 customer_doc.setdefault("name", identifier)
+                if not _branch_allowed(customer_doc.get("branch")):
+                    customer_doc = None
 
         if not customer_doc:
             customer_doc = frappe.db.get_value(
                 "Garage Customer",
-                {"customer_name": identifier},
+                {"customer_name": identifier, "branch": branch_value} if branch_value else {"customer_name": identifier},
                 customer_fields,
                 as_dict=True,
             )
             if customer_doc:
                 customer_doc = dict(customer_doc)
+                if not _branch_allowed(customer_doc.get("branch")):
+                    customer_doc = None
 
         if not customer_doc:
             like_pattern = f"%{identifier}%"
+            filters: Dict[str, Any] = {"customer_name": ["like", like_pattern]}
+            if branch_value:
+                filters["branch"] = branch_value
             matches = frappe.get_all(
                 "Garage Customer",
-                filters={"customer_name": ["like", like_pattern]},
+                filters=filters,
                 fields=customer_fields,
                 order_by="modified desc",
                 limit=1,
             )
             if matches:
-                customer_doc = dict(matches[0])
+                candidate = dict(matches[0])
+                if _branch_allowed(candidate.get("branch")):
+                    customer_doc = candidate
 
     if not customer_doc and not matched_vehicle:
         return {}
 
     vehicles: List[Dict[str, Any]] = []
     if customer_doc:
+        vehicle_filters: Dict[str, Any] = {"customer": customer_doc["name"]}
+        if branch_value:
+            vehicle_filters["branch"] = branch_value
         vehicles = frappe.get_all(
             "Garage Vehicle",
-            filters={"customer": customer_doc["name"]},
+            filters=vehicle_filters,
             fields=VEHICLE_LOOKUP_FIELDS,
             order_by="modified desc",
             limit=20,
         )
+        vehicles = [vehicle for vehicle in vehicles if _branch_allowed(vehicle.get("branch"))]
     elif matched_vehicle:
         vehicles = [matched_vehicle]
 
@@ -3829,9 +3897,12 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
 
     if not existing_customer and manual_customer_name:
         with _ignoring_permissions():
+            filters = {"customer_name": manual_customer_name}
+            if branch_name:
+                filters["branch"] = branch_name
             matched_customer = frappe.db.get_value(
                 "Garage Customer",
-                {"customer_name": manual_customer_name},
+                filters,
                 "name",
             )
         if matched_customer:
@@ -3842,13 +3913,23 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         customer_payload = _filter_fields(data, ALLOWED_DOCS["Garage Customer"]["fields"])
         if manual_customer_name and not customer_payload.get("customer_name"):
             customer_payload["customer_name"] = manual_customer_name
+        if branch_name:
+            customer_payload["branch"] = branch_name
         if not customer_payload.get("customer_name"):
             frappe.throw(_("Nama customer wajib diisi."))
         customer_doc = _insert_document("Garage Customer", customer_payload)
         customer_name = customer_doc.name
         created["customer"] = customer_doc.name
     else:
-        _get_doc("Garage Customer", existing_customer)  # validate existence
+        customer_doc = _get_doc("Garage Customer", existing_customer)
+        customer_branch = cstr(getattr(customer_doc, "branch", "")).strip()
+        if customer_branch and customer_branch != branch_name:
+            frappe.throw(
+                _("Customer {0} terdaftar di cabang {1}.").format(
+                    customer_doc.customer_name or customer_doc.name,
+                    customer_branch,
+                )
+            )
 
     vehicle_fields = ALLOWED_DOCS["Garage Vehicle"]["fields"] - {"customer"}
     vehicle_payload = _filter_fields(data, vehicle_fields)
@@ -3864,6 +3945,8 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         if not vehicle_doc.last_service_date:
             vehicle_doc.last_service_date = nowdate()
         vehicle_doc.customer = customer_name
+        if branch_name:
+            vehicle_doc.branch = branch_name
         if not vehicle_doc.license_plate:
             frappe.throw(_("Nomor polisi kendaraan wajib diisi."))
         _insert_doc(vehicle_doc)
@@ -3871,13 +3954,22 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         created["vehicle"] = vehicle_doc.name
 
     if not vehicle_name and data.get("license_plate"):
-        existing_vehicle = _find_vehicle_by_plate(data.get("license_plate"), fields=("name", "customer"))
+        existing_vehicle = _find_vehicle_by_plate(
+            data.get("license_plate"),
+            branch=branch_name,
+            fields=("name", "customer", "branch"),
+        )
         if existing_vehicle:
             vehicle_name = existing_vehicle.get("name")
             if vehicle_name:
                 created["vehicle"] = vehicle_name
             if not customer_name and existing_vehicle.get("customer"):
                 customer_name = existing_vehicle.get("customer")
+            vehicle_branch = cstr(existing_vehicle.get("branch") or "").strip()
+            if vehicle_branch and vehicle_branch != branch_name:
+                frappe.throw(
+                    _("Kendaraan ini terdaftar di cabang {0}.").format(vehicle_branch)
+                )
 
     created["customer_name"] = customer_name
 
@@ -4418,15 +4510,27 @@ def create_service_intake(data):
         # Cek apakah pilih customer existing
         existing_customer = data.get('existing_customer')
         if existing_customer:
-            customer_name = existing_customer
+            customer_doc = _get_doc('Garage Customer', existing_customer)
+            existing_branch = cstr(getattr(customer_doc, 'branch', '') or '').strip()
+            if existing_branch and existing_branch != branch_name:
+                frappe.throw(
+                    _("Customer {0} terdaftar di cabang {1}.").format(
+                        customer_doc.customer_name or customer_doc.name,
+                        existing_branch,
+                    )
+                )
+            customer_name = customer_doc.name
         else:
             # Buat customer baru
             new_customer_name = data.get('customer_name') or data.get('new_customer_name')
             if not new_customer_name:
                 frappe.throw(_("Customer name is required"))
-            
+
             # Cek apakah customer sudah ada
-            existing = frappe.db.exists('Garage Customer', {'customer_name': new_customer_name})
+            customer_filters = {'customer_name': new_customer_name}
+            if branch_name:
+                customer_filters['branch'] = branch_name
+            existing = frappe.db.exists('Garage Customer', customer_filters)
             if existing:
                 customer_name = existing
             else:
@@ -4439,15 +4543,19 @@ def create_service_intake(data):
                     'email': data.get('email', ''),
                     'preferred_contact_method': data.get('preferred_contact_method', 'Phone'),
                     'is_vip': int(data.get('is_vip', 0)),
-                    'marketing_source': data.get('marketing_source', '')
+                    'marketing_source': data.get('marketing_source', ''),
+                    'branch': branch_name,
                 })
                 customer.insert(ignore_permissions=True)
                 customer_name = customer.name
                 frappe.db.commit()
-        
+
         # 2. Handle Vehicle (cek existing atau buat baru)
         vehicle_name = None
-        existing_vehicle = frappe.db.exists('Garage Vehicle', {'license_plate': license_plate})
+        vehicle_filters = {'license_plate': license_plate}
+        if branch_name:
+            vehicle_filters['branch'] = branch_name
+        existing_vehicle = frappe.db.exists('Garage Vehicle', vehicle_filters)
         
         # Get mandatory fields dengan default values
         brand = data.get('brand', 'Other')
@@ -4464,9 +4572,12 @@ def create_service_intake(data):
         
         if existing_vehicle:
             vehicle_name = existing_vehicle
-            vehicle = frappe.get_doc('Garage Vehicle', vehicle_name)
+            vehicle = _get_doc('Garage Vehicle', vehicle_name)
+            vehicle_branch = cstr(getattr(vehicle, 'branch', '') or '').strip()
+            if vehicle_branch and vehicle_branch != branch_name:
+                frappe.throw(_("Kendaraan ini terdaftar di cabang {0}.").format(vehicle_branch))
             vehicle.customer = customer_name
-            
+
             # Update fields jika ada
             if data.get('brand'):
                 vehicle.make = data.get('brand')
@@ -4497,6 +4608,7 @@ def create_service_intake(data):
                 'doctype': 'Garage Vehicle',
                 'license_plate': license_plate,
                 'customer': customer_name,
+                'branch': branch_name,
                 'make': brand,  # Mandatory
                 'model': data.get('model', ''),
                 'model_variant': data.get('model_variant', ''),
@@ -4587,10 +4699,11 @@ def create_service_intake(data):
                 frappe.logger().warning(f"Failed to load bundle: {str(e)}")
         
         # 3. Create Service Order
+        customer_doc = _get_doc('Garage Customer', customer_name)
         service_order = frappe.get_doc({
             'doctype': 'Garage Service Order',
             'customer': customer_name,
-            'customer_name': frappe.db.get_value('Garage Customer', customer_name, 'customer_name'),
+            'customer_name': customer_doc.customer_name,
             'vehicle': vehicle_name,
             'vehicle_plate': license_plate,
             'vehicle_brand': brand,

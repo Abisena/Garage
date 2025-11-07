@@ -15,6 +15,7 @@
   "engine": "InnoDB",
   "field_order": [
     "customer",
+    "branch",
     "license_plate",
     "vin",
     "brand",
@@ -38,6 +39,14 @@
       "label": "Customer",
       "options": "Garage Customer",
       "reqd": 1
+    },
+    {
+      "fieldname": "branch",
+      "fieldtype": "Link",
+      "label": "Branch",
+      "options": "Garage Branch",
+      "reqd": 1,
+      "in_list_view": 1
     },
     {
       "fieldname": "license_plate",
