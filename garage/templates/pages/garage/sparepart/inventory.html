@@ -353,18 +353,25 @@ body {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    min-width: 1280px;
+    min-width: 1420px;
     table-layout: auto;
 }
 
 .inventory-table th,
 .inventory-table td {
-    padding: 14px 16px;
+    padding: 16px 20px;
     text-align: left;
-    border-bottom: 1px solid var(--border-light);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
     background: transparent;
     white-space: normal;
     word-break: break-word;
+    line-height: 1.45;
+    vertical-align: top;
+}
+
+.inventory-table th:not(:last-child),
+.inventory-table td:not(:last-child) {
+    border-right: 1px solid rgba(226, 232, 240, 0.6);
 }
 
 .inventory-table th {
@@ -376,6 +383,8 @@ body {
     position: sticky;
     top: 0;
     z-index: 1;
+    border-bottom: 1px solid rgba(210, 219, 235, 0.8);
+    backdrop-filter: blur(4px);
 }
 
 .inventory-table tbody tr:last-child td {
@@ -384,24 +393,41 @@ body {
 
 .inventory-table tbody tr[data-clickable="true"] {
     cursor: pointer;
-    transition: background 0.2s ease;
 }
 
-.inventory-table tbody tr[data-clickable="true"]:hover {
+.inventory-table tbody tr[data-clickable="true"] td {
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.inventory-table tbody tr[data-clickable="true"]:hover td {
     background: rgba(0, 102, 255, 0.08);
 }
 
-.inventory-table tbody tr.is-low-stock {
-    background: rgba(255, 179, 0, 0.08);
+.inventory-table tbody tr:not(.is-low-stock):not(.is-out-of-stock) td {
+    background: rgba(255, 255, 255, 0.95);
 }
 
-.inventory-table tbody tr.is-out-of-stock {
-    background: rgba(255, 61, 0, 0.1);
+.inventory-table tbody tr:nth-child(even):not(.is-low-stock):not(.is-out-of-stock) td {
+    background: rgba(244, 247, 252, 0.95);
 }
 
-.inventory-table tbody tr.is-low-stock:hover,
-.inventory-table tbody tr.is-out-of-stock:hover {
+.inventory-table tbody tr.is-low-stock td {
+    background: rgba(255, 179, 0, 0.14);
+    border-bottom-color: rgba(255, 179, 0, 0.35);
+    border-right-color: rgba(255, 179, 0, 0.25);
+}
+
+.inventory-table tbody tr.is-out-of-stock td {
+    background: rgba(255, 61, 0, 0.16);
+    border-bottom-color: rgba(255, 61, 0, 0.3);
+    border-right-color: rgba(255, 61, 0, 0.25);
+}
+
+.inventory-table tbody tr.is-low-stock:hover td,
+.inventory-table tbody tr.is-out-of-stock:hover td {
     background: rgba(0, 102, 255, 0.12);
+    border-right-color: rgba(0, 102, 255, 0.3);
+    border-bottom-color: rgba(0, 102, 255, 0.3);
 }
 
 .inventory-table td.is-numeric,
@@ -1024,6 +1050,10 @@ body {
 
     function openPurchaseOrder(part) {
         if (!part) {
+            return;
+        }
+        if (window.frappe && typeof window.frappe.set_route === 'function') {
+            window.frappe.set_route('List', 'Purchase Order');
             return;
         }
         window.location.href = '/app/purchase-order';
