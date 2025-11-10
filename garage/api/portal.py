@@ -2088,6 +2088,10 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
         ["name", "branch_name", "branch_code", "address_line1", "address_line2", "city", "phone", "email"],
     )
 
+    if allowed is not None:
+        allowed_set = {value for value in allowed if value}
+        branches = [branch for branch in branches if branch.get("name") in allowed_set]
+
     available_branch_names = {branch_row.get("name") for branch_row in branches if branch_row.get("name")}
     if requested_branch and available_branch_names and requested_branch not in available_branch_names:
         requested_branch = ""
@@ -3223,17 +3227,28 @@ def list_spare_parts(
     )
     service_order_map: Dict[str, Dict[str, Any]] = {}
     technician_display: Dict[str, str] = {}
+    mechanic_display: Dict[str, str] = {}
     if parent_order_names:
+        service_order_fields = [
+            "name",
+            "customer",
+            "vehicle",
+            "priority",
+            "service_advisor",
+            "branch",
+        ]
+        if _doctype_has_field("Garage Service Order", "assigned_mechanic"):
+            service_order_fields.append("assigned_mechanic")
+        if _doctype_has_field("Garage Service Order", "assigned_mechanic_name"):
+            service_order_fields.append("assigned_mechanic_name")
+        if _doctype_has_field("Garage Service Order", "mechanic_in_charge"):
+            service_order_fields.append("mechanic_in_charge")
+        if _doctype_has_field("Garage Service Order", "mechanic_in_charge_name"):
+            service_order_fields.append("mechanic_in_charge_name")
+
         service_orders = _list_dicts(
             "Garage Service Order",
-            [
-                "name",
-                "customer",
-                "vehicle",
-                "priority",
-                "service_advisor",
-                "branch",
-            ],
+            service_order_fields,
             filters=[["name", "in", parent_order_names]],
             limit=len(parent_order_names),
             branch=branch_filter,
@@ -3246,6 +3261,15 @@ def list_spare_parts(
             name: cstr(order.get("branch") or "").strip() or None
             for name, order in service_order_map.items()
         }
+
+        mechanic_ids = {
+            cstr(order.get("assigned_mechanic") or order.get("mechanic_in_charge") or "").strip()
+            for order in service_orders
+            if order.get("assigned_mechanic") or order.get("mechanic_in_charge")
+        }
+        mechanic_ids = {value for value in mechanic_ids if value}
+        if mechanic_ids:
+            mechanic_display = _employee_display_map(mechanic_ids)
 
         allowed_parents = set(service_order_map.keys())
         if allowed_parents:
@@ -3269,6 +3293,19 @@ def list_spare_parts(
 
                 customer_info = customer_display.get(customer_id, {})
                 vehicle_info = vehicle_display.get(vehicle_id, {})
+
+                mechanic_id = cstr(
+                    order.get("assigned_mechanic") or order.get("mechanic_in_charge") or ""
+                ).strip()
+                if mechanic_id:
+                    order["assigned_mechanic"] = mechanic_id
+                    mechanic_name = (
+                        cstr(order.get("assigned_mechanic_name") or "").strip()
+                        or cstr(order.get("mechanic_in_charge_name") or "").strip()
+                        or mechanic_display.get(mechanic_id)
+                        or mechanic_id
+                    )
+                    order["assigned_mechanic_name"] = mechanic_name
 
                 order["customer_id"] = customer_id
                 order["customer_name"] = customer_info.get("customer_name") or customer_id
@@ -3388,6 +3425,21 @@ def list_spare_parts(
                 request["vehicle_model_variant"] = request.get("service_vehicle_model")
                 request["service_priority"] = order_info.get("priority")
                 request["service_advisor"] = order_info.get("service_advisor")
+                request["customer"] = request["service_customer_name"]
+                request["vehicle"] = request.get("service_vehicle")
+
+                mechanic_id = cstr(
+                    order_info.get("assigned_mechanic") or order_info.get("mechanic_in_charge") or ""
+                ).strip()
+                if mechanic_id:
+                    request["assigned_mechanic"] = mechanic_id
+                mechanic_name = (
+                    order_info.get("assigned_mechanic_name")
+                    or order_info.get("mechanic_in_charge_name")
+                    or (mechanic_id and mechanic_display.get(mechanic_id))
+                )
+                if mechanic_name:
+                    request["assigned_mechanic_name"] = mechanic_name
 
                 technicians: List[Dict[str, Any]] = []
                 for task in tasks_by_parent.get(parent, []):

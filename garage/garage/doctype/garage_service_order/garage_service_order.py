@@ -39,9 +39,17 @@ class GarageServiceOrder(Document):
         """Derive the aggregated sparepart/material charge status."""
 
         computed = self._compute_part_charge_status()
+        current = getattr(self, "part_charge_status", None) or ""
+
         if computed in {"Partial Approve", "Partial Reject", "Rejected"}:
             self.part_charge_status = computed
-        elif not getattr(self, "part_charge_status", None):
+            return
+
+        if not current or current == "Not Started":
+            self.part_charge_status = computed
+            return
+
+        if current == "Approved" and computed not in {"Approved", "Not Started"}:
             self.part_charge_status = computed
 
     def _compute_part_charge_status(self) -> str:
@@ -54,6 +62,19 @@ class GarageServiceOrder(Document):
             status_str = (status or "").strip()
             if status_str:
                 statuses.append(status_str)
+                continue
+
+            has_content = False
+            for field in ("item_code", "item_name", "description", "qty"):
+                value = getattr(row, field, None)
+                if value is None and hasattr(row, "as_dict"):
+                    value = row.as_dict().get(field)
+                if value:
+                    has_content = True
+                    break
+
+            if has_content:
+                statuses.append("Pending")
 
         return derive_part_charge_status(statuses, getattr(self, "part_charge_status", None))
 
