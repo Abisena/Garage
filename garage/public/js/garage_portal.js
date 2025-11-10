@@ -2656,12 +2656,32 @@ function cloneBrandModelMap(map) {
                 }
                 const orderMeta = document.createElement('div');
                 orderMeta.className = 'table-meta';
-                const orderMetaParts = [];
-                if (order.customer) {
-                    orderMetaParts.push(order.customer);
+                const customerLabel =
+                    order.customer_name || order.customer_display || order.customer || '';
+                const vehiclePieces = [];
+                if (order.vehicle_display) {
+                    vehiclePieces.push(order.vehicle_display);
+                } else if (order.vehicle_name) {
+                    vehiclePieces.push(order.vehicle_name);
+                } else if (order.vehicle) {
+                    vehiclePieces.push(order.vehicle);
                 }
-                if (order.vehicle) {
-                    orderMetaParts.push(order.vehicle);
+                if (order.vehicle_plate) {
+                    const plate = order.vehicle_plate;
+                    const alreadyHasPlate = vehiclePieces.some(
+                        (value) => typeof value === 'string' && value.includes(plate)
+                    );
+                    if (!alreadyHasPlate) {
+                        vehiclePieces.push(plate);
+                    }
+                }
+                const vehicleLabel = vehiclePieces.filter(Boolean).join(' • ');
+                const orderMetaParts = [];
+                if (customerLabel) {
+                    orderMetaParts.push(customerLabel);
+                }
+                if (vehicleLabel) {
+                    orderMetaParts.push(vehicleLabel);
                 }
                 orderMeta.textContent = orderMetaParts.join(' • ') || '-';
                 orderCell.appendChild(orderMeta);
@@ -3112,11 +3132,30 @@ function cloneBrandModelMap(map) {
 
             if (modal.summary) {
                 const summaryParts = [];
-                if (group.order?.customer) {
-                    summaryParts.push(`${__('Customer')}: ${group.order.customer}`);
+                const summaryCustomer =
+                    group.order?.customer_name ||
+                    group.order?.customer_display ||
+                    group.order?.customer;
+                if (summaryCustomer) {
+                    summaryParts.push(`${__('Customer')}: ${summaryCustomer}`);
                 }
-                if (group.order?.vehicle) {
-                    summaryParts.push(`${__('Kendaraan')}: ${group.order.vehicle}`);
+                const vehicleBase =
+                    group.order?.vehicle_display ||
+                    group.order?.vehicle_name ||
+                    group.order?.vehicle ||
+                    '';
+                const vehiclePlate = group.order?.vehicle_plate || '';
+                let summaryVehicle = vehicleBase;
+                if (vehiclePlate) {
+                    const hasPlate =
+                        typeof summaryVehicle === 'string' &&
+                        summaryVehicle.includes(vehiclePlate);
+                    summaryVehicle = hasPlate
+                        ? summaryVehicle
+                        : [summaryVehicle, vehiclePlate].filter(Boolean).join(' • ');
+                }
+                if (summaryVehicle) {
+                    summaryParts.push(`${__('Kendaraan')}: ${summaryVehicle}`);
                 }
                 if (group.order?.priority) {
                     summaryParts.push(`${__('Prioritas')}: ${group.order.priority}`);

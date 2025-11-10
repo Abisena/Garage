@@ -3071,7 +3071,10 @@ def get_spare_part_detail(name: str) -> Dict[str, Any]:
 
 
 @frappe.whitelist()
-def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
+def list_spare_parts(
+    filters: Optional[Any] = None,
+    branch: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     List all spare parts with filtering and search capabilities.
     
@@ -3082,6 +3085,9 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
             - status: Filter by status (Active/Inactive/Low Stock)
             - min_stock: Show only items with stock_qty >= this value
             - max_stock: Show only items with stock_qty <= this value
+        branch: Optional branch name to scope the response. When omitted, the
+            active branch preference or permitted branches for the session
+            user are applied automatically.
             
     Returns:
         Dict containing:
@@ -3093,6 +3099,19 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
     
     data = _ensure_dict(filters or {})
+
+    requested_branch = cstr(
+        branch or data.get("branch") or frappe.form_dict.get("branch") or ""
+    ).strip()
+
+    user = frappe.session.user
+    allowed = _allowed_branches(user)
+    allowed_set: Set[str] = {value for value in (allowed or []) if value}
+
+    if allowed is not None and requested_branch and requested_branch not in allowed_set:
+        requested_branch = ""
+
+    branch_filter = requested_branch or None
     
     # Build filters
     filter_conditions = []
@@ -3190,11 +3209,12 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
         ],
         order_by="creation asc",
         limit=200,
+        branch=branch_filter,
     )
 
     # Fetch recently approved spare part issues so the portal can expose
     # the approval history without requiring a Desk login.
-    spare_part_approvals = _list_spare_part_approvals(None, limit=100)
+    order_branch_map: Dict[str, Optional[str]] = {}
 
     # Enrich requests with service order context and technician information to
     # make the UI rendering straightforward.
@@ -3202,6 +3222,7 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
         {request.get("parent") for request in spare_part_requests if request.get("parent")}
     )
     service_order_map: Dict[str, Dict[str, Any]] = {}
+    technician_display: Dict[str, str] = {}
     if parent_order_names:
         service_orders = _list_dicts(
             "Garage Service Order",
@@ -3211,97 +3232,189 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
                 "vehicle",
                 "priority",
                 "service_advisor",
+                "branch",
             ],
             filters=[["name", "in", parent_order_names]],
             limit=len(parent_order_names),
+            branch=branch_filter,
         )
-        service_order_map = {row.get("name"): row for row in service_orders}
-
-        customer_ids = {
-            row.get("customer")
-            for row in service_orders
-            if row.get("customer")
-        }
-        vehicle_ids = {
-            row.get("vehicle")
-            for row in service_orders
-            if row.get("vehicle")
+        service_order_map = {
+            row.get("name"): row for row in service_orders if row.get("name")
         }
 
-        customer_display = _customer_display_map(customer_ids)
-        vehicle_display = _vehicle_display_map(vehicle_ids)
+        order_branch_map = {
+            name: cstr(order.get("branch") or "").strip() or None
+            for name, order in service_order_map.items()
+        }
 
-        service_tasks = _list_dicts(
-            "Garage Service Order Task",
-            ["name", "parent", "task", "status", "technician"],
-            filters=[["parent", "in", parent_order_names]],
-            limit=500,
-        )
+        allowed_parents = set(service_order_map.keys())
+        if allowed_parents:
+            customer_ids = {
+                row.get("customer")
+                for row in service_orders
+                if row.get("customer") and row.get("name") in allowed_parents
+            }
+            vehicle_ids = {
+                row.get("vehicle")
+                for row in service_orders
+                if row.get("vehicle") and row.get("name") in allowed_parents
+            }
 
-        technician_ids = sorted(
-            {task.get("technician") for task in service_tasks if task.get("technician")}
-        )
-        technician_display = _employee_display_map(technician_ids)
+            customer_display = _customer_display_map(customer_ids)
+            vehicle_display = _vehicle_display_map(vehicle_ids)
 
-        tasks_by_parent: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
-        for task in service_tasks:
-            parent = task.get("parent")
-            if parent:
+            for order in service_order_map.values():
+                customer_id = order.get("customer")
+                vehicle_id = order.get("vehicle")
+
+                customer_info = customer_display.get(customer_id, {})
+                vehicle_info = vehicle_display.get(vehicle_id, {})
+
+                order["customer_id"] = customer_id
+                order["customer_name"] = customer_info.get("customer_name") or customer_id
+                order["customer_display"] = order["customer_name"]
+                order["customer_phone"] = customer_info.get("phone")
+                order["customer_email"] = customer_info.get("email")
+
+                vehicle_display_name = (
+                    vehicle_info.get("display")
+                    or vehicle_info.get("vehicle_name")
+                    or vehicle_id
+                )
+                license_plate = vehicle_info.get("license_plate")
+
+                if vehicle_display_name and license_plate:
+                    combined_vehicle = f"{vehicle_display_name} ({license_plate})"
+                else:
+                    combined_vehicle = license_plate or vehicle_display_name
+
+                order["vehicle_id"] = vehicle_id
+                order["vehicle_name"] = vehicle_display_name
+                order["vehicle_plate"] = license_plate
+                order["vehicle_display"] = combined_vehicle
+
+            service_tasks = _list_dicts(
+                "Garage Service Order Task",
+                ["name", "parent", "task", "status", "technician"],
+                filters=[
+                    ["parenttype", "=", "Garage Service Order"],
+                    ["parent", "in", list(allowed_parents)],
+                ],
+                limit=500,
+                branch=branch_filter,
+            )
+
+            technician_ids = sorted(
+                {
+                    task.get("technician")
+                    for task in service_tasks
+                    if task.get("technician")
+                }
+            )
+            technician_display = _employee_display_map(technician_ids)
+
+            tasks_by_parent: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+            for task in service_tasks:
+                parent = cstr(task.get("parent") or "").strip()
+                if not parent or parent not in allowed_parents:
+                    continue
+                if branch_filter and order_branch_map.get(parent) not in {None, branch_filter}:
+                    continue
                 tasks_by_parent[parent].append(task)
 
-        for request in spare_part_requests:
-            parent = request.get("parent")
-            if not parent:
-                continue
-
-            order_info = service_order_map.get(parent, {})
-
-            customer_id = order_info.get("customer")
-            vehicle_id = order_info.get("vehicle")
-
-            customer_info = customer_display.get(customer_id, {})
-            vehicle_info = vehicle_display.get(vehicle_id, {})
-
-            request["service_customer_id"] = customer_id
-            request["service_customer_name"] = customer_info.get("customer_name") or customer_id
-            request["service_customer"] = request["service_customer_name"]
-            request["customer_name"] = request["service_customer_name"]
-            request["customer_type"] = customer_info.get("customer_type")
-            request["service_customer_phone"] = customer_info.get("phone")
-            if customer_info.get("email"):
-                request["service_customer_email"] = customer_info.get("email")
-
-            request["service_vehicle_id"] = vehicle_id
-            request["service_vehicle_name"] = vehicle_info.get("display") or vehicle_id
-            request["service_vehicle_plate"] = vehicle_info.get("license_plate")
-            request["service_vehicle_brand"] = vehicle_info.get("brand")
-            request["service_vehicle_model"] = vehicle_info.get("model") or vehicle_info.get("type_model")
-            request["service_vehicle_year"] = vehicle_info.get("vehicle_year")
-            request["service_vehicle_color"] = vehicle_info.get("color")
-            request["service_vehicle"] = request["service_vehicle_name"]
-            request["vehicle_name"] = request["service_vehicle_name"]
-            request["vehicle_plate"] = request["service_vehicle_plate"]
-            request["vehicle_brand"] = request.get("service_vehicle_brand")
-            request["vehicle_model"] = request.get("service_vehicle_model")
-            request["vehicle_model_variant"] = request.get("service_vehicle_model")
-            request["service_priority"] = order_info.get("priority")
-            request["service_advisor"] = order_info.get("service_advisor")
-
-            technicians: List[Dict[str, Any]] = []
-            for task in tasks_by_parent.get(parent, []):
-                technician = task.get("technician")
-                if not technician:
+            filtered_requests: List[Dict[str, Any]] = []
+            for request in spare_part_requests:
+                parent = cstr(request.get("parent") or "").strip()
+                if not parent or parent not in allowed_parents:
                     continue
-                technicians.append(
-                    {
-                        "technician": technician,
-                        "technician_name": technician_display.get(technician, technician),
-                        "task": task.get("task"),
-                        "status": task.get("status"),
-                    }
+                if branch_filter and order_branch_map.get(parent) not in {None, branch_filter}:
+                    continue
+                filtered_requests.append(request)
+            spare_part_requests = filtered_requests
+
+            parent_order_names = sorted(
+                {request.get("parent") for request in spare_part_requests if request.get("parent")}
+            )
+
+            for request in spare_part_requests:
+                parent = request.get("parent")
+                if not parent:
+                    continue
+
+                order_info = service_order_map.get(parent, {})
+
+                customer_id = order_info.get("customer")
+                vehicle_id = order_info.get("vehicle")
+
+                customer_info = customer_display.get(customer_id, {})
+                vehicle_info = vehicle_display.get(vehicle_id, {})
+
+                request["service_customer_id"] = customer_id
+                request["service_customer_name"] = (
+                    order_info.get("customer_name")
+                    or customer_info.get("customer_name")
+                    or customer_id
                 )
-            if technicians:
-                request["technicians"] = technicians
+                request["service_customer"] = request["service_customer_name"]
+                request["customer_name"] = request["service_customer_name"]
+                request["customer_type"] = customer_info.get("customer_type")
+                request["service_customer_phone"] = customer_info.get("phone")
+                if customer_info.get("email"):
+                    request["service_customer_email"] = customer_info.get("email")
+
+                vehicle_display_name = (
+                    order_info.get("vehicle_display")
+                    or vehicle_info.get("display")
+                    or vehicle_id
+                )
+                license_plate = vehicle_info.get("license_plate") or order_info.get("vehicle_plate")
+
+                request["service_vehicle_id"] = vehicle_id
+                request["service_vehicle_name"] = vehicle_display_name
+                request["service_vehicle_plate"] = license_plate
+                request["service_vehicle_brand"] = vehicle_info.get("brand")
+                request["service_vehicle_model"] = (
+                    vehicle_info.get("model") or vehicle_info.get("type_model")
+                )
+                request["service_vehicle_year"] = vehicle_info.get("vehicle_year")
+                request["service_vehicle_color"] = vehicle_info.get("color")
+                request["service_vehicle"] = (
+                    order_info.get("vehicle_display") or vehicle_display_name
+                )
+                request["vehicle_name"] = request["service_vehicle_name"]
+                request["vehicle_plate"] = request["service_vehicle_plate"]
+                request["vehicle_brand"] = request.get("service_vehicle_brand")
+                request["vehicle_model"] = request.get("service_vehicle_model")
+                request["vehicle_model_variant"] = request.get("service_vehicle_model")
+                request["service_priority"] = order_info.get("priority")
+                request["service_advisor"] = order_info.get("service_advisor")
+
+                technicians: List[Dict[str, Any]] = []
+                for task in tasks_by_parent.get(parent, []):
+                    technician = task.get("technician")
+                    if not technician:
+                        continue
+                    technicians.append(
+                        {
+                            "technician": technician,
+                            "technician_name": technician_display.get(technician, technician),
+                            "task": task.get("task"),
+                            "status": task.get("status"),
+                        }
+                    )
+                if technicians:
+                    request["technicians"] = technicians
+        else:
+            spare_part_requests = []
+            parent_order_names = []
+            service_order_map = {}
+    else:
+        order_branch_map = {}
+        parent_order_names = []
+
+    spare_part_approvals = _list_spare_part_approvals(
+        branch_filter, order_branch_map or None, limit=100
+    )
 
     # Apply search filter if provided
     search_term = (data.get("search") or "").strip().lower()
