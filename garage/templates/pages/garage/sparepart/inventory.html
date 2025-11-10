@@ -953,6 +953,7 @@ body {
         listSpareParts: 'garage.api.portal.list_spare_parts',
     };
 
+    const BRANCH_STORAGE_KEY = 'garage.portal.branch';
     const PAGE_SIZE = 10;
     const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
@@ -962,6 +963,7 @@ body {
         pagination: {
             'spare-inventory': { page: 1 },
         },
+        activeBranch: '',
     };
 
     function formatCurrency(value) {
@@ -1257,11 +1259,51 @@ body {
         }, 400);
     }
 
+    function readPortalBranchPreference() {
+        try {
+            const portalStateBranch =
+                typeof window !== 'undefined' &&
+                window.garagePortalState &&
+                typeof window.garagePortalState.active_branch === 'string'
+                    ? window.garagePortalState.active_branch.trim()
+                    : '';
+            if (portalStateBranch) {
+                return portalStateBranch;
+            }
+            if (typeof window !== 'undefined' && window.localStorage) {
+                const stored = window.localStorage.getItem(BRANCH_STORAGE_KEY);
+                if (stored) {
+                    return stored.trim();
+                }
+            }
+        } catch (error) {
+            console.warn('[Inventory] Tidak dapat membaca preferensi cabang:', error);
+        }
+        return '';
+    }
+
+    function handleBranchChanged(event) {
+        const nextBranch = (event?.detail?.branch || '').trim();
+        if (nextBranch === state.activeBranch) {
+            return;
+        }
+        state.activeBranch = nextBranch;
+        if (state.pagination['spare-inventory']) {
+            state.pagination['spare-inventory'].page = 1;
+        }
+        loadSpareParts();
+    }
+
     async function loadSpareParts() {
         try {
+            const args = { filters: { search: state.searchQuery } };
+            if (state.activeBranch) {
+                args.branch = state.activeBranch;
+            }
+
             const response = await frappe.call({
                 method: API.listSpareParts,
-                args: { filters: { search: state.searchQuery } },
+                args,
                 freeze: false,
             });
 
@@ -1276,6 +1318,7 @@ body {
     }
 
     function init() {
+        state.activeBranch = readPortalBranchPreference();
         loadSpareParts();
 
         document.querySelector('[data-role="spare-search"]')?.addEventListener('input', handleSearch);
@@ -1287,6 +1330,8 @@ body {
         document.querySelectorAll('[data-desk-link]').forEach((link) => {
             link.href = `/app/${link.dataset.deskLink.toLowerCase().replace(/ /g, '-')}`;
         });
+
+        window.addEventListener('garage-portal:branch-changed', handleBranchChanged);
     }
 
     if (document.readyState === 'loading') {
