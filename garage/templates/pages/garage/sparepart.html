@@ -1937,9 +1937,6 @@ body .frappe-confirm {
             const actionButtons = [
                 '<button class="btn-inline" type="button" data-request-action="detail">🔍 Detail</button>',
             ];
-            if (primaryRequestName) {
-                actionButtons.push('<button class="btn-inline" type="button" data-request-action="document">📄 Dokumen</button>');
-            }
 
             const queueMeta = `<div class="request-status__meta">${group.requests.length} permintaan</div>`;
             const otherStatusMeta = otherStatuses.length
@@ -2100,12 +2097,6 @@ body .frappe-confirm {
             return;
         }
 
-        if (action === 'document') {
-            if (requestName) {
-                generateApprovalDocument(requestName, serviceOrder, button);
-            }
-            return;
-        }
     }
 
     function processGroupAction(requestNames, action, serviceOrder, button, options = {}) {

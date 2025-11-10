@@ -90,7 +90,7 @@
             font-size: 10px;
         }
 
-        .signature {
+        .signature { 
             width: 48%;
             text-align: center;
         }
@@ -99,6 +99,11 @@
             margin-top: 32px;
             border-top: 1px solid #666;
             padding-top: 4px;
+        }
+
+        .signature-name {
+            margin-top: 6px;
+            font-weight: 600;
         }
 
         .branch-info {
@@ -189,6 +194,7 @@
             <div class="signature">
                 Diterima oleh<br />
                 <div class="signature-line">Service</div>
+                <div class="signature-name">({{ service_order.mechanic or '-' }})</div>
             </div>
         </footer>
     </div>

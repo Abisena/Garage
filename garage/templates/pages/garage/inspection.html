@@ -1568,7 +1568,7 @@ body.parts-detail-mode .parts-table td.actions {
                             <div class="intake-meta__item intake-meta__item--no-card">
                                 <span class="intake-meta__label">Mekanik</span> <!-- Label di dalam -->
                                 <div class="intake-meta__control">
-                                    <select id="assigned_mechanic" name="assigned_mechanic">
+                                    <select id="assigned_mechanic" name="assigned_mechanic" required>
                                         <option value="">Pilih mekanik tersedia</option>
                                     </select>
                                 </div>
@@ -1762,6 +1762,8 @@ body.parts-detail-mode .parts-table td.actions {
     let baseTechnicianRoster = [];
     let currentAssignedMechanic = '';
     let currentAssignedMechanicDisplay = '';
+    let isPartChargeApproved = false;
+    let shouldHideSpkButton = false;
     // ====================================================================
 
     function setSparePartCatalog(parts) {
@@ -2228,6 +2230,10 @@ body.parts-detail-mode .parts-table td.actions {
             select.dataset.currentValue = value;
             select.dataset.currentDisplay = display;
 
+            if (value) {
+                select.setCustomValidity('');
+            }
+
             currentAssignedMechanic = value ? String(value).trim() : '';
             currentAssignedMechanicDisplay = currentAssignedMechanic ? display : '';
 
@@ -2508,6 +2514,7 @@ body.parts-detail-mode .parts-table td.actions {
         if (spkButton) {
             spkButtonLabel = spkButton.textContent || spkButtonLabel;
         }
+        updateSpkButtonVisibility();
         setSpkButtonState(false);
 
         bindTechnicianSelect();
@@ -2570,7 +2577,7 @@ body.parts-detail-mode .parts-table td.actions {
         }
 
         function canModifyPart(part) {
-            if (isPartsDetailMode) {
+            if (isPartsDetailMode || isPartChargeApproved) {
                 return false;
             }
 
@@ -2614,6 +2621,26 @@ body.parts-detail-mode .parts-table td.actions {
                 .join('');
         }
 
+        function updateSpkButtonVisibility() {
+            if (!spkButton) {
+                return;
+            }
+
+            if (shouldHideSpkButton) {
+                spkButton.style.display = 'none';
+            } else {
+                spkButton.style.display = '';
+            }
+        }
+
+        function setShouldHideSpkButton(hidden) {
+            const next = Boolean(hidden);
+            if (next !== shouldHideSpkButton) {
+                shouldHideSpkButton = next;
+            }
+            updateSpkButtonVisibility();
+        }
+
         function setSpkButtonState(enabled) {
             if (!spkButton) {
                 return;
@@ -2626,6 +2653,8 @@ body.parts-detail-mode .parts-table td.actions {
                 spkButton.disabled = true;
                 spkButton.setAttribute('aria-disabled', 'true');
             }
+
+            updateSpkButtonVisibility();
         }
 
         function updateModeCopy() {
@@ -2652,7 +2681,8 @@ body.parts-detail-mode .parts-table td.actions {
             }
 
             if (addButton) {
-                if (isPartsDetailMode) {
+                const shouldDisableAdd = isPartsDetailMode || isPartChargeApproved;
+                if (shouldDisableAdd) {
                     addButton.disabled = true;
                     addButton.setAttribute('aria-disabled', 'true');
                 } else {
@@ -2709,12 +2739,15 @@ body.parts-detail-mode .parts-table td.actions {
             if (mode === 'partial-reject') {
                 isPartialRejectMode = true;
                 isPartsDetailMode = false;
+                setShouldHideSpkButton(true);
             } else if (mode === 'parts-detail') {
                 isPartialRejectMode = false;
                 isPartsDetailMode = true;
+                setShouldHideSpkButton(false);
             } else {
                 isPartialRejectMode = false;
                 isPartsDetailMode = false;
+                setShouldHideSpkButton(false);
             }
 
             if (typeof document !== 'undefined' && document.body && document.body.classList) {
@@ -3009,6 +3042,7 @@ body.parts-detail-mode .parts-table td.actions {
             if (!container) {
                 return;
             }
+            setShouldHideSpkButton(isPartialRejectMode);
             if (requiredParts.length === 0) {
                 const emptyTitle = isPartialRejectMode
                     ? 'Belum ada item pengganti.'
@@ -3061,9 +3095,12 @@ body.parts-detail-mode .parts-table td.actions {
                 };
             });
 
+            const hasReRequestParts = requiredParts.some((part) => normalizeStatusValue(part.stock_status) === 're-request');
+            setShouldHideSpkButton(isPartialRejectMode || hasReRequestParts);
+
             const rows = requiredParts.map((part, i) => {
                 const normalizedStatus = normalizeStatusValue(part.stock_status);
-                const locked = isPartLocked(part) || isPartsDetailMode;
+                const locked = isPartLocked(part) || isPartsDetailMode || isPartChargeApproved;
                 const rowClasses = ['part-row'];
                 if (normalizedStatus === 'rejected') {
                     rowClasses.push('part-row--rejected');
@@ -3081,7 +3118,7 @@ body.parts-detail-mode .parts-table td.actions {
                 const inputDisabledAttr = locked ? ' disabled' : '';
                 const removeDisabledAttr = locked ? ' disabled' : '';
                 const removeTitleAttr = locked && !isPartsDetailMode ? ' title="Item tidak dapat dihapus"' : '';
-                const actionButton = !isPartsDetailMode
+                const actionButton = (!isPartsDetailMode && !isPartChargeApproved)
                     ? `<button type="button" class="btn-remove" onclick="removeRequiredPart(${i})"${removeDisabledAttr}${removeTitleAttr}>🗑️ Trash</button>`
                     : '';
 
@@ -3170,7 +3207,7 @@ body.parts-detail-mode .parts-table td.actions {
         }
 
         window.addRequiredPart = function() {
-            if (isPartsDetailMode) {
+            if (isPartsDetailMode || isPartChargeApproved) {
                 if (window.frappe && typeof frappe.show_alert === 'function') {
                     frappe.show_alert({ message: 'Order ini sudah aman. Tidak perlu menambah sparepart.', indicator: 'blue' }, 5);
                 }
@@ -3200,7 +3237,7 @@ body.parts-detail-mode .parts-table td.actions {
         };
 
         window.removeRequiredPart = function(index) {
-            if (isPartsDetailMode) {
+            if (isPartsDetailMode || isPartChargeApproved) {
                 return;
             }
             const part = requiredParts[index];
@@ -3216,7 +3253,7 @@ body.parts-detail-mode .parts-table td.actions {
         };
 
         window.selectRequiredPart = function(index, value) {
-            if (isPartsDetailMode) {
+            if (isPartsDetailMode || isPartChargeApproved) {
                 return;
             }
             const part = requiredParts[index];
@@ -3257,7 +3294,7 @@ body.parts-detail-mode .parts-table td.actions {
         };
 
         window.updateRequiredPartQty = function(index, value) {
-            if (isPartsDetailMode) {
+            if (isPartsDetailMode || isPartChargeApproved) {
                 return;
             }
             if (!requiredParts[index]) {
@@ -3276,7 +3313,7 @@ body.parts-detail-mode .parts-table td.actions {
         };
 
         window.updateRequiredPartRate = function(index, value) {
-            if (isPartsDetailMode) {
+            if (isPartsDetailMode || isPartChargeApproved) {
                 return;
             }
             if (!requiredParts[index]) {
@@ -3295,7 +3332,7 @@ body.parts-detail-mode .parts-table td.actions {
         };
 
         window.updateRequiredPartDiscount = function(index, value) {
-            if (isPartsDetailMode) {
+            if (isPartsDetailMode || isPartChargeApproved) {
                 return;
             }
             if (!requiredParts[index]) {
@@ -3313,7 +3350,7 @@ body.parts-detail-mode .parts-table td.actions {
         };
 
         window.updateRequiredPartDescription = function(index, value) {
-            if (isPartsDetailMode) {
+            if (isPartsDetailMode || isPartChargeApproved) {
                 return;
             }
             const part = requiredParts[index];
@@ -3337,7 +3374,7 @@ body.parts-detail-mode .parts-table td.actions {
         };
 
         window.updateRequiredPartUom = function(index, value) {
-            if (isPartsDetailMode) {
+            if (isPartsDetailMode || isPartChargeApproved) {
                 return;
             }
             if (!requiredParts[index]) {
@@ -3414,6 +3451,8 @@ body.parts-detail-mode .parts-table td.actions {
             const vehicleDetails = order.vehicle_details || {};
 
             const normalizedPartCharge = normalizeStatusValue(order?.part_charge_status);
+            isPartChargeApproved = normalizedPartCharge === 'approved';
+
             if (normalizedPartCharge === 'partial reject') {
                 setPageMode('partial-reject');
             } else if (isPartialRejectMode || isPartsDetailMode) {
@@ -3421,6 +3460,8 @@ body.parts-detail-mode .parts-table td.actions {
             } else {
                 setPageMode('default');
             }
+
+            updateModeCopy();
 
             document.getElementById('display_order_id').textContent = formatServiceOrderId(order.name || order.order_id);
 
@@ -3705,6 +3746,16 @@ body.parts-detail-mode .parts-table td.actions {
             const notesInput = document.getElementById('service_notes');
             const assignedMechanicInput = document.getElementById('assigned_mechanic');
 
+            if (assignedMechanicInput) {
+                const mechanicValue = assignedMechanicInput.value.trim();
+                if (!mechanicValue) {
+                    assignedMechanicInput.setCustomValidity('Pilih mekanik terlebih dahulu.');
+                    assignedMechanicInput.reportValidity();
+                    return;
+                }
+                assignedMechanicInput.setCustomValidity('');
+            }
+
             const data = {
                 order_id: orderId,
                 priority: priorityInput ? priorityInput.value : (latestOrder?.priority || null),
@@ -3729,6 +3780,7 @@ body.parts-detail-mode .parts-table td.actions {
                 applyStatusBadge('Work In Progress');
                 latestOrder = Object.assign({}, latestOrder || {}, { status: 'Work In Progress' });
                 setSpkButtonState(true);
+                setTimeout(() => window.location.reload(), 1200);
             } catch (error) {
                 console.error('Error:', error);
                 const message = error && error.message === 'CSRF token not available'

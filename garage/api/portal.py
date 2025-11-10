@@ -3509,7 +3509,18 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
     for field, value in data.items():
         if field in allowed_fields and value is not None:
             setattr(doc, field, value)
-    
+
+    assigned_mechanic_value = cstr(data.get("assigned_mechanic") or "").strip() if "assigned_mechanic" in data else None
+    if assigned_mechanic_value is not None:
+        doc.assigned_mechanic = assigned_mechanic_value
+        if assigned_mechanic_value:
+            display_map = _employee_display_map([assigned_mechanic_value])
+            display_name = display_map.get(assigned_mechanic_value) or assigned_mechanic_value
+            if hasattr(doc, "assigned_mechanic_name"):
+                doc.assigned_mechanic_name = display_name
+        elif hasattr(doc, "assigned_mechanic_name"):
+            doc.assigned_mechanic_name = ""
+
     status_update = data.get("status")
     if status_update:
         allowed_statuses = {
