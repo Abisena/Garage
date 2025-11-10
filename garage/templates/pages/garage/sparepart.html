@@ -962,6 +962,30 @@ body .frappe-confirm {
     gap: 10px;
 }
 
+.spare-request-modal__item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.spare-request-modal__item-code {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    word-break: break-word;
+    text-align: left;
+}
+
+.spare-request-modal__item-name {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: right;
+    word-break: break-word;
+}
+
 .spare-request-modal__item-meta {
     font-size: 13px;
     color: var(--text-secondary);
@@ -2311,6 +2335,8 @@ body .frappe-confirm {
                     const part = state.partIndex.get(req.item_code) || state.partIndex.get(req.item_name);
                     const qty = req.qty || req.stock_qty || 0;
                     const uom = req.uom || 'Unit';
+                    const partName = req.item_name || (part && part.item_name) || '-';
+                    const partCode = req.item_code || (part && part.item_code) || '-';
                     const description = req.description ? `<div class="spare-request-modal__item-note">${escapeHTML(req.description)}</div>` : '';
                     const warning = !part
                         ? '<div class="spare-request-modal__item-warning">Sparepart belum terdaftar di master gudang.</div>'
@@ -2321,6 +2347,10 @@ body .frappe-confirm {
 
                     return `
                         <div class="spare-request-modal__item">
+                            <div class="spare-request-modal__item-header">
+                                <div class="spare-request-modal__item-code">${escapeHTML(partCode)}</div>
+                                <div class="spare-request-modal__item-name">${escapeHTML(partName)}</div>
+                            </div>
                             <div class="spare-request-modal__item-status">
                                 ${getRequestStatusBadge(req.stock_status)}
                                 <span>${escapeHTML(`${qty} ${uom}`)}</span>
