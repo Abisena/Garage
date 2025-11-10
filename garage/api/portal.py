@@ -1447,6 +1447,53 @@ def _employee_branch_map(employee_ids: Iterable[str]) -> Dict[str, Optional[str]
     return {row.get("name"): row.get("branch") for row in rows if row.get("name")}
 
 
+def _user_branch_map(user_ids: Iterable[str]) -> Dict[str, Optional[str]]:
+    unique_ids = sorted({cstr(user or "").strip() for user in user_ids if user and user not in {"Guest"}})
+    if not unique_ids:
+        return {}
+
+    branch_map: Dict[str, Optional[str]] = {}
+
+    try:
+        with _ignoring_permissions():
+            fields = ["user", "branch"]
+            if _branch_access_has_default_flag():
+                fields.append("is_default")
+            rows = frappe.db.get_all(
+                "Garage Branch Access",
+                filters={"user": ("in", unique_ids)},
+                fields=fields,
+            )
+    except Exception:
+        rows = []
+
+    for row in rows:
+        user = cstr(row.get("user") or "").strip()
+        branch = cstr(row.get("branch") or "").strip()
+        if not user or not branch:
+            continue
+        if row.get("is_default"):
+            branch_map[user] = branch
+            continue
+        branch_map.setdefault(user, branch)
+
+    for user in unique_ids:
+        if branch_map.get(user):
+            continue
+        try:
+            preference = cstr(
+                get_user_default("garage_branch", user)
+                or get_user_default("branch", user)
+                or ""
+            ).strip()
+        except Exception:
+            preference = ""
+        if preference:
+            branch_map[user] = preference
+
+    return branch_map
+
+
 def _customer_display_map(customer_ids: Iterable[str]) -> Dict[str, Dict[str, Any]]:
     unique_ids = sorted({customer for customer in customer_ids if customer})
     if not unique_ids:
@@ -1744,6 +1791,7 @@ def _technician_profiles_from_roles(
         return []
 
     fallback: List[Dict[str, Any]] = []
+    matched_user_ids: Set[str] = set()
     for employee in employees:
         identifier = employee.get("name")
         if not identifier or identifier in exclude_employees:
@@ -1756,12 +1804,16 @@ def _technician_profiles_from_roles(
             else ("Active" if raw_status.lower() == "active" else "Inactive")
         )
 
+        user_id = cstr(employee.get("user_id") or "").strip()
+        if user_id:
+            matched_user_ids.add(user_id)
+
         fallback.append(
             {
                 "name": identifier,
                 "employee": identifier,
                 "employee_name": employee.get("employee_name") or identifier,
-                "user_id": employee.get("user_id"),
+                "user_id": user_id or None,
                 "status": normalized_status or "Active",
                 "max_active_jobs": DEFAULT_TECHNICIAN_CAPACITY,
                 "skill_tags": "",
@@ -1769,6 +1821,75 @@ def _technician_profiles_from_roles(
                 "email": employee.get("company_email"),
                 "notes": "",
                 "branch": employee.get("branch"),
+            }
+        )
+
+    remaining_users = {
+        user
+        for user in users_with_roles
+        if user and user not in matched_user_ids and user not in exclude_employees
+    }
+
+    if not remaining_users:
+        return fallback
+
+    user_rows: List[Dict[str, Any]] = []
+    try:
+        with _ignoring_permissions():
+            user_rows = frappe.db.get_all(
+                "User",
+                fields=[
+                    "name",
+                    "full_name",
+                    "first_name",
+                    "last_name",
+                    "enabled",
+                    "mobile_no",
+                    "phone",
+                    "email",
+                ],
+                filters={"name": ("in", list(remaining_users))},
+                limit=200,
+            )
+    except Exception:
+        user_rows = []
+
+    if not user_rows:
+        return fallback
+
+    branch_map = _user_branch_map(remaining_users)
+
+    for user in user_rows:
+        identifier = cstr(user.get("name") or "").strip()
+        if not identifier or identifier in exclude_employees:
+            continue
+
+        enabled = cint(user.get("enabled", 1))
+        status = "Active" if enabled else "Inactive"
+
+        full_name = cstr(user.get("full_name") or "").strip()
+        if not full_name:
+            first = cstr(user.get("first_name") or "").strip()
+            last = cstr(user.get("last_name") or "").strip()
+            full_name = " ".join(part for part in [first, last] if part).strip()
+        display_name = full_name or identifier
+
+        phone = cstr(user.get("mobile_no") or user.get("phone") or "").strip()
+        email = cstr(user.get("email") or identifier or "").strip()
+
+        fallback.append(
+            {
+                "name": identifier,
+                "employee": identifier,
+                "employee_name": display_name,
+                "user_id": identifier,
+                "status": status,
+                "max_active_jobs": DEFAULT_TECHNICIAN_CAPACITY,
+                "skill_tags": "",
+                "phone": phone or None,
+                "email": email or None,
+                "notes": "",
+                "branch": branch_map.get(identifier),
             }
         )
 
