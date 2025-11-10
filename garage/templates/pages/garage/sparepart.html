@@ -149,6 +149,7 @@ body {
     padding: 0 0 24px 0;
     box-shadow: var(--shadow-lg);
     margin-bottom: 0;
+    width: 100%;
 }
 
 /* === NAVIGATION === */
@@ -164,7 +165,8 @@ body {
     overflow-x: auto !important;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-    max-width: fit-content;
+    width: min(100%, 960px);
+    flex-wrap: wrap;
     margin: 0 auto;
 }
 
@@ -184,6 +186,7 @@ body {
 .portal-nav a {
     display: inline-flex !important;
     align-items: center !important;
+    justify-content: center !important;
     gap: 8px !important;
     padding: 12px 20px !important;
     border-radius: 8px !important;
@@ -196,6 +199,7 @@ body {
     transition: all 0.25s ease !important;
     white-space: nowrap !important;
     position: relative;
+    min-width: 148px;
 }
 
 .portal-nav a::before {
@@ -1821,6 +1825,11 @@ body .frappe-confirm {
             }
             if (request.service_advisor) {
                 group.serviceAdvisor = request.service_advisor;
+            }
+
+            const assignedMechanic = request.assigned_mechanic_name || request.assigned_mechanic;
+            if (assignedMechanic) {
+                group.technicians.add(assignedMechanic);
             }
 
             if (vehicleInfo.plate && !group.vehiclePlate) {
