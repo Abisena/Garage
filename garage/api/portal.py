@@ -3808,22 +3808,6 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
     # Get the document
     doc = _get_doc("Garage Service Order", order_id)
 
-    current_part_status = derive_part_charge_status(
-        [
-            cstr(getattr(row, "stock_status", ""))
-            for row in getattr(doc, "required_parts", []) or []
-        ],
-        getattr(doc, "part_charge_status", None),
-    )
-    if (
-        cstr(current_part_status).strip().lower() == "approved"
-        and "required_parts" in data
-    ):
-        frappe.throw(
-            _("Permintaan sparepart sudah approved. Tidak dapat mengubah permintaan."),
-            title=_("Sparepart sudah Approved"),
-        )
-
     # Update main fields
     allowed_fields = {
         "branch",
@@ -3913,6 +3897,15 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
                     if not status or status in {"draft", "planned"}:
                         part["stock_status"] = "Pending Check"
                     doc.append("required_parts", part)
+                derived_status = derive_part_charge_status(
+                    [
+                        cstr(getattr(row, "stock_status", ""))
+                        for row in getattr(doc, "required_parts", []) or []
+                    ],
+                    getattr(doc, "part_charge_status", None),
+                )
+                if derived_status:
+                    doc.part_charge_status = derived_status
         except Exception as e:
             frappe.log_error(f"Error updating required_parts: {str(e)}")
     

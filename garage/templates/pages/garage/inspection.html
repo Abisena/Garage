@@ -2511,7 +2511,9 @@ body.parts-detail-mode .parts-table td.actions {
         let latestOrder = null;
         let baseServiceFee = 0;
         let serviceSummaryItems = [];
-        const LOCKED_PART_MESSAGE = 'Item ini tidak dapat diubah karena sudah diproses oleh tim sparepart.';
+        const LOCKED_PART_MESSAGE = 'Item ini tidak dapat diubah karena sudah diproses oleh tim sparepart. Tambahkan part baru bila diperlukan.';
+        const EDITABLE_PART_STATUSES = new Set(['', 'draft', 'planned', 'request', 'pending', 'pending check', 'available', 'to order', 'ordered', 'in transit', 'backordered', 're-request']);
+        const EDITABLE_PART_STATUSES_PARTIAL_REJECT = new Set(['', 'draft', 'planned', 'request', 'pending', 'pending check', 'available', 'to order', 'ordered', 'in transit', 'backordered', 're-request', 'rejected']);
         let spkButton = null;
         let spkButtonLabel = 'Print SPK';
 
@@ -2582,21 +2584,25 @@ body.parts-detail-mode .parts-table td.actions {
         }
 
         function canModifyPart(part) {
-            if (isPartsDetailMode || isPartChargeApproved) {
+            if (isPartsDetailMode) {
                 return false;
             }
 
-            if (!isPartialRejectMode) {
-                return true;
-            }
-            const status = normalizeStatusValue(part?.stock_status);
-            if (!status) {
-                return true;
-            }
-            return ['rejected', 'draft', 're-request'].includes(status);
+            const normalizedStatus = normalizeStatusValue(part?.stock_status);
+            const editableStatuses = isPartialRejectMode
+                ? EDITABLE_PART_STATUSES_PARTIAL_REJECT
+                : EDITABLE_PART_STATUSES;
+
+            return editableStatuses.has(normalizedStatus);
         }
 
         function isPartLocked(part) {
+            if (!part) {
+                return false;
+            }
+            if (isPartsDetailMode) {
+                return true;
+            }
             return !canModifyPart(part);
         }
 
@@ -2689,22 +2695,26 @@ body.parts-detail-mode .parts-table td.actions {
                     ? 'Beberapa permintaan sparepart ditolak. Hapus item yang ditolak, kemudian ajukan pengganti sebelum mengirim ulang.'
                     : (isPartsDetailMode
                         ? 'Permintaan sparepart telah aman. Gunakan halaman ini untuk meninjau detail tanpa melakukan perubahan.'
-                        : 'Lengkapi hasil pemeriksaan kendaraan dan bagikan update terbaru untuk tim bengkel.');
+                        : (isPartChargeApproved
+                            ? 'Sparepart yang sudah disetujui akan dikunci. Tambahkan part baru bila membutuhkan request ulang.'
+                            : 'Lengkapi hasil pemeriksaan kendaraan dan bagikan update terbaru untuk tim bengkel.'));
                 subtitleEl.textContent = subtitleText;
             }
 
             if (addButton) {
-                const shouldDisableAdd = isPartsDetailMode || isPartChargeApproved;
+                const shouldDisableAdd = isPartsDetailMode;
                 if (shouldDisableAdd) {
                     addButton.disabled = true;
                     addButton.setAttribute('aria-disabled', 'true');
-                    addButton.title = isPartChargeApproved
-                        ? 'Status sparepart sudah approved. Tidak dapat menambah item baru.'
-                        : '';
+                    addButton.removeAttribute('title');
                 } else {
                     addButton.disabled = false;
                     addButton.removeAttribute('aria-disabled');
-                    addButton.removeAttribute('title');
+                    if (isPartChargeApproved) {
+                        addButton.title = 'Sparepart lama dikunci. Tambahkan part baru untuk request ulang.';
+                    } else {
+                        addButton.removeAttribute('title');
+                    }
                 }
             }
 
@@ -2713,21 +2723,22 @@ body.parts-detail-mode .parts-table td.actions {
                 if (!saveButton.dataset.originalLabel) {
                     saveButton.dataset.originalLabel = originalLabel;
                 }
-                if (isPartsDetailMode || isPartChargeApproved) {
+                if (isPartsDetailMode) {
                     saveButton.disabled = true;
                     saveButton.setAttribute('aria-disabled', 'true');
-                    saveButton.title = isPartChargeApproved
-                        ? 'Status sparepart sudah approved. Tidak dapat mengirim permintaan baru.'
-                        : '';
-                    if (isPartChargeApproved) {
-                        saveButton.textContent = 'Sudah Approved';
-                    }
+                    saveButton.removeAttribute('title');
+                    saveButton.textContent = saveButton.dataset.originalLabel;
                 } else {
                     saveButton.disabled = false;
                     saveButton.removeAttribute('aria-disabled');
-                    saveButton.removeAttribute('title');
-                    if (saveButton.dataset.originalLabel) {
-                        saveButton.textContent = saveButton.dataset.originalLabel;
+                    if (isPartChargeApproved) {
+                        saveButton.textContent = 'Request Ulang';
+                        saveButton.title = 'Simpan perubahan untuk mengajukan permintaan baru.';
+                    } else {
+                        saveButton.removeAttribute('title');
+                        if (saveButton.dataset.originalLabel) {
+                            saveButton.textContent = saveButton.dataset.originalLabel;
+                        }
                     }
                 }
             }
@@ -3131,7 +3142,7 @@ body.parts-detail-mode .parts-table td.actions {
 
             const rows = requiredParts.map((part, i) => {
                 const normalizedStatus = normalizeStatusValue(part.stock_status);
-                const locked = isPartLocked(part) || isPartsDetailMode || isPartChargeApproved;
+                const locked = isPartLocked(part);
                 const rowClasses = ['part-row'];
                 if (normalizedStatus === 'rejected') {
                     rowClasses.push('part-row--rejected');
@@ -3149,7 +3160,7 @@ body.parts-detail-mode .parts-table td.actions {
                 const inputDisabledAttr = locked ? ' disabled' : '';
                 const removeDisabledAttr = locked ? ' disabled' : '';
                 const removeTitleAttr = locked && !isPartsDetailMode ? ' title="Item tidak dapat dihapus"' : '';
-                const actionButton = (!isPartsDetailMode && !isPartChargeApproved)
+                const actionButton = canModifyPart(part)
                     ? `<button type="button" class="btn-remove" onclick="removeRequiredPart(${i})"${removeDisabledAttr}${removeTitleAttr}>🗑️ Trash</button>`
                     : '';
 
@@ -3238,7 +3249,7 @@ body.parts-detail-mode .parts-table td.actions {
         }
 
         window.addRequiredPart = function() {
-            if (isPartsDetailMode || isPartChargeApproved) {
+            if (isPartsDetailMode) {
                 if (window.frappe && typeof frappe.show_alert === 'function') {
                     frappe.show_alert({ message: 'Order ini sudah aman. Tidak perlu menambah sparepart.', indicator: 'blue' }, 5);
                 }
@@ -3268,7 +3279,7 @@ body.parts-detail-mode .parts-table td.actions {
         };
 
         window.removeRequiredPart = function(index) {
-            if (isPartsDetailMode || isPartChargeApproved) {
+            if (isPartsDetailMode) {
                 return;
             }
             const part = requiredParts[index];
@@ -3284,7 +3295,7 @@ body.parts-detail-mode .parts-table td.actions {
         };
 
         window.selectRequiredPart = function(index, value) {
-            if (isPartsDetailMode || isPartChargeApproved) {
+            if (isPartsDetailMode) {
                 return;
             }
             const part = requiredParts[index];
@@ -3325,7 +3336,7 @@ body.parts-detail-mode .parts-table td.actions {
         };
 
         window.updateRequiredPartQty = function(index, value) {
-            if (isPartsDetailMode || isPartChargeApproved) {
+            if (isPartsDetailMode) {
                 return;
             }
             if (!requiredParts[index]) {
@@ -3344,7 +3355,7 @@ body.parts-detail-mode .parts-table td.actions {
         };
 
         window.updateRequiredPartRate = function(index, value) {
-            if (isPartsDetailMode || isPartChargeApproved) {
+            if (isPartsDetailMode) {
                 return;
             }
             if (!requiredParts[index]) {
@@ -3363,7 +3374,7 @@ body.parts-detail-mode .parts-table td.actions {
         };
 
         window.updateRequiredPartDiscount = function(index, value) {
-            if (isPartsDetailMode || isPartChargeApproved) {
+            if (isPartsDetailMode) {
                 return;
             }
             if (!requiredParts[index]) {
@@ -3381,7 +3392,7 @@ body.parts-detail-mode .parts-table td.actions {
         };
 
         window.updateRequiredPartDescription = function(index, value) {
-            if (isPartsDetailMode || isPartChargeApproved) {
+            if (isPartsDetailMode) {
                 return;
             }
             const part = requiredParts[index];
@@ -3405,7 +3416,7 @@ body.parts-detail-mode .parts-table td.actions {
         };
 
         window.updateRequiredPartUom = function(index, value) {
-            if (isPartsDetailMode || isPartChargeApproved) {
+            if (isPartsDetailMode) {
                 return;
             }
             if (!requiredParts[index]) {
@@ -3490,7 +3501,7 @@ body.parts-detail-mode .parts-table td.actions {
                 hasShownApprovedAlert = true;
                 if (window.frappe && typeof frappe.show_alert === 'function') {
                     frappe.show_alert({
-                        message: '✅ Permintaan sparepart sudah approved. Perubahan tidak diperbolehkan.',
+                        message: '✅ Permintaan sparepart sudah approved. Item yang disetujui akan dikunci. Tambahkan part baru bila diperlukan.',
                         indicator: 'blue'
                     }, 5);
                 }
@@ -3747,15 +3758,6 @@ body.parts-detail-mode .parts-table td.actions {
             if (isPartsDetailMode) {
                 if (window.frappe && typeof frappe.show_alert === 'function') {
                     frappe.show_alert({ message: 'Sparepart sudah aman. Tidak ada aksi yang diperlukan.', indicator: 'blue' }, 5);
-                }
-                return;
-            }
-            if (isPartChargeApproved) {
-                if (window.frappe && typeof frappe.show_alert === 'function') {
-                    frappe.show_alert({
-                        message: 'Sparepart sudah approved. Tidak dapat mengirim permintaan baru.',
-                        indicator: 'blue'
-                    }, 5);
                 }
                 return;
             }
