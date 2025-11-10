@@ -3802,12 +3802,28 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
         frappe.throw(_("Service Order ID diperlukan."))
     
     data = _ensure_dict(inspection_data or {})
-    
+
     auto_assignments: List[Dict[str, Any]] = []
 
     # Get the document
     doc = _get_doc("Garage Service Order", order_id)
-    
+
+    current_part_status = derive_part_charge_status(
+        [
+            cstr(getattr(row, "stock_status", ""))
+            for row in getattr(doc, "required_parts", []) or []
+        ],
+        getattr(doc, "part_charge_status", None),
+    )
+    if (
+        cstr(current_part_status).strip().lower() == "approved"
+        and "required_parts" in data
+    ):
+        frappe.throw(
+            _("Permintaan sparepart sudah approved. Tidak dapat mengubah permintaan."),
+            title=_("Sparepart sudah Approved"),
+        )
+
     # Update main fields
     allowed_fields = {
         "branch",
