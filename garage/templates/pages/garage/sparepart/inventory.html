@@ -1054,11 +1054,19 @@ body {
         if (!part) {
             return;
         }
+
+        const fallbackUrl = '/app/purchase-order';
+
         if (window.frappe && typeof window.frappe.set_route === 'function') {
-            window.frappe.set_route('List', 'Purchase Order');
-            return;
+            try {
+                window.frappe.set_route('List', 'Purchase Order');
+                return;
+            } catch (error) {
+                console.warn('[Inventory] Gagal menggunakan frappe.set_route:', error);
+            }
         }
-        window.location.href = '/app/purchase-order';
+
+        window.location.href = fallbackUrl;
     }
 
     function updateMetrics(data) {
