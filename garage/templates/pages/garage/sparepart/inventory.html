@@ -344,15 +344,17 @@ body {
 
 .inventory-table-wrapper {
     width: 100%;
-    overflow-x: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
 .inventory-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    min-width: 100%;
-    table-layout: fixed;
+    min-width: 1280px;
+    table-layout: auto;
 }
 
 .inventory-table th,
