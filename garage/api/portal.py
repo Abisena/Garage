@@ -2996,27 +2996,49 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
         filter_conditions.append(["stock_qty", "<=", data["max_stock"]])
     
     # Get all spare parts
+    spare_part_fields = [
+        "name",
+        "part_code",
+        "part_name",
+        "description",
+        "category",
+        "brand",
+        "uom",
+        "unit_price",
+        "stock_qty",
+        "reserved_qty",
+        "reorder_level",
+        "warehouse_location",
+        "managed_by",
+        "status",
+        "last_restocked_on",
+        "image",
+        "notes",
+        "modified",
+        "owner",
+    ]
+
+    optional_part_fields = [
+        "branch",
+        "default_warehouse",
+        "warehouse",
+        "stock_uom",
+        "purchase_uom",
+        "selling_price",
+        "last_purchase_rate",
+        "last_purchase_supplier",
+        "last_supplier",
+        "supplier",
+        "buying_price",
+    ]
+
+    for field in optional_part_fields:
+        if _doctype_has_field("Garage Spare Part", field):
+            spare_part_fields.append(field)
+
     spare_parts = _list_dicts(
         "Garage Spare Part",
-        [
-            "name",
-            "part_code",
-            "part_name",
-            "description",
-            "category",
-            "brand",
-            "uom",
-            "unit_price",
-            "stock_qty",
-            "reserved_qty",
-            "reorder_level",
-            "warehouse_location",
-            "managed_by",
-            "status",
-            "last_restocked_on",
-            "image",
-            "notes",
-        ],
+        spare_part_fields,
         filters=filter_conditions if filter_conditions else None,
         limit=500,
     )
@@ -3178,22 +3200,81 @@ def list_spare_parts(filters: Optional[Any] = None) -> Dict[str, Any]:
             if flt(part.get("stock_qty", 0)) <= flt(part.get("reorder_level", 0))
         ]
     
+    processed_parts: List[Dict[str, Any]] = []
+    low_stock_parts: List[Dict[str, Any]] = []
+    total_stock_value = 0.0
+
+    for part in spare_parts:
+        record = dict(part)
+        qty = flt(record.get("stock_qty", 0))
+        reserved = flt(record.get("reserved_qty", 0))
+        reorder_level = flt(record.get("reorder_level", 0))
+        projected = qty - reserved
+
+        record["available_qty"] = qty
+        record["ordered_qty"] = reserved
+        record["projected_qty"] = projected
+
+        warehouse_candidates = [
+            record.get("default_warehouse"),
+            record.get("warehouse"),
+            record.get("warehouse_location"),
+        ]
+        record["display_warehouse"] = next(
+            (c for c in warehouse_candidates if c),
+            None,
+        )
+
+        uom_candidates = [
+            record.get("uom"),
+            record.get("stock_uom"),
+            record.get("purchase_uom"),
+        ]
+        record["display_uom"] = next((c for c in uom_candidates if c), None)
+
+        selling_rate = flt(record.get("unit_price")) or flt(record.get("selling_price"))
+        record["selling_rate"] = selling_rate
+
+        last_purchase_rate = flt(
+            record.get("last_purchase_rate")
+            or record.get("buying_price")
+            or 0
+        )
+        record["last_purchase_rate"] = last_purchase_rate
+
+        record["last_supplier"] = (
+            record.get("last_supplier")
+            or record.get("last_purchase_supplier")
+            or record.get("supplier")
+        )
+
+        total_stock_value += qty * (selling_rate or 0)
+
+        processed_parts.append(record)
+
+        is_low_stock = qty <= 0 or (reorder_level > 0 and qty <= reorder_level)
+        if is_low_stock:
+            low_stock_parts.append(record)
+
     # Calculate statistics
-    active_parts = [p for p in spare_parts if p.get("status") == "Active"]
-    low_stock_parts = [
-        p for p in spare_parts
-        if flt(p.get("stock_qty", 0)) <= flt(p.get("reorder_level", 0))
+    active_parts = [
+        p for p in processed_parts if (p.get("status") or "").strip().lower() == "active"
     ]
 
+    active_request_count = len(spare_part_requests)
+
     return {
-        "spare_parts": spare_parts,
+        "spare_parts": processed_parts,
         "spare_part_requests": spare_part_requests,
         "spare_part_approvals": spare_part_approvals,
-        "total_count": len(spare_parts),
+        "low_stock_parts": low_stock_parts,
+        "total_count": len(processed_parts),
         "active_count": len(active_parts),
         "low_stock_count": len(low_stock_parts),
+        "active_request_count": active_request_count,
         "request_count": len(parent_order_names),
         "approval_count": len(spare_part_approvals),
+        "total_stock_value": total_stock_value,
     }
 
 

@@ -182,6 +182,41 @@ body {
     gap: 12px;
 }
 
+.detail-header__identity {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 24px;
+}
+
+.detail-identity {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 200px;
+}
+
+.detail-identity--code {
+    max-width: 240px;
+}
+
+.detail-identity__label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+}
+
+.detail-identity__value {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.detail-identity--name .detail-header__title {
+    margin: 0;
+}
+
 .detail-header__meta {
     display: flex;
     flex-wrap: wrap;
@@ -532,6 +567,12 @@ body {
         margin-right: 0;
     }
 
+    .detail-header__identity {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+    }
+
     .detail-grid {
         grid-template-columns: 1fr;
     }
@@ -570,12 +611,20 @@ body {
         <section class="detail-header">
             <div class="detail-header__media is-empty" data-role="part-image">🧩</div>
             <div class="detail-header__content">
+                <div class="detail-header__identity">
+                    <div class="detail-identity detail-identity--code">
+                        <span class="detail-identity__label">Kode Part</span>
+                        <span class="detail-identity__value" data-role="part-code">-</span>
+                    </div>
+                    <div class="detail-identity detail-identity--name">
+                        <span class="detail-identity__label">Nama Part</span>
+                        <h1 class="detail-header__title" data-role="part-name">Memuat…</h1>
+                    </div>
+                </div>
                 <div class="detail-header__meta">
-                    <span class="detail-header__chip" data-role="part-code" hidden></span>
                     <span class="detail-header__chip" data-role="part-category" hidden></span>
                     <span class="detail-header__chip" data-role="part-brand" hidden></span>
                 </div>
-                <h1 class="detail-header__title" data-role="part-name">Memuat…</h1>
                 <p class="detail-header__description" data-role="part-description" hidden></p>
                 <div class="detail-header__status" data-role="part-status"></div>
             </div>
@@ -841,7 +890,9 @@ body {
             partDescriptionEl.textContent = description;
             partDescriptionEl.hidden = !description;
         }
-        updateChip(partCodeEl, part.part_code);
+        if (partCodeEl) {
+            partCodeEl.textContent = part.part_code || '-';
+        }
         updateChip(partCategoryEl, part.category);
         updateChip(partBrandEl, part.brand);
 
