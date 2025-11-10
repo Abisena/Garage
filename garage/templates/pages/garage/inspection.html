@@ -2482,6 +2482,8 @@ body.parts-detail-mode .parts-table td.actions {
         const urlParams = new URLSearchParams(window.location.search);
         const orderId = urlParams.get('order_id');
         const requestedMode = (urlParams.get('mode') || '').toLowerCase();
+        const sourceContext = (urlParams.get('source') || '').toLowerCase();
+        const shouldStayOnPageAfterSave = sourceContext === 'waiting-entry';
         let isPartialRejectMode = requestedMode === 'partial-reject';
         let isPartsDetailMode = requestedMode === 'parts-detail';
 
@@ -3780,7 +3782,10 @@ body.parts-detail-mode .parts-table td.actions {
                 applyStatusBadge('Work In Progress');
                 latestOrder = Object.assign({}, latestOrder || {}, { status: 'Work In Progress' });
                 setSpkButtonState(true);
-                setTimeout(() => window.location.reload(), 1200);
+
+                if (!shouldStayOnPageAfterSave) {
+                    setTimeout(() => window.location.reload(), 1200);
+                }
             } catch (error) {
                 console.error('Error:', error);
                 const message = error && error.message === 'CSRF token not available'
