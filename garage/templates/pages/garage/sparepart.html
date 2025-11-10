@@ -1924,7 +1924,7 @@ body .frappe-confirm {
                 ? `<div class="customer-meta">SA: ${escapeHTML(group.serviceAdvisor)}</div>`
                 : '';
             const technicianLine = group.technicians.size
-                ? `<div class="customer-meta">Teknisi: ${escapeHTML(Array.from(group.technicians).join(', '))}</div>`
+                ? `<div class="customer-meta">Mekanik: ${escapeHTML(Array.from(group.technicians).join(', '))}</div>`
                 : '';
             const serviceOrderDisplay = formatServiceOrderId(group.serviceOrder);
             const serviceOrderLink = group.serviceOrder
@@ -2276,7 +2276,7 @@ body .frappe-confirm {
                 const breakdown = `${uniqueRequests.length} permintaan`;
                 const advisorLine = group.serviceAdvisor ? `<div>Service Advisor: ${escapeHTML(group.serviceAdvisor)}</div>` : '';
                 const technicianLine = group.technicians.size
-                    ? `<div>Teknisi: ${escapeHTML(Array.from(group.technicians).join(', '))}</div>`
+                    ? `<div>Mekanik: ${escapeHTML(Array.from(group.technicians).join(', '))}</div>`
                     : '';
                 const parsedDisplay = parseVehicleName(group.vehicleDisplay || '');
                 const vehiclePlate = group.vehiclePlate || parsedDisplay.plate;

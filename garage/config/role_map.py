@@ -33,6 +33,8 @@ ROLE_HOME_ROUTES: Mapping[str, str] = {
     "Service Advisor": "/garage/service",
     "Technician": "/garage/service",
     "Teknisi": "/garage/service",
+    "Mechanic": "/garage/service",
+    "Mekanik": "/garage/service",
 
     # Spare part & inventory teams
     "Sparepart": "/garage/sparepart",

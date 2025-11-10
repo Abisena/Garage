@@ -21,7 +21,7 @@ PORTAL_NAV_ITEMS: List[Dict[str, Any]] = [
         "route": "/garage/service",
         "key": "service",
         "label": "🔧 Servis",
-        "roles": ["Service", "Servis", "Service Advisor", "Technician", "Teknisi"],
+        "roles": ["Service", "Servis", "Service Advisor", "Technician", "Teknisi", "Mechanic", "Mekanik"],
     },
     {
         "route": "/garage/sparepart",

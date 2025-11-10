@@ -13,6 +13,8 @@ ROLE_NAMES = [
     "Service Advisor",
     "Technician",
     "Teknisi",
+    "Mechanic",
+    "Mekanik",
     "Head Teknisi",
     "Sparepart",
     "Spare Part",

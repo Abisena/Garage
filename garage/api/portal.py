@@ -34,7 +34,7 @@ SERVICE_ORDER_ACTIVE_STATUSES = {
     "Awaiting QC",
 }
 TECHNICIAN_ACTIVE_STATUS = {"Active"}
-TECHNICIAN_ROLE_NAMES = {"Technician", "Teknisi"}
+TECHNICIAN_ROLE_NAMES = {"Technician", "Teknisi", "Mechanic", "Mekanik"}
 DEFAULT_TECHNICIAN_CAPACITY = 3
 
 BRANCH_FILTER_FIELDS: Mapping[str, str] = {

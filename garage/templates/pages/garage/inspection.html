@@ -6,7 +6,7 @@
 
 {% block title %}{% if is_partial_reject_mode %}Inspeksi Partial Reject - Garage{% elif is_parts_detail_mode %}Detail Sparepart - Garage{% else %}Inspeksi Service Order - Garage{% endif %}{% endblock %}
 
-{% set required_roles = ['Service', 'Servis', 'Service Advisor', 'Technician', 'Teknisi'] %}
+{% set required_roles = ['Service', 'Servis', 'Service Advisor', 'Technician', 'Teknisi', 'Mechanic', 'Mekanik'] %}
 {% include "garage/templates/includes/role_guard.html" %}
 
 {% block head_include %}
@@ -180,7 +180,7 @@ a:hover {
     line-height: 1.4; /* Atur line height */
 }
 
-/* Reset styling untuk item teknisi agar label tidak keluar */
+/* Reset styling untuk item mekanik agar label tidak keluar */
 .intake-meta__item--no-card {
     border: none !important;
     background: transparent !important;
@@ -375,7 +375,7 @@ a:hover {
     background: var(--bg-surface);
 }
 
-/* KHUSUS untuk teknisi select: TANPA card/border */
+/* KHUSUS untuk mekanik select: TANPA card/border */
 .intake-meta__item--no-card {
     border: none !important;
     background: transparent !important;
@@ -1564,12 +1564,12 @@ body.parts-detail-mode .parts-table td.actions {
                                 <span class="intake-meta__value" id="display_vehicle">-</span>
                             </div>
                             
-                            <!-- Baris 2: Teknisi (PINDAHKAN LABEL KE DALAM) -->
+                            <!-- Baris 2: Mekanik (PINDAHKAN LABEL KE DALAM) -->
                             <div class="intake-meta__item intake-meta__item--no-card">
-                                <span class="intake-meta__label">Teknisi</span> <!-- Label di dalam -->
+                                <span class="intake-meta__label">Mekanik</span> <!-- Label di dalam -->
                                 <div class="intake-meta__control">
                                     <select id="assigned_mechanic" name="assigned_mechanic" required>
-                                        <option value="">Pilih teknisi tersedia</option>
+                                        <option value="">Pilih mekanik tersedia</option>
                                     </select>
                                 </div>
                             </div>
@@ -1925,7 +1925,7 @@ body.parts-detail-mode .parts-table td.actions {
 
         const value = select.value || '';
         if (!value) {
-            statusElement.textContent = 'Belum ada teknisi ditugaskan.';
+            statusElement.textContent = 'Belum ada mekanik ditugaskan.';
             return;
         }
 
@@ -1933,7 +1933,7 @@ body.parts-detail-mode .parts-table td.actions {
         const displayName = select.dataset.currentDisplay || value;
 
         if (!technician) {
-            statusElement.textContent = `${displayName} (tidak ditemukan di daftar teknisi).`;
+            statusElement.textContent = `${displayName} (tidak ditemukan di daftar mekanik).`;
             statusElement.classList.add('is-unknown');
             return;
         }
@@ -1944,7 +1944,7 @@ body.parts-detail-mode .parts-table td.actions {
         //     statusElement.textContent = `${technician.employee_name} • ${loadText} • ${slotText}.`;
         //     statusElement.classList.add('is-available');
         // } else {
-        //     statusElement.textContent = `${technician.employee_name} • ${loadText} • Teknisi sudah penuh.`;
+        //     statusElement.textContent = `${technician.employee_name} • ${loadText} • Mekanik sudah penuh.`;
         //     statusElement.classList.add('is-full');
         // }
     }
@@ -1966,7 +1966,7 @@ body.parts-detail-mode .parts-table td.actions {
         select.innerHTML = '';
         const placeholder = document.createElement('option');
         placeholder.value = '';
-        placeholder.textContent = 'Pilih teknisi tersedia';
+        placeholder.textContent = 'Pilih mekanik tersedia';
         select.appendChild(placeholder);
 
         const sortedRoster = sortTechnicians(technicianRoster);
@@ -2001,7 +2001,7 @@ body.parts-detail-mode .parts-table td.actions {
             const fallbackOption = document.createElement('option');
             fallbackOption.value = targetValue;
             const fallbackLabel = previousDisplay || targetValue;
-            fallbackOption.textContent = `${fallbackLabel} (di luar daftar teknisi)`;
+            fallbackOption.textContent = `${fallbackLabel} (di luar daftar mekanik)`;
             fallbackOption.dataset.displayName = fallbackLabel;
             select.appendChild(fallbackOption);
             select.value = targetValue;
@@ -2029,7 +2029,7 @@ body.parts-detail-mode .parts-table td.actions {
         if (!technicianRoster.length) {
             const emptyState = document.createElement('div');
             emptyState.className = 'technician-roster__empty';
-            emptyState.textContent = 'Belum ada teknisi yang terdaftar.';
+            emptyState.textContent = 'Belum ada mekanik yang terdaftar.';
             container.appendChild(emptyState);
             return;
         }
@@ -2907,7 +2907,7 @@ body.parts-detail-mode .parts-table td.actions {
                         metaPieces.push(task.description);
                     }
                     if (task.technician_name) {
-                        metaPieces.push(`Teknisi: ${task.technician_name}`);
+                        metaPieces.push(`Mekanik: ${task.technician_name}`);
                     }
                     const meta = metaPieces.join(' • ');
                     items.push({
@@ -3749,7 +3749,7 @@ body.parts-detail-mode .parts-table td.actions {
             if (assignedMechanicInput) {
                 const mechanicValue = assignedMechanicInput.value.trim();
                 if (!mechanicValue) {
-                    assignedMechanicInput.setCustomValidity('Pilih teknisi terlebih dahulu.');
+                    assignedMechanicInput.setCustomValidity('Pilih mekanik terlebih dahulu.');
                     assignedMechanicInput.reportValidity();
                     return;
                 }

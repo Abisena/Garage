@@ -3174,7 +3174,7 @@ function cloneBrandModelMap(map) {
                     if (technicianNames.length) {
                         const technicianMeta = document.createElement('div');
                         technicianMeta.className = 'spare-request-modal__item-meta';
-                        technicianMeta.textContent = `${__('Teknisi')}: ${technicianNames.join(', ')}`;
+                        technicianMeta.textContent = `${__('Mekanik')}: ${technicianNames.join(', ')}`;
                         row.appendChild(technicianMeta);
                     }
 
