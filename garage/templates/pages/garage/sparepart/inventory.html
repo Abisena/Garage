@@ -876,8 +876,8 @@ body {
     <section class="inventory-section">
         <header class="inventory-section__header">
             <div>
-                <h3>Total Stok Inventory</h3>
-                <p>Klik baris untuk membuka detail sparepart.</p>
+                <h3>Stock Inventory</h3>
+                <p>Klik baris untuk membuka detail sparepart. Baris berwarna menandakan stok menipis dan akan membuka halaman Purchase Order.</p>
             </div>
             <div class="inventory-section__meta">
                 <span class="inventory-section__badge" data-role="inventory-total-value">Nilai Stok: Rp 0</span>
@@ -915,46 +915,6 @@ body {
         </div>
         <div class="table-pagination" data-pagination="spare-inventory" hidden></div>
     </section>
-
-    <section class="inventory-section" data-role="low-stock-section" hidden>
-        <header class="inventory-section__header">
-            <div>
-                <h3>Stok Menipis</h3>
-                <p>Daftar sparepart yang perlu segera dipesan ulang.</p>
-            </div>
-            <div class="inventory-section__meta">
-                <span class="inventory-section__hint">Klik baris untuk membuka Purchase Order di Frappe.</span>
-            </div>
-        </header>
-        <div class="inventory-table-wrapper">
-            <table class="inventory-table inventory-table--compact" data-role="low-stock-table">
-                <thead>
-                    <tr>
-                        <th>Kode Barang</th>
-                        <th>Nama Barang</th>
-                        <th>Gudang</th>
-                        <th>Stok Tersedia</th>
-                        <th>Dipesan</th>
-                        <th>Proyeksi</th>
-                        <th>Harga Jual / Unit (Rp)</th>
-                        <th>Satuan</th>
-                        <th>Merek</th>
-                        <th>Harga Beli Terakhir (Rp)</th>
-                        <th>Pemasok Terakhir</th>
-                        <th>Cabang</th>
-                        <th>Status</th>
-                        <th>Terakhir Diperbarui</th>
-                    </tr>
-                </thead>
-                <tbody data-role="low-stock-table-body"></tbody>
-            </table>
-            <div class="empty-state" data-role="low-stock-empty" hidden>
-                <div class="empty-state__icon">✅</div>
-                <div class="empty-state__title">Stok aman.</div>
-                <p class="empty-state__message">Belum ada sparepart yang berada di bawah batas reorder.</p>
-            </div>
-        </div>
-    </section>
 </div>
 {% endblock %}
 
@@ -972,7 +932,6 @@ body {
 
     const state = {
         spareParts: [],
-        lowStockParts: [],
         searchQuery: '',
         pagination: {
             'spare-inventory': { page: 1 },
@@ -1067,35 +1026,20 @@ body {
         if (!part) {
             return;
         }
-        const params = new URLSearchParams();
-        const code = part.part_code || part.name || '';
-        if (code) params.set('item_code', code);
-        if (part.part_name) params.set('item_name', part.part_name);
-        const warehouse = part.display_warehouse || part.default_warehouse || part.warehouse || part.warehouse_location;
-        if (warehouse) params.set('warehouse', warehouse);
-        const uom = part.display_uom || part.uom;
-        if (uom) params.set('uom', uom);
-        const availableQty = part.available_qty ?? part.stock_qty ?? 0;
-        const orderedQty = part.ordered_qty ?? part.reserved_qty ?? 0;
-        const projectedQty = part.projected_qty ?? (availableQty - orderedQty);
-        params.set('stock_qty', String(availableQty));
-        params.set('reserved_qty', String(orderedQty));
-        params.set('projected_qty', String(projectedQty));
-        const sellingRate = part.selling_rate || part.unit_price || 0;
-        params.set('rate', String(sellingRate));
-        if (part.brand) params.set('brand', part.brand);
-        if (part.last_supplier) params.set('supplier', part.last_supplier);
-        if (part.last_purchase_rate) params.set('last_purchase_rate', String(part.last_purchase_rate));
-        if (part.branch) params.set('branch', part.branch);
-        if (part.status) params.set('status', part.status);
-        const target = `/app/purchase-order/new-purchase-order?${params.toString()}`;
-        window.location.href = target;
+        window.location.href = '/app/purchase-order';
     }
 
     function updateMetrics(data) {
+        const spareParts = Array.isArray(data.spare_parts) ? data.spare_parts : state.spareParts;
+        const computedLowStock = Array.isArray(spareParts)
+            ? spareParts.filter((part) => {
+                const status = evaluateStockStatus(part);
+                return status === 'low' || status === 'out';
+            }).length
+            : 0;
         const metrics = {
-            'spare-count': data.total_count,
-            'spare-low-stock': data.low_stock_count,
+            'spare-count': data.total_count ?? (Array.isArray(spareParts) ? spareParts.length : 0),
+            'spare-low-stock': data.low_stock_count ?? computedLowStock,
             'spare-active-requests': data.active_request_count ?? data.request_count ?? 0,
         };
         Object.entries(metrics).forEach(([key, value]) => {
@@ -1158,7 +1102,7 @@ body {
         }
 
         return `
-            <tr class="${rowClasses.join(' ')}" data-clickable="true" data-${datasetKey}="${index}" data-part="${escapeHTML(identifier)}">
+            <tr class="${rowClasses.join(' ')}" data-clickable="true" data-${datasetKey}="${index}" data-part="${escapeHTML(identifier)}" data-stock-status="${stockStatus}">
                 ${cells.join('')}
             </tr>
         `;
@@ -1191,30 +1135,6 @@ body {
 
         tableBody.innerHTML = visibleParts
             .map((part, offset) => buildInventoryRow(part, { index: start + offset, includeCreatedBy: true }))
-            .join('');
-    }
-
-    function renderLowStockTable(parts) {
-        const section = document.querySelector('[data-role="low-stock-section"]');
-        const tableBody = document.querySelector('[data-role="low-stock-table-body"]');
-        const emptyState = document.querySelector('[data-role="low-stock-empty"]');
-        if (!section || !tableBody) {
-            return;
-        }
-
-        const hasData = Array.isArray(parts) && parts.length > 0;
-        section.hidden = !hasData;
-
-        if (!hasData) {
-            tableBody.innerHTML = '';
-            if (emptyState) emptyState.hidden = false;
-            return;
-        }
-
-        if (emptyState) emptyState.hidden = true;
-
-        tableBody.innerHTML = parts
-            .map((part, index) => buildInventoryRow(part, { index, datasetKey: 'low-index', includeCreatedBy: false }))
             .join('');
     }
 
@@ -1289,24 +1209,13 @@ body {
         if (!part) {
             return;
         }
+        const status = (row.dataset.stockStatus || '').toLowerCase();
+        if (status === 'low' || status === 'out') {
+            openPurchaseOrder(part);
+            return;
+        }
         const identifier = part.name || part.part_code;
         openSpareDetail(identifier);
-    }
-
-    function handleLowStockRowClick(event) {
-        const row = event.target.closest('tr[data-low-index]');
-        if (!row) {
-            return;
-        }
-        const index = Number(row.dataset.lowIndex);
-        if (Number.isNaN(index)) {
-            return;
-        }
-        const part = state.lowStockParts[index];
-        if (!part) {
-            return;
-        }
-        openPurchaseOrder(part);
     }
 
     function handleSearch(event) {
@@ -1328,10 +1237,8 @@ body {
 
             const data = response.message || {};
             state.spareParts = Array.isArray(data.spare_parts) ? data.spare_parts : [];
-            state.lowStockParts = Array.isArray(data.low_stock_parts) ? data.low_stock_parts : [];
             updateMetrics(data);
             renderInventory(state.spareParts);
-            renderLowStockTable(state.lowStockParts);
         } catch (error) {
             console.error('[Inventory] Error:', error);
             frappe.show_alert({ message: 'Gagal memuat inventaris: ' + (error.message || error), indicator: 'red' }, 5);
@@ -1343,7 +1250,6 @@ body {
 
         document.querySelector('[data-role="spare-search"]')?.addEventListener('input', handleSearch);
         document.querySelector('[data-role="inventory-table-body"]')?.addEventListener('click', handleInventoryRowClick);
-        document.querySelector('[data-role="low-stock-table-body"]')?.addEventListener('click', handleLowStockRowClick);
         document.querySelectorAll('[data-pagination]').forEach((container) => {
             container.addEventListener('click', handlePaginationClick);
         });
