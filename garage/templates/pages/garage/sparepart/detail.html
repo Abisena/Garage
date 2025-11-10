@@ -401,19 +401,46 @@ body {
     gap: 12px;
 }
 
-.request-item__order {
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
 .request-item__meta {
     font-size: 13px;
     color: var(--text-muted);
 }
 
+.request-item__body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+}
+
+.request-item__summary {
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.request-item__summary .badge {
+    margin-left: 4px;
+}
+
+.request-item__code {
+    font-weight: 700;
+}
+
+.request-item__name {
+    font-weight: 600;
+}
+
 .request-item__qty {
     font-weight: 600;
     color: var(--text-secondary);
+}
+
+.request-item__body .request-item__meta {
+    flex-basis: 100%;
 }
 
 .request-item__footer {
@@ -994,6 +1021,24 @@ body {
                 const warehouseLine = request.warehouse
                     ? `<div class="request-item__meta">Gudang: ${escapeHTML(request.warehouse)}</div>`
                     : '';
+                const itemName = request.item_name || request.item_code || '';
+                const summaryParts = [];
+                if (orderDisplay) {
+                    summaryParts.push(`<span class="request-item__code">${escapeHTML(orderDisplay)}</span>`);
+                }
+                if (itemName) {
+                    const formattedName = orderDisplay
+                        ? `(${escapeHTML(itemName)})`
+                        : escapeHTML(itemName);
+                    summaryParts.push(`<span class="request-item__name">${formattedName}</span>`);
+                }
+                if (statusBadge) {
+                    summaryParts.push(statusBadge);
+                }
+                const summaryLine = summaryParts.length
+                    ? `<div class="request-item__summary">${summaryParts.join(' ')}</div>`
+                    : '<div class="request-item__summary"><span class="request-item__name">-</span></div>';
+                const headerMeta = [customerLine, vehicleLine, advisorLine].filter(Boolean).join('');
                 const qtyDisplay = formatQuantity(request.qty || request.stock_qty, request.uom);
                 const created = formatDateTime(request.creation);
                 const orderLink = request.parent
@@ -1005,16 +1050,11 @@ body {
                 return `
                     <li class="request-item">
                         <div class="request-item__header">
-                            <div>
-                                <div class="request-item__order">${escapeHTML(orderDisplay)} ${statusBadge}</div>
-                                ${customerLine}
-                                ${vehicleLine}
-                                ${advisorLine}
-                            </div>
+                            <div>${headerMeta}</div>
                             <div>${getRequestStatusBadge(request.stock_status)}</div>
                         </div>
                         <div class="request-item__body">
-                            <div>${escapeHTML(request.item_name || request.item_code || '-')}</div>
+                            ${summaryLine}
                             <div class="request-item__qty">${escapeHTML(qtyDisplay)}</div>
                             ${sourceLine}
                             ${warehouseLine}
