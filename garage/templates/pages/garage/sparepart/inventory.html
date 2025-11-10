@@ -223,11 +223,14 @@ body {
 }
 
 .inventory-metric {
-    flex: 1 1 200px;
-    background: var(--bg-surface);
+    flex: 1 1 220px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.9));
     border: 1px solid var(--border-light);
     border-radius: var(--radius-lg);
-    padding: 20px;
+    padding: 18px 20px;
     box-shadow: var(--shadow-sm);
 }
 
@@ -238,12 +241,168 @@ body {
     letter-spacing: 0.08em;
 }
 
+.inventory-metric__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04);
+}
+
+.inventory-metric__content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 .inventory-metric__value {
     display: block;
     margin-top: 8px;
     font-size: 32px;
     font-weight: 700;
     color: var(--text-primary);
+}
+
+.inventory-section {
+    margin-top: 40px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.inventory-section__header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 24px 28px;
+    border-bottom: 1px solid var(--border-light);
+    background: linear-gradient(135deg, rgba(0, 102, 255, 0.05), rgba(0, 102, 255, 0));
+}
+
+.inventory-section__header h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.inventory-section__header p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.inventory-section__meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.inventory-section__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: var(--primary-subtle);
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+.inventory-section__hint {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.inventory-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.inventory-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 960px;
+}
+
+.inventory-table th,
+.inventory-table td {
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-light);
+    background: transparent;
+}
+
+.inventory-table th {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    background: rgba(0, 102, 255, 0.04);
+}
+
+.inventory-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.inventory-table tbody tr[data-clickable="true"] {
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.inventory-table tbody tr[data-clickable="true"]:hover {
+    background: rgba(0, 102, 255, 0.08);
+}
+
+.inventory-table tbody tr.is-low-stock {
+    background: rgba(255, 179, 0, 0.08);
+}
+
+.inventory-table tbody tr.is-out-of-stock {
+    background: rgba(255, 61, 0, 0.1);
+}
+
+.inventory-table tbody tr.is-low-stock:hover,
+.inventory-table tbody tr.is-out-of-stock:hover {
+    background: rgba(0, 102, 255, 0.12);
+}
+
+.inventory-table td.is-numeric,
+.inventory-table th.is-numeric {
+    text-align: right;
+}
+
+.inventory-table td.is-nowrap {
+    white-space: nowrap;
+}
+
+.inventory-table td.is-muted {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.inventory-table--compact th,
+.inventory-table--compact td {
+    padding: 12px 14px;
+}
+
+.inventory-table--compact {
+    min-width: 720px;
+}
+
+.inventory-table .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .inventory-actions {
@@ -617,12 +776,25 @@ body {
         </div>
         <div class="inventory-header__metrics">
             <div class="inventory-metric">
-                <span class="inventory-metric__label">Total Sparepart</span>
-                <span class="inventory-metric__value" data-metric="spare-count">0</span>
+                <div class="inventory-metric__icon">📦</div>
+                <div class="inventory-metric__content">
+                    <span class="inventory-metric__label">Total Sparepart</span>
+                    <span class="inventory-metric__value" data-metric="spare-count">0</span>
+                </div>
             </div>
             <div class="inventory-metric">
-                <span class="inventory-metric__label">Stok Menipis</span>
-                <span class="inventory-metric__value" data-metric="spare-low-stock">0</span>
+                <div class="inventory-metric__icon">📝</div>
+                <div class="inventory-metric__content">
+                    <span class="inventory-metric__label">Permintaan Aktif</span>
+                    <span class="inventory-metric__value" data-metric="spare-active-requests">0</span>
+                </div>
+            </div>
+            <div class="inventory-metric">
+                <div class="inventory-metric__icon">🚨</div>
+                <div class="inventory-metric__content">
+                    <span class="inventory-metric__label">Stok Menipis</span>
+                    <span class="inventory-metric__value" data-metric="spare-low-stock">0</span>
+                </div>
             </div>
         </div>
     </div>
@@ -634,29 +806,106 @@ body {
         <a class="btn btn-secondary" data-desk-link="Garage Spare Part" target="_blank">Buka Master Sparepart</a>
     </div>
 
-    <div class="inventory-card-grid" data-role="spare-inventory-grid"></div>
-    <div class="table-pagination" data-pagination="spare-inventory" hidden></div>
-    <div class="empty-state" data-empty="spare-inventory">
-        <div class="empty-state__icon">📦</div>
-        <div class="empty-state__title">Belum ada data sparepart.</div>
-        <p>Tambahkan data master sparepart dari halaman profil untuk mulai mengelola stok.</p>
-    </div>
+    <section class="inventory-section">
+        <header class="inventory-section__header">
+            <div>
+                <h3>Total Stok Inventory</h3>
+                <p>Klik baris untuk membuka detail sparepart.</p>
+            </div>
+            <div class="inventory-section__meta">
+                <span class="inventory-section__badge" data-role="inventory-total-value">Nilai Stok: Rp 0</span>
+                <span class="inventory-section__hint">Nilai stok berdasarkan harga jual/unit.</span>
+            </div>
+        </header>
+        <div class="inventory-table-wrapper">
+            <table class="inventory-table" data-role="inventory-table">
+                <thead>
+                    <tr>
+                        <th>Kode Barang</th>
+                        <th>Nama Barang</th>
+                        <th>Gudang</th>
+                        <th>Stok Tersedia</th>
+                        <th>Dipesan</th>
+                        <th>Proyeksi</th>
+                        <th>Harga Jual / Unit (Rp)</th>
+                        <th>Satuan</th>
+                        <th>Merek</th>
+                        <th>Harga Beli Terakhir (Rp)</th>
+                        <th>Pemasok Terakhir</th>
+                        <th>Cabang</th>
+                        <th>Status</th>
+                        <th>Terakhir Diperbarui</th>
+                        <th>Dibuat Oleh</th>
+                    </tr>
+                </thead>
+                <tbody data-role="inventory-table-body"></tbody>
+            </table>
+            <div class="empty-state" data-empty="spare-inventory" hidden>
+                <div class="empty-state__icon">📦</div>
+                <div class="empty-state__title">Belum ada data sparepart.</div>
+                <p>Tambahkan data master sparepart dari halaman profil untuk mulai mengelola stok.</p>
+            </div>
+        </div>
+        <div class="table-pagination" data-pagination="spare-inventory" hidden></div>
+    </section>
+
+    <section class="inventory-section" data-role="low-stock-section" hidden>
+        <header class="inventory-section__header">
+            <div>
+                <h3>Stok Menipis</h3>
+                <p>Daftar sparepart yang perlu segera dipesan ulang.</p>
+            </div>
+            <div class="inventory-section__meta">
+                <span class="inventory-section__hint">Klik baris untuk membuka Purchase Order di Frappe.</span>
+            </div>
+        </header>
+        <div class="inventory-table-wrapper">
+            <table class="inventory-table inventory-table--compact" data-role="low-stock-table">
+                <thead>
+                    <tr>
+                        <th>Kode Barang</th>
+                        <th>Nama Barang</th>
+                        <th>Gudang</th>
+                        <th>Stok Tersedia</th>
+                        <th>Dipesan</th>
+                        <th>Proyeksi</th>
+                        <th>Harga Jual / Unit (Rp)</th>
+                        <th>Satuan</th>
+                        <th>Merek</th>
+                        <th>Harga Beli Terakhir (Rp)</th>
+                        <th>Pemasok Terakhir</th>
+                        <th>Cabang</th>
+                        <th>Status</th>
+                        <th>Terakhir Diperbarui</th>
+                    </tr>
+                </thead>
+                <tbody data-role="low-stock-table-body"></tbody>
+            </table>
+            <div class="empty-state" data-role="low-stock-empty" hidden>
+                <div class="empty-state__icon">✅</div>
+                <div class="empty-state__title">Stok aman.</div>
+                <p class="empty-state__message">Belum ada sparepart yang berada di bawah batas reorder.</p>
+            </div>
+        </div>
+    </section>
 </div>
 {% endblock %}
 
 {% block script %}
 <script>
-(function() {
+(function () {
     'use strict';
 
     const API = {
         listSpareParts: 'garage.api.portal.list_spare_parts',
     };
 
-    const PAGE_SIZE = 9;
+    const PAGE_SIZE = 10;
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
     const state = {
         spareParts: [],
+        lowStockParts: [],
         searchQuery: '',
         pagination: {
             'spare-inventory': { page: 1 },
@@ -669,7 +918,7 @@ body {
             currency: 'IDR',
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
-        }).format(value || 0);
+        }).format(Number(value) || 0);
     }
 
     function formatQuantity(value, uom) {
@@ -677,10 +926,7 @@ body {
         if (!Number.isNaN(numeric)) {
             const formatted = Number.isInteger(numeric)
                 ? numeric.toLocaleString('id-ID')
-                : numeric.toLocaleString('id-ID', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                  });
+                : numeric.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             return `${formatted} ${uom || ''}`.trim();
         }
         if (value && uom) {
@@ -693,7 +939,6 @@ body {
         if (value === undefined || value === null) {
             return '';
         }
-
         return String(value)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -702,27 +947,48 @@ body {
             .replace(/'/g, '&#39;');
     }
 
+    function formatDateTime(value) {
+        if (!value) {
+            return '-';
+        }
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+            return value;
+        }
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = MONTH_NAMES[date.getMonth()] || String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${day}-${month}-${year} ${hours}:${minutes}`;
+    }
+
     function getStatusBadge(status) {
         const normalized = (status || '').toLowerCase();
         const labels = {
             active: { text: 'Active', className: 'badge success' },
             inactive: { text: 'Inactive', className: 'badge subtle' },
             retired: { text: 'Retired', className: 'badge muted' },
+            discontinued: { text: 'Discontinued', className: 'badge danger' },
         };
         const config = labels[normalized] || { text: status || 'Active', className: 'badge success' };
-        return `<span class="${config.className}">${escapeHTML(config.text)}</span>`;
+        return `<span class="${config.className} status-badge">${escapeHTML(config.text)}</span>`;
     }
 
-    function getStockStatus(stockQty, reorderLevel) {
-        const stock = parseFloat(stockQty) || 0;
-        const reorder = parseFloat(reorderLevel) || 0;
-        if (stock === 0) return '<span class="inventory-card__status is-critical">Habis</span>';
-        if (stock <= reorder) return '<span class="inventory-card__status is-low">Menipis</span>';
-        return '<span class="inventory-card__status">Cukup</span>';
+    function evaluateStockStatus(part) {
+        const qty = parseFloat(part.available_qty ?? part.stock_qty ?? 0) || 0;
+        const reorder = parseFloat(part.reorder_level ?? 0) || 0;
+        if (qty <= 0) {
+            return 'out';
+        }
+        if (reorder > 0 && qty <= reorder) {
+            return 'low';
+        }
+        return 'ok';
     }
 
-    function openSpareDetail(partIdentifier) {
-        const value = (partIdentifier || '').trim();
+    function openSpareDetail(identifier) {
+        const value = (identifier || '').trim();
         if (!value) {
             return;
         }
@@ -730,106 +996,158 @@ body {
         window.location.href = url;
     }
 
+    function openPurchaseOrder(part) {
+        if (!part) {
+            return;
+        }
+        const params = new URLSearchParams();
+        const code = part.part_code || part.name || '';
+        if (code) params.set('item_code', code);
+        if (part.part_name) params.set('item_name', part.part_name);
+        const warehouse = part.display_warehouse || part.default_warehouse || part.warehouse || part.warehouse_location;
+        if (warehouse) params.set('warehouse', warehouse);
+        const uom = part.display_uom || part.uom;
+        if (uom) params.set('uom', uom);
+        const availableQty = part.available_qty ?? part.stock_qty ?? 0;
+        const orderedQty = part.ordered_qty ?? part.reserved_qty ?? 0;
+        const projectedQty = part.projected_qty ?? (availableQty - orderedQty);
+        params.set('stock_qty', String(availableQty));
+        params.set('reserved_qty', String(orderedQty));
+        params.set('projected_qty', String(projectedQty));
+        const sellingRate = part.selling_rate || part.unit_price || 0;
+        params.set('rate', String(sellingRate));
+        if (part.brand) params.set('brand', part.brand);
+        if (part.last_supplier) params.set('supplier', part.last_supplier);
+        if (part.last_purchase_rate) params.set('last_purchase_rate', String(part.last_purchase_rate));
+        if (part.branch) params.set('branch', part.branch);
+        if (part.status) params.set('status', part.status);
+        const target = `/app/purchase-order/new-purchase-order?${params.toString()}`;
+        window.location.href = target;
+    }
+
     function updateMetrics(data) {
         const metrics = {
             'spare-count': data.total_count,
             'spare-low-stock': data.low_stock_count,
+            'spare-active-requests': data.active_request_count ?? data.request_count ?? 0,
         };
         Object.entries(metrics).forEach(([key, value]) => {
-            document.querySelectorAll(`[data-metric="${key}"]`).forEach(el => {
-                el.textContent = value || 0;
+            document.querySelectorAll(`[data-metric="${key}"]`).forEach((el) => {
+                el.textContent = value ?? 0;
             });
         });
+        const totalValueEl = document.querySelector('[data-role="inventory-total-value"]');
+        if (totalValueEl) {
+            totalValueEl.textContent = `Nilai Stok: ${formatCurrency(data.total_stock_value || 0)}`;
+        }
     }
 
-    function renderInventory(spareParts) {
-        const grid = document.querySelector('[data-role="spare-inventory-grid"]');
+    function buildInventoryRow(part, options) {
+        const index = options.index ?? 0;
+        const datasetKey = options.datasetKey || 'index';
+        const includeCreatedBy = Boolean(options.includeCreatedBy);
+        const identifier = part.name || part.part_code || '';
+        const partCode = part.part_code || part.name || '-';
+        const partName = part.part_name || '-';
+        const warehouse = part.display_warehouse || part.default_warehouse || part.warehouse || part.warehouse_location || '-';
+        const availableQty = part.available_qty ?? part.stock_qty ?? 0;
+        const orderedQty = part.ordered_qty ?? part.reserved_qty ?? 0;
+        const projectedQty = part.projected_qty ?? (availableQty - orderedQty);
+        const uom = part.display_uom || part.uom || 'Unit';
+        const sellingRate = part.selling_rate || part.unit_price || 0;
+        const lastPurchaseRate = Number(part.last_purchase_rate || 0);
+        const lastSupplier = part.last_supplier || '-';
+        const branch = part.branch || '-';
+        const statusBadge = getStatusBadge(part.status);
+        const updatedAt = formatDateTime(part.modified);
+        const createdBy = part.owner || '-';
+        const stockStatus = evaluateStockStatus(part);
+        const rowClasses = [];
+        if (stockStatus === 'out') {
+            rowClasses.push('is-out-of-stock');
+        } else if (stockStatus === 'low') {
+            rowClasses.push('is-low-stock');
+        }
+
+        const cells = [
+            `<td class="is-nowrap">${escapeHTML(partCode)}</td>`,
+            `<td>${escapeHTML(partName)}</td>`,
+            `<td>${escapeHTML(warehouse)}</td>`,
+            `<td class="is-numeric">${escapeHTML(formatQuantity(availableQty, uom))}</td>`,
+            `<td class="is-numeric">${escapeHTML(formatQuantity(orderedQty, uom))}</td>`,
+            `<td class="is-numeric">${escapeHTML(formatQuantity(projectedQty, uom))}</td>`,
+            `<td class="is-numeric">${escapeHTML(formatCurrency(sellingRate))}</td>`,
+            `<td>${escapeHTML(uom)}</td>`,
+            `<td>${escapeHTML(part.brand || '-')}</td>`,
+            `<td class="is-numeric">${lastPurchaseRate ? escapeHTML(formatCurrency(lastPurchaseRate)) : '-'}</td>`,
+            `<td>${escapeHTML(lastSupplier)}</td>`,
+            `<td>${escapeHTML(branch)}</td>`,
+            `<td>${statusBadge}</td>`,
+            `<td class="is-nowrap is-muted">${escapeHTML(updatedAt)}</td>`,
+        ];
+
+        if (includeCreatedBy) {
+            cells.push(`<td class="is-muted">${escapeHTML(createdBy)}</td>`);
+        }
+
+        return `
+            <tr class="${rowClasses.join(' ')}" data-clickable="true" data-${datasetKey}="${index}" data-part="${escapeHTML(identifier)}">
+                ${cells.join('')}
+            </tr>
+        `;
+    }
+
+    function renderInventory(parts) {
+        const tableBody = document.querySelector('[data-role="inventory-table-body"]');
         const emptyState = document.querySelector('[data-empty="spare-inventory"]');
         const paginationState = state.pagination['spare-inventory'];
-        if (!grid || !paginationState) {
+        if (!tableBody || !paginationState) {
             return;
         }
 
-        if (!spareParts || spareParts.length === 0) {
-            grid.innerHTML = '';
-            if (emptyState) emptyState.style.display = 'block';
+        if (!parts || !parts.length) {
+            tableBody.innerHTML = '';
+            if (emptyState) emptyState.hidden = false;
             updatePaginationControls('spare-inventory', 0);
             return;
         }
 
-        if (emptyState) emptyState.style.display = 'none';
+        if (emptyState) emptyState.hidden = true;
 
-        const total = spareParts.length;
+        const total = parts.length;
         const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
         paginationState.page = Math.min(Math.max(paginationState.page, 1), totalPages);
         const start = (paginationState.page - 1) * PAGE_SIZE;
-        const visibleParts = spareParts.slice(start, start + PAGE_SIZE);
+        const visibleParts = parts.slice(start, start + PAGE_SIZE);
 
         updatePaginationControls('spare-inventory', total);
 
-        grid.innerHTML = visibleParts
-            .map(part => {
-                const name = part.part_name || part.part_code || '-';
-                const description = part.description
-                    ? `<div class="inventory-card__subtitle">${escapeHTML(part.description)}</div>`
-                    : '';
-                const metaPieces = [];
-                if (part.part_code) {
-                    metaPieces.push(`<span>Kode: ${escapeHTML(part.part_code)}</span>`);
-                }
-                if (part.category) {
-                    metaPieces.push(`<span>Kategori: ${escapeHTML(part.category)}</span>`);
-                }
-                if (part.brand) {
-                    metaPieces.push(`<span>Brand: ${escapeHTML(part.brand)}</span>`);
-                }
-                const meta = metaPieces.length
-                    ? `<div class="inventory-card__meta">${metaPieces.join('')}</div>`
-                    : '';
-                const qty = part.available_qty || part.actual_qty || part.stock_qty || 0;
-                const uom = part.stock_uom || part.uom || 'Unit';
-                const valuation = part.valuation_rate ? formatCurrency(part.valuation_rate) : 'Rp 0';
-                const warehouse = part.warehouse || part.default_warehouse || '-';
-                const status = getStatusBadge(part.status);
-                const tags = [
-                    part.warehouse_location ? `<span class="inventory-card__tag">📍 ${escapeHTML(part.warehouse_location)}</span>` : '',
-                    part.managed_by ? `<span class="inventory-card__tag">👤 ${escapeHTML(part.managed_by)}</span>` : '',
-                ].filter(Boolean).join('');
-                const reorderLine = parseFloat(part.reorder_level)
-                    ? `<div class="inventory-card__hint">Batas Reorder: ${formatQuantity(part.reorder_level, uom)}</div>`
-                    : '';
-                const reservedLine = parseFloat(part.reserved_qty)
-                    ? `<div class="inventory-card__hint">Reservasi: ${formatQuantity(part.reserved_qty, uom)}</div>`
-                    : '';
+        tableBody.innerHTML = visibleParts
+            .map((part, offset) => buildInventoryRow(part, { index: start + offset, includeCreatedBy: true }))
+            .join('');
+    }
 
-                const identifier = escapeHTML(part.name || part.part_code || '');
+    function renderLowStockTable(parts) {
+        const section = document.querySelector('[data-role="low-stock-section"]');
+        const tableBody = document.querySelector('[data-role="low-stock-table-body"]');
+        const emptyState = document.querySelector('[data-role="low-stock-empty"]');
+        if (!section || !tableBody) {
+            return;
+        }
 
-                return `
-                    <article class="inventory-card" data-role="inventory-card" data-part="${identifier}" data-part-code="${escapeHTML(part.part_code || '')}">
-                        <div class="inventory-card__header">
-                            <div>
-                                <div class="inventory-card__title">${escapeHTML(name)}</div>
-                                ${description}
-                            </div>
-                            <div class="inventory-card__badge">${status}</div>
-                        </div>
-                        ${meta}
-                        <div class="inventory-card__stock">
-                            <div>
-                                <div class="inventory-card__metric">${escapeHTML(formatQuantity(qty, uom))}</div>
-                                ${reservedLine}
-                                ${reorderLine}
-                            </div>
-                            ${getStockStatus(qty, part.reorder_level)}
-                        </div>
-                        <div class="inventory-card__footer">
-                            <div class="inventory-card__price">${escapeHTML(valuation)}</div>
-                            <button class="inventory-card__action" type="button" data-role="inventory-view-detail" data-part="${identifier}">Kelola Stok</button>
-                        </div>
-                        ${tags ? `<div class="inventory-card__tags">${tags}</div>` : ''}
-                    </article>
-                `;
-            })
+        const hasData = Array.isArray(parts) && parts.length > 0;
+        section.hidden = !hasData;
+
+        if (!hasData) {
+            tableBody.innerHTML = '';
+            if (emptyState) emptyState.hidden = false;
+            return;
+        }
+
+        if (emptyState) emptyState.hidden = true;
+
+        tableBody.innerHTML = parts
+            .map((part, index) => buildInventoryRow(part, { index, datasetKey: 'low-index', includeCreatedBy: false }))
             .join('');
     }
 
@@ -891,23 +1209,37 @@ body {
         renderInventory(state.spareParts);
     }
 
-    function handleInventoryCardClick(event) {
-        const actionButton = event.target.closest('[data-role="inventory-view-detail"]');
-        if (actionButton) {
-            const value = actionButton.dataset.part
-                || actionButton.closest('[data-role="inventory-card"]')?.dataset.part
-                || actionButton.closest('[data-role="inventory-card"]')?.dataset.partCode;
-            openSpareDetail(value);
+    function handleInventoryRowClick(event) {
+        const row = event.target.closest('tr[data-index]');
+        if (!row) {
             return;
         }
-
-        const card = event.target.closest('[data-role="inventory-card"]');
-        if (!card || event.target.closest('button')) {
+        const index = Number(row.dataset.index);
+        if (Number.isNaN(index)) {
             return;
         }
+        const part = state.spareParts[index];
+        if (!part) {
+            return;
+        }
+        const identifier = part.name || part.part_code;
+        openSpareDetail(identifier);
+    }
 
-        const value = card.dataset.part || card.dataset.partCode;
-        openSpareDetail(value);
+    function handleLowStockRowClick(event) {
+        const row = event.target.closest('tr[data-low-index]');
+        if (!row) {
+            return;
+        }
+        const index = Number(row.dataset.lowIndex);
+        if (Number.isNaN(index)) {
+            return;
+        }
+        const part = state.lowStockParts[index];
+        if (!part) {
+            return;
+        }
+        openPurchaseOrder(part);
     }
 
     function handleSearch(event) {
@@ -928,9 +1260,11 @@ body {
             });
 
             const data = response.message || {};
-            state.spareParts = data.spare_parts || [];
+            state.spareParts = Array.isArray(data.spare_parts) ? data.spare_parts : [];
+            state.lowStockParts = Array.isArray(data.low_stock_parts) ? data.low_stock_parts : [];
             updateMetrics(data);
             renderInventory(state.spareParts);
+            renderLowStockTable(state.lowStockParts);
         } catch (error) {
             console.error('[Inventory] Error:', error);
             frappe.show_alert({ message: 'Gagal memuat inventaris: ' + (error.message || error), indicator: 'red' }, 5);
@@ -941,12 +1275,13 @@ body {
         loadSpareParts();
 
         document.querySelector('[data-role="spare-search"]')?.addEventListener('input', handleSearch);
-        document.querySelector('[data-role="spare-inventory-grid"]')?.addEventListener('click', handleInventoryCardClick);
-        document.querySelectorAll('[data-pagination]').forEach(container => {
+        document.querySelector('[data-role="inventory-table-body"]')?.addEventListener('click', handleInventoryRowClick);
+        document.querySelector('[data-role="low-stock-table-body"]')?.addEventListener('click', handleLowStockRowClick);
+        document.querySelectorAll('[data-pagination]').forEach((container) => {
             container.addEventListener('click', handlePaginationClick);
         });
 
-        document.querySelectorAll('[data-desk-link]').forEach(link => {
+        document.querySelectorAll('[data-desk-link]').forEach((link) => {
             link.href = `/app/${link.dataset.deskLink.toLowerCase().replace(/ /g, '-')}`;
         });
     }
