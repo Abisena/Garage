@@ -1877,12 +1877,14 @@ def _auto_assign_technicians(
     return tasks, auto_assigned
 
 
-def _group_status(doctype: str) -> Dict[str, int]:
+def _group_status(doctype: str, *, branch: Optional[str] = None) -> Dict[str, int]:
     try:
         with _ignoring_permissions():
+            filters = _apply_branch_filters(doctype, None, branch=branch)
             rows = frappe.db.get_all(
                 doctype,
                 fields=["status", "count(*) as total"],
+                filters=filters,
                 group_by="status",
                 order_by="total desc",
                 ignore_permissions=True,
@@ -1892,10 +1894,16 @@ def _group_status(doctype: str) -> Dict[str, int]:
     return {row.get("status") or "Unknown": cint(row.get("total") or 0) for row in rows}
 
 
-def _sum_field(doctype: str, field: str, filters: Optional[Any] = None) -> float:
+def _sum_field(
+    doctype: str,
+    field: str,
+    filters: Optional[Any] = None,
+    *,
+    branch: Optional[str] = None,
+) -> float:
     try:
         with _ignoring_permissions():
-            applied_filters = _apply_branch_filters(doctype, filters)
+            applied_filters = _apply_branch_filters(doctype, filters, branch=branch)
             result = frappe.db.get_all(
                 doctype,
                 filters=applied_filters,
@@ -2269,18 +2277,30 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
     service_bundles = _get_service_bundles()
 
     status_summary = {
-        "service_orders": _group_status("Garage Service Order"),
-        "spare_orders": _group_status("Garage Spare Part Order"),
-        "procurement_orders": _group_status("Garage Procurement Order"),
-        "stock_movements": _group_status("Garage Stock Movement"),
-        "sales_invoices": _group_status("Garage Sales Invoice"),
-        "payment_entries": _group_status("Garage Payment Entry"),
+        "service_orders": _group_status("Garage Service Order", branch=branch_filter),
+        "spare_orders": _group_status("Garage Spare Part Order", branch=branch_filter),
+        "procurement_orders": _group_status("Garage Procurement Order", branch=branch_filter),
+        "stock_movements": _group_status("Garage Stock Movement", branch=branch_filter),
+        "sales_invoices": _group_status("Garage Sales Invoice", branch=branch_filter),
+        "payment_entries": _group_status("Garage Payment Entry", branch=branch_filter),
     }
 
     totals = {
-        "invoice_total": _sum_field("Garage Sales Invoice", "total_amount"),
-        "outstanding_total": _sum_field("Garage Sales Invoice", "outstanding_amount"),
-        "payments_total": _sum_field("Garage Payment Entry", "paid_amount"),
+        "invoice_total": _sum_field(
+            "Garage Sales Invoice",
+            "total_amount",
+            branch=branch_filter,
+        ),
+        "outstanding_total": _sum_field(
+            "Garage Sales Invoice",
+            "outstanding_amount",
+            branch=branch_filter,
+        ),
+        "payments_total": _sum_field(
+            "Garage Payment Entry",
+            "paid_amount",
+            branch=branch_filter,
+        ),
     }
 
     desk_routes = {doctype: _desk_route(doctype) for doctype in DOC_TYPES}
