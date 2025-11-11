@@ -93,20 +93,61 @@ def _compose_issue_filename(service_order: frappe.Document) -> str:
     return filename.replace("--", "-")
 
 
+def _coalesce_row_value(row: object, *fields: str) -> str:
+    """Return the first non-empty attribute or mapping value for the given fields."""
+
+    row_dict: Optional[Dict[str, Any]] = None
+
+    for field in fields:
+        value = getattr(row, field, None)
+        if value:
+            return cstr(value).strip()
+
+        if row_dict is None and hasattr(row, "as_dict") and callable(row.as_dict):
+            try:
+                row_dict = row.as_dict() or {}
+            except Exception:
+                row_dict = {}
+
+        if row_dict:
+            value = row_dict.get(field)
+            if value:
+                return cstr(value).strip()
+
+    return ""
+
+
 def _collect_issued_parts(service_order: frappe.Document) -> Iterable[Dict[str, Any]]:
     for row in service_order.get("required_parts", []) or []:
         status = cstr(getattr(row, "stock_status", "")).strip()
         if status != "Issued":
             continue
+
         qty = flt(getattr(row, "qty", 0))
+
+        item_code = _coalesce_row_value(row, "item_code", "part_code", "item", "spare_part") or "-"
+        item_name = (
+            _coalesce_row_value(row, "item_name", "description", "part_name", "item_description")
+            or "-"
+        )
+        warehouse = _coalesce_row_value(
+            row,
+            "warehouse",
+            "warehouse_location",
+            "requested_warehouse",
+            "issue_warehouse",
+            "issued_from",
+        )
+        source = _coalesce_row_value(row, "source", "managed_by", "source_type", "part_source")
+
         yield {
-            "item_code": cstr(getattr(row, "item_code", "")).strip() or "-",
-            "item_name": cstr(getattr(row, "item_name", "") or getattr(row, "description", "")).strip() or "-",
+            "item_code": item_code,
+            "item_name": item_name,
             "qty": qty,
             "qty_display": service_estimate._format_quantity(qty),  # type: ignore[attr-defined]
             "uom": cstr(getattr(row, "uom", "")).strip() or "Unit",
-            "warehouse": cstr(getattr(row, "warehouse", "")).strip(),
-            "source": cstr(getattr(row, "source", "")).strip(),
+            "warehouse": warehouse,
+            "source": source,
         }
 
 
