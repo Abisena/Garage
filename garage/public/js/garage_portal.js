@@ -292,14 +292,197 @@ function cloneBrandModelMap(map) {
             this.globalBranchSelect = null;
             this.globalBranchWrapper = null;
             this.branchContainerKind = null;
+            this.dateFilterPreferenceKey = 'garage.portal.date_filters';
+            this.dateFilterWrapper = null;
+            this.dateFilterControls = {
+                date: null,
+                month: null,
+                year: null,
+                reset: null,
+            };
+            this.isUpdatingDateControls = false;
+            this.activeDateFilter = { mode: 'all', startDate: '', endDate: '', value: '' };
+            this.loadDateFilterPreference();
         }
 
         init() {
             this.setupGlobalBranchSelector();
+            this.setupGlobalDateFilters();
             this.cacheDom();
+            this.updateDateFilterControlsFromState(false);
             this.bindEvents();
             this.initRepeaters();
             this.fetchBootstrap(false);
+        }
+
+        loadDateFilterPreference() {
+            const defaultFilter = { mode: 'all', startDate: '', endDate: '', value: '' };
+            this.activeDateFilter = { ...defaultFilter };
+            try {
+                if (window.localStorage) {
+                    const raw = window.localStorage.getItem(this.dateFilterPreferenceKey);
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        this.activeDateFilter = this.normalizeDateFilter(parsed);
+                        return;
+                    }
+                }
+            } catch (error) {
+                // Ignore persistence failures
+            }
+            this.activeDateFilter = { ...defaultFilter };
+        }
+
+        normalizeDateFilter(raw) {
+            const defaultFilter = { mode: 'all', startDate: '', endDate: '', value: '' };
+            if (!raw || typeof raw !== 'object') {
+                return { ...defaultFilter };
+            }
+
+            const modeValue = String(
+                raw.mode ?? raw.date_filter_mode ?? raw.filter_mode ?? ''
+            ).toLowerCase();
+            const allowedModes = new Set(['all', 'date', 'month', 'year']);
+            const startDate =
+                typeof raw.startDate === 'string'
+                    ? raw.startDate.trim()
+                    : typeof raw.start_date === 'string'
+                    ? raw.start_date.trim()
+                    : '';
+            const endDate =
+                typeof raw.endDate === 'string'
+                    ? raw.endDate.trim()
+                    : typeof raw.end_date === 'string'
+                    ? raw.end_date.trim()
+                    : '';
+            const valueCandidate =
+                typeof raw.value === 'string'
+                    ? raw.value.trim()
+                    : typeof raw.date_filter_value === 'string'
+                    ? raw.date_filter_value.trim()
+                    : typeof raw.date_value === 'string'
+                    ? raw.date_value.trim()
+                    : '';
+
+            const normalized = {
+                mode: allowedModes.has(modeValue) ? modeValue : 'all',
+                startDate,
+                endDate,
+                value: valueCandidate,
+            };
+
+            if (normalized.mode === 'date' && normalized.startDate && !normalized.value) {
+                normalized.value = normalized.startDate;
+            } else if (normalized.mode === 'month' && !normalized.value && normalized.startDate) {
+                normalized.value = normalized.startDate.slice(0, 7);
+            } else if (normalized.mode === 'year' && !normalized.value && normalized.startDate) {
+                normalized.value = normalized.startDate.slice(0, 4);
+            }
+
+            return normalized;
+        }
+
+        isSameDateFilter(a, b) {
+            const left = this.normalizeDateFilter(a);
+            const right = this.normalizeDateFilter(b);
+            return (
+                (left.mode || 'all') === (right.mode || 'all') &&
+                (left.startDate || '') === (right.startDate || '') &&
+                (left.endDate || '') === (right.endDate || '') &&
+                (left.value || '') === (right.value || '')
+            );
+        }
+
+        setActiveDateFilter(filter) {
+            const normalized = this.normalizeDateFilter(filter);
+            const changed = !this.isSameDateFilter(this.activeDateFilter, normalized);
+            this.activeDateFilter = normalized;
+
+            if (this.state && typeof this.state === 'object') {
+                if (!this.state.active_filters || typeof this.state.active_filters !== 'object') {
+                    this.state.active_filters = {};
+                }
+                this.state.active_filters.mode = normalized.mode;
+                this.state.active_filters.start_date = normalized.startDate;
+                this.state.active_filters.end_date = normalized.endDate;
+                this.state.active_filters.value = normalized.value;
+            }
+
+            this.persistDateFilterPreference();
+            return changed;
+        }
+
+        persistDateFilterPreference() {
+            try {
+                if (!window.localStorage) {
+                    return;
+                }
+                const filter = this.normalizeDateFilter(this.activeDateFilter);
+                const hasRange = !!(filter.startDate || filter.endDate);
+                if (filter.mode === 'all' && !hasRange) {
+                    window.localStorage.removeItem(this.dateFilterPreferenceKey);
+                    return;
+                }
+                window.localStorage.setItem(
+                    this.dateFilterPreferenceKey,
+                    JSON.stringify(filter)
+                );
+            } catch (error) {
+                // Ignore persistence failures
+            }
+        }
+
+        getActiveDateFilterArgs() {
+            const filter = this.normalizeDateFilter(this.activeDateFilter);
+            const args = {};
+            if (filter.mode && filter.mode !== 'all') {
+                args.date_filter_mode = filter.mode;
+            }
+            if (filter.startDate) {
+                args.start_date = filter.startDate;
+            }
+            if (filter.endDate) {
+                args.end_date = filter.endDate;
+            }
+            if (filter.value && filter.mode && filter.mode !== 'all') {
+                args.date_filter_value = filter.value;
+            }
+            return args;
+        }
+
+        ensureYearOption(yearValue) {
+            if (!yearValue || !this.dateFilterControls || !this.dateFilterControls.year) {
+                return;
+            }
+            const select = this.dateFilterControls.year;
+            const options = Array.from(select.options || []);
+            if (!options.some((option) => option.value === yearValue)) {
+                const option = document.createElement('option');
+                option.value = yearValue;
+                option.textContent = yearValue;
+                select.appendChild(option);
+            }
+        }
+
+        computeMonthRangeFromValue(value) {
+            if (typeof value !== 'string' || !value) {
+                return null;
+            }
+            const match = value.match(/^(\d{4})-(\d{2})$/);
+            if (!match) {
+                return null;
+            }
+            const year = Number.parseInt(match[1], 10);
+            const month = Number.parseInt(match[2], 10);
+            if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) {
+                return null;
+            }
+            const endDate = new Date(year, month, 0);
+            const endDay = String(endDate.getDate()).padStart(2, '0');
+            return {
+                start: `${match[1]}-${match[2]}-01`,
+                end: `${match[1]}-${match[2]}-${endDay}`,
+            };
         }
 
         setupGlobalBranchSelector() {
@@ -353,6 +536,115 @@ function cloneBrandModelMap(map) {
 
             this.globalBranchSelect = select;
             return select;
+        }
+
+        setupGlobalDateFilters() {
+            if (this.dateFilterWrapper && document.body.contains(this.dateFilterWrapper)) {
+                return this.dateFilterWrapper;
+            }
+
+            const existingDate = document.getElementById('portal_date_filter');
+            if (existingDate) {
+                const existingWrapper = existingDate.closest('.portal-date-filter');
+                this.dateFilterWrapper = existingWrapper;
+                this.dateFilterControls = {
+                    date: existingDate,
+                    month: document.getElementById('portal_month_filter'),
+                    year: document.getElementById('portal_year_filter'),
+                    reset: document.getElementById('portal_date_filter_reset'),
+                };
+                return existingWrapper;
+            }
+
+            const container = this.globalBranchWrapper
+                ? this.globalBranchWrapper.parentNode
+                : this.findBranchSelectorContainer();
+            if (!container) {
+                return null;
+            }
+
+            this.ensureBranchSwitcherStyles(container);
+
+            const wrapper =
+                this.branchContainerKind === 'list'
+                    ? document.createElement('li')
+                    : document.createElement('div');
+            wrapper.className =
+                this.branchContainerKind === 'list'
+                    ? 'portal-date-filter portal-date-filter--nav'
+                    : 'portal-date-filter portal-date-filter--standalone';
+
+            const label = document.createElement('span');
+            label.className = 'portal-date-filter__label';
+            label.textContent = 'Periode';
+            wrapper.appendChild(label);
+
+            const controls = document.createElement('div');
+            controls.className = 'portal-date-filter__controls';
+
+            const dateInput = document.createElement('input');
+            dateInput.type = 'date';
+            dateInput.id = 'portal_date_filter';
+            dateInput.className = 'portal-date-filter__input';
+            dateInput.setAttribute('aria-label', 'Filter berdasarkan tanggal');
+            controls.appendChild(dateInput);
+
+            const monthInput = document.createElement('input');
+            monthInput.type = 'month';
+            monthInput.id = 'portal_month_filter';
+            monthInput.className = 'portal-date-filter__input';
+            monthInput.setAttribute('aria-label', 'Filter berdasarkan bulan');
+            controls.appendChild(monthInput);
+
+            const yearSelect = document.createElement('select');
+            yearSelect.id = 'portal_year_filter';
+            yearSelect.className = 'portal-date-filter__input';
+            yearSelect.setAttribute('aria-label', 'Filter berdasarkan tahun');
+
+            const blankOption = document.createElement('option');
+            blankOption.value = '';
+            blankOption.textContent = '— Tahun —';
+            yearSelect.appendChild(blankOption);
+
+            const currentYear = new Date().getFullYear();
+            for (let year = currentYear; year >= currentYear - 9; year -= 1) {
+                const option = document.createElement('option');
+                option.value = String(year);
+                option.textContent = String(year);
+                yearSelect.appendChild(option);
+            }
+
+            controls.appendChild(yearSelect);
+
+            const resetButton = document.createElement('button');
+            resetButton.type = 'button';
+            resetButton.id = 'portal_date_filter_reset';
+            resetButton.className = 'portal-date-filter__reset';
+            resetButton.setAttribute('aria-label', 'Hapus filter tanggal');
+            resetButton.textContent = 'Reset';
+            controls.appendChild(resetButton);
+
+            wrapper.appendChild(controls);
+
+            if (
+                this.globalBranchWrapper &&
+                this.globalBranchWrapper.parentNode === container &&
+                this.globalBranchWrapper.nextSibling
+            ) {
+                container.insertBefore(wrapper, this.globalBranchWrapper.nextSibling);
+            } else {
+                container.appendChild(wrapper);
+            }
+
+            this.dateFilterWrapper = wrapper;
+            this.dateFilterControls = {
+                date: dateInput,
+                month: monthInput,
+                year: yearSelect,
+                reset: resetButton,
+            };
+
+            return wrapper;
         }
 
         findBranchSelectorContainer() {
@@ -433,6 +725,65 @@ function cloneBrandModelMap(map) {
                         opacity: 0.7;
                         cursor: not-allowed;
                     }
+                    .portal-date-filter {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        color: var(--text-primary, #1a2332);
+                        font-family: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+                    }
+                    .portal-date-filter--standalone {
+                        margin-left: 1rem;
+                        padding: 0.25rem 0;
+                    }
+                    .portal-date-filter--nav {
+                        padding: 0.5rem 0.75rem;
+                    }
+                    .portal-date-filter__label {
+                        font-size: 0.8125rem;
+                        font-weight: 600;
+                        color: inherit;
+                        margin: 0;
+                        letter-spacing: -0.01em;
+                    }
+                    .portal-date-filter__controls {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        flex-wrap: wrap;
+                    }
+                    .portal-date-filter__input {
+                        min-width: 8.5rem;
+                        padding: 0.35rem 0.75rem;
+                        border-radius: 999px;
+                        border: 1.5px solid var(--border-base, #d4dae4);
+                        background: var(--bg-surface, #ffffff);
+                        font-size: 0.8125rem;
+                        font-weight: 500;
+                        color: inherit;
+                        box-shadow: none;
+                        appearance: none;
+                    }
+                    .portal-date-filter__input:focus {
+                        outline: none;
+                        border-color: var(--primary, #0066ff);
+                        box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.15);
+                    }
+                    .portal-date-filter__reset {
+                        padding: 0.35rem 0.75rem;
+                        border-radius: 999px;
+                        border: 1px solid transparent;
+                        background: var(--primary-subtle, #f0f7ff);
+                        color: var(--primary-dark, #0052cc);
+                        font-size: 0.8125rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: background 0.2s ease, color 0.2s ease;
+                    }
+                    .portal-date-filter__reset:hover {
+                        background: var(--primary-light, #4d94ff);
+                        color: #ffffff;
+                    }
                     @media (max-width: 767px) {
                         .portal-branch-switcher {
                             width: 100%;
@@ -441,6 +792,18 @@ function cloneBrandModelMap(map) {
                         .portal-branch-switcher__select {
                             width: 100%;
                             min-width: 0;
+                        }
+                        .portal-date-filter {
+                            width: 100%;
+                            flex-direction: column;
+                            align-items: flex-start;
+                        }
+                        .portal-date-filter__controls {
+                            width: 100%;
+                        }
+                        .portal-date-filter__input,
+                        .portal-date-filter__reset {
+                            width: 100%;
                         }
                     }
                 `;
@@ -455,6 +818,215 @@ function cloneBrandModelMap(map) {
                     container.style.alignItems = 'center';
                     container.style.gap = '1rem';
                 }
+            }
+        }
+
+        bindDateFilterControls() {
+            if (!this.dateFilterControls) {
+                return;
+            }
+
+            const { date, month, year, reset } = this.dateFilterControls;
+
+            const bindChange = (element, handler) => {
+                if (!element || element.dataset.dateFilterBound) {
+                    return;
+                }
+                element.addEventListener('change', handler);
+                element.dataset.dateFilterBound = '1';
+            };
+
+            bindChange(date, () => {
+                if (this.isUpdatingDateControls) {
+                    return;
+                }
+                this.handleDateFilterChange('date');
+            });
+
+            bindChange(month, () => {
+                if (this.isUpdatingDateControls) {
+                    return;
+                }
+                this.handleDateFilterChange('month');
+            });
+
+            bindChange(year, () => {
+                if (this.isUpdatingDateControls) {
+                    return;
+                }
+                this.handleDateFilterChange('year');
+            });
+
+            if (reset && !reset.dataset.dateFilterBound) {
+                reset.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    this.handleDateFilterChange('reset');
+                });
+                reset.dataset.dateFilterBound = '1';
+            }
+        }
+
+        handleDateFilterChange(source) {
+            if (!this.dateFilterControls) {
+                return;
+            }
+
+            let nextFilter = { mode: 'all', startDate: '', endDate: '', value: '' };
+
+            if (source === 'reset') {
+                this.isUpdatingDateControls = true;
+                try {
+                    if (this.dateFilterControls.date) {
+                        this.dateFilterControls.date.value = '';
+                    }
+                    if (this.dateFilterControls.month) {
+                        this.dateFilterControls.month.value = '';
+                    }
+                    if (this.dateFilterControls.year) {
+                        this.dateFilterControls.year.value = '';
+                    }
+                } finally {
+                    this.isUpdatingDateControls = false;
+                }
+            } else if (source === 'date') {
+                const value = (this.dateFilterControls.date?.value || '').trim();
+                this.isUpdatingDateControls = true;
+                try {
+                    if (this.dateFilterControls.month) {
+                        this.dateFilterControls.month.value = '';
+                    }
+                    if (this.dateFilterControls.year) {
+                        this.dateFilterControls.year.value = '';
+                    }
+                } finally {
+                    this.isUpdatingDateControls = false;
+                }
+                if (value) {
+                    nextFilter = {
+                        mode: 'date',
+                        startDate: value,
+                        endDate: value,
+                        value,
+                    };
+                }
+            } else if (source === 'month') {
+                const value = (this.dateFilterControls.month?.value || '').trim();
+                const range = this.computeMonthRangeFromValue(value);
+                this.isUpdatingDateControls = true;
+                try {
+                    if (this.dateFilterControls.date) {
+                        this.dateFilterControls.date.value = '';
+                    }
+                    if (this.dateFilterControls.year) {
+                        if (value) {
+                            const yearValue = value.slice(0, 4);
+                            this.ensureYearOption(yearValue);
+                            this.dateFilterControls.year.value = yearValue;
+                        } else {
+                            this.dateFilterControls.year.value = '';
+                        }
+                    }
+                } finally {
+                    this.isUpdatingDateControls = false;
+                }
+                if (range) {
+                    nextFilter = {
+                        mode: 'month',
+                        startDate: range.start,
+                        endDate: range.end,
+                        value,
+                    };
+                }
+            } else if (source === 'year') {
+                const value = (this.dateFilterControls.year?.value || '').trim();
+                this.isUpdatingDateControls = true;
+                try {
+                    if (this.dateFilterControls.date) {
+                        this.dateFilterControls.date.value = '';
+                    }
+                    if (this.dateFilterControls.month) {
+                        this.dateFilterControls.month.value = '';
+                    }
+                } finally {
+                    this.isUpdatingDateControls = false;
+                }
+                if (value) {
+                    nextFilter = {
+                        mode: 'year',
+                        startDate: `${value}-01-01`,
+                        endDate: `${value}-12-31`,
+                        value,
+                    };
+                }
+            } else {
+                return;
+            }
+
+            const changed = this.setActiveDateFilter(nextFilter);
+            this.updateDateFilterControlsFromState(false);
+            if (changed) {
+                this.fetchBootstrap(false);
+            }
+        }
+
+        updateDateFilterControlsFromState(preferState = true) {
+            if (!this.dateFilterControls) {
+                return;
+            }
+
+            let filter = this.normalizeDateFilter(this.activeDateFilter);
+
+            if (preferState && this.state && typeof this.state === 'object') {
+                const stateFilter = this.normalizeDateFilter(this.state.active_filters);
+                if (!this.isSameDateFilter(filter, stateFilter)) {
+                    filter = stateFilter;
+                    this.activeDateFilter = stateFilter;
+                    this.persistDateFilterPreference();
+                } else {
+                    this.activeDateFilter = filter;
+                }
+            } else {
+                this.activeDateFilter = filter;
+            }
+
+            const { date, month, year } = this.dateFilterControls;
+
+            this.isUpdatingDateControls = true;
+            try {
+                if (date) {
+                    date.value =
+                        this.activeDateFilter.mode === 'date'
+                            ? this.activeDateFilter.startDate
+                            : '';
+                }
+                if (month) {
+                    month.value =
+                        this.activeDateFilter.mode === 'month'
+                            ? this.activeDateFilter.value ||
+                              (this.activeDateFilter.startDate
+                                  ? this.activeDateFilter.startDate.slice(0, 7)
+                                  : '')
+                            : '';
+                }
+                if (year) {
+                    const yearValue =
+                        this.activeDateFilter.mode === 'year'
+                            ? this.activeDateFilter.value ||
+                              (this.activeDateFilter.startDate
+                                  ? this.activeDateFilter.startDate.slice(0, 4)
+                                  : '')
+                            : '';
+                    if (yearValue) {
+                        this.ensureYearOption(yearValue);
+                    }
+                    year.value = yearValue;
+                }
+            } finally {
+                this.isUpdatingDateControls = false;
+            }
+
+            if (preferState) {
+                this.persistDateFilterPreference();
             }
         }
 
@@ -503,6 +1075,13 @@ function cloneBrandModelMap(map) {
                 brand: document.getElementById('brand'),
                 model: document.getElementById('model'),
                 modelVariant: document.getElementById('model_variant'),
+            };
+
+            this.dateFilterControls = {
+                date: document.getElementById('portal_date_filter'),
+                month: document.getElementById('portal_month_filter'),
+                year: document.getElementById('portal_year_filter'),
+                reset: document.getElementById('portal_date_filter_reset'),
             };
 
             this.globalBranchSelect = this.selects.globalBranch;
@@ -818,9 +1397,11 @@ function cloneBrandModelMap(map) {
         }
 
         bindEvents() {
+            this.bindDateFilterControls();
+
             if (this.forms.intake) {
                 this.setupBrandModelControls();
-                
+
                 // PATCH: Improved submit handler
                 this.forms.intake.addEventListener('submit', (event) => {
                     event.preventDefault();
@@ -2303,9 +2884,13 @@ function cloneBrandModelMap(map) {
                     : '')
                     || this.preferredBranch
                     || (this.selects.globalBranch ? this.selects.globalBranch.value : '');
+            const args = this.getActiveDateFilterArgs();
+            if (activeBranch) {
+                args.branch = activeBranch;
+            }
             frappe.call({
                 method: 'garage.api.portal.portal_bootstrap',
-                args: activeBranch ? { branch: activeBranch } : {},
+                args,
                 freeze: freezeRequest,
                 callback: (response) => {
                     if (response?.exc || response?.exception) {
@@ -2319,6 +2904,8 @@ function cloneBrandModelMap(map) {
                         : {});
 
                     this.state = message && typeof message === 'object' && !Array.isArray(message) ? message : {};
+
+                    this.updateDateFilterControlsFromState();
 
                     try {
                         window.garagePortalState = this.state;
@@ -2343,6 +2930,7 @@ function cloneBrandModelMap(map) {
         }
 
         render() {
+            this.updateDateFilterControlsFromState(false);
             this.updateBranchSelects();
             this.updateDeskLinks();
             this.renderIntakeSection();

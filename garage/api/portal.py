@@ -1,8 +1,10 @@
 """Frappe API endpoints powering the Garage website workflow portal."""
 from __future__ import annotations
 
+import calendar
 from collections import defaultdict
 from contextlib import contextmanager
+from datetime import date
 from functools import lru_cache
 from urllib.parse import quote
 import re
@@ -11,7 +13,7 @@ from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional,
 import frappe
 from frappe import _
 from frappe.exceptions import PermissionError
-from frappe.utils import cint, cstr, flt, get_datetime, get_url, now_datetime, nowdate
+from frappe.utils import cint, cstr, flt, get_datetime, get_url, getdate, now_datetime, nowdate
 from frappe.defaults import get_user_default
 
 from garage.utils import service_estimate, spare_part_issue
@@ -50,7 +52,20 @@ BRANCH_FILTER_FIELDS: Mapping[str, str] = {
     "Garage Branch": "name",
 }
 
-BRANCH_ADMIN_ROLES = {"System Manager"}
+BRANCH_ADMIN_ROLES = {"System Manager", "Head Manager Bengkel"}
+
+DATE_FILTER_FIELDS: Mapping[str, str] = {
+    "Garage Service Order": "service_booking_date",
+    "Garage Spare Part Order": "order_date",
+    "Garage Procurement Order": "order_date",
+    "Garage Stock Movement": "posting_date",
+    "Garage Sales Invoice": "invoice_date",
+    "Garage Payment Entry": "payment_date",
+    "Garage Receipt Document": "receipt_date",
+    "Garage Spare Part Approval": "approved_on",
+}
+
+DATE_FILTER_MODES = {"all", "date", "month", "year"}
 
 
 def _is_branch_admin(user: str) -> bool:
@@ -214,6 +229,155 @@ def _apply_branch_filters(
                 normalized.append([branch_field, "=", branch_value])
 
     return normalized
+
+
+def _resolve_date_field(doctype: str, explicit: Optional[str] = None) -> Optional[str]:
+    candidates: List[str] = []
+    if explicit:
+        candidates.append(explicit)
+
+    mapped = DATE_FILTER_FIELDS.get(doctype)
+    if mapped and mapped not in candidates:
+        candidates.append(mapped)
+
+    fallback_fields = (
+        "approved_on",
+        "service_booking_date",
+        "order_date",
+        "expected_date",
+        "delivery_date",
+        "posting_date",
+        "invoice_date",
+        "due_date",
+        "payment_date",
+        "receipt_date",
+        "transaction_date",
+        "last_restocked_on",
+        "log_date",
+        "creation",
+        "modified",
+    )
+
+    for field in fallback_fields:
+        if field and field not in candidates:
+            candidates.append(field)
+
+    for field in candidates:
+        if field and _doctype_has_field(doctype, field):
+            return field
+
+    return None
+
+
+def _sanitize_iso_date(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    try:
+        return getdate(value).isoformat()
+    except Exception:
+        return None
+
+
+def _normalize_date_filter_inputs(
+    start_date: Optional[str],
+    end_date: Optional[str],
+    mode: Optional[str],
+    raw_value: Optional[str] = None,
+) -> Tuple[Optional[str], Optional[str], str, Optional[str]]:
+    resolved_mode = cstr(mode or "").strip().lower()
+    if resolved_mode not in DATE_FILTER_MODES:
+        resolved_mode = "all"
+
+    resolved_value = cstr(raw_value or "").strip()
+
+    if resolved_mode == "date":
+        target = resolved_value or start_date or end_date
+        single = _sanitize_iso_date(target)
+        if single:
+            return single, single, "date", single
+        resolved_mode = "all"
+
+    if resolved_mode == "month":
+        match = re.fullmatch(r"(\d{4})-(\d{2})", resolved_value)
+        if match:
+            year = cint(match.group(1))
+            month = cint(match.group(2))
+            if 1 <= month <= 12:
+                start_iso = date(year, month, 1).isoformat()
+                end_iso = date(year, month, calendar.monthrange(year, month)[1]).isoformat()
+                return start_iso, end_iso, "month", f"{year:04d}-{month:02d}"
+        resolved_mode = "all"
+
+    if resolved_mode == "year":
+        if re.fullmatch(r"\d{4}", resolved_value):
+            year = cint(resolved_value)
+            start_iso = date(year, 1, 1).isoformat()
+            end_iso = date(year, 12, 31).isoformat()
+            return start_iso, end_iso, "year", f"{year:04d}"
+        resolved_mode = "all"
+
+    start_iso = _sanitize_iso_date(start_date)
+    end_iso = _sanitize_iso_date(end_date)
+
+    if start_iso and end_iso and start_iso > end_iso:
+        start_iso, end_iso = end_iso, start_iso
+
+    return start_iso, end_iso, "all", None
+
+
+def _apply_date_filters(
+    doctype: str,
+    filters: Optional[Any],
+    *,
+    date_range: Optional[Tuple[Optional[str], Optional[str]]] = None,
+    date_field: Optional[str] = None,
+) -> List[List[Any]]:
+    if isinstance(filters, list):
+        normalized: List[List[Any]] = [
+            list(condition)
+            for condition in filters
+            if isinstance(condition, (list, tuple))
+        ]
+    else:
+        normalized = _normalize_filters(filters)
+
+    if not date_range:
+        return normalized
+
+    start_date, end_date = date_range
+    if not start_date and not end_date:
+        return normalized
+
+    field = _resolve_date_field(doctype, date_field)
+    if not field:
+        return normalized
+
+    if start_date:
+        normalized.append([field, ">=", start_date])
+    if end_date:
+        normalized.append([field, "<=", end_date])
+
+    return normalized
+
+
+def _within_date_range(value: Any, start: Optional[str], end: Optional[str]) -> bool:
+    if not start and not end:
+        return True
+
+    if not value:
+        return False
+
+    try:
+        candidate = getdate(value).isoformat()
+    except Exception:
+        return False
+
+    if start and candidate < start:
+        return False
+    if end and candidate > end:
+        return False
+
+    return True
 
 
 def _all_spare_requests_issued(service_order: str) -> bool:
@@ -1292,10 +1456,18 @@ def _list_dicts(
     limit: int = DEFAULT_LIMIT,
     order_by: Optional[str] = None,
     branch: Optional[str] = None,
+    date_range: Optional[Tuple[Optional[str], Optional[str]]] = None,
+    date_field: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     try:
         with _ignoring_permissions():
             applied_filters = _apply_branch_filters(doctype, filters, branch=branch)
+            applied_filters = _apply_date_filters(
+                doctype,
+                applied_filters,
+                date_range=date_range,
+                date_field=date_field,
+            )
             rows = frappe.db.get_all(
                 doctype,
                 fields=list(fields),
@@ -1312,12 +1484,15 @@ def _list_spare_part_approvals(
     branch: Optional[str],
     order_branch_map: Optional[Mapping[str, Optional[str]]] = None,
     limit: int = DEFAULT_LIMIT,
+    date_range: Optional[Tuple[Optional[str], Optional[str]]] = None,
 ) -> List[Dict[str, Any]]:
     """Fetch spare part approval records including legacy entries without branch data."""
 
     branch_value = cstr(branch or "").strip()
     allowed = _allowed_branches(frappe.session.user)
     allowed_set = {value for value in (allowed or []) if value}
+    start_date, end_date = date_range or (None, None)
+    date_field = _resolve_date_field("Garage Spare Part Approval", "approved_on")
 
     try:
         with _ignoring_permissions():
@@ -1367,6 +1542,11 @@ def _list_spare_part_approvals(
                 order_branch = cstr(service_branches.get(record.get("service_order")) or "").strip()
                 if order_branch and order_branch != branch_value:
                     continue
+
+        if date_field:
+            record_date = record.get(date_field)
+            if not _within_date_range(record_date, start_date, end_date):
+                continue
 
         approvals.append(record)
         if len(approvals) >= limit:
@@ -1998,10 +2178,22 @@ def _auto_assign_technicians(
     return tasks, auto_assigned
 
 
-def _group_status(doctype: str, *, branch: Optional[str] = None) -> Dict[str, int]:
+def _group_status(
+    doctype: str,
+    *,
+    branch: Optional[str] = None,
+    date_range: Optional[Tuple[Optional[str], Optional[str]]] = None,
+    date_field: Optional[str] = None,
+) -> Dict[str, int]:
     try:
         with _ignoring_permissions():
             filters = _apply_branch_filters(doctype, None, branch=branch)
+            filters = _apply_date_filters(
+                doctype,
+                filters,
+                date_range=date_range,
+                date_field=date_field,
+            )
             rows = frappe.db.get_all(
                 doctype,
                 fields=["status", "count(*) as total"],
@@ -2021,10 +2213,18 @@ def _sum_field(
     filters: Optional[Any] = None,
     *,
     branch: Optional[str] = None,
+    date_range: Optional[Tuple[Optional[str], Optional[str]]] = None,
+    date_field: Optional[str] = None,
 ) -> float:
     try:
         with _ignoring_permissions():
             applied_filters = _apply_branch_filters(doctype, filters, branch=branch)
+            applied_filters = _apply_date_filters(
+                doctype,
+                applied_filters,
+                date_range=date_range,
+                date_field=date_field,
+            )
             result = frappe.db.get_all(
                 doctype,
                 filters=applied_filters,
@@ -2072,7 +2272,13 @@ def _desk_route(doctype: str) -> Dict[str, str]:
 
 
 @frappe.whitelist()
-def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
+def portal_bootstrap(
+    branch: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    date_filter_mode: Optional[str] = None,
+    date_filter_value: Optional[str] = None,
+) -> Dict[str, Any]:
     """Return aggregated data for the Garage website portal dashboard."""
 
     _require_login()
@@ -2082,6 +2288,19 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
     allowed = _allowed_branches(user)
     if allowed is not None and requested_branch and requested_branch not in allowed:
         requested_branch = ""
+
+    start_iso, end_iso, active_mode, active_value = _normalize_date_filter_inputs(
+        start_date,
+        end_date,
+        date_filter_mode,
+        date_filter_value,
+    )
+
+    date_range: Optional[Tuple[Optional[str], Optional[str]]]
+    if start_iso or end_iso:
+        date_range = (start_iso, end_iso)
+    else:
+        date_range = None
 
     branches = _list_dicts(
         "Garage Branch",
@@ -2176,6 +2395,8 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
             "service_notes",
         ],
         branch=branch_filter,
+        date_range=date_range,
+        date_field="service_booking_date",
     )
     open_service_orders = _list_dicts(
         "Garage Service Order",
@@ -2192,17 +2413,23 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
         ],
         filters=[["status", "not in", ["Completed", "Cancelled"]]],
         branch=branch_filter,
+        date_range=date_range,
+        date_field="service_booking_date",
     )
     spare_orders = _list_dicts(
         "Garage Spare Part Order",
         ["name", "status", "customer", "branch", "branch_code", "order_date", "delivery_date", "total_amount"],
         branch=branch_filter,
+        date_range=date_range,
+        date_field="order_date",
     )
     open_spare_orders = _list_dicts(
         "Garage Spare Part Order",
         ["name", "status", "customer", "branch", "branch_code", "order_date", "delivery_date"],
         filters=[["status", "not in", ["Delivered", "Cancelled"]]],
         branch=branch_filter,
+        date_range=date_range,
+        date_field="order_date",
     )
     spare_parts = _list_dicts(
         "Garage Spare Part",
@@ -2251,6 +2478,7 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
         ],
         limit=200,
         branch=branch_filter,
+        date_range=date_range,
     )
     service_tasks = _list_dicts(
         "Garage Service Order Task",
@@ -2258,6 +2486,18 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
         filters=[["parenttype", "=", "Garage Service Order"]],
         limit=500,
         branch=branch_filter,
+        date_range=date_range,
+    )
+
+    tracked_orders: Set[str] = {
+        cstr(order.get("name"))
+        for order in service_orders
+        if order.get("name")
+    }
+    tracked_orders.update(
+        cstr(order.get("name"))
+        for order in open_service_orders
+        if order.get("name")
     )
 
     order_branch_map: Dict[str, Optional[str]] = {}
@@ -2270,7 +2510,24 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
         if name and name not in order_branch_map:
             order_branch_map[name] = order.get("branch")
 
-    spare_part_approvals = _list_spare_part_approvals(branch_filter, order_branch_map, limit=200)
+    spare_part_approvals = _list_spare_part_approvals(
+        branch_filter,
+        order_branch_map,
+        limit=200,
+        date_range=date_range,
+    )
+
+    if date_range and tracked_orders:
+        spare_part_requests = [
+            request
+            for request in spare_part_requests
+            if not request.get("parent") or request.get("parent") in tracked_orders
+        ]
+        service_tasks = [
+            task
+            for task in service_tasks
+            if not task.get("parent") or task.get("parent") in tracked_orders
+        ]
 
     if branch_filter:
         spare_part_requests = [
@@ -2320,12 +2577,16 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
         "Garage Procurement Order",
         ["name", "status", "supplier", "order_date", "expected_date", "total_qty", "total_amount"],
         branch=branch_filter,
+        date_range=date_range,
+        date_field="order_date",
     )
     pending_procurement = _list_dicts(
         "Garage Procurement Order",
         ["name", "status", "supplier", "expected_date", "total_qty"],
         filters=[["status", "in", ["Draft", "Ordered", "Partially Received"]]],
         branch=branch_filter,
+        date_range=date_range,
+        date_field="order_date",
     )
     stock_movements = _list_dicts(
         "Garage Stock Movement",
@@ -2339,6 +2600,8 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
             "status",
         ],
         branch=branch_filter,
+        date_range=date_range,
+        date_field="posting_date",
     )
     invoices = _list_dicts(
         "Garage Sales Invoice",
@@ -2354,6 +2617,8 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
             "outstanding_amount",
         ],
         branch=branch_filter,
+        date_range=date_range,
+        date_field="invoice_date",
     )
     open_invoices = _list_dicts(
         "Garage Sales Invoice",
@@ -2370,6 +2635,8 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
         ],
         filters=[["status", "not in", ["Paid", "Cancelled"]]],
         branch=branch_filter,
+        date_range=date_range,
+        date_field="invoice_date",
     )
     payments = _list_dicts(
         "Garage Payment Entry",
@@ -2384,6 +2651,8 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
             "paid_amount",
         ],
         branch=branch_filter,
+        date_range=date_range,
+        date_field="payment_date",
     )
     receipts = _list_dicts(
         "Garage Receipt Document",
@@ -2397,17 +2666,49 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
             "delivery_method",
         ],
         branch=branch_filter,
+        date_range=date_range,
+        date_field="receipt_date",
     )
 
     service_bundles = _get_service_bundles()
 
     status_summary = {
-        "service_orders": _group_status("Garage Service Order", branch=branch_filter),
-        "spare_orders": _group_status("Garage Spare Part Order", branch=branch_filter),
-        "procurement_orders": _group_status("Garage Procurement Order", branch=branch_filter),
-        "stock_movements": _group_status("Garage Stock Movement", branch=branch_filter),
-        "sales_invoices": _group_status("Garage Sales Invoice", branch=branch_filter),
-        "payment_entries": _group_status("Garage Payment Entry", branch=branch_filter),
+        "service_orders": _group_status(
+            "Garage Service Order",
+            branch=branch_filter,
+            date_range=date_range,
+            date_field="service_booking_date",
+        ),
+        "spare_orders": _group_status(
+            "Garage Spare Part Order",
+            branch=branch_filter,
+            date_range=date_range,
+            date_field="order_date",
+        ),
+        "procurement_orders": _group_status(
+            "Garage Procurement Order",
+            branch=branch_filter,
+            date_range=date_range,
+            date_field="order_date",
+        ),
+        "stock_movements": _group_status(
+            "Garage Stock Movement",
+            branch=branch_filter,
+            date_range=date_range,
+            date_field="posting_date",
+        ),
+        "sales_invoices": _group_status(
+            "Garage Sales Invoice",
+            branch=branch_filter,
+            date_range=date_range,
+            date_field="invoice_date",
+        ),
+        "payment_entries": _group_status(
+            "Garage Payment Entry",
+            branch=branch_filter,
+            date_range=date_range,
+            date_field="payment_date",
+        ),
     }
 
     totals = {
@@ -2415,16 +2716,22 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
             "Garage Sales Invoice",
             "total_amount",
             branch=branch_filter,
+            date_range=date_range,
+            date_field="invoice_date",
         ),
         "outstanding_total": _sum_field(
             "Garage Sales Invoice",
             "outstanding_amount",
             branch=branch_filter,
+            date_range=date_range,
+            date_field="invoice_date",
         ),
         "payments_total": _sum_field(
             "Garage Payment Entry",
             "paid_amount",
             branch=branch_filter,
+            date_range=date_range,
+            date_field="payment_date",
         ),
     }
 
@@ -2450,6 +2757,12 @@ def portal_bootstrap(branch: Optional[str] = None) -> Dict[str, Any]:
         "receipt_documents": receipts,
         "branches": branches,
         "active_branch": active_branch,
+        "active_filters": {
+            "mode": active_mode,
+            "start_date": start_iso,
+            "end_date": end_iso,
+            "value": active_value,
+        },
         "status_summary": status_summary,
         "totals": totals,
         "desk_routes": desk_routes,
