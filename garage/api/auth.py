@@ -6,6 +6,7 @@ from collections.abc import Iterable, Sequence
 from typing import Any, Dict, List
 
 import frappe
+from frappe.utils import now
 
 from garage.config import role_map
 
@@ -132,4 +133,15 @@ def get_portal_navigation() -> Dict[str, List[Dict[str, Any]]]:
         items.append(payload)
 
     return {"items": items}
+
+
+@frappe.whitelist(allow_guest=False)
+def keep_portal_session_alive() -> Dict[str, str]:
+    """Touch the current session so it remains active for portal users."""
+
+    user = frappe.session.user
+    if user == "Guest":
+        raise frappe.PermissionError(frappe._("Please log in to access the portal."))
+
+    return {"user": user, "refreshed_at": now()}
 
