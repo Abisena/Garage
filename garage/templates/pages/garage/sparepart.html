@@ -1307,6 +1307,26 @@ body .frappe-confirm {
 
 {% block script %}
 <script>
+    (function loadGaragePortalBundle() {
+        const assetPath = '/assets/garage/js/garage_portal.js';
+
+        if (window.frappe && typeof window.frappe.require === 'function') {
+            window.frappe.require(assetPath);
+            return;
+        }
+
+        if (document.querySelector(`script[data-garage-portal="${assetPath}"]`)) {
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = assetPath;
+        script.async = true;
+        script.dataset.garagePortal = assetPath;
+        document.head.appendChild(script);
+    })();
+</script>
+<script>
 (function() {
     'use strict';
 
