@@ -455,6 +455,34 @@ body {
     font-size: 13px;
 }
 
+.inventory-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--primary);
+    background: rgba(0, 102, 255, 0.08);
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.inventory-action-btn:hover:not(:disabled) {
+    background: rgba(0, 102, 255, 0.16);
+    box-shadow: 0 8px 16px rgba(0, 102, 255, 0.15);
+}
+
+.inventory-action-btn:disabled {
+    cursor: not-allowed;
+    border-color: var(--border-base);
+    background: var(--gray-100);
+    color: var(--text-muted);
+    box-shadow: none;
+}
+
 .inventory-table--compact th,
 .inventory-table--compact td {
     padding: 12px 14px;
@@ -907,7 +935,7 @@ body {
         <header class="inventory-section__header">
             <div>
                 <h3>Stock Inventory</h3>
-                <p>Klik baris untuk membuka detail sparepart. Baris berwarna menandakan stok menipis dan akan membuka halaman Purchase Order.</p>
+                <p>Klik baris untuk membuka detail sparepart. Gunakan tombol <strong>Kelola Stok</strong> pada baris yang menipis untuk membuka halaman Purchase Order.</p>
             </div>
             <div class="inventory-section__meta">
                 <span class="inventory-section__badge" data-role="inventory-total-value">Nilai Stok: Rp 0</span>
@@ -931,6 +959,7 @@ body {
                         <th>Pemasok Terakhir</th>
                         <th>Cabang</th>
                         <th>Status</th>
+                        <th class="is-nowrap">Aksi</th>
                         <th>Terakhir Diperbarui</th>
                         <th>Dibuat Oleh</th>
                     </tr>
@@ -1164,6 +1193,8 @@ body {
         } else if (stockStatus === 'low') {
             rowClasses.push('is-low-stock');
         }
+        const manageButtonDisabled = !(stockStatus === 'low' || stockStatus === 'out');
+        const manageButton = `<button class="inventory-action-btn" type="button" data-action="manage-stock" ${manageButtonDisabled ? 'disabled' : ''}>Kelola Stok</button>`;
 
         const cells = [
             `<td class="is-nowrap">${escapeHTML(partCode)}</td>`,
@@ -1179,6 +1210,7 @@ body {
             `<td>${escapeHTML(lastSupplier)}</td>`,
             `<td>${escapeHTML(branch)}</td>`,
             `<td>${statusBadge}</td>`,
+            `<td class="is-nowrap">${manageButton}</td>`,
             `<td class="is-nowrap is-muted">${escapeHTML(updatedAt)}</td>`,
         ];
 
@@ -1282,6 +1314,31 @@ body {
     }
 
     function handleInventoryRowClick(event) {
+        const manageButton = event.target.closest('button[data-action="manage-stock"]');
+        if (manageButton) {
+            if (manageButton.disabled) {
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            }
+            const rowFromButton = manageButton.closest('tr[data-index]');
+            if (!rowFromButton) {
+                return;
+            }
+            const indexFromButton = Number(rowFromButton.dataset.index);
+            if (Number.isNaN(indexFromButton)) {
+                return;
+            }
+            const partFromButton = state.spareParts[indexFromButton];
+            if (!partFromButton) {
+                return;
+            }
+            openPurchaseOrder(partFromButton);
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
+
         const row = event.target.closest('tr[data-index]');
         if (!row) {
             return;
@@ -1292,11 +1349,6 @@ body {
         }
         const part = state.spareParts[index];
         if (!part) {
-            return;
-        }
-        const status = (row.dataset.stockStatus || '').toLowerCase();
-        if (status === 'low' || status === 'out') {
-            openPurchaseOrder(part);
             return;
         }
         const identifier = part.name || part.part_code;
