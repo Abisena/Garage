@@ -2417,30 +2417,58 @@ body.parts-detail-mode .parts-table td.actions {
     }
 
     function resolveCSRFToken() {
+        const tokenReaders = [
+            () => {
+                if (typeof window === 'undefined') {
+                    return null;
+                }
+
+                if (window.frappe && window.frappe.csrf_token) {
+                    return window.frappe.csrf_token;
+                }
+
+                if (window.csrf_token) {
+                    return window.csrf_token;
+                }
+
+                if (window.frappe && window.frappe.boot && window.frappe.boot.csrf_token) {
+                    return window.frappe.boot.csrf_token;
+                }
+
+                return null;
+            },
+            () => {
+                const meta = document.querySelector('meta[name="csrf-token"], meta[name="csrf_token"]');
+                return meta && meta.content ? meta.content : null;
+            },
+            () => {
+                const cookieMatch = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+                return cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
+            }
+        ];
+
+        let fallbackToken = null;
+
+        for (const readToken of tokenReaders) {
+            const token = readToken();
+
+            if (!token) {
+                continue;
+            }
+
+            fallbackToken = token;
+
+            if (token !== cachedCSRFToken) {
+                return cacheCSRFToken(token);
+            }
+        }
+
         if (cachedCSRFToken) {
             return cachedCSRFToken;
         }
 
-        if (window.frappe) {
-            if (window.frappe.csrf_token) {
-                return cacheCSRFToken(window.frappe.csrf_token);
-            }
-            if (window.csrf_token) {
-                return cacheCSRFToken(window.csrf_token);
-            }
-            if (window.frappe.boot && window.frappe.boot.csrf_token) {
-                return cacheCSRFToken(window.frappe.boot.csrf_token);
-            }
-        }
-
-        const meta = document.querySelector('meta[name="csrf-token"], meta[name="csrf_token"]');
-        if (meta && meta.content) {
-            return cacheCSRFToken(meta.content);
-        }
-
-        const cookieMatch = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
-        if (cookieMatch) {
-            return cacheCSRFToken(decodeURIComponent(cookieMatch[1]));
+        if (fallbackToken) {
+            return cacheCSRFToken(fallbackToken);
         }
 
         return null;
