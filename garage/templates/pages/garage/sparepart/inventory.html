@@ -1063,6 +1063,14 @@ body {
     }
 
     function evaluateStockStatus(part) {
+        const stockStatus = (part?.stock_status || '').toLowerCase();
+        if (stockStatus === 'out of stock' || stockStatus === 'out') {
+            return 'out';
+        }
+        if (stockStatus === 'low stock' || stockStatus === 'low') {
+            return 'low';
+        }
+
         const qty = parseFloat(part.available_qty ?? part.stock_qty ?? 0) || 0;
         const reorder = parseFloat(part.reorder_level ?? 0) || 0;
         if (qty <= 0) {
@@ -1085,62 +1093,101 @@ body {
 
     function openPurchaseOrder(part) {
         if (!part) {
+            if (window.frappe?.show_alert) {
+                window.frappe.show_alert({
+                    message: 'Tidak dapat membuka Purchase Order untuk sparepart ini.',
+                    indicator: 'red',
+                });
+            }
             return;
         }
 
-        const fallbackUrl = '/app/purchase-order';
-        const itemCode = ((part.part_code || part.name || '')).trim();
+        const itemCode = (part.part_code || part.name || '').trim();
         const itemName = part.part_name || part.item_name || itemCode;
         const uom = part.display_uom || part.uom || 'Unit';
+        const branch = part.branch || '';
         const today =
             window.frappe &&
             window.frappe.datetime &&
             typeof window.frappe.datetime.get_today === 'function'
                 ? window.frappe.datetime.get_today()
                 : null;
+        const inDeskContext = /^\/(app|desk)\b/.test(window.location.pathname || '');
 
-        if (window.frappe && typeof window.frappe.set_route === 'function') {
+        const routeOptions = {};
+        if (part.default_supplier) {
+            routeOptions.supplier = part.default_supplier;
+        }
+        if (branch) {
+            routeOptions.branch = branch;
+        }
+        if (today) {
+            routeOptions.schedule_date = today;
+        }
+        if (itemCode) {
+            routeOptions.items = [
+                {
+                    item_code: itemCode,
+                    item_name: itemName || itemCode,
+                    qty: 1,
+                    uom,
+                    schedule_date: today || undefined,
+                },
+            ];
+        }
+
+        let openedInDesk = false;
+
+        if (window.frappe) {
             try {
-                const routeOptions = {};
-                if (part.default_supplier) {
-                    routeOptions.supplier = part.default_supplier;
-                }
-                if (today) {
-                    routeOptions.schedule_date = today;
-                }
-                if (itemCode) {
-                    routeOptions.items = [
-                        {
-                            item_code: itemCode,
-                            item_name: itemName || itemCode,
-                            qty: 1,
-                            uom,
-                            schedule_date: today || undefined,
-                        },
-                    ];
-                }
                 if (typeof window.frappe.new_doc === 'function') {
                     window.frappe.new_doc('Purchase Order', routeOptions);
-                } else {
+                    openedInDesk = true;
+                } else if (typeof window.frappe.set_route === 'function') {
                     window.frappe.route_options = routeOptions;
                     window.frappe.set_route('Form', 'Purchase Order', 'new-purchase-order-1');
+                    openedInDesk = true;
                 }
-                if (window.frappe.show_alert) {
+
+                if (openedInDesk && inDeskContext && typeof window.frappe.show_alert === 'function') {
                     window.frappe.show_alert(
                         {
-                            message: 'Form purchase order baru dibuka. Lengkapi detail secara manual.',
+                            message: 'Form Purchase Order baru dibuka. Lengkapi detail secara manual.',
                             indicator: 'blue',
                         },
                         5
                     );
                 }
-                return;
             } catch (error) {
-                console.warn('[Inventory] Gagal menggunakan frappe.set_route:', error);
+                console.warn('[Inventory] Gagal membuka Purchase Order melalui Desk:', error);
+                openedInDesk = false;
             }
         }
 
-        window.location.href = fallbackUrl;
+        if (!openedInDesk || !inDeskContext) {
+            const fallbackUrl = new URL('/app/purchase-order', window.location.origin);
+            const params = new URLSearchParams();
+            if (itemCode) {
+                params.set('item_code', itemCode);
+            }
+            if (itemName && itemName !== itemCode) {
+                params.set('item_name', itemName);
+            }
+            if (part.default_supplier) {
+                params.set('supplier', part.default_supplier);
+            }
+            if (branch) {
+                params.set('branch', branch);
+            }
+            if (today) {
+                params.set('schedule_date', today);
+            }
+            if (params.toString()) {
+                fallbackUrl.search = params.toString();
+            }
+
+            window.location.href = fallbackUrl.toString();
+        }
     }
 
     function updateMetrics(data) {
