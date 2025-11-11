@@ -455,6 +455,34 @@ body {
     font-size: 13px;
 }
 
+.inventory-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--primary);
+    background: rgba(0, 102, 255, 0.08);
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.inventory-action-btn:hover:not(:disabled) {
+    background: rgba(0, 102, 255, 0.16);
+    box-shadow: 0 8px 16px rgba(0, 102, 255, 0.15);
+}
+
+.inventory-action-btn:disabled {
+    cursor: not-allowed;
+    border-color: var(--border-base);
+    background: var(--gray-100);
+    color: var(--text-muted);
+    box-shadow: none;
+}
+
 .inventory-table--compact th,
 .inventory-table--compact td {
     padding: 12px 14px;
@@ -907,7 +935,7 @@ body {
         <header class="inventory-section__header">
             <div>
                 <h3>Stock Inventory</h3>
-                <p>Klik baris untuk membuka detail sparepart. Baris berwarna menandakan stok menipis dan akan membuka halaman Purchase Order.</p>
+                <p>Klik baris untuk membuka detail sparepart. Gunakan tombol <strong>Kelola Stok</strong> pada baris yang menipis untuk membuka halaman Purchase Order.</p>
             </div>
             <div class="inventory-section__meta">
                 <span class="inventory-section__badge" data-role="inventory-total-value">Nilai Stok: Rp 0</span>
@@ -931,6 +959,7 @@ body {
                         <th>Pemasok Terakhir</th>
                         <th>Cabang</th>
                         <th>Status</th>
+                        <th class="is-nowrap">Aksi</th>
                         <th>Terakhir Diperbarui</th>
                         <th>Dibuat Oleh</th>
                     </tr>
@@ -1034,6 +1063,14 @@ body {
     }
 
     function evaluateStockStatus(part) {
+        const stockStatus = (part?.stock_status || '').toLowerCase();
+        if (stockStatus === 'out of stock' || stockStatus === 'out') {
+            return 'out';
+        }
+        if (stockStatus === 'low stock' || stockStatus === 'low') {
+            return 'low';
+        }
+
         const qty = parseFloat(part.available_qty ?? part.stock_qty ?? 0) || 0;
         const reorder = parseFloat(part.reorder_level ?? 0) || 0;
         if (qty <= 0) {
@@ -1056,62 +1093,101 @@ body {
 
     function openPurchaseOrder(part) {
         if (!part) {
+            if (window.frappe?.show_alert) {
+                window.frappe.show_alert({
+                    message: 'Tidak dapat membuka Purchase Order untuk sparepart ini.',
+                    indicator: 'red',
+                });
+            }
             return;
         }
 
-        const fallbackUrl = '/app/purchase-order';
-        const itemCode = ((part.part_code || part.name || '')).trim();
+        const itemCode = (part.part_code || part.name || '').trim();
         const itemName = part.part_name || part.item_name || itemCode;
         const uom = part.display_uom || part.uom || 'Unit';
+        const branch = part.branch || '';
         const today =
             window.frappe &&
             window.frappe.datetime &&
             typeof window.frappe.datetime.get_today === 'function'
                 ? window.frappe.datetime.get_today()
                 : null;
+        const inDeskContext = /^\/(app|desk)\b/.test(window.location.pathname || '');
 
-        if (window.frappe && typeof window.frappe.set_route === 'function') {
+        const routeOptions = {};
+        if (part.default_supplier) {
+            routeOptions.supplier = part.default_supplier;
+        }
+        if (branch) {
+            routeOptions.branch = branch;
+        }
+        if (today) {
+            routeOptions.schedule_date = today;
+        }
+        if (itemCode) {
+            routeOptions.items = [
+                {
+                    item_code: itemCode,
+                    item_name: itemName || itemCode,
+                    qty: 1,
+                    uom,
+                    schedule_date: today || undefined,
+                },
+            ];
+        }
+
+        let openedInDesk = false;
+
+        if (window.frappe) {
             try {
-                const routeOptions = {};
-                if (part.default_supplier) {
-                    routeOptions.supplier = part.default_supplier;
-                }
-                if (today) {
-                    routeOptions.schedule_date = today;
-                }
-                if (itemCode) {
-                    routeOptions.items = [
-                        {
-                            item_code: itemCode,
-                            item_name: itemName || itemCode,
-                            qty: 1,
-                            uom,
-                            schedule_date: today || undefined,
-                        },
-                    ];
-                }
                 if (typeof window.frappe.new_doc === 'function') {
                     window.frappe.new_doc('Purchase Order', routeOptions);
-                } else {
+                    openedInDesk = true;
+                } else if (typeof window.frappe.set_route === 'function') {
                     window.frappe.route_options = routeOptions;
                     window.frappe.set_route('Form', 'Purchase Order', 'new-purchase-order-1');
+                    openedInDesk = true;
                 }
-                if (window.frappe.show_alert) {
+
+                if (openedInDesk && inDeskContext && typeof window.frappe.show_alert === 'function') {
                     window.frappe.show_alert(
                         {
-                            message: 'Form purchase order baru dibuka. Lengkapi detail secara manual.',
+                            message: 'Form Purchase Order baru dibuka. Lengkapi detail secara manual.',
                             indicator: 'blue',
                         },
                         5
                     );
                 }
-                return;
             } catch (error) {
-                console.warn('[Inventory] Gagal menggunakan frappe.set_route:', error);
+                console.warn('[Inventory] Gagal membuka Purchase Order melalui Desk:', error);
+                openedInDesk = false;
             }
         }
 
-        window.location.href = fallbackUrl;
+        if (!openedInDesk || !inDeskContext) {
+            const fallbackUrl = new URL('/app/purchase-order', window.location.origin);
+            const params = new URLSearchParams();
+            if (itemCode) {
+                params.set('item_code', itemCode);
+            }
+            if (itemName && itemName !== itemCode) {
+                params.set('item_name', itemName);
+            }
+            if (part.default_supplier) {
+                params.set('supplier', part.default_supplier);
+            }
+            if (branch) {
+                params.set('branch', branch);
+            }
+            if (today) {
+                params.set('schedule_date', today);
+            }
+            if (params.toString()) {
+                fallbackUrl.search = params.toString();
+            }
+
+            window.location.href = fallbackUrl.toString();
+        }
     }
 
     function updateMetrics(data) {
@@ -1164,6 +1240,8 @@ body {
         } else if (stockStatus === 'low') {
             rowClasses.push('is-low-stock');
         }
+        const manageButtonDisabled = !(stockStatus === 'low' || stockStatus === 'out');
+        const manageButton = `<button class="inventory-action-btn" type="button" data-action="manage-stock" ${manageButtonDisabled ? 'disabled' : ''}>Kelola Stok</button>`;
 
         const cells = [
             `<td class="is-nowrap">${escapeHTML(partCode)}</td>`,
@@ -1179,6 +1257,7 @@ body {
             `<td>${escapeHTML(lastSupplier)}</td>`,
             `<td>${escapeHTML(branch)}</td>`,
             `<td>${statusBadge}</td>`,
+            `<td class="is-nowrap">${manageButton}</td>`,
             `<td class="is-nowrap is-muted">${escapeHTML(updatedAt)}</td>`,
         ];
 
@@ -1282,6 +1361,31 @@ body {
     }
 
     function handleInventoryRowClick(event) {
+        const manageButton = event.target.closest('button[data-action="manage-stock"]');
+        if (manageButton) {
+            if (manageButton.disabled) {
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            }
+            const rowFromButton = manageButton.closest('tr[data-index]');
+            if (!rowFromButton) {
+                return;
+            }
+            const indexFromButton = Number(rowFromButton.dataset.index);
+            if (Number.isNaN(indexFromButton)) {
+                return;
+            }
+            const partFromButton = state.spareParts[indexFromButton];
+            if (!partFromButton) {
+                return;
+            }
+            openPurchaseOrder(partFromButton);
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
+
         const row = event.target.closest('tr[data-index]');
         if (!row) {
             return;
@@ -1292,11 +1396,6 @@ body {
         }
         const part = state.spareParts[index];
         if (!part) {
-            return;
-        }
-        const status = (row.dataset.stockStatus || '').toLowerCase();
-        if (status === 'low' || status === 'out') {
-            openPurchaseOrder(part);
             return;
         }
         const identifier = part.name || part.part_code;
