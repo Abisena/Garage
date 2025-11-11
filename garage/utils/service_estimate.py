@@ -383,35 +383,66 @@ def _resolve_user_full_name(user_id: Optional[str]) -> str:
 
 
 def _resolve_employee_name(employee_id: Optional[str]) -> str:
-    """Get the human friendly name for an employee identifier."""
+    """Get the human friendly name for an employee/technician identifier."""
+
     if not employee_id:
         return "-"
 
     identifier = (str(employee_id).strip() if employee_id else "") or "-"
 
+    def _from_employee(emp_id: str) -> Optional[Dict[str, str]]:
+        try:
+            with _ignore_permissions():
+                return frappe.db.get_value(
+                    "Employee",
+                    emp_id,
+                    ["employee_name", "user_id"],
+                    as_dict=True,
+                )
+        except Exception:
+            return None
+
+    row = _from_employee(identifier)
+
+    if row:
+        employee_name = (row.get("employee_name") or "").strip()
+        if employee_name:
+            return employee_name
+
+        user_id = (row.get("user_id") or "").strip()
+        if user_id:
+            resolved = _resolve_user_full_name(user_id)
+            if resolved and resolved != "-":
+                return resolved
+
+    # Fall back to Garage Technician profile when an Employee record isn't directly found.
     try:
         with _ignore_permissions():
-            row = frappe.db.get_value(
-                "Employee",
+            technician_row = frappe.db.get_value(
+                "Garage Technician",
                 identifier,
-                ["employee_name", "user_id"],
+                ["employee_name", "employee", "user_id"],
                 as_dict=True,
             )
     except Exception:
-        row = None
+        technician_row = None
 
-    if not row:
-        return identifier
+    if technician_row:
+        technician_name = (technician_row.get("employee_name") or "").strip()
+        if technician_name:
+            return technician_name
 
-    employee_name = (row.get("employee_name") or "").strip()
-    if employee_name:
-        return employee_name
+        linked_employee = (technician_row.get("employee") or "").strip()
+        if linked_employee and linked_employee != identifier:
+            resolved = _resolve_employee_name(linked_employee)
+            if resolved and resolved not in {"-", linked_employee}:
+                return resolved
 
-    user_id = (row.get("user_id") or "").strip()
-    if user_id:
-        resolved = _resolve_user_full_name(user_id)
-        if resolved and resolved != "-":
-            return resolved
+        technician_user = (technician_row.get("user_id") or "").strip()
+        if technician_user:
+            resolved = _resolve_user_full_name(technician_user)
+            if resolved and resolved != "-":
+                return resolved
 
     return identifier
 
