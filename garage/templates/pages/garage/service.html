@@ -1968,6 +1968,18 @@ body {
     const PROGRESS_STAGE_STATUS_SET = new Set(
         PROGRESS_STAGE_STATUSES.map(status => status.toLowerCase())
     );
+    const INSPECTION_STAGE_STATUSES = [
+        'Draft',
+        'Inspection',
+        'Estimate',
+        'Awaiting Approval',
+        'Approved',
+        'Pending Inspection',
+        'Planning'
+    ];
+    const INSPECTION_STAGE_STATUS_SET = new Set(
+        INSPECTION_STAGE_STATUSES.map(status => status.toLowerCase())
+    );
 
     const orderLookup = {};
     const PAGE_SIZE = 5;
@@ -2059,6 +2071,121 @@ body {
 
         const target = `/garage/inspection?${queryParams.join('&')}`;
         return `<a class="service-order-link" href="${target}">${label}</a>`;
+    }
+
+    function categorizeOrdersByStatus(orders) {
+        const list = Array.isArray(orders) ? orders : [];
+        const inspection = [];
+        const progress = [];
+        const completed = [];
+
+        list.forEach(order => {
+            if (!order) {
+                return;
+            }
+
+            const rawStatus = order.status || '';
+            const normalized = rawStatus.toString().trim().toLowerCase();
+
+            if (normalized === 'completed') {
+                completed.push(order);
+                return;
+            }
+
+            if (PROGRESS_STAGE_STATUS_SET.has(normalized)) {
+                progress.push(order);
+                return;
+            }
+
+            if (INSPECTION_STAGE_STATUS_SET.has(normalized)) {
+                inspection.push(order);
+                return;
+            }
+
+            inspection.push(order);
+        });
+
+        return {
+            orders: list,
+            inspection,
+            progress,
+            completed,
+        };
+    }
+
+    function mergeUniqueOrders(primaryOrders, ...orderGroups) {
+        const merged = Array.isArray(primaryOrders) ? primaryOrders.slice() : [];
+        const seen = new Set(
+            merged
+                .map(order => order?.name)
+                .filter(Boolean)
+        );
+
+        orderGroups
+            .filter(Array.isArray)
+            .forEach(group => {
+                group.forEach(order => {
+                    if (!order) {
+                        return;
+                    }
+
+                    const identifier = order.name;
+                    if (identifier) {
+                        if (seen.has(identifier)) {
+                            return;
+                        }
+                        seen.add(identifier);
+                    }
+
+                    merged.push(order);
+                });
+            });
+
+        return merged;
+    }
+
+    function normalizeServiceOrderPayload(message) {
+        if (!message) {
+            return categorizeOrdersByStatus([]);
+        }
+
+        if (Array.isArray(message)) {
+            return categorizeOrdersByStatus(message);
+        }
+
+        const payload = typeof message === 'object' ? message : {};
+        const rawOrders = Array.isArray(payload.orders) ? payload.orders : [];
+        const hasCategorizedArrays = ['inspection', 'progress', 'completed'].some(
+            key => Array.isArray(payload[key])
+        );
+
+        if (hasCategorizedArrays) {
+            const inspection = Array.isArray(payload.inspection) ? payload.inspection.slice() : [];
+            const progress = Array.isArray(payload.progress) ? payload.progress.slice() : [];
+            const completed = Array.isArray(payload.completed) ? payload.completed.slice() : [];
+
+            const orders = mergeUniqueOrders(rawOrders, inspection, progress, completed);
+
+            return {
+                orders,
+                inspection,
+                progress,
+                completed,
+            };
+        }
+
+        const candidateOrders =
+            rawOrders.length ?
+                rawOrders :
+                Array.isArray(payload.data) ?
+                    payload.data :
+                    Array.isArray(payload.list) ?
+                        payload.list :
+                        Array.isArray(payload.results) ?
+                            payload.results :
+                            [];
+
+        return categorizeOrdersByStatus(candidateOrders);
     }
 
     function renderSparepartShortcut(order) {
@@ -2834,10 +2961,11 @@ body {
 
             console.log('[API] Response:', response);
 
-            const data = response.message || {};
-
-            // Categorize orders based on status
-            const allOrders = data.orders || [];
+            const normalized = normalizeServiceOrderPayload(response.message);
+            const allOrders = normalized.orders || [];
+            const inspection = normalized.inspection || [];
+            const progress = normalized.progress || [];
+            const completed = normalized.completed || [];
 
             Object.keys(orderLookup).forEach(key => delete orderLookup[key]);
             allOrders.forEach(order => {
@@ -2846,32 +2974,17 @@ body {
                 }
             });
 
-            const inspectionStageStatuses = ['Draft', 'Inspection', 'Estimate', 'Awaiting Approval', 'Approved', 'Pending Inspection', 'Planning'];
-            const inspection = allOrders.filter(o =>
-                inspectionStageStatuses.includes(o.status)
-            );
-
-            const progress = allOrders.filter(o =>
-                PROGRESS_STAGE_STATUSES.includes(o.status)
-            );
-
-            const completed = allOrders.filter(o =>
-                o.status === 'Completed'
-            );
-
-            const categorized = {
-                inspection: inspection,
-                progress: progress,
-                completed: completed
-            };
-
             // Update UI
             renderBookingAlerts(allOrders);
-            updateStats(categorized);
+            updateStats({
+                inspection,
+                progress,
+                completed,
+            });
 
-            setInspectionOrders(categorized.inspection || [], { preservePage: true });
-            setProgressOrders(categorized.progress || [], { preservePage: true });
-            setCompletedOrders(categorized.completed || [], { preservePage: true });
+            setInspectionOrders(inspection, { preservePage: true });
+            setProgressOrders(progress, { preservePage: true });
+            setCompletedOrders(completed, { preservePage: true });
 
             applyGlobalSearch({ preservePage: true });
 
