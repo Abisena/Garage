@@ -2446,6 +2446,31 @@ body.parts-detail-mode .parts-table td.actions {
         return null;
     }
 
+    async function requestFreshCSRFToken() {
+        try {
+            const response = await fetch('/api/method/frappe.sessions.get_csrf_token', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch CSRF token');
+            }
+
+            const payload = await response.json();
+            if (payload && payload.message) {
+                return cacheCSRFToken(payload.message);
+            }
+        } catch (error) {
+            console.error('Unable to refresh CSRF token:', error);
+        }
+
+        return null;
+    }
+
     async function ensureCSRFToken(maxAttempts = 10, delay = 200) {
         let token = resolveCSRFToken();
 
@@ -2459,6 +2484,11 @@ body.parts-detail-mode .parts-table td.actions {
             if (token) {
                 return token;
             }
+        }
+
+        token = await requestFreshCSRFToken();
+        if (token) {
+            return token;
         }
 
         throw new Error('CSRF token not available');
