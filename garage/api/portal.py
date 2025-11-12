@@ -3027,11 +3027,17 @@ def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, An
 @frappe.whitelist()
 def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
     """List all service orders with filtering and categorization."""
-    
+
     _require_login()
-    
+
     filter_dict = _ensure_dict(filters or {})
-    
+
+    requested_branch = cstr(filter_dict.get("branch") or "").strip()
+    if requested_branch:
+        allowed = _allowed_branches(frappe.session.user)
+        if allowed is not None and requested_branch not in set(allowed):
+            requested_branch = ""
+
     # Base fields to fetch
     fields = [
         "name",
@@ -3091,6 +3097,7 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
         filters=db_filters,
         limit=100,
         order_by="creation asc",
+        branch=requested_branch or None,
     )
     
     # Enrich with related data
