@@ -1968,6 +1968,58 @@ body {
 (function() {
     'use strict';
 
+    const BRANCH_STORAGE_KEY = 'garage.portal.branch';
+    let activeBranch = '';
+
+    function normalizeBranch(value) {
+        return value === undefined || value === null ? '' : String(value).trim();
+    }
+
+    function getStoredBranchPreference() {
+        try {
+            if (window.localStorage) {
+                return normalizeBranch(window.localStorage.getItem(BRANCH_STORAGE_KEY));
+            }
+        } catch (error) {
+            // Ignore storage access issues
+        }
+        return '';
+    }
+
+    function resolveInitialBranch() {
+        const state = window.garagePortalState;
+        if (state && typeof state === 'object') {
+            const stateBranch = normalizeBranch(state.active_branch);
+            if (stateBranch) {
+                return stateBranch;
+            }
+        }
+
+        const select = document.getElementById('portal_branch_selector');
+        if (select && select.value) {
+            const selectedBranch = normalizeBranch(select.value);
+            if (selectedBranch) {
+                return selectedBranch;
+            }
+        }
+
+        return getStoredBranchPreference();
+    }
+
+    function setActiveBranch(value) {
+        const normalized = normalizeBranch(value);
+        if (normalized === activeBranch) {
+            return false;
+        }
+        activeBranch = normalized;
+        console.log('[Branch] Active branch set to:', normalized || '(all branches)');
+        return true;
+    }
+
+    function getActiveBranch() {
+        return activeBranch;
+    }
+
     // ============================================================================
     // API CONFIGURATION
     // ============================================================================
@@ -2973,9 +3025,15 @@ body {
         try {
             console.log('[API] Loading service orders...');
 
+            const branch = getActiveBranch();
+            const args = {};
+            if (branch) {
+                args.filters = { branch };
+            }
+
             const response = await frappe.call({
                 method: API_CONFIG.listServiceOrders,
-                args: {},
+                args,
                 freeze: false
             });
 
@@ -3055,6 +3113,25 @@ body {
         }
     }
 
+    function handleBranchChange(branchValue) {
+        const changed = setActiveBranch(branchValue);
+        if (changed) {
+            loadServiceOrders();
+        }
+    }
+
+    document.addEventListener('garage-portal:branch-changed', (event) => {
+        const detailBranch = event && event.detail ? event.detail.branch : '';
+        handleBranchChange(detailBranch);
+    });
+
+    document.addEventListener('garage-portal:state-updated', (event) => {
+        const state = event && event.detail ? event.detail.state : null;
+        if (state && typeof state === 'object') {
+            handleBranchChange(state.active_branch);
+        }
+    });
+
     // ============================================================================
     // PUBLIC FUNCTIONS
     // ============================================================================
@@ -3079,6 +3156,8 @@ body {
         console.log('[Init] Initializing service management page...');
         console.log('[Init] Browser:', navigator.userAgent);
         console.log('[Init] Timestamp:', new Date().toISOString());
+
+        setActiveBranch(resolveInitialBranch());
 
         // Load data on page load
         loadServiceOrders();
