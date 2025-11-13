@@ -13,6 +13,12 @@ from garage.config import role_map
 
 PORTAL_NAV_ITEMS: List[Dict[str, Any]] = [
     {
+        "route": "/garage",
+        "key": "dashboard",
+        "label": "🏠 Dashboard",
+        "roles": [],
+    },
+    {
         "route": "/garage/intake",
         "key": "intake",
         "label": "📋 Registrasi",

@@ -1,878 +1,1058 @@
 {% extends "templates/web.html" %}
 
-{% block title %}Garage Service Portal{% endblock %}
+{% block title %}Garage Dashboard{% endblock %}
 
 {% set required_roles = [] %}
 {% include "garage/templates/includes/role_guard.html" %}
 
 {% block head_include %}
-<!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-
 <style>
-/* ============================================================================
-   GARAGE SERVICE PORTAL - PREMIUM ELEGANT DESIGN
-   Modern, Clean, Professional & Sophisticated
-   ============================================================================ */
+@import url('/assets/garage/css/garage_portal.css');
 
-/* === DESIGN TOKENS === */
 :root {
-    /* Brand Colors - Refined Blue Palette */
-    --primary: #0066FF;
-    --primary-dark: #0052CC;
-    --primary-darker: #003D99;
-    --primary-light: #4D94FF;
-    --primary-lightest: #E6F2FF;
-    --primary-subtle: #F0F7FF;
-    
-    /* Accent Colors */
-    --accent-success: #00C853;
-    --accent-warning: #FFB300;
-    --accent-danger: #FF3D00;
-    --accent-info: #00B8D4;
-    
-    /* Neutral Palette - Sophisticated Grays */
-    --gray-50: #FAFBFC;
-    --gray-100: #F5F7FA;
-    --gray-200: #E9ECF1;
-    --gray-300: #D4DAE4;
-    --gray-400: #B8C1D3;
-    --gray-500: #8896AB;
-    --gray-600: #5E6C84;
-    --gray-700: #3E4C5E;
-    --gray-800: #2A3647;
-    --gray-900: #1A2332;
-    
-    /* Semantic Colors */
-    --text-primary: #1A2332;
-    --text-secondary: #5E6C84;
-    --text-muted: #8896AB;
-    --text-inverse: #FFFFFF;
-    
-    --bg-body: #F5F7FA;
-    --bg-surface: #FFFFFF;
-    --bg-elevated: #FAFBFC;
-    --bg-overlay: rgba(26, 35, 50, 0.8);
-    
-    --border-light: #E9ECF1;
-    --border-base: #D4DAE4;
-    --border-strong: #B8C1D3;
-    
-    /* Shadows - Layered Depth */
-    --shadow-xs: 0 1px 2px rgba(26, 35, 50, 0.04);
-    --shadow-sm: 0 2px 4px rgba(26, 35, 50, 0.06), 0 1px 2px rgba(26, 35, 50, 0.04);
-    --shadow-md: 0 4px 8px rgba(26, 35, 50, 0.08), 0 2px 4px rgba(26, 35, 50, 0.04);
-    --shadow-lg: 0 8px 16px rgba(26, 35, 50, 0.12), 0 4px 8px rgba(26, 35, 50, 0.06);
-    --shadow-xl: 0 16px 32px rgba(26, 35, 50, 0.16), 0 8px 16px rgba(26, 35, 50, 0.08);
-    --shadow-2xl: 0 24px 48px rgba(26, 35, 50, 0.2), 0 12px 24px rgba(26, 35, 50, 0.1);
-    
-    /* Border Radius */
-    --radius-xs: 4px;
-    --radius-sm: 6px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
-    --radius-xl: 16px;
-    --radius-2xl: 20px;
-    --radius-full: 9999px;
-    
-    /* Spacing Scale */
-    --space-1: 4px;
-    --space-2: 8px;
-    --space-3: 12px;
-    --space-4: 16px;
-    --space-5: 20px;
-    --space-6: 24px;
-    --space-8: 32px;
-    --space-10: 40px;
-    --space-12: 48px;
-    --space-16: 64px;
-    --space-20: 80px;
-    --space-24: 96px;
-    
-    /* Typography */
-    --font-sans: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-    
-    --font-size-xs: 0.75rem;      /* 12px */
-    --font-size-sm: 0.875rem;     /* 14px */
-    --font-size-base: 0.9375rem;  /* 15px */
-    --font-size-lg: 1.0625rem;    /* 17px */
-    --font-size-xl: 1.25rem;      /* 20px */
-    --font-size-2xl: 1.5rem;      /* 24px */
-    --font-size-3xl: 1.875rem;    /* 30px */
-    --font-size-4xl: 2.25rem;     /* 36px */
-    --font-size-5xl: 3rem;        /* 48px */
-    
-    --font-weight-normal: 400;
-    --font-weight-medium: 500;
-    --font-weight-semibold: 600;
-    --font-weight-bold: 700;
-    
-    --line-height-tight: 1.25;
-    --line-height-normal: 1.5;
-    --line-height-relaxed: 1.625;
-    --line-height-loose: 1.75;
-    
-    /* Transitions */
-    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
-    
-    /* Z-index Scale */
-    --z-base: 0;
-    --z-dropdown: 1000;
-    --z-sticky: 1020;
-    --z-fixed: 1030;
-    --z-modal-backdrop: 1040;
-    --z-modal: 1050;
-    --z-popover: 1060;
-    --z-tooltip: 1070;
-}
-
-/* === BASE RESETS === */
-*,
-*::before,
-*::after {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-html {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-    scroll-behavior: smooth;
+    --dashboard-bg: #f5f7fa;
+    --dashboard-surface: #ffffff;
+    --dashboard-border: #e3e8f4;
+    --dashboard-muted: #5e6c84;
+    --dashboard-heading: #111a2c;
+    --dashboard-shadow: 0 24px 48px rgba(15, 23, 42, 0.12);
+    --dashboard-radius: 20px;
 }
 
 body {
-    font-family: var(--font-sans) !important;
-    font-size: var(--font-size-base) !important;
-    line-height: var(--line-height-normal) !important;
-    color: var(--text-primary) !important;
-    background: var(--bg-body) !important;
-    overflow-x: hidden;
+    background: var(--dashboard-bg) !important;
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    color: var(--dashboard-heading) !important;
 }
 
-/* Hide default Frappe navbar styling */
-.navbar {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
-.navbar-default {
-    background-color: transparent !important;
-    border-color: transparent !important;
-}
-
-/* Remove blue background from hamburger menu */
-.navbar-toggle {
-    background-color: transparent !important;
-    border-color: rgba(0, 0, 0, 0.1) !important;
-}
-
-.navbar-toggle:hover,
-.navbar-toggle:focus {
-    background-color: rgba(0, 0, 0, 0.05) !important;
-}
-
-/* Remove blue background from active/selected navbar items */
-.navbar-nav > li > a {
-    background-color: transparent !important;
-}
-
-.navbar-nav > li.active > a,
-.navbar-nav > li.active > a:hover,
-.navbar-nav > li.active > a:focus {
-    background-color: transparent !important;
-    color: inherit !important;
-}
-
-/* Remove any default blue backgrounds */
-.navbar-default .navbar-nav > .active > a,
-.navbar-default .navbar-nav > .active > a:hover,
-.navbar-default .navbar-nav > .active > a:focus {
-    background-color: transparent !important;
-}
-
-.btn-primary,
-.btn-primary:hover,
-.btn-primary:focus,
-.btn-primary:active {
-    background-color: transparent !important;
-    border-color: transparent !important;
-}
-
-/* Target any blue background in navbar area */
-header .navbar-nav li a,
-header .navbar-nav li button {
-    background-color: transparent !important;
-}
-
-/* === CONTAINER === */
-.container {
-    max-width: 1440px !important;
-    margin: 0 auto !important;
-    padding-left: var(--space-6) !important;
-    padding-right: var(--space-6) !important;
-}
-
-@media (min-width: 1200px) {
-    .container {
-        padding-left: var(--space-12) !important;
-        padding-right: var(--space-12) !important;
-    }
-}
-
-/* === HEADER SECTION (NEW) === */
-.portal-header {
+.portal-hero--dashboard {
     position: relative;
-    background: linear-gradient(160deg, 
-        var(--primary-darker) 0%, 
-        var(--primary-dark) 40%, 
-        var(--primary) 100%);
-    padding: var(--space-6) 0 var(--space-8) 0;
-    box-shadow: var(--shadow-lg);
-    margin-bottom: 0;
-    margin-top: var(--space-6);
+    margin-top: 32px;
+    padding: 56px 0 64px;
+    background: linear-gradient(135deg, #002766 0%, #0052cc 45%, #0075ff 100%);
+    color: #ffffff;
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: var(--dashboard-shadow);
 }
 
-.portal-header::before {
+.portal-hero--dashboard::before {
     content: '';
     position: absolute;
     inset: 0;
-    background-image: 
-        radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
-    z-index: 0;
+    background-image:
+        radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.18), transparent 55%),
+        radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.12), transparent 55%),
+        radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.08), transparent 45%);
 }
 
-.portal-header .container {
+.portal-hero--dashboard .container {
     position: relative;
     z-index: 1;
 }
 
-.portal-header__brand {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-3);
-    margin-bottom: var(--space-6);
+.portal-hero__eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    font-size: 0.75rem;
+    opacity: 0.8;
+    margin-bottom: 12px;
 }
 
-.portal-header__icon {
-    width: 48px;
-    height: 48px;
-    background: rgba(255, 255, 255, 0.15);
+.portal-hero__brand {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.portal-hero__icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.18);
     backdrop-filter: blur(10px);
-    border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.portal-header__title {
-    color: var(--text-inverse) !important;
-    font-size: var(--font-size-2xl) !important;
-    font-weight: var(--font-weight-bold) !important;
-    margin: 0 !important;
-    line-height: 1.2 !important;
+.portal-hero__brand h1 {
+    margin: 0 0 6px;
+    font-size: 2.1rem;
+    font-weight: 700;
 }
 
-.portal-header__subtitle {
-    color: rgba(255, 255, 255, 0.85) !important;
-    font-size: var(--font-size-sm) !important;
-    margin: 0 !important;
+.portal-hero__brand p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.85);
 }
 
-/* === NAVIGATION === */
-.portal-nav {
-    display: flex !important;
-    justify-content: center !important;
-    gap: var(--space-2) !important;
-    background: rgba(255, 255, 255, 0.1) !important;
-    backdrop-filter: blur(20px) !important;
-    padding: var(--space-2) !important;
-    border-radius: var(--radius-lg) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    overflow-x: auto !important;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-    max-width: fit-content;
-    margin: 0 auto;
+.portal-hero__meta {
+    margin-top: 32px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
 }
 
-.portal-nav::-webkit-scrollbar {
-    height: 6px;
+.meta-item {
+    padding: 14px 18px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 16px;
+    min-width: 220px;
 }
 
-.portal-nav::-webkit-scrollbar-track {
-    background: transparent;
+.meta-label {
+    display: block;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 6px;
 }
 
-.portal-nav::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: var(--radius-full);
+.meta-value {
+    font-size: 1.1rem;
+    font-weight: 600;
 }
 
-.portal-nav a {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: var(--space-2) !important;
-    padding: var(--space-3) var(--space-5) !important;
-    border-radius: var(--radius-md) !important;
-    font-size: var(--font-size-sm) !important;
-    font-weight: var(--font-weight-medium) !important;
-    text-decoration: none !important;
-    color: rgba(255, 255, 255, 0.9) !important;
-    background: transparent !important;
-    border: 1px solid transparent !important;
-    transition: all var(--transition-base) !important;
-    white-space: nowrap !important;
-    position: relative;
+.meta-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
-.portal-nav a::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-md);
-    opacity: 0;
-    transition: opacity var(--transition-base);
+.meta-actions .primary,
+.sidebar-actions .secondary,
+.sidebar-actions .ghost,
+.dashboard-card button.primary {
+    border-radius: 999px;
+    padding: 12px 22px;
+    border: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.portal-nav a:hover::before {
-    opacity: 1;
+.meta-actions .primary,
+.dashboard-card button.primary {
+    background: #ffffff;
+    color: #0052cc;
+    box-shadow: 0 10px 25px rgba(17, 24, 39, 0.18);
 }
 
-.portal-nav a:hover {
-    color: var(--text-inverse) !important;
-    border-color: rgba(255, 255, 255, 0.25) !important;
+.meta-actions .primary:hover,
+.sidebar-actions .secondary:hover,
+.sidebar-actions .ghost:hover,
+.dashboard-card button.primary:hover {
     transform: translateY(-1px);
 }
 
-.portal-nav a.active {
-    background: rgba(255, 255, 255, 0.95) !important;
-    color: var(--primary) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+.dashboard-section {
+    padding: 72px 0 120px;
 }
 
-.portal-nav a.active::before {
-    display: none;
+.dashboard-grid {
+    display: grid;
+    gap: 32px;
+    grid-template-columns: minmax(280px, 340px) 1fr;
+    align-items: start;
 }
 
-/* === SECTION SPACING === */
-.portal-section {
-    padding: var(--space-16) 0 !important;
-    position: relative;
+.dashboard-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 }
 
-.portal-section:first-of-type {
-    padding-top: var(--space-12) !important;
+.sidebar-card,
+.dashboard-card {
+    background: var(--dashboard-surface);
+    border: 1px solid var(--dashboard-border);
+    border-radius: var(--dashboard-radius);
+    padding: 28px;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
 }
 
-.portal-section--muted {
-    background: var(--gray-50) !important;
+.sidebar-card h2 {
+    margin: 0 0 10px;
+    font-size: 1.1rem;
 }
 
-/* === CARDS === */
-.portal-grid {
-    display: grid !important;
-    gap: var(--space-6) !important;
+.sidebar-card p {
+    margin: 0 0 18px;
+    color: var(--dashboard-muted);
+    font-size: 0.93rem;
 }
 
-.portal-grid--overview {
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)) !important;
+.sidebar-meta {
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
 }
 
-.portal-card {
-    background: var(--bg-surface) !important;
-    border: 1px solid var(--border-light) !important;
-    border-radius: var(--radius-xl) !important;
-    padding: var(--space-8) !important;
-    transition: all var(--transition-base) !important;
-    position: relative;
-    overflow: hidden;
+.sidebar-meta div {
+    border: 1px solid var(--dashboard-border);
+    border-radius: 14px;
+    padding: 12px 16px;
 }
 
-.portal-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--primary), var(--primary-light));
-    opacity: 0;
-    transition: opacity var(--transition-base);
+.sidebar-meta dt {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+    color: var(--dashboard-muted);
 }
 
-.portal-card:hover::before {
-    opacity: 1;
+.sidebar-meta dd {
+    margin: 0;
+    font-weight: 600;
 }
 
-.portal-card--link {
+.sidebar-actions {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sidebar-actions .secondary {
+    background: #0052cc;
+    color: #ffffff;
+    border: none;
+}
+
+.sidebar-actions .ghost {
+    background: transparent;
+    color: #0052cc;
+    border: 1px solid rgba(0, 82, 204, 0.25);
+    text-align: center;
+    text-decoration: none;
+}
+
+.status-clusters {
+    display: grid;
+    gap: 16px;
+}
+
+.status-clusters h3 {
+    margin: 0 0 8px;
+    font-size: 0.95rem;
+}
+
+.status-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.status-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border: 1px dashed var(--dashboard-border);
+    border-radius: 12px;
+    color: var(--dashboard-heading);
+    font-size: 0.9rem;
+    cursor: default;
+}
+
+.status-list__item--interactive {
     cursor: pointer;
 }
 
-.portal-card--link:hover {
-    border-color: var(--primary-lightest) !important;
-    box-shadow: var(--shadow-lg) !important;
-    transform: translateY(-4px);
+.status-list__item--interactive:hover {
+    background: #f6f8fb;
 }
 
-.portal-card--compact {
-    padding: var(--space-6) !important;
+.status-list .badge {
+    background: #eef2ff;
+    color: #3b46c5;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 999px;
 }
 
-.portal-card__header {
-    margin-bottom: var(--space-6) !important;
+.desk-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
-.portal-card__header h3 {
-    color: var(--text-primary) !important;
-    font-size: var(--font-size-xl) !important;
-    font-weight: var(--font-weight-bold) !important;
-    margin: 0 0 var(--space-2) 0 !important;
-    line-height: var(--line-height-tight) !important;
+.desk-links a {
+    flex: 1 1 45%;
+    min-width: 140px;
+    text-decoration: none;
+    border: 1px solid var(--dashboard-border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    color: var(--dashboard-heading);
+    transition: background 0.2s ease;
 }
 
-.portal-card__header .lead {
-    color: var(--text-secondary) !important;
-    font-size: var(--font-size-base) !important;
-    line-height: var(--line-height-relaxed) !important;
-    margin: 0 !important;
+.desk-links a:hover {
+    background: #f6f8fb;
 }
 
-.portal-card__list {
-    list-style: none !important;
-    margin: 0 0 var(--space-6) 0 !important;
-    padding: 0 !important;
+.dashboard-main {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
 }
 
-.portal-card__list li {
-    position: relative;
-    padding-left: var(--space-6) !important;
-    margin-bottom: var(--space-3) !important;
-    color: var(--text-secondary) !important;
-    font-size: var(--font-size-sm) !important;
-    line-height: var(--line-height-relaxed) !important;
+.dashboard-card__header {
+    margin-bottom: 22px;
 }
 
-.portal-card__list li::before {
-    content: '→';
-    position: absolute;
-    left: 0;
-    color: var(--primary);
-    font-weight: var(--font-weight-bold);
+.dashboard-card__eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.72rem;
+    color: var(--dashboard-muted);
+    margin: 0 0 6px;
 }
 
-.portal-card__list li:last-child {
-    margin-bottom: 0 !important;
+.dashboard-card__title {
+    margin: 0;
+    font-size: 1.35rem;
 }
 
-.portal-card__action {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: var(--space-2) !important;
-    color: var(--primary) !important;
-    font-size: var(--font-size-sm) !important;
-    font-weight: var(--font-weight-semibold) !important;
-    text-decoration: none !important;
-    transition: all var(--transition-base) !important;
+.dashboard-card__subtitle {
+    margin: 6px 0 0;
+    color: var(--dashboard-muted);
+    font-size: 0.95rem;
 }
 
-.portal-card__action::after {
-    content: '→';
-    transition: transform var(--transition-base);
+.metric-badges {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 22px;
 }
 
-.portal-card--link:hover .portal-card__action::after {
-    transform: translateX(4px);
+.metric-badge {
+    border: 1px solid var(--dashboard-border);
+    border-radius: 16px;
+    padding: 14px 16px;
 }
 
-/* === TABLE LINKS === */
-.table-links {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: var(--space-2) !important;
-    margin: var(--space-6) 0 !important;
+.metric-label {
+    display: block;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dashboard-muted);
+    margin-bottom: 6px;
 }
 
-.table-links a {
-    display: inline-flex !important;
-    align-items: center !important;
-    padding: var(--space-2) var(--space-4) !important;
-    background: var(--primary-subtle) !important;
-    border: 1px solid var(--primary-lightest) !important;
-    border-radius: var(--radius-md) !important;
-    color: var(--primary) !important;
-    font-size: var(--font-size-sm) !important;
-    font-weight: var(--font-weight-medium) !important;
-    text-decoration: none !important;
-    transition: all var(--transition-base) !important;
+.metric-value {
+    font-size: 1.2rem;
+    font-weight: 700;
 }
 
-.table-links a:hover {
-    background: var(--primary-lightest) !important;
-    border-color: var(--primary-light) !important;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
+.table-wrapper {
+    border: 1px solid var(--dashboard-border);
+    border-radius: 18px;
+    padding: 18px;
+    margin-bottom: 18px;
 }
 
-/* === REFRESH META === */
-.refresh-meta {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    padding: var(--space-4) !important;
-    background: var(--gray-50) !important;
-    border-radius: var(--radius-md) !important;
-    margin-top: var(--space-6) !important;
+.table-headline {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
 }
 
-.refresh-label {
-    color: var(--text-muted) !important;
-    font-size: var(--font-size-sm) !important;
-    margin-right: var(--space-2) !important;
+.table-headline h3 {
+    margin: 0;
+    font-size: 1rem;
 }
 
-.refresh-value {
-    color: var(--text-primary) !important;
-    font-size: var(--font-size-sm) !important;
-    font-weight: var(--font-weight-medium) !important;
-    font-family: var(--font-mono) !important;
+.table-headline p {
+    margin: 0;
+    color: var(--dashboard-muted);
+    font-size: 0.85rem;
 }
 
-/* === BUTTONS === */
-button {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: var(--space-2) !important;
-    padding: var(--space-3) var(--space-5) !important;
-    border-radius: var(--radius-md) !important;
-    font-size: var(--font-size-sm) !important;
-    font-weight: var(--font-weight-medium) !important;
-    font-family: var(--font-sans) !important;
-    cursor: pointer !important;
-    transition: all var(--transition-base) !important;
-    border: 1px solid transparent !important;
+.portal-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
 }
 
-button:not(.secondary) {
-    background: var(--primary) !important;
-    color: var(--text-inverse) !important;
+.portal-table thead th {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.7rem;
+    color: var(--dashboard-muted);
+    text-align: left;
+    border-bottom: 1px solid var(--dashboard-border);
+    padding: 10px;
 }
 
-button:not(.secondary):hover {
-    background: var(--primary-dark) !important;
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
+.portal-table td {
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+    padding: 12px 10px;
+    font-size: 0.9rem;
+    vertical-align: top;
 }
 
-button.secondary {
-    background: var(--bg-surface) !important;
-    color: var(--text-primary) !important;
-    border-color: var(--border-base) !important;
+.portal-table tr:last-child td {
+    border-bottom: none;
 }
 
-button.secondary:hover {
-    background: var(--gray-50) !important;
-    border-color: var(--border-strong) !important;
-    transform: translateY(-2px);
+.portal-table--spare-request td {
+    border-bottom: none;
 }
 
-/* === RESPONSIVE === */
-@media (max-width: 991px) {
-    .portal-header {
-        padding: var(--space-6) 0;
+.portal-table--modal {
+    border: 1px solid var(--dashboard-border);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.empty-state {
+    margin-top: 16px;
+    padding: 20px;
+    text-align: center;
+    border: 1px dashed var(--dashboard-border);
+    border-radius: 16px;
+    color: var(--dashboard-muted);
+    display: none;
+}
+
+.empty-state[hidden] {
+    display: none !important;
+}
+
+.empty-state__title {
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.portal-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 9999;
+}
+
+.portal-modal.is-open {
+    display: flex;
+}
+
+.portal-modal__dialog {
+    background: #ffffff;
+    border-radius: 20px;
+    width: min(960px, 100%);
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.2);
+}
+
+.portal-modal__header {
+    padding: 20px 28px;
+    border-bottom: 1px solid var(--dashboard-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.portal-modal__title {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.portal-modal__close {
+    background: transparent;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+}
+
+.portal-modal__body {
+    padding: 20px 28px;
+    overflow: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.portal-modal__summary {
+    font-size: 0.95rem;
+    color: var(--dashboard-muted);
+}
+
+.portal-modal__table {
+    border: 1px solid var(--dashboard-border);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.portal-modal__empty {
+    text-align: center;
+    color: var(--dashboard-muted);
+    display: none;
+}
+
+.portal-modal__empty.is-visible {
+    display: block;
+}
+
+.portal-modal__footer {
+    padding: 16px 28px;
+    border-top: 1px solid var(--dashboard-border);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.portal-modal__footer .secondary {
+    border-radius: 999px;
+    padding: 10px 20px;
+    border: 1px solid var(--dashboard-border);
+    background: #f6f8fb;
+    cursor: pointer;
+}
+
+.spare-request-modal__list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.spare-request-modal__item {
+    border: 1px solid var(--dashboard-border);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.spare-request-modal__item-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: baseline;
+}
+
+.spare-request-modal__item-code {
+    font-weight: 600;
+}
+
+.spare-request-modal__item-meta {
+    font-size: 0.85rem;
+    color: var(--dashboard-muted);
+}
+
+.spare-request-modal__item-status .status-pill {
+    background: #eef2ff;
+    color: #3b46c5;
+}
+
+.spare-request-modal__item-note,
+.spare-request-modal__item-warning {
+    font-size: 0.9rem;
+}
+
+.spare-request-modal__item-warning {
+    color: #b42318;
+}
+
+@media (max-width: 1200px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
     }
-    
-    .portal-header__title {
-        font-size: var(--font-size-xl) !important;
-    }
-    
-    .portal-nav {
-        gap: var(--space-1) !important;
-    }
-    
-    .portal-nav a {
-        padding: var(--space-2) var(--space-4) !important;
-        font-size: 0.8125rem !important;
-    }
-    
-    .portal-section {
-        padding: var(--space-12) 0 !important;
-    }
-    
-    .portal-section:first-of-type {
-        padding-top: var(--space-8) !important;
-    }
-    
-    .portal-grid--overview {
-        grid-template-columns: 1fr !important;
-    }
-}
 
-@media (max-width: 767px) {
-    .portal-header {
-        padding: var(--space-5) 0;
-    }
-    
-    .portal-header__brand {
-        margin-bottom: var(--space-4);
-    }
-    
-    .portal-header__icon {
-        width: 40px;
-        height: 40px;
-        font-size: 20px;
-    }
-    
-    .portal-header__title {
-        font-size: var(--font-size-lg) !important;
-    }
-    
-    .portal-nav {
-        padding: var(--space-1) !important;
-    }
-    
-    .portal-card {
-        padding: var(--space-6) !important;
-    }
-    
-    .portal-card__header h3 {
-        font-size: var(--font-size-xl) !important;
-    }
-    
-    .refresh-meta {
+    .portal-hero__brand {
         flex-direction: column;
-        align-items: flex-start;
+        text-align: center;
+    }
+
+    .portal-hero__meta {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .meta-actions {
+        justify-content: center;
     }
 }
 
-@media (max-width: 479px) {
-    .portal-header__title {
-        font-size: var(--font-size-base) !important;
+@media (max-width: 640px) {
+    .sidebar-card,
+    .dashboard-card {
+        padding: 22px;
     }
-    
-    .portal-nav {
-        width: 100%;
+
+    .table-wrapper {
+        padding: 14px;
     }
-    
-    .portal-card {
-        padding: var(--space-5) !important;
+
+    .portal-table th,
+    .portal-table td {
+        font-size: 0.8rem;
     }
-}
-
-/* === UTILITIES === */
-.text-center {
-    text-align: center !important;
-}
-
-.text-right {
-    text-align: right !important;
-}
-
-.mt-0 { margin-top: 0 !important; }
-.mt-2 { margin-top: var(--space-2) !important; }
-.mt-4 { margin-top: var(--space-4) !important; }
-.mt-6 { margin-top: var(--space-6) !important; }
-.mt-8 { margin-top: var(--space-8) !important; }
-
-.mb-0 { margin-bottom: 0 !important; }
-.mb-2 { margin-bottom: var(--space-2) !important; }
-.mb-4 { margin-bottom: var(--space-4) !important; }
-.mb-6 { margin-bottom: var(--space-6) !important; }
-.mb-8 { margin-bottom: var(--space-8) !important; }
-
-/* === PRINT STYLES === */
-@media print {
-    .portal-header,
-    .portal-nav,
-    button,
-    .table-links {
-        display: none !important;
-    }
-    
-    .portal-card {
-        box-shadow: none !important;
-        border: 1px solid var(--border-base) !important;
-        page-break-inside: avoid;
-    }
-}
-
-/* === ACCESSIBILITY === */
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
-}
-
-/* === DARK MODE SUPPORT (Optional) === */
-@media (prefers-color-scheme: dark) {
-    /* Add dark mode variables here if needed */
 }
 </style>
 {% endblock %}
 
 {% block page_content %}
-<script>
-    window.location.replace('/garage/intake');
-</script>
-<div class="portal-redirect-notice">
-    <p>Anda akan dialihkan ke halaman registrasi. Jika tidak otomatis, silakan <a href="/garage/intake">klik di sini</a>.</p>
-</div>
-<!-- Header Section with Brand and Navigation -->
-<header class="portal-header">
+<header class="portal-hero--dashboard">
     <div class="container">
-        <div class="portal-header__brand">
-            <div class="portal-header__icon">🔧</div>
+        <div class="portal-hero__eyebrow">Garage Portal</div>
+        <div class="portal-hero__brand">
+            <div class="portal-hero__icon">🧭</div>
             <div>
-                <h1 class="portal-header__title">Garage Service Portal</h1>
-                <p class="portal-header__subtitle">Sistem Manajemen Bengkel Terpadu</p>
+                <h1>Dashboard Operasional</h1>
+                <p>Monitor intake, servis, sparepart, dan keuangan lintas cabang dari satu layar.</p>
             </div>
         </div>
-        
-        <nav class="portal-nav">
-            <a href="/" class="active">🏠 Overview</a>
-            <a href="/garage/intake">📋 Registrasi</a>
-            <a href="/garage/service">🔧 Servis</a>
-            <a href="/garage/sparepart">📦 Sparepart</a>
-            <a href="/garage/procurement">🛒 Pengadaan</a>
-            <a href="/garage/finance">💰 Keuangan</a>
-            <a href="/garage/insight">📊 Report</a>
-        </nav>
+        <div class="portal-hero__meta">
+            <div class="meta-item">
+                <span class="meta-label">Cabang Aktif</span>
+                <span class="meta-value" data-role="branch-display" data-target="hero-branch">Memuat cabang aktif…</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Terakhir Sinkron</span>
+                <span class="meta-value" data-role="refreshed-at">—</span>
+            </div>
+            <div class="meta-actions">
+                <button class="primary" type="button" data-action="refresh-portal">🔄 Refresh Data</button>
+            </div>
+        </div>
     </div>
 </header>
 
-<section class="portal-section">
-    <div class="container">
-        <div class="portal-grid portal-grid--overview">
-            <article class="portal-card portal-card--link" onclick="window.location.href='/garage/intake'">
-                <header class="portal-card__header">
-                    <h3>Registrasi Customer & Kendaraan</h3>
-                    <p class="lead">Registrasi customer baru, catat preferensi komunikasi, dan tautkan kendaraan.</p>
-                </header>
-                <ul class="portal-card__list">
-                    <li>Form Registrasi customer & kendaraan.</li>
-                    <li>Ringkasan master data terbaru.</li>
-                    <li>Integrasi langsung dengan DocType Garage Customer & Vehicle.</li>
-                </ul>
-                <a class="portal-card__action" href="/garage/intake">Buka halaman Registrasi</a>
+{% set active_page = 'dashboard' %}
+{% include "garage/templates/includes/portal_nav.html" %}
+
+<section class="dashboard-section">
+    <div class="container dashboard-grid">
+        <aside class="dashboard-sidebar">
+            <article class="sidebar-card">
+                <h2>Snapshot Cabang</h2>
+                <p>Semua angka mengikuti cabang dan rentang tanggal aktif.</p>
+                <dl class="sidebar-meta">
+                    <div>
+                        <dt>Cabang</dt>
+                        <dd data-role="branch-display" data-target="sidebar-branch">Memuat cabang aktif…</dd>
+                    </div>
+                    <div>
+                        <dt>Periode</dt>
+                        <dd>Atur filter tanggal di bagian atas portal.</dd>
+                    </div>
+                </dl>
+                <div class="sidebar-actions">
+                    <button class="secondary" type="button" data-action="refresh-portal">Muat ulang data</button>
+                    <a class="ghost" data-desk-link="Garage Branch" target="_blank">Kelola cabang di Desk</a>
+                </div>
             </article>
-            
-            <article class="portal-card portal-card--link" onclick="window.location.href='/garage/service'">
-                <header class="portal-card__header">
-                    <h3>Orkestrasi Servis Bengkel</h3>
-                    <p class="lead">Buat service order, kelola progres teknisi, dan pantau status pengerjaan.</p>
-                </header>
-                <ul class="portal-card__list">
-                    <li>Pencatatan service order lengkap dengan task.</li>
-                    <li>Log progres teknisi dan status QC.</li>
-                    <li>Ringkasan order aktif dan metrik estimasi biaya.</li>
-                </ul>
-                <a class="portal-card__action" href="/garage/service">Buka halaman Servis</a>
+
+            <article class="sidebar-card">
+                <h2>Status Dokumen</h2>
+                <p class="lead">Klik status servis untuk membuka detail service order.</p>
+                <div class="status-clusters">
+                    <div>
+                        <h3>Service Order</h3>
+                        <ul class="status-list" data-status="service-orders"></ul>
+                    </div>
+                    <div>
+                        <h3>Sparepart</h3>
+                        <ul class="status-list" data-status="spare-orders"></ul>
+                    </div>
+                    <div>
+                        <h3>Procurement</h3>
+                        <ul class="status-list" data-status="procurement-orders"></ul>
+                    </div>
+                    <div>
+                        <h3>Stock Movement</h3>
+                        <ul class="status-list" data-status="stock-movements"></ul>
+                    </div>
+                    <div>
+                        <h3>Sales Invoice</h3>
+                        <ul class="status-list" data-status="sales-invoices"></ul>
+                    </div>
+                    <div>
+                        <h3>Payment Entry</h3>
+                        <ul class="status-list" data-status="payment-entries"></ul>
+                    </div>
+                </div>
             </article>
-            
-            <article class="portal-card portal-card--link" onclick="window.location.href='/garage/sparepart'">
-                <header class="portal-card__header">
-                    <h3>Penjualan Sparepart</h3>
-                    <p class="lead">Kelola permintaan sparepart counter dan pantau pemenuhan stok.</p>
-                </header>
-                <ul class="portal-card__list">
-                    <li>Form order sparepart dengan detail item.</li>
-                    <li>Status pesanan dan jadwal pengambilan.</li>
-                    <li>Terhubung dengan DocType Garage Spare Part Order.</li>
-                </ul>
-                <a class="portal-card__action" href="/garage/sparepart">Buka halaman Sparepart</a>
+
+            <article class="sidebar-card">
+                <h2>Koneksi Desk</h2>
+                <p>Akses cepat ke DocType yang sama di Desk untuk operasi lanjutan.</p>
+                <div class="desk-links">
+                    <a data-desk-link="Garage Customer" target="_blank">Customer</a>
+                    <a data-desk-link="Garage Vehicle" target="_blank">Kendaraan</a>
+                    <a data-desk-link="Garage Service Order" target="_blank">Service Order</a>
+                    <a data-desk-link="Garage Spare Part Order" target="_blank">Sparepart</a>
+                    <a data-desk-link="Garage Procurement Order" target="_blank">Procurement</a>
+                    <a data-desk-link="Garage Stock Movement" target="_blank">Stock Movement</a>
+                    <a data-desk-link="Garage Sales Invoice" target="_blank">Sales Invoice</a>
+                    <a data-desk-link="Garage Payment Entry" target="_blank">Payment Entry</a>
+                    <a data-desk-link="Garage Receipt Document" target="_blank">Receipt</a>
+                </div>
             </article>
-            
-            <article class="portal-card portal-card--link" onclick="window.location.href='/garage/procurement'">
-                <header class="portal-card__header">
-                    <h3>Pengadaan & Pergerakan Stok</h3>
-                    <p class="lead">Catat permintaan pembelian dan mutasi gudang secara terstruktur.</p>
+        </aside>
+
+        <div class="dashboard-main">
+            <article class="dashboard-card">
+                <header class="dashboard-card__header">
+                    <p class="dashboard-card__eyebrow">Intake & Database</p>
+                    <h2 class="dashboard-card__title">Customer & Kendaraan Terbaru</h2>
+                    <p class="dashboard-card__subtitle">Ringkasan registrasi beserta kendaraan yang aktif pada periode terpilih.</p>
                 </header>
-                <ul class="portal-card__list">
-                    <li>Form procurement order lengkap dengan detail item.</li>
-                    <li>Pencatatan mutasi stok masuk/keluar.</li>
-                    <li>Monitoring pengadaan yang masih tertunda.</li>
-                </ul>
-                <a class="portal-card__action" href="/garage/procurement">Buka halaman Pengadaan</a>
+                <div class="table-wrapper">
+                    <table class="portal-table">
+                        <thead>
+                            <tr>
+                                <th>Customer</th>
+                                <th>Tipe</th>
+                                <th>Kontak</th>
+                                <th>VIP</th>
+                                <th>Kendaraan</th>
+                                <th>Brand</th>
+                                <th>Jenis</th>
+                                <th>Model</th>
+                                <th>No. Rangka</th>
+                                <th>No. Mesin</th>
+                                <th>Servis Terakhir</th>
+                            </tr>
+                        </thead>
+                        <tbody data-role="customer-vehicle-table"></tbody>
+                    </table>
+                    <div class="empty-state" data-empty="customer-vehicle" hidden>
+                        <div class="empty-state__title">Belum ada data intake.</div>
+                        <p>Registrasi baru akan muncul otomatis setelah tim front desk menyimpan intake.</p>
+                    </div>
+                </div>
             </article>
-            
-            <article class="portal-card portal-card--link" onclick="window.location.href='/garage/finance'">
-                <header class="portal-card__header">
-                    <h3>Penagihan & Pembayaran</h3>
-                    <p class="lead">Kelola invoice, penerimaan pembayaran, dan terbitkan bukti bayar.</p>
+
+            <article class="dashboard-card">
+                <header class="dashboard-card__header">
+                    <p class="dashboard-card__eyebrow">Servis & Pengerjaan</p>
+                    <h2 class="dashboard-card__title">Monitoring Workshop</h2>
+                    <p class="dashboard-card__subtitle">Pantau estimasi biaya, jumlah order aktif, dan status QC.</p>
                 </header>
-                <ul class="portal-card__list">
-                    <li>Form sales invoice dan jadwal pembayaran.</li>
-                    <li>Pencatatan payment entry dan alokasi ke invoice.</li>
-                    <li>Ringkasan piutang serta pembayaran terakhir.</li>
-                </ul>
-                <a class="portal-card__action" href="/garage/finance">Buka halaman Keuangan</a>
+                <div class="metric-badges">
+                    <div class="metric-badge">
+                        <span class="metric-label">Total Estimasi</span>
+                        <span class="metric-value" data-metric="service-estimate">Rp 0</span>
+                    </div>
+                    <div class="metric-badge">
+                        <span class="metric-label">Order Aktif</span>
+                        <span class="metric-value" data-metric="service-open-count">0</span>
+                    </div>
+                    <div class="metric-badge">
+                        <span class="metric-label">QC Pending</span>
+                        <span class="metric-value" data-metric="qc-pending">0</span>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <div class="table-headline">
+                        <h3>Antrian Servis Aktif</h3>
+                        <p>Daftar service order terbaru pada cabang terpilih.</p>
+                    </div>
+                    <table class="portal-table">
+                        <thead>
+                            <tr>
+                                <th>Service Order</th>
+                                <th>Customer</th>
+                                <th>Catatan</th>
+                                <th>Status</th>
+                                <th>Estimasi Selesai</th>
+                            </tr>
+                        </thead>
+                        <tbody data-role="open-service-table"></tbody>
+                    </table>
+                    <div class="empty-state" data-empty="open-service" hidden>
+                        <div class="empty-state__title">Tidak ada service order terbuka.</div>
+                        <p>Order baru akan otomatis terlihat setelah dibuat dari intake atau desk.</p>
+                    </div>
+                </div>
             </article>
-            
-            <article class="portal-card portal-card--link" onclick="window.location.href='/garage/insight'">
-                <header class="portal-card__header">
-                    <h3>Report & Monitoring</h3>
-                    <p class="lead">Pantau status workflow lintas dokumen untuk keputusan cepat.</p>
+
+            <article class="dashboard-card">
+                <header class="dashboard-card__header">
+                    <p class="dashboard-card__eyebrow">Sparepart</p>
+                    <h2 class="dashboard-card__title">Permintaan & Persetujuan</h2>
+                    <p class="dashboard-card__subtitle">Koordinasikan kebutuhan part dari servis hingga counter.</p>
                 </header>
-                <ul class="portal-card__list">
-                    <li>Ringkasan status service order, sparepart, hingga keuangan.</li>
-                    <li>Tautan cepat menuju Desk untuk operasi lanjutan.</li>
-                    <li>Pembaharuan data sekali klik.</li>
-                </ul>
-                <a class="portal-card__action" href="/garage/insight">Buka halaman Report</a>
+                <div class="metric-badges">
+                    <div class="metric-badge">
+                        <span class="metric-label">Total Master Sparepart</span>
+                        <span class="metric-value" data-metric="spare-count">0</span>
+                    </div>
+                    <div class="metric-badge">
+                        <span class="metric-label">Permintaan Aktif</span>
+                        <span class="metric-value" data-metric="spare-request-count">0</span>
+                    </div>
+                    <div class="metric-badge">
+                        <span class="metric-label">Stok Menipis</span>
+                        <span class="metric-value" data-metric="spare-low-stock">0</span>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <div class="table-headline">
+                        <h3>Order Counter</h3>
+                        <p>Transaksi penjualan sparepart yang masih berjalan.</p>
+                    </div>
+                    <table class="portal-table">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Customer</th>
+                                <th>Status</th>
+                                <th>Target Selesai</th>
+                            </tr>
+                        </thead>
+                        <tbody data-role="spare-table"></tbody>
+                    </table>
+                    <div class="empty-state" data-empty="spare" hidden>
+                        <div class="empty-state__title">Belum ada order counter.</div>
+                        <p>Buat order baru dari halaman Sparepart ketika ada penjualan langsung.</p>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <div class="table-headline">
+                        <h3>Permintaan dari Servis</h3>
+                        <p>Klik baris untuk membuka detail sparepart.</p>
+                    </div>
+                    <table class="portal-table portal-table--spare-request">
+                        <thead>
+                            <tr>
+                                <th>Service Order</th>
+                                <th>Kendaraan</th>
+                                <th>Customer</th>
+                                <th>Aksi</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody data-role="spare-request-table"></tbody>
+                    </table>
+                    <div class="empty-state" data-empty="spare-requests" hidden>
+                        <div class="empty-state__title">Tidak ada permintaan aktif.</div>
+                        <p>Permintaan baru dari halaman inspeksi akan tampil di sini.</p>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <div class="table-headline">
+                        <h3>Riwayat Approve Sparepart</h3>
+                    </div>
+                    <table class="portal-table">
+                        <thead>
+                            <tr>
+                                <th>Dokumen</th>
+                                <th>Service Order</th>
+                                <th>Disetujui Pada</th>
+                                <th>Oleh</th>
+                                <th>Unduh</th>
+                            </tr>
+                        </thead>
+                        <tbody data-role="spare-approval-table"></tbody>
+                    </table>
+                    <div class="empty-state" data-empty="spare-approvals" hidden>
+                        <div class="empty-state__title">Belum ada riwayat approve.</div>
+                        <p>Persetujuan sparepart akan tercatat otomatis setelah dokumen disetujui.</p>
+                    </div>
+                </div>
+            </article>
+
+            <article class="dashboard-card">
+                <header class="dashboard-card__header">
+                    <p class="dashboard-card__eyebrow">Pengadaan & Stok</p>
+                    <h2 class="dashboard-card__title">Inventory Health</h2>
+                    <p class="dashboard-card__subtitle">Pantau order pembelian dan stok yang perlu perhatian.</p>
+                </header>
+                <div class="table-wrapper">
+                    <div class="table-headline">
+                        <h3>Order Pengadaan</h3>
+                        <p>Pesanan pembelian yang belum selesai.</p>
+                    </div>
+                    <table class="portal-table">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Pemasok</th>
+                                <th>Status</th>
+                                <th>Estimasi Kedatangan</th>
+                            </tr>
+                        </thead>
+                        <tbody data-role="pending-procurement-table"></tbody>
+                    </table>
+                    <div class="empty-state" data-empty="pending-procurement" hidden>
+                        <div class="empty-state__title">Tidak ada procurement pending.</div>
+                        <p>Buat procurement order baru ketika stok gudang menipis.</p>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <div class="table-headline">
+                        <h3>Sparepart Perlu Perhatian</h3>
+                        <p>Daftar stok rendah atau mencapai reorder level.</p>
+                    </div>
+                    <table class="portal-table">
+                        <thead>
+                            <tr>
+                                <th>Sparepart</th>
+                                <th>Gudang</th>
+                                <th>Stok</th>
+                                <th>Reorder</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody data-role="spare-inventory-table"></tbody>
+                    </table>
+                    <div class="empty-state" data-empty="spare-inventory" hidden>
+                        <div class="empty-state__title">Stok aman.</div>
+                        <p>Tidak ada item yang berada di bawah threshold reorder.</p>
+                    </div>
+                </div>
+            </article>
+
+            <article class="dashboard-card">
+                <header class="dashboard-card__header">
+                    <p class="dashboard-card__eyebrow">Keuangan</p>
+                    <h2 class="dashboard-card__title">Penagihan & Pembayaran</h2>
+                    <p class="dashboard-card__subtitle">Percepat follow-up invoice dan rekonsiliasi pembayaran.</p>
+                </header>
+                <div class="metric-badges">
+                    <div class="metric-badge">
+                        <span class="metric-label">Invoice Terbuka</span>
+                        <span class="metric-value" data-metric="invoice-total">Rp 0</span>
+                    </div>
+                    <div class="metric-badge">
+                        <span class="metric-label">Outstanding</span>
+                        <span class="metric-value" data-metric="outstanding-total">Rp 0</span>
+                    </div>
+                    <div class="metric-badge">
+                        <span class="metric-label">Pembayaran Masuk</span>
+                        <span class="metric-value" data-metric="payments-total">Rp 0</span>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <div class="table-headline">
+                        <h3>Invoice Jatuh Tempo</h3>
+                    </div>
+                    <table class="portal-table">
+                        <thead>
+                            <tr>
+                                <th>Invoice</th>
+                                <th>Customer</th>
+                                <th>Jatuh Tempo</th>
+                                <th>Outstanding</th>
+                            </tr>
+                        </thead>
+                        <tbody data-role="open-invoice-table"></tbody>
+                    </table>
+                    <div class="empty-state" data-empty="open-invoice" hidden>
+                        <div class="empty-state__title">Tidak ada invoice terbuka.</div>
+                        <p>Semua invoice aktif sudah lunas untuk cabang & periode ini.</p>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <div class="table-headline">
+                        <h3>Pembayaran Terbaru</h3>
+                    </div>
+                    <table class="portal-table">
+                        <thead>
+                            <tr>
+                                <th>Payment Entry</th>
+                                <th>Customer</th>
+                                <th>Tanggal</th>
+                                <th>Metode</th>
+                            </tr>
+                        </thead>
+                        <tbody data-role="payment-table"></tbody>
+                    </table>
+                    <div class="empty-state" data-empty="payment" hidden>
+                        <div class="empty-state__title">Belum ada pembayaran.</div>
+                        <p>Pembayaran baru akan muncul otomatis setelah disubmit.</p>
+                    </div>
+                </div>
             </article>
         </div>
     </div>
 </section>
 
-<section class="portal-section portal-section--muted">
-    <div class="container">
-        <div class="portal-grid">
-            <article class="portal-card portal-card--compact">
-                <h3>🔗 Koneksi ke Desk</h3>
-                <p class="lead">
-                    Setiap form di portal ini menulis dokumen asli yang sama dengan versi Desk/Frappe.
-                    Gunakan tautan berikut untuk membuka daftar dokumen terkait secara langsung.
-                </p>
-                <div class="table-links table-links--wrap">
-                    <a href="#" data-desk-link="Garage Customer" target="_blank">Garage Customer</a>
-                    <a href="#" data-desk-link="Garage Vehicle" target="_blank">Garage Vehicle</a>
-                    <a href="#" data-desk-link="Garage Service Order" target="_blank">Garage Service Order</a>
-                    <a href="#" data-desk-link="Garage Spare Part Order" target="_blank">Garage Spare Part Order</a>
-                    <a href="#" data-desk-link="Garage Procurement Order" target="_blank">Garage Procurement Order</a>
-                    <a href="#" data-desk-link="Garage Stock Movement" target="_blank">Garage Stock Movement</a>
-                    <a href="#" data-desk-link="Garage Sales Invoice" target="_blank">Garage Sales Invoice</a>
-                    <a href="#" data-desk-link="Garage Payment Entry" target="_blank">Garage Payment Entry</a>
-                    <a href="#" data-desk-link="Garage Receipt Document" target="_blank">Garage Receipt Document</a>
-                </div>
-                <div class="refresh-meta">
-                    <div>
-                        <span class="refresh-label">Terakhir disinkronkan:</span>
-                        <span class="refresh-value" data-role="refreshed-at">—</span>
-                    </div>
-                    <button class="secondary" type="button" data-action="refresh-portal">🔄 Refresh Data</button>
-                </div>
-            </article>
+<div class="portal-modal" id="service-status-modal" aria-hidden="true">
+    <div class="portal-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="service-status-modal-title">
+        <div class="portal-modal__header">
+            <h3 class="portal-modal__title" id="service-status-modal-title" data-role="status-modal-title">Detail Status Servis</h3>
+            <button type="button" class="portal-modal__close" data-role="status-modal-close" aria-label="Tutup">×</button>
+        </div>
+        <div class="portal-modal__body">
+            <div class="portal-modal__summary" data-role="status-modal-summary"></div>
+            <div class="portal-modal__table" data-role="status-modal-table-wrapper" hidden>
+                <table class="portal-table portal-table--modal">
+                    <thead>
+                        <tr>
+                            <th>Service Order</th>
+                            <th>Customer</th>
+                            <th>Kendaraan</th>
+                            <th>Prioritas</th>
+                            <th>Status</th>
+                            <th>Tanggal Booking</th>
+                            <th>Estimasi Selesai</th>
+                            <th>Actual Selesai</th>
+                            <th>Status QC</th>
+                        </tr>
+                    </thead>
+                    <tbody data-role="status-modal-table"></tbody>
+                </table>
+            </div>
+            <div class="portal-modal__empty" data-role="status-modal-empty">
+                <p>Tidak ada service order pada status ini.</p>
+            </div>
+        </div>
+        <div class="portal-modal__footer">
+            <button type="button" class="secondary" data-role="status-modal-close">Tutup</button>
         </div>
     </div>
-</section>
+</div>
+
+<div class="portal-modal" id="spare-request-modal" aria-hidden="true">
+    <div class="portal-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="spare-request-modal-title">
+        <div class="portal-modal__header">
+            <h3 class="portal-modal__title" id="spare-request-modal-title" data-role="spare-request-modal-title">Detail Sparepart</h3>
+            <button type="button" class="portal-modal__close" data-role="spare-request-modal-close" aria-label="Tutup">×</button>
+        </div>
+        <div class="portal-modal__body">
+            <div class="portal-modal__summary" data-role="spare-request-modal-summary"></div>
+            <div class="spare-request-modal__list" data-role="spare-request-modal-list"></div>
+            <div class="portal-modal__empty" data-role="spare-request-modal-empty">
+                <p>Tidak ada detail sparepart untuk ditampilkan.</p>
+            </div>
+        </div>
+        <div class="portal-modal__footer">
+            <button type="button" class="secondary" data-role="spare-request-modal-close">Tutup</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block script %}
