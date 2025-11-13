@@ -397,6 +397,533 @@ header .navbar-nav li button {
     display: none;
 }
 
+/* === NEW DASHBOARD LAYOUT === */
+.intake-shell {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    min-height: calc(100vh - var(--space-6));
+    background: var(--bg-body);
+}
+
+.intake-sidebar {
+    background: var(--gray-900);
+    color: rgba(255, 255, 255, 0.85);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    border-radius: 0 var(--radius-2xl) var(--radius-2xl) 0;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), var(--shadow-2xl);
+    position: sticky;
+    top: 0;
+    min-height: 100vh;
+    z-index: 2;
+}
+
+.intake-sidebar__brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.logo-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-2xl);
+    background: rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.intake-sidebar__brand p {
+    font-size: var(--font-size-sm);
+    margin: 0;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.intake-sidebar__brand strong {
+    font-size: var(--font-size-lg);
+    color: #fff;
+}
+
+.intake-sidebar__nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.intake-sidebar__nav a {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    font-weight: var(--font-weight-medium);
+    transition: all var(--transition-base);
+    border: 1px solid transparent;
+}
+
+.intake-sidebar__nav a:hover {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.intake-sidebar__nav a.active {
+    background: linear-gradient(120deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
+    color: var(--primary);
+    border-color: transparent;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+}
+
+.intake-sidebar__footer {
+    margin-top: auto;
+    padding: var(--space-4);
+    border-radius: var(--radius-xl);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.intake-sidebar__footer span {
+    display: block;
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.intake-sidebar__footer strong {
+    font-size: var(--font-size-2xl);
+    color: #fff;
+}
+
+.intake-main {
+    background: var(--bg-body);
+    min-height: 100vh;
+}
+
+.intake-main__inner {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: var(--space-10);
+}
+
+.intake-header {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-6);
+    padding: var(--space-8);
+    border-radius: var(--radius-2xl);
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+    color: #fff;
+    box-shadow: var(--shadow-xl);
+}
+
+.intake-header h1 {
+    margin-bottom: var(--space-2);
+}
+
+.intake-header p {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.intake-header__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.branch-pill {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-xl);
+    padding: var(--space-3) var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    min-width: 160px;
+}
+
+.branch-pill span {
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.branch-pill strong {
+    font-size: var(--font-size-lg);
+    color: #fff;
+}
+
+.header-help {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-xl);
+    padding: var(--space-3) var(--space-5);
+    font-weight: var(--font-weight-semibold);
+}
+
+.intake-content-grid {
+    margin-top: var(--space-10);
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1.35fr);
+    gap: var(--space-8);
+    align-items: flex-start;
+}
+
+.intake-content-grid__primary .portal-section {
+    padding: 0;
+}
+
+.intake-content-grid__primary .container {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    max-width: 100% !important;
+}
+
+.registration-card {
+    box-shadow: var(--shadow-lg);
+}
+
+.intake-queue-card {
+    position: sticky;
+    top: var(--space-10);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    padding: var(--space-6);
+    border-radius: var(--radius-2xl);
+    background: linear-gradient(165deg, var(--primary), var(--primary-dark));
+    color: #fff;
+    box-shadow: var(--shadow-2xl);
+}
+
+.intake-queue-card__header {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+    align-items: flex-start;
+}
+
+.intake-queue-card__header h3 {
+    font-size: var(--font-size-3xl);
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+}
+
+.intake-queue-card__header small {
+    font-size: var(--font-size-sm);
+    opacity: 0.8;
+    text-transform: uppercase;
+}
+
+.intake-queue-card__meta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: flex-end;
+}
+
+.queue-branch {
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.15);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+}
+
+.intake-queue-card__meta time {
+    font-size: var(--font-size-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.intake-queue-card__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: var(--space-1);
+}
+
+.queue-empty {
+    padding: var(--space-5);
+    border-radius: var(--radius-xl);
+    background: rgba(255, 255, 255, 0.08);
+    text-align: center;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.queue-empty small {
+    display: block;
+    margin-top: var(--space-2);
+    font-size: var(--font-size-xs);
+    opacity: 0.8;
+}
+
+.queue-item {
+    width: 100%;
+    border: none;
+    border-radius: var(--radius-xl);
+    padding: var(--space-4);
+    display: flex;
+    gap: var(--space-4);
+    align-items: center;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    text-align: left;
+    transition: transform var(--transition-base), background var(--transition-base);
+}
+
+.queue-item:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.queue-item__code {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    min-width: 96px;
+}
+
+.queue-item__content {
+    flex: 1;
+}
+
+.queue-item__customer {
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-1);
+}
+
+.queue-item__vehicle {
+    font-size: var(--font-size-sm);
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0;
+}
+
+.queue-item__meta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: flex-end;
+}
+
+.queue-status {
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.queue-status--success {
+    background: rgba(0, 200, 83, 0.2);
+    color: #9ef1c5;
+}
+
+.queue-status--warning {
+    background: rgba(255, 179, 0, 0.2);
+    color: #ffe0a3;
+}
+
+.queue-status--danger {
+    background: rgba(255, 61, 0, 0.2);
+    color: #ffb39a;
+}
+
+.queue-item__meta time {
+    font-size: var(--font-size-xs);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.queue-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-overlay);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-base);
+    padding: var(--space-4);
+    z-index: var(--z-modal);
+}
+
+.queue-modal.is-open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.queue-modal__overlay {
+    position: absolute;
+    inset: 0;
+}
+
+.queue-modal__dialog {
+    position: relative;
+    background: var(--bg-surface);
+    border-radius: var(--radius-2xl);
+    width: min(520px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-2xl);
+    transform: translateY(24px);
+    transition: transform var(--transition-base);
+}
+
+.queue-modal.is-open .queue-modal__dialog {
+    transform: translateY(0);
+}
+
+.queue-modal__header,
+.queue-modal__footer {
+    padding: var(--space-5) var(--space-6);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.queue-modal__footer {
+    border-top: 1px solid var(--border-light);
+    border-bottom: none;
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-3);
+}
+
+.queue-modal__body {
+    padding: var(--space-6);
+}
+
+.queue-modal__close {
+    background: transparent;
+    color: var(--text-primary);
+    border-radius: var(--radius-full);
+    width: 36px;
+    height: 36px;
+    font-size: 1.25rem;
+}
+
+.queue-ticket {
+    background: linear-gradient(135deg, var(--primary-lightest), #fff);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-md);
+}
+
+.queue-ticket__badge {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-secondary);
+}
+
+.queue-ticket__reg {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+.queue-ticket__number {
+    font-size: var(--font-size-4xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--primary);
+}
+
+.queue-ticket__subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.queue-ticket__info {
+    background: #fff;
+    border-radius: var(--radius-xl);
+    padding: var(--space-4);
+    border: 1px solid var(--border-light);
+}
+
+.queue-ticket__info dl {
+    margin: 0;
+    display: grid;
+    gap: var(--space-3);
+}
+
+.queue-ticket__info dt {
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+.queue-ticket__info dd {
+    margin: 0;
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+}
+
+.queue-ticket__status {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--space-4);
+    text-align: center;
+}
+
+.queue-ticket__status span {
+    display: block;
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.queue-ticket__status strong {
+    font-size: var(--font-size-lg);
+    color: var(--text-primary);
+}
+
+.queue-ticket__steps ul {
+    margin: 0;
+    padding-left: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.queue-ticket__notes {
+    background: #fff;
+    border-radius: var(--radius-xl);
+    padding: var(--space-4);
+    border: 1px dashed var(--border-light);
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
 /* === SECTION SPACING === */
 .portal-section {
     padding: var(--space-12) 0 var(--space-16) !important;
@@ -1068,6 +1595,38 @@ button:disabled {
     .estimate-card {
         position: static;
     }
+
+    .intake-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .intake-sidebar {
+        position: relative;
+        top: auto;
+        min-height: auto;
+        border-radius: 0 0 var(--radius-2xl) var(--radius-2xl);
+        flex-direction: column;
+    }
+
+    .intake-sidebar__nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+
+    .intake-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .intake-content-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .intake-queue-card {
+        position: relative;
+        top: 0;
+    }
 }
 
 @media (max-width: 767px) {
@@ -1098,19 +1657,36 @@ button:disabled {
         padding: var(--space-2) var(--space-4) !important;
         font-size: var(--font-size-xs) !important;
     }
-    
+
     .portal-section {
         padding: var(--space-8) 0 var(--space-12) !important;
     }
-    
+
     .portal-card {
         padding: var(--space-6) !important;
     }
-    
+
+    .intake-sidebar {
+        padding: var(--space-4);
+    }
+
+    .intake-sidebar__nav {
+        overflow-x: auto;
+    }
+
+    .intake-header {
+        padding: var(--space-6);
+    }
+
+    .intake-queue-card__header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
     .portal-card__header h2 {
         font-size: var(--font-size-xl) !important;
     }
-    
+
     .form-banner {
         padding: var(--space-5) !important;
     }
@@ -1173,11 +1749,14 @@ button:disabled {
     .portal-hero--sub,
     .portal-nav-wrapper,
     .portal-nav,
+    .intake-sidebar,
+    .intake-queue-card,
+    .queue-modal,
     button,
     .table-links {
         display: none !important;
     }
-    
+
     .portal-card,
     .form-section {
         box-shadow: none !important;
@@ -1319,37 +1898,51 @@ button:disabled {
 {% endblock %}
 
 {% block page_content %}
-<!-- Header Section -->
-<header class="portal-hero--sub">
-    <div class="container">
-        <div class="portal-hero__brand">
-            <div class="portal-hero__icon">📋</div>
+<section class="intake-shell">
+    <aside class="intake-sidebar">
+        <div class="intake-sidebar__brand">
+            <div class="logo-circle">🚗</div>
             <div>
-                <h1>Registrasi Customer & Kendaraan</h1>
-                <p>Registrasi customer baru dan catat detail kendaraan untuk service</p>
+                <p>AutoCare Workshop</p>
+                <strong>Manager</strong>
             </div>
         </div>
-    </div>
-</header>
-
-<!-- Navigation Wrapper -->
-<div class="portal-nav-wrapper">
-    <div class="container">
-        <nav class="portal-nav">
-            <a href="/garage/intake" class="active">📋 Registrasi</a>
-            <a href="/garage/service">🔧 Servis</a>
+        <nav class="intake-sidebar__nav">
+            <a href="/garage/insight">📊 Insight</a>
+            <a href="/garage/service">🔧 Service Order</a>
             <a href="/garage/sparepart">📦 Sparepart</a>
-            <a href="/garage/procurement">🛒 Pengadaan</a>
-            <a href="/garage/finance">💰 Keuangan</a>
-            <a href="/garage/insight">📊 Report</a>
+            <a href="/garage/procurement">🛒 Procurement</a>
+            <a href="/garage/finance">💰 Finance</a>
+            <a href="/garage/intake" class="active">📝 Customer Registration</a>
+            <a href="/garage/update-progress">⏱️ Update Progress</a>
         </nav>
-    </div>
-</div>
-
+        <div class="intake-sidebar__footer">
+            <span>Branch Code</span>
+            <strong>JKT</strong>
+        </div>
+    </aside>
+    <div class="intake-main">
+        <div class="intake-main__inner">
+            <header class="intake-header">
+                <div>
+                    <p class="portal-eyebrow">Step 1 · Intake Portal</p>
+                    <h1>Registrasi Customer & Kendaraan</h1>
+                    <p>Registrasikan customer baru, pilih kendaraan yang tepat, dan catat keluhan sebelum service dimulai.</p>
+                </div>
+                <div class="intake-header__meta">
+                    <div class="branch-pill">
+                        <span>Cabang Aktif</span>
+                        <strong data-role="branch-display" data-target="intake_branch">JKT</strong>
+                    </div>
+                    <button type="button" class="header-help">Panduan Intake</button>
+                </div>
+            </header>
+            <div class="intake-content-grid">
+                <div class="intake-content-grid__primary">
 <section class="portal-section">
         <div class="container">
             <div class="portal-grid two-column">
-                <article class="portal-card">
+                <article class="portal-card registration-card">
                     <div class="portal-card__header">
                         <h2>Registrasi Customer & Kendaraan</h2>
                         <p class="lead">
@@ -1585,7 +2178,7 @@ button:disabled {
                                     >
                                         Memuat cabang aktif…
                                     </div>
-                                    <input type="hidden" id="intake_branch" name="branch" required />
+                                    <input type="hidden" id="intake_branch" name="branch" required value="JKT" data-default-branch="JKT" />
                                     <p class="form-hint">Cabang mengikuti pilihan di bagian atas portal.</p>
                                 </div>
 
@@ -1691,6 +2284,115 @@ button:disabled {
             </div>
         </div>
     </section>
+                </div>
+                <aside class="portal-card intake-queue-card" aria-live="polite">
+                    <div class="intake-queue-card__header">
+                        <div>
+                            <p class="portal-eyebrow">Today's registrations</p>
+                            <h3>
+                                <span data-role="todays-registration-count">0</span>
+                                <small>antrian</small>
+                            </h3>
+                        </div>
+                        <div class="intake-queue-card__meta">
+                            <span class="queue-branch" data-role="todays-registration-branch">JKT</span>
+                            <time data-role="todays-registration-date">—</time>
+                        </div>
+                    </div>
+                    <div class="intake-queue-card__list" data-role="todays-registration-list">
+                        <div class="queue-empty">
+                            <p>Belum ada registrasi hari ini.</p>
+                            <small>Registrasi baru akan tampil otomatis di sini.</small>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="queue-modal" id="queue-detail-modal" aria-hidden="true">
+    <div class="queue-modal__overlay" data-action="dismiss-queue-modal"></div>
+    <div class="queue-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="queue-modal-title">
+        <header class="queue-modal__header">
+            <div>
+                <p class="portal-eyebrow">Struk Nomor Antrian Inspection</p>
+                <h3 id="queue-modal-title">View Only</h3>
+            </div>
+            <button type="button" class="queue-modal__close" data-action="dismiss-queue-modal">
+                <span class="sr-only">Tutup detail antrian</span>
+                ✕
+            </button>
+        </header>
+        <section class="queue-modal__body">
+            <div class="queue-ticket" data-role="queue-ticket">
+                <div class="queue-ticket__badge">Registration ID</div>
+                <div class="queue-ticket__reg" data-role="queue-registration-id">—</div>
+                <div class="queue-ticket__number" data-role="queue-code">JKT-001</div>
+                <p class="queue-ticket__subtitle">Nomor Antrian</p>
+                <div class="queue-ticket__info">
+                    <h4>Customer Information</h4>
+                    <dl>
+                        <div>
+                            <dt>Nama</dt>
+                            <dd data-role="queue-customer-name">—</dd>
+                        </div>
+                        <div>
+                            <dt>Kontak</dt>
+                            <dd data-role="queue-customer-contact">—</dd>
+                        </div>
+                    </dl>
+                </div>
+                <div class="queue-ticket__info">
+                    <h4>Vehicle Information</h4>
+                    <dl>
+                        <div>
+                            <dt>Unit</dt>
+                            <dd data-role="queue-vehicle">—</dd>
+                        </div>
+                        <div>
+                            <dt>Detail</dt>
+                            <dd data-role="queue-vehicle-meta">—</dd>
+                        </div>
+                    </dl>
+                </div>
+                <div class="queue-ticket__info">
+                    <h4>Keluhan Customer</h4>
+                    <p data-role="queue-notes">—</p>
+                </div>
+                <div class="queue-ticket__status">
+                    <div>
+                        <span>Status</span>
+                        <strong data-role="queue-status">Inspection</strong>
+                    </div>
+                    <div>
+                        <span>Prioritas</span>
+                        <strong data-role="queue-priority">Normal</strong>
+                    </div>
+                    <div>
+                        <span>Tipe Intake</span>
+                        <strong data-role="queue-intake">Walk-In</strong>
+                    </div>
+                </div>
+                <div class="queue-ticket__steps">
+                    <h4>Next Steps</h4>
+                    <ul data-role="queue-next-steps">
+                        <li>Verifikasi data intake dan cetak struk.</li>
+                        <li>Serahkan unit ke tim inspeksi untuk pengecekan awal.</li>
+                    </ul>
+                </div>
+                <div class="queue-ticket__notes">
+                    <h4>Important Notes</h4>
+                    <p>Struk ini bersifat view only untuk konfirmasi customer dan dapat dicetak kapan saja.</p>
+                </div>
+            </div>
+        </section>
+        <footer class="queue-modal__footer">
+            <button type="button" class="secondary" data-action="dismiss-queue-modal">Tutup</button>
+            <button type="button" class="primary" data-action="print-queue">🖨️ Print Struk</button>
+        </footer>
+    </div>
+</div>
 {% endblock %}
 
 {% block script %}
@@ -2767,13 +3469,13 @@ button:disabled {
                 if (pdfResponse.message && pdfResponse.message.success) {
                     const fileUrl = pdfResponse.message.file_url;
                     const fileName = pdfResponse.message.file_name;
-                    
+
                     console.log('📁 File URL:', fileUrl);
                     console.log('📄 File Name:', fileName);
-                    
+
                     // Force download dengan proper handling
                     forceDownloadPDF(fileUrl, fileName);
-                    
+
                 } else {
                     console.warn('⚠️ PDF generation failed, but registration successful');
                     frappe.show_alert({
@@ -2781,7 +3483,11 @@ button:disabled {
                         indicator: 'orange'
                     }, 5);
                 }
-                
+
+                if (window.garageQueueModule && typeof window.garageQueueModule.refresh === 'function') {
+                    window.garageQueueModule.refresh({ showLoader: false });
+                }
+
                 // Step 3: Redirect after success
                 setTimeout(() => {
                     console.log('🔄 Redirecting to service page...');
@@ -2832,6 +3538,385 @@ button:disabled {
     } else {
         initFormSubmit();
     }
+})();
+
+(function initTodayRegistrationPanel() {
+    const listRoot = document.querySelector('[data-role="todays-registration-list"]');
+    if (!listRoot) {
+        return;
+    }
+
+    const countNode = document.querySelector('[data-role="todays-registration-count"]');
+    const dateNode = document.querySelector('[data-role="todays-registration-date"]');
+    const branchNode = document.querySelector('[data-role="todays-registration-branch"]');
+    const modal = document.getElementById('queue-detail-modal');
+    const nextStepsNode = modal ? modal.querySelector('[data-role="queue-next-steps"]') : null;
+    const modalFields = modal
+        ? {
+              queueCode: modal.querySelector('[data-role="queue-code"]'),
+              registrationId: modal.querySelector('[data-role="queue-registration-id"]'),
+              customerName: modal.querySelector('[data-role="queue-customer-name"]'),
+              customerContact: modal.querySelector('[data-role="queue-customer-contact"]'),
+              vehicle: modal.querySelector('[data-role="queue-vehicle"]'),
+              vehicleMeta: modal.querySelector('[data-role="queue-vehicle-meta"]'),
+              notes: modal.querySelector('[data-role="queue-notes"]'),
+              status: modal.querySelector('[data-role="queue-status"]'),
+              priority: modal.querySelector('[data-role="queue-priority"]'),
+              intake: modal.querySelector('[data-role="queue-intake"]'),
+          }
+        : {};
+    const printButton = modal ? modal.querySelector('[data-action="print-queue"]') : null;
+
+    const DATE_FORMATTER = new Intl.DateTimeFormat('id-ID', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    });
+    const TIME_FORMATTER = new Intl.DateTimeFormat('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+
+    const state = {
+        records: [],
+        lookup: new Map(),
+        active: null,
+        timer: null,
+        lastBranch: null,
+    };
+
+    function setDateLabel() {
+        if (dateNode) {
+            dateNode.textContent = DATE_FORMATTER.format(new Date());
+        }
+    }
+
+    function getBranchValue() {
+        const branchInput = document.getElementById('intake_branch');
+        if (!branchInput) {
+            return 'JKT';
+        }
+        const fallback = branchInput.dataset.defaultBranch || 'JKT';
+        const value = (branchInput.value || '').trim();
+        return value || fallback || 'JKT';
+    }
+
+    function buildVehicleLine(record) {
+        const segments = [];
+        if (record.vehicle_plate) {
+            segments.push(record.vehicle_plate);
+        }
+        const descriptor = [record.vehicle_brand, record.vehicle_model]
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+        if (descriptor) {
+            segments.push(descriptor);
+        }
+        return segments.join(' · ') || '—';
+    }
+
+    function getStatusInfo(status) {
+        const label = status || 'Inspection';
+        const normalized = label.toLowerCase();
+        if (['completed', 'approved', 'work in progress'].some((value) => normalized.includes(value))) {
+            return { label, className: 'queue-status--success' };
+        }
+        if (['awaiting approval', 'estimate', 'inspection', 'draft'].some((value) => normalized.includes(value))) {
+            return { label, className: 'queue-status--warning' };
+        }
+        if (['cancelled', 'reject'].some((value) => normalized.includes(value))) {
+            return { label, className: 'queue-status--danger' };
+        }
+        return { label, className: '' };
+    }
+
+    function normalizeOrder(order, index, branchCode) {
+        const baseBranch = (order.branch_code || branchCode || order.branch || 'JKT').toString().toUpperCase();
+        const queueCode = `${baseBranch}-${String(index + 1).padStart(3, '0')}`;
+        const statusInfo = getStatusInfo(order.status);
+        return {
+            id: order.name || queueCode,
+            queueCode,
+            customer_name: order.customer_name || order.customer || 'Customer Baru',
+            customer_phone: order.customer_phone || order.primary_contact || order.phone || '',
+            vehicle_plate: (order.vehicle_plate || order.license_plate || order.vehicle || '').toUpperCase(),
+            vehicle_brand: order.vehicle_brand || '',
+            vehicle_model: order.vehicle_model || '',
+            vehicle_year: order.vehicle_year || '',
+            vehicle_variant: order.vehicle_model_variant || '',
+            status: statusInfo.label,
+            statusClass: statusInfo.className,
+            created_on: order.creation || order.modified || '',
+            created_label: order.creation ? TIME_FORMATTER.format(new Date(order.creation)) : '—',
+            notes: order.service_notes || order.inspection_summary || order.notes || '',
+            priority: order.priority || 'Normal',
+            intake_type: order.intake_type || 'Walk-In',
+        };
+    }
+
+    function showLoading() {
+        listRoot.innerHTML = '<div class="queue-empty"><p>Memuat data antrian…</p></div>';
+    }
+
+    async function refresh(options = {}) {
+        if (options.showLoader !== false) {
+            showLoading();
+        }
+
+        if (!window.garageCall) {
+            return;
+        }
+
+        const branch = getBranchValue();
+        state.lastBranch = branch;
+        if (branchNode) {
+            branchNode.textContent = branch;
+        }
+
+        try {
+            const today = new Date().toISOString().slice(0, 10);
+            const response = await window.garageCall({
+                method: 'garage.api.portal.list_service_orders',
+                args: { filters: { branch, from_date: today, to_date: today } },
+            });
+            const payload = response?.message?.orders ? response.message : response?.message || response;
+            const orders = Array.isArray(payload?.orders) ? payload.orders : [];
+            const sorted = orders
+                .slice()
+                .sort((a, b) => (a.creation || '').localeCompare(b.creation || ''));
+            state.records = sorted.map((order, index) => normalizeOrder(order, index, branch));
+            state.lookup = new Map(state.records.map((record) => [record.id, record]));
+            if (countNode) {
+                countNode.textContent = state.records.length;
+            }
+            renderList();
+        } catch (error) {
+            console.error('Failed to load today\'s registrations', error);
+            listRoot.innerHTML = '<div class="queue-empty queue-empty--error"><p>Tidak dapat memuat data antrian.</p></div>';
+        }
+    }
+
+    function renderList() {
+        if (!state.records.length) {
+            listRoot.innerHTML = '<div class="queue-empty"><p>Belum ada registrasi hari ini.</p><small>Registrasi baru akan tampil otomatis di sini.</small></div>';
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        state.records.forEach((record) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'queue-item';
+            button.dataset.registrationId = record.id;
+            button.innerHTML = `
+                <span class="queue-item__code">${escapeHtml(record.queueCode)}</span>
+                <div class="queue-item__content">
+                    <p class="queue-item__customer">${escapeHtml(record.customer_name)}</p>
+                    <p class="queue-item__vehicle">${escapeHtml(buildVehicleLine(record))}</p>
+                </div>
+                <div class="queue-item__meta">
+                    <span class="queue-status ${record.statusClass}">${escapeHtml(record.status)}</span>
+                    <time>${record.created_label}</time>
+                </div>
+            `;
+            fragment.appendChild(button);
+        });
+
+        listRoot.innerHTML = '';
+        listRoot.appendChild(fragment);
+    }
+
+    function renderNextSteps(record) {
+        if (!nextStepsNode) {
+            return;
+        }
+        nextStepsNode.innerHTML = '';
+        const steps = buildNextSteps(record);
+        steps.forEach((step) => {
+            const li = document.createElement('li');
+            li.textContent = step;
+            nextStepsNode.appendChild(li);
+        });
+    }
+
+    function buildNextSteps(record) {
+        const steps = [`Status saat ini: ${record.status}`];
+        if ((record.priority || '').toLowerCase() === 'urgent') {
+            steps.push('Prioritaskan antrian ini dan arahkan unit ke jalur inspeksi cepat.');
+        } else {
+            steps.push('Lanjutkan pengecekan awal lalu perbarui status di portal.');
+        }
+        steps.push('Gunakan tombol Print untuk menyerahkan struk ke customer.');
+        return steps;
+    }
+
+    function updateModal(record) {
+        if (!modal) {
+            return;
+        }
+        if (modalFields.queueCode) {
+            modalFields.queueCode.textContent = record.queueCode;
+        }
+        if (modalFields.registrationId) {
+            modalFields.registrationId.textContent = record.id;
+        }
+        if (modalFields.customerName) {
+            modalFields.customerName.textContent = record.customer_name || '—';
+        }
+        if (modalFields.customerContact) {
+            modalFields.customerContact.textContent = record.customer_phone || '—';
+        }
+        if (modalFields.vehicle) {
+            modalFields.vehicle.textContent = buildVehicleLine(record);
+        }
+        if (modalFields.vehicleMeta) {
+            const meta = [record.vehicle_year, record.vehicle_variant]
+                .filter(Boolean)
+                .join(' · ');
+            modalFields.vehicleMeta.textContent = meta || '—';
+        }
+        if (modalFields.notes) {
+            modalFields.notes.textContent = record.notes || 'Tidak ada catatan tambahan.';
+        }
+        if (modalFields.status) {
+            modalFields.status.textContent = record.status;
+        }
+        if (modalFields.priority) {
+            modalFields.priority.textContent = record.priority || 'Normal';
+        }
+        if (modalFields.intake) {
+            modalFields.intake.textContent = record.intake_type || 'Walk-In';
+        }
+        renderNextSteps(record);
+    }
+
+    function openModal(record) {
+        if (!modal || !record) {
+            return;
+        }
+        state.active = record;
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        updateModal(record);
+        const closeButton = modal.querySelector('.queue-modal__close');
+        if (closeButton) {
+            setTimeout(() => closeButton.focus(), 100);
+        }
+    }
+
+    function closeModal() {
+        if (!modal) {
+            return;
+        }
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        state.active = null;
+    }
+
+    function handleListClick(event) {
+        const origin = event.target instanceof Element ? event.target : null;
+        const target = origin ? origin.closest('[data-registration-id]') : null;
+        if (!target) {
+            return;
+        }
+        const record = state.lookup.get(target.dataset.registrationId);
+        if (record) {
+            openModal(record);
+        }
+    }
+
+    function handleStateUpdate(event) {
+        const incomingBranch = event?.detail?.state?.active_branch;
+        if (incomingBranch && incomingBranch !== state.lastBranch) {
+            refresh({ showLoader: false });
+        }
+    }
+
+    function openPrintWindow(record) {
+        const printWindow = window.open('', '_blank', 'width=420,height=640');
+        if (!printWindow) {
+            showNotification('Tidak dapat membuka jendela print.', 'warning');
+            return;
+        }
+        const created = record.created_on ? new Date(record.created_on) : new Date();
+        const html = `<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Struk Antrian ${escapeHtml(record.queueCode)}</title>
+        <style>
+            body { font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 24px; background: #f3f4f6; color: #111827; }
+            .ticket { background: #fff; border-radius: 20px; padding: 24px; border: 1px solid #e5e7eb; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08); }
+            .ticket h1 { margin: 0 0 8px; font-size: 32px; color: #2563eb; }
+            .ticket p { margin: 4px 0; font-size: 14px; }
+            dl { margin: 16px 0 0; }
+            dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: #94a3b8; }
+            dd { margin: 0 0 8px; font-size: 14px; color: #111827; }
+        </style>
+    </head>
+    <body>
+        <div class="ticket">
+            <p>Registration ID</p>
+            <h1>${escapeHtml(record.queueCode)}</h1>
+            <p>${escapeHtml(record.id)}</p>
+            <dl>
+                <dt>Customer</dt>
+                <dd>${escapeHtml(record.customer_name)}</dd>
+                <dt>Kontak</dt>
+                <dd>${escapeHtml(record.customer_phone || '—')}</dd>
+                <dt>Kendaraan</dt>
+                <dd>${escapeHtml(buildVehicleLine(record))}</dd>
+                <dt>Status</dt>
+                <dd>${escapeHtml(record.status)} · ${escapeHtml(record.priority || 'Normal')}</dd>
+                <dt>Tanggal</dt>
+                <dd>${escapeHtml(created.toLocaleString('id-ID'))}</dd>
+            </dl>
+            <p style="margin-top:16px;font-size:12px;color:#6b7280;">Cetak struk ini dan serahkan kepada customer sebagai bukti antrian inspeksi.</p>
+        </div>
+        <script>window.addEventListener('load', function() { window.print(); });<\/script>
+    </body>
+</html>`;
+        printWindow.document.write(html);
+        printWindow.document.close();
+    }
+
+    listRoot.addEventListener('click', handleListClick);
+    document.addEventListener('garage-portal:state-updated', handleStateUpdate);
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeModal();
+        }
+    });
+
+    if (modal) {
+        modal.querySelectorAll('[data-action="dismiss-queue-modal"]').forEach((element) => {
+            element.addEventListener('click', closeModal);
+        });
+    }
+
+    if (printButton) {
+        printButton.addEventListener('click', () => {
+            if (state.active) {
+                openPrintWindow(state.active);
+            }
+        });
+    }
+
+    window.addEventListener('pagehide', () => {
+        if (state.timer) {
+            clearInterval(state.timer);
+        }
+    });
+
+    setDateLabel();
+    refresh();
+    state.timer = setInterval(() => refresh({ showLoader: false }), 60000);
+
+    window.garageQueueModule = {
+        refresh,
+    };
 })();
 
 
