@@ -16,8 +16,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
     body {
-        background: #f0f4ff !important;
+        background: linear-gradient(135deg, #eff6ff, #e2e8f0) !important;
         font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+        min-height: 100vh;
     }
 
     .portal-login {
@@ -30,47 +31,77 @@
 
     .portal-login__card {
         width: 100%;
-        max-width: 420px;
+        max-width: 460px;
         background: #ffffff;
-        border-radius: 20px;
-        box-shadow: 0 24px 48px rgba(0, 41, 120, 0.18);
-        padding: 40px;
-        border: 1px solid rgba(0, 102, 255, 0.08);
+        border-radius: 24px;
+        box-shadow: 0 35px 60px rgba(15, 23, 42, 0.18);
+        overflow: hidden;
+        border: 1px solid rgba(59, 130, 246, 0.15);
     }
 
-    .portal-login__logo {
+    .portal-login__card-header {
+        background: linear-gradient(120deg, #3b82f6, #2563eb);
+        padding: 48px 32px 40px;
+        color: #ffffff;
+        text-align: center;
+    }
+
+    .portal-login__emblem {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 16px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.18);
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 12px;
-        margin-bottom: 32px;
-        color: #0052cc;
-        font-weight: 700;
-        font-size: 1.5rem;
+        font-size: 2rem;
+        backdrop-filter: blur(6px);
+    }
+
+    .portal-login__title {
+        font-size: 1.75rem;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .portal-login__subtitle {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.85);
+    }
+
+    .portal-login__body {
+        padding: 40px;
     }
 
     .portal-login__heading {
         text-align: center;
-        margin-bottom: 32px;
+        margin-bottom: 28px;
     }
 
     .portal-login__heading h1 {
-        font-size: 1.625rem;
-        margin-bottom: 8px;
-        font-weight: 700;
-        color: #002978;
+        font-size: 1.5rem;
+        margin-bottom: 6px;
+        font-weight: 600;
+        color: #1e293b;
     }
 
     .portal-login__heading p {
-        color: #5e6c84;
+        color: #64748b;
         font-size: 0.95rem;
+    }
+
+    .portal-login__form {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
     }
 
     .portal-login__form label {
         display: block;
         font-weight: 600;
         margin-bottom: 8px;
-        color: #002978;
+        color: #0f172a;
         font-size: 0.9rem;
     }
 
@@ -78,31 +109,38 @@
         width: 100%;
         padding: 14px 16px;
         border-radius: 12px;
-        border: 1px solid rgba(0, 41, 120, 0.15);
-        background: #f7f9ff;
+        border: 1px solid rgba(15, 23, 42, 0.15);
+        background: #f8fafc;
         font-size: 0.95rem;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
     }
 
     .portal-login__form input:focus {
-        border-color: #0066ff;
-        box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
         outline: none;
         background: #ffffff;
     }
 
     .portal-login__button {
         width: 100%;
-        margin-top: 12px;
         padding: 14px;
         border-radius: 12px;
-        background: linear-gradient(135deg, #0066ff, #003d99);
+        background: #3b82f6;
         color: #ffffff;
         font-weight: 600;
         font-size: 1rem;
         border: none;
         cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .portal-login__button svg.spin {
+        animation: portal-spin 1s linear infinite;
     }
 
     .portal-login__button:disabled {
@@ -112,35 +150,67 @@
 
     .portal-login__button:hover:not(:disabled) {
         transform: translateY(-1px);
-        box-shadow: 0 12px 24px rgba(0, 41, 120, 0.22);
+        box-shadow: 0 15px 30px rgba(37, 99, 235, 0.35);
+        background: #2563eb;
     }
 
     .portal-login__status {
-        margin-top: 16px;
+        margin-top: 4px;
         font-size: 0.9rem;
         text-align: center;
     }
 
     .portal-login__status--error {
-        color: #c62828;
+        color: #b91c1c;
+        background: #fee2e2;
+        border: 1px solid #fecaca;
+        border-radius: 10px;
+        padding: 12px;
     }
 
     .portal-login__status--success {
-        color: #1b5e20;
+        color: #15803d;
+        background: #dcfce7;
+        border: 1px solid #bbf7d0;
+        border-radius: 10px;
+        padding: 12px;
     }
 
     .portal-login__status--info {
-        color: #0052cc;
+        color: #1d4ed8;
+        background: #e0edff;
+        border: 1px solid #cbd5ff;
+        border-radius: 10px;
+        padding: 12px;
     }
 
-    @media (max-width: 480px) {
-        .portal-login__card {
+    .portal-login__note {
+        margin-top: 28px;
+        padding: 16px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        color: #475569;
+        line-height: 1.4;
+    }
+
+    @keyframes portal-spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    @media (max-width: 520px) {
+        .portal-login__body {
             padding: 32px 24px;
-            border-radius: 16px;
         }
 
-        .portal-login__heading h1 {
-            font-size: 1.4rem;
+        .portal-login__card-header {
+            padding: 40px 24px 32px;
         }
     }
 </style>
@@ -149,26 +219,39 @@
 {% block page_content %}
 <section class="portal-login">
     <div class="portal-login__card">
-        <div class="portal-login__logo">
-            <span>🚗</span>
-            <span>Garage Portal</span>
+        <div class="portal-login__card-header">
+            <div class="portal-login__emblem">🔧</div>
+            <div class="portal-login__title">AutoCare Workshop</div>
+            <div class="portal-login__subtitle">Sistem Manajemen Bengkel Multi Cabang</div>
         </div>
-        <div class="portal-login__heading">
-            <h1>Masuk ke Portal Bengkel</h1>
-            <p>Pilih peran Anda untuk mengakses modul yang sesuai.</p>
+        <div class="portal-login__body">
+            <div class="portal-login__heading">
+                <h1>Masuk ke Pravenya</h1>
+                <p>Gunakan kredensial portal bengkel Anda untuk melanjutkan.</p>
+            </div>
+            <form id="portal-login-form" class="portal-login__form">
+                <div class="form-group">
+                    <label for="login-username">Username / Email</label>
+                    <input type="text" id="login-username" name="usr" placeholder="contoh: advisor@cabang.id" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" name="pwd" placeholder="Masukkan password" required>
+                </div>
+                <button type="submit" class="portal-login__button">
+                    <span style="display:flex;align-items:center;gap:8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 17L15 12L10 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span>Login</span>
+                    </span>
+                </button>
+                <div class="portal-login__status" id="login-status" hidden></div>
+            </form>
+            <div class="portal-login__note">
+                Gunakan akun Pravenya yang memiliki akses ke portal bengkel untuk mengelola layanan dan operasional cabang Anda.
+            </div>
         </div>
-        <form id="portal-login-form" class="portal-login__form">
-            <div class="form-group">
-                <label for="login-username">Email atau Username</label>
-                <input type="text" id="login-username" name="usr" placeholder="nama@contoh.com" required>
-            </div>
-            <div class="form-group" style="margin-top: 20px;">
-                <label for="login-password">Kata Sandi</label>
-                <input type="password" id="login-password" name="pwd" placeholder="Masukkan kata sandi" required>
-            </div>
-            <button type="submit" class="portal-login__button">Masuk</button>
-            <div class="portal-login__status" id="login-status" hidden></div>
-        </form>
     </div>
 </section>
 {% endblock %}
@@ -183,6 +266,7 @@
 
         const status = document.getElementById('login-status');
         const button = form.querySelector('button[type="submit"]');
+        const defaultButtonContent = button.innerHTML;
 
         function showStatus(message, type) {
             status.textContent = message;
@@ -211,6 +295,19 @@
             }
 
             button.disabled = true;
+            button.innerHTML = '<span style="display:flex;align-items:center;gap:8px;">' +
+                '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="spin">' +
+                '<path d="M12 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />' +
+                '<path d="M12 18V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />' +
+                '<path d="M4.93 4.93L7.76 7.76" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />' +
+                '<path d="M16.24 16.24L19.07 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />' +
+                '<path d="M2 12H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />' +
+                '<path d="M18 12H22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />' +
+                '<path d="M4.93 19.07L7.76 16.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />' +
+                '<path d="M16.24 7.76L19.07 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />' +
+                '</svg>' +
+                '<span>Memproses…</span>' +
+                '</span>';
             showStatus('Memproses login...', 'info');
 
             try {
@@ -235,6 +332,7 @@
                 showStatus('Terjadi kesalahan saat menghubungkan ke server.', 'error');
             } finally {
                 button.disabled = false;
+                button.innerHTML = defaultButtonContent;
             }
         });
     })();
