@@ -103,12 +103,12 @@ export async function logoutPortal(): Promise<void> {
 }
 
 export async function fetchSessionUser(): Promise<PortalUserProfile> {
-  // Pakai custom whitelisted method
+  // Pakai custom whitelisted method (gunakan POST default agar kompatibel di semua versi Frappe)
   const response = await apiRequest<{
     id: string;
     full_name: string;
     email: string;
-  }>('/api/method/garage.api.auth.get_logged_user', { method: 'GET' });
+  }>('/api/method/garage.api.auth.get_logged_user');
 
   return {
     id: response.id,
