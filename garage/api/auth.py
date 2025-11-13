@@ -64,7 +64,7 @@ PORTAL_NAV_ITEMS: List[Dict[str, Any]] = [
 # errors in environments that do not yet support HTTP method filters on
 # ``frappe.whitelist``. Keeping the decorator simple ensures compatibility with
 # older Frappe releases that may back this repository.
-@frappe.whitelist(allow_guest=False)
+@frappe.whitelist(allow_guest=True)
 def get_logged_user() -> Dict[str, str]:
     """Get current logged in user profile information.
     
@@ -74,11 +74,15 @@ def get_logged_user() -> Dict[str, str]:
     user = frappe.session.user
     
     if user == "Guest":
-        frappe.throw("Not logged in", frappe.PermissionError)
-    
+        # Mirror frappe.auth.get_logged_user behaviour and allow guests to
+        # discover whether they already have an authenticated session.  The
+        # frontend treats a ``Guest`` response as an unauthenticated state and
+        # will prompt the user to log in.
+        return {"id": "Guest", "full_name": "Guest", "email": ""}
+
     # Get user document
     user_doc = frappe.get_doc("User", user)
-    
+
     return {
         "id": user,
         "full_name": user_doc.full_name or user,
