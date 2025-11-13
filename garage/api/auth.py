@@ -60,6 +60,28 @@ PORTAL_NAV_ITEMS: List[Dict[str, Any]] = [
 
 
 @frappe.whitelist(allow_guest=False)
+def get_logged_user() -> Dict[str, str]:
+    """Get current logged in user profile information.
+    
+    Returns user ID, full name, and email for the authenticated session user.
+    This is a whitelisted alternative to frappe.auth.get_logged_user.
+    """
+    user = frappe.session.user
+    
+    if user == "Guest":
+        frappe.throw("Not logged in", frappe.PermissionError)
+    
+    # Get user document
+    user_doc = frappe.get_doc("User", user)
+    
+    return {
+        "id": user,
+        "full_name": user_doc.full_name or user,
+        "email": user_doc.email or user,
+    }
+
+
+@frappe.whitelist(allow_guest=False)
 def get_portal_home() -> Dict[str, str]:
     """Return the default portal landing page for the current session user.
 
@@ -144,4 +166,3 @@ def keep_portal_session_alive() -> Dict[str, str]:
         raise frappe.PermissionError(frappe._("Please log in to access the portal."))
 
     return {"user": user, "refreshed_at": now()}
-

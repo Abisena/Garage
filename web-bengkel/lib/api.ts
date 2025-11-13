@@ -13,21 +13,10 @@ const getBaseUrl = () => {
     return cachedBaseUrl;
   }
 
-  const envBase = process.env.NEXT_PUBLIC_PRAVENYA_URL;
-  if (envBase) {
-    cachedBaseUrl = normalizeBaseUrl(envBase);
-    return cachedBaseUrl;
-  }
-
-  if (typeof window !== 'undefined' && window.location?.origin) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('NEXT_PUBLIC_PRAVENYA_URL is not configured; defaulting to current origin');
-    }
-    cachedBaseUrl = normalizeBaseUrl(window.location.origin);
-    return cachedBaseUrl;
-  }
-
-  throw new Error('NEXT_PUBLIC_PRAVENYA_URL is not configured');
+  // Gunakan env variable untuk production
+  const envBase = process.env.NEXT_PUBLIC_PRAVENYA_URL || 'http://127.0.0.1:8005';
+  cachedBaseUrl = normalizeBaseUrl(envBase);
+  return cachedBaseUrl;
 };
 
 type SerializableBody = Record<string, unknown> | unknown[] | null | undefined;
@@ -45,7 +34,13 @@ async function apiRequest<T = unknown>(path: string, options: RequestOptions = {
 
   if (options.rawBody !== undefined) {
     body = options.rawBody ?? undefined;
-  } else if (body && typeof body === 'object' && !(body instanceof FormData) && !(body instanceof URLSearchParams) && !(body instanceof Blob)) {
+  } else if (
+    body &&
+    typeof body === 'object' &&
+    !(body instanceof FormData) &&
+    !(body instanceof URLSearchParams) &&
+    !(body instanceof Blob)
+  ) {
     headers.set('Content-Type', 'application/json');
     body = JSON.stringify(body);
   }
@@ -108,22 +103,17 @@ export async function logoutPortal(): Promise<void> {
 }
 
 export async function fetchSessionUser(): Promise<PortalUserProfile> {
-  const userId = await apiRequest<string>('/api/method/frappe.auth.get_logged_user', { method: 'GET' });
-  const detail = await apiRequest<{ message: { full_name?: string; email?: string } }>(
-    '/api/method/frappe.client.get_value',
-    {
-      body: {
-        doctype: 'User',
-        filters: { name: userId },
-        fieldname: ['full_name', 'email'],
-      },
-    },
-  );
-  const info = detail?.message || {};
+  // Pakai custom whitelisted method
+  const response = await apiRequest<{
+    id: string;
+    full_name: string;
+    email: string;
+  }>('/api/method/garage.api.auth.get_logged_user', { method: 'GET' });
+
   return {
-    id: userId,
-    fullName: info.full_name || userId,
-    email: info.email || userId,
+    id: response.id,
+    fullName: response.full_name || response.id,
+    email: response.email || response.id,
   };
 }
 

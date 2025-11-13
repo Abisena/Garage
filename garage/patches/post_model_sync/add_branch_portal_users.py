@@ -1,8 +1,11 @@
 """Seed default portal users with branch access."""
 
-"""Seed default portal users with branch access."""
-
 from __future__ import annotations
+
+from typing import Optional, Tuple
+
+import frappe
+from frappe.utils.password import update_password
 
 from typing import Optional, Tuple
 
