@@ -59,7 +59,11 @@ PORTAL_NAV_ITEMS: List[Dict[str, Any]] = [
 ]
 
 
-@frappe.whitelist(allow_guest=False)
+# ``fetchSessionUser`` on the Next.js frontend issues a ``GET`` request, so we
+# explicitly allow the same HTTP method here. Without this, Frappe would reject
+# the call with a "method not allowed" style PermissionError even though the
+# endpoint is decorated as whitelisted.
+@frappe.whitelist(methods=["GET"], allow_guest=False)
 def get_logged_user() -> Dict[str, str]:
     """Get current logged in user profile information.
     
