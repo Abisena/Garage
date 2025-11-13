@@ -13,8 +13,8 @@ const getBaseUrl = () => {
     return cachedBaseUrl;
   }
 
-  // Gunakan env variable untuk production
-  const envBase = process.env.NEXT_PUBLIC_PRAVENYA_URL || 'http://127.0.0.1:8005';
+  // Gunakan env variable untuk production, fallback ke proxy bawaan Next.js
+  const envBase = process.env.NEXT_PUBLIC_PRAVENYA_URL || '/api/pravenya';
   cachedBaseUrl = normalizeBaseUrl(envBase);
   return cachedBaseUrl;
 };

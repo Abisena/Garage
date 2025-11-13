@@ -3,11 +3,17 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 ## Getting Started
 
 First, configure the Pravenya base URL that exposes the Garage API. Create a `.env.local`
-file in this directory and point `NEXT_PUBLIC_PRAVENYA_URL` to your site (for example
-`http://pravenya.local:8000`).
+file in this directory and point `PRAVENYA_API_BASE_URL` to your site (for example
+`http://pravenya.local:8000`). The frontend automatically proxies all requests through
+`/api/pravenya`, so in most cases you do not need to expose the remote origin to the
+browser. If you prefer to bypass the proxy you can still set `NEXT_PUBLIC_PRAVENYA_URL`
+to the full URL of your Pravenya instance, but by default the app will use the built-in
+proxy for better CORS and session handling.
 
 ```
-NEXT_PUBLIC_PRAVENYA_URL=http://pravenya.local:8000
+PRAVENYA_API_BASE_URL=http://pravenya.local:8000
+# Optional override:
+# NEXT_PUBLIC_PRAVENYA_URL=http://pravenya.local:8000
 ```
 
 Then run the development server:
