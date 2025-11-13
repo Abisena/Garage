@@ -104,11 +104,18 @@ export async function logoutPortal(): Promise<void> {
 
 export async function fetchSessionUser(): Promise<PortalUserProfile> {
   // Pakai custom whitelisted method (gunakan POST default agar kompatibel di semua versi Frappe)
-  const response = await apiRequest<{
-    id: string;
-    full_name: string;
-    email: string;
-  }>('/api/method/garage.api.auth.get_logged_user');
+  const response = await apiRequest<
+    | {
+        id?: string | null;
+        full_name?: string | null;
+        email?: string | null;
+      }
+    | null
+  >('/api/method/garage.api.auth.get_logged_user');
+
+  if (!response || !response.id) {
+    throw new Error('Sesi tidak ditemukan atau tidak valid. Silakan login kembali.');
+  }
 
   return {
     id: response.id,
