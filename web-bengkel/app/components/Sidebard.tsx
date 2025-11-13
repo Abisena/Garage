@@ -42,8 +42,29 @@ const menuItems = [
   { id: 'settings', label: 'Log History', icon: Settings, navKey: 'log-history' },
 ];
 
+const getUserInitials = (fullName?: string) => {
+  if (!fullName) {
+    return '??';
+  }
+
+  const initials = fullName
+    .trim()
+    .split(/\s+/)
+    .map((word) => word[0])
+    .filter(Boolean)
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  return initials || '??';
+};
+
 export function Sidebar({ currentPage, setCurrentPage, currentUser }: SidebarProps) {
   const { allowedNavKeys } = usePortalData();
+
+  const initials = getUserInitials(currentUser?.fullName);
+  const displayName = currentUser?.fullName || 'Pengguna Tanpa Nama';
+  const displayEmail = currentUser?.email || 'Email tidak tersedia';
 
   return (
     <aside className="w-64 bg-slate-900 text-white flex flex-col fixed left-0 top-0 h-screen">
@@ -98,17 +119,11 @@ export function Sidebar({ currentPage, setCurrentPage, currentUser }: SidebarPro
       <div className="p-4 border-t border-slate-800">
         <div className="flex items-center gap-3 px-4 py-3">
           <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center uppercase">
-            <span className="text-slate-300 text-sm">
-              {currentUser.fullName
-                .split(' ')
-                .map((word) => word[0])
-                .join('')
-                .slice(0, 2)}
-            </span>
+            <span className="text-slate-300 text-sm">{initials}</span>
           </div>
           <div className="flex-1">
-            <p className="text-white text-sm">{currentUser.fullName}</p>
-            <p className="text-slate-400 text-xs truncate">{currentUser.email}</p>
+            <p className="text-white text-sm">{displayName}</p>
+            <p className="text-slate-400 text-xs truncate">{displayEmail}</p>
           </div>
         </div>
       </div>
