@@ -2,7 +2,15 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+First, configure the Pravenya base URL that exposes the Garage API. Create a `.env.local`
+file in this directory and point `NEXT_PUBLIC_PRAVENYA_URL` to your site (for example
+`http://pravenya.local:8000`).
+
+```
+NEXT_PUBLIC_PRAVENYA_URL=http://pravenya.local:8000
+```
+
+Then run the development server:
 
 ```bash
 npm run dev

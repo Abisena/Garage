@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import watermarkLogo from 'figma:asset/5ef42b457e7713cd266d609b04b7f121b13997b7.png';
 
 interface WorkOrder {
   id: string;
@@ -27,7 +26,7 @@ interface WorkOrder {
   branch: string;
   date: string;
   mechanicName?: string;
-  spareParts?: any[];
+  spareParts?: SparePart[];
 }
 
 interface SparePart {

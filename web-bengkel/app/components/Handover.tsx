@@ -1,191 +1,177 @@
 'use client';
 
-import React from 'react';
-import { Car, CheckCircle, FileText, Key } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Car, Key, RefreshCcw } from 'lucide-react';
+import { usePortalData } from '../context/PortalDataContext';
 import { Button } from './ui/button';
 
+function formatDate(value?: string | null) {
+  if (!value) {
+    return '-';
+  }
+  try {
+    return new Date(value).toLocaleString('id-ID');
+  } catch {
+    return value;
+  }
+}
+
+function daysSince(dateValue?: string | null) {
+  if (!dateValue) {
+    return null;
+  }
+  try {
+    const now = new Date();
+    const target = new Date(dateValue);
+    return Math.floor((now.getTime() - target.getTime()) / (1000 * 60 * 60 * 24));
+  } catch {
+    return null;
+  }
+}
+
 export function Handover() {
-  const readyForHandover = [
-    {
-      orderId: 'ORD-002',
-      customer: 'Siti Rahayu',
-      phone: '+62 813-4567-8901',
-      vehicle: 'Honda Jazz 2019',
-      plate: 'B 5678 ABC',
-      servicesCompleted: ['Brake Pad Replacement', 'Brake Fluid Change'],
-      paymentStatus: 'Paid',
-      parkingBay: 'A-12'
-    }
-  ];
+  const { data, refresh } = usePortalData();
+  const serviceOrders = data?.service_orders || [];
 
-  const handoverChecklist = [
-    'Vehicle cleaned and washed',
-    'All tools and equipment removed',
-    'Work order signed and completed',
-    'Payment confirmed',
-    'Keys prepared',
-    'Vehicle parked in handover area'
-  ];
+  const readyOrders = useMemo(() => {
+    return serviceOrders.filter((order) => (order.status || '') === 'Completed' && !order.actual_delivery_date);
+  }, [serviceOrders]);
 
-  const maintenanceTips = [
-    'Check brake fluid every 6 months',
-    'Inspect brake pads every 10,000 km',
-    'Avoid sudden braking when possible',
-    'Schedule next service in 3 months'
-  ];
+  const deliveredOrders = useMemo(() => {
+    return serviceOrders
+      .filter((order) => order.status === 'Completed' && order.actual_delivery_date)
+      .sort((a, b) => {
+        const dateA = a.actual_delivery_date ? new Date(a.actual_delivery_date).getTime() : 0;
+        const dateB = b.actual_delivery_date ? new Date(b.actual_delivery_date).getTime() : 0;
+        return dateB - dateA;
+      })
+      .slice(0, 5);
+  }, [serviceOrders]);
+
+  const stats = useMemo(() => {
+    const today = new Date();
+    const todayDeliveries = deliveredOrders.filter((order) => {
+      if (!order.actual_delivery_date) {
+        return false;
+      }
+      const delivered = new Date(order.actual_delivery_date);
+      return delivered.toDateString() === today.toDateString();
+    }).length;
+    const completedThisWeek = deliveredOrders.filter((order) => {
+      const diff = daysSince(order.actual_delivery_date);
+      return diff !== null && diff <= 7;
+    }).length;
+    return [
+      { label: 'Ready for Pickup', value: readyOrders.length },
+      { label: 'Delivered Today', value: todayDeliveries },
+      { label: 'Delivered (7d)', value: completedThisWeek },
+    ];
+  }, [deliveredOrders, readyOrders.length]);
 
   return (
     <div className="p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-blue-500 rounded-lg p-2">
-                <Car className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-slate-800">Vehicle Handover</h1>
-                <p className="text-slate-600">Step 8: Return vehicle to customer</p>
-              </div>
-            </div>
+            <h1 className="text-slate-800 mb-1">Vehicle Handover</h1>
+            <p className="text-slate-600">Pastikan kendaraan yang sudah selesai servis segera diserahkan ke customer.</p>
           </div>
+          <Button variant="outline" onClick={() => refresh()} className="flex items-center gap-2">
+            <RefreshCcw className="w-4 h-4" /> Refresh Data
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {stats.map((stat) => (
+            <div key={stat.label} className="bg-white rounded-xl p-4 border border-slate-200 text-center">
+              <p className="text-slate-500 text-sm mb-1">{stat.label}</p>
+              <p className="text-slate-900 text-2xl">{stat.value}</p>
+            </div>
+          ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Ready for Handover */}
-            {readyForHandover.map((item, index) => (
-              <div key={index} className="bg-white rounded-xl border border-slate-200">
-                <div className="p-6 border-b border-slate-200">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-slate-900 mb-1">{item.orderId} - {item.customer}</h3>
-                      <p className="text-slate-600">{item.vehicle}</p>
-                      <p className="text-slate-500">{item.plate}</p>
-                    </div>
-                    <span className="px-3 py-1 rounded-full border bg-emerald-100 text-emerald-700 border-emerald-200">
-                      {item.paymentStatus}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-slate-500 mb-1">Contact</p>
-                      <p className="text-slate-900">{item.phone}</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-500 mb-1">Parking Bay</p>
-                      <p className="text-slate-900">{item.parkingBay}</p>
-                    </div>
-                  </div>
+            <div className="bg-white rounded-xl border border-slate-200">
+              <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                  <h3 className="text-slate-800">Ready for Handover</h3>
+                  <p className="text-slate-500 text-sm">{readyOrders.length} kendaraan menunggu diambil customer</p>
                 </div>
-
-                <div className="p-6 border-b border-slate-200">
-                  <h4 className="text-slate-800 mb-3">Services Completed</h4>
-                  <ul className="space-y-2">
-                    {item.servicesCompleted.map((service, idx) => (
-                      <li key={idx} className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-emerald-500" />
-                        <span className="text-slate-700">{service}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="p-6 border-b border-slate-200 bg-slate-50">
-                  <h4 className="text-slate-800 mb-3">Handover Checklist</h4>
-                  <div className="space-y-2">
-                    {handoverChecklist.map((item, idx) => (
-                      <label key={idx} className="flex items-center gap-3 p-2 hover:bg-white rounded cursor-pointer">
-                        <input type="checkbox" className="w-4 h-4 rounded border-slate-300" defaultChecked />
-                        <span className="text-slate-700">{item}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="p-6">
-                  <h4 className="text-slate-800 mb-3">Maintenance Tips for Customer</h4>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                    <ul className="space-y-2">
-                      {maintenanceTips.map((tip, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <span className="text-blue-600 mt-1">•</span>
-                          <span className="text-slate-700">{tip}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="block text-slate-700 mb-2">Next Service Date</label>
-                    <input
-                      type="date"
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="block text-slate-700 mb-2">Additional Notes</label>
-                    <textarea
-                      rows={3}
-                      placeholder="Any additional information for the customer..."
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="flex gap-3">
-                    <Button className="bg-blue-500 hover:bg-blue-600 text-white flex-1">
-                      <Key className="w-4 h-4 mr-2" />
-                      Complete Handover
-                    </Button>
-                    <Button variant="outline" className="border-slate-300">
-                      <FileText className="w-4 h-4 mr-2" />
-                      Print Report
-                    </Button>
-                  </div>
-                </div>
+                <Button variant="outline" size="sm" onClick={() => refresh()}>
+                  <Key className="w-4 h-4 mr-1" /> Update
+                </Button>
               </div>
-            ))}
+              <div className="divide-y divide-slate-200">
+                {readyOrders.map((order) => (
+                  <div key={order.name} className="p-6 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="text-slate-900 mb-1">{order.name}</h4>
+                        <p className="text-slate-600">{order.customer_name || order.customer || '-'}</p>
+                        <p className="text-slate-500 text-sm">{order.customer_phone || order.customer_email || '-'}</p>
+                      </div>
+                      <span className="px-3 py-1 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200 text-sm">
+                        Completed
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm text-slate-600">
+                      <div>
+                        <p className="text-slate-500 text-xs">Vehicle</p>
+                        <p className="text-slate-900">{order.vehicle_plate || '-'}</p>
+                        <p>{[order.vehicle_brand, order.vehicle_model].filter(Boolean).join(' ')}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 text-xs">Estimated Delivery</p>
+                        <p className="text-slate-900">{formatDate(order.estimated_delivery_date)}</p>
+                        <p>Priority: {order.priority || 'Normal'}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 text-xs mb-1">QC Status</p>
+                      <p className="text-slate-900">{order.qc_status || 'Belum QC'}</p>
+                    </div>
+                  </div>
+                ))}
+                {readyOrders.length === 0 && (
+                  <div className="p-6 text-center text-slate-500">Tidak ada kendaraan yang menunggu handover.</div>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="space-y-6">
             <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h3 className="text-slate-800 mb-4">Today's Handovers</h3>
+              <h3 className="text-slate-800 mb-4">Recent Deliveries</h3>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <span className="text-slate-700">Ready</span>
-                  <span className="text-slate-900">3</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                  <span className="text-slate-700">Completed</span>
-                  <span className="text-slate-900">12</span>
-                </div>
+                {deliveredOrders.map((order) => (
+                  <div key={order.name} className="border border-slate-200 rounded-lg p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="text-slate-900">{order.customer_name || order.customer || '-'}</p>
+                        <p className="text-slate-500 text-sm">{order.vehicle_plate || '-'}</p>
+                      </div>
+                      <span className="text-slate-600 text-sm">{formatDate(order.actual_delivery_date)}</span>
+                    </div>
+                    <p className="text-slate-600 text-sm">{order.service_order_type || 'General Service'}</p>
+                  </div>
+                ))}
+                {deliveredOrders.length === 0 && <p className="text-slate-500 text-sm">Belum ada handover terbaru.</p>}
               </div>
             </div>
 
-            <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
-              <h4 className="text-blue-900 mb-3">Customer Experience Tips</h4>
-              <ul className="space-y-2 text-blue-800">
-                <li className="flex items-start gap-2">
-                  <span>•</span>
-                  <span>Explain all work performed</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span>•</span>
-                  <span>Show replaced parts if applicable</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span>•</span>
-                  <span>Schedule next maintenance</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span>•</span>
-                  <span>Ensure customer satisfaction</span>
-                </li>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-3">
+                <Car className="w-5 h-5 text-blue-600" />
+                <div>
+                  <p className="text-blue-900 font-medium">Checklist Reminder</p>
+                  <p className="text-blue-700 text-sm">Gunakan daftar berikut sebelum menyerahkan kendaraan.</p>
+                </div>
+              </div>
+              <ul className="text-blue-900 text-sm space-y-2">
+                <li>• Pastikan pembayaran sudah dilunasi.</li>
+                <li>• Jelaskan perbaikan yang dilakukan dan rekomendasi berikutnya.</li>
+                <li>• Serahkan dokumen invoice & receipt ke customer.</li>
               </ul>
             </div>
           </div>
