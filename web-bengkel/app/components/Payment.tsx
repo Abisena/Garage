@@ -1,217 +1,188 @@
 'use client';
 
-import React from 'react';
-import { CreditCard, DollarSign, FileText, Printer } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { CreditCard, DollarSign, FileText, RefreshCcw, TrendingUp } from 'lucide-react';
+import { usePortalData } from '../context/PortalDataContext';
 import { Button } from './ui/button';
 
-export function Payment() {
-  const pendingPayments = [
-    {
-      orderId: 'ORD-002',
-      customer: 'Siti Rahayu',
-      vehicle: 'Honda Jazz 2019',
-      plate: 'B 5678 ABC',
-      services: [
-        { name: 'Brake Pad Replacement', price: 450000 },
-        { name: 'Brake Fluid Change', price: 150000 },
-        { name: 'Labor', price: 200000 }
-      ],
-      parts: 600000,
-      labor: 200000,
-      subtotal: 800000,
-      tax: 80000,
-      total: 880000,
-      status: 'Ready for Payment'
-    }
-  ];
+const currencyFormatter = new Intl.NumberFormat('id-ID', {
+  style: 'currency',
+  currency: 'IDR',
+  maximumFractionDigits: 0,
+});
 
-  const recentPayments = [
+function formatDate(value?: string | null) {
+  if (!value) {
+    return '-';
+  }
+  try {
+    return new Date(value).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return value;
+  }
+}
+
+export function Payment() {
+  const { data, refresh } = usePortalData();
+
+  const openInvoices = data?.open_invoices?.length ? data.open_invoices : data?.sales_invoices || [];
+  const paymentEntries = useMemo(() => {
+    const entries = [...(data?.payment_entries || [])];
+    return entries
+      .sort((a, b) => {
+        const dateA = a.payment_date ? new Date(a.payment_date).getTime() : 0;
+        const dateB = b.payment_date ? new Date(b.payment_date).getTime() : 0;
+        return dateB - dateA;
+      })
+      .slice(0, 8);
+  }, [data?.payment_entries]);
+
+  const stats = [
     {
-      id: 'PAY-001',
-      orderId: 'ORD-001',
-      customer: 'Budi Santoso',
-      amount: 2500000,
-      method: 'Transfer',
-      time: '14:30'
+      label: 'Invoice Issued',
+      value: currencyFormatter.format(data?.totals?.invoice_total || 0),
+      icon: FileText,
+      color: 'text-blue-600',
+      bg: 'bg-blue-50',
     },
     {
-      id: 'PAY-002',
-      orderId: 'ORD-003',
-      customer: 'Ahmad Yani',
-      amount: 500000,
-      method: 'Cash',
-      time: '13:15'
-    }
+      label: 'Outstanding',
+      value: currencyFormatter.format(data?.totals?.outstanding_total || 0),
+      icon: CreditCard,
+      color: 'text-amber-600',
+      bg: 'bg-amber-50',
+    },
+    {
+      label: 'Payments Collected',
+      value: currencyFormatter.format(data?.totals?.payments_total || 0),
+      icon: DollarSign,
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50',
+    },
   ];
 
   return (
     <div className="p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-emerald-500 rounded-lg p-2">
-                <CreditCard className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-slate-800">Payment & Invoicing</h1>
-                <p className="text-slate-600">Step 7: Process payments and generate invoices</p>
-              </div>
-            </div>
+            <h1 className="text-slate-800 mb-1">Payment & Invoicing</h1>
+            <p className="text-slate-600">Sinkron langsung dengan Sales Invoice dan Payment Entry di Pravenya.</p>
           </div>
+          <Button variant="outline" onClick={() => refresh()} className="flex items-center gap-2">
+            <RefreshCcw className="w-4 h-4" /> Refresh Data
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {stats.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <div key={stat.label} className="bg-white rounded-xl p-5 border border-slate-200 flex items-center gap-3">
+                <div className={`${stat.bg} rounded-lg p-3`}>
+                  <Icon className={`w-5 h-5 ${stat.color}`} />
+                </div>
+                <div>
+                  <p className="text-slate-500 text-sm">{stat.label}</p>
+                  <p className="text-slate-900 text-xl">{stat.value}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Invoice Details */}
-          <div className="lg:col-span-2 space-y-6">
-            {pendingPayments.map((payment, index) => (
-              <div key={index} className="bg-white rounded-xl border border-slate-200">
-                {/* Invoice Header */}
-                <div className="p-6 border-b border-slate-200">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-slate-900 mb-1">Invoice - {payment.orderId}</h3>
-                      <p className="text-slate-600">{payment.customer}</p>
-                      <p className="text-slate-500">{payment.vehicle} - {payment.plate}</p>
-                    </div>
-                    <span className="px-3 py-1 rounded-full border bg-amber-100 text-amber-700 border-amber-200">
-                      {payment.status}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Invoice Items */}
-                <div className="p-6">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-slate-200">
-                        <th className="text-left py-3 text-slate-700">Description</th>
-                        <th className="text-right py-3 text-slate-700">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {payment.services.map((service, idx) => (
-                        <tr key={idx} className="border-b border-slate-100">
-                          <td className="py-3 text-slate-700">{service.name}</td>
-                          <td className="py-3 text-slate-900 text-right">
-                            Rp {service.price.toLocaleString('id-ID')}
-                          </td>
-                        </tr>
-                      ))}
-                      <tr className="border-b border-slate-200">
-                        <td className="py-3 text-slate-900">Subtotal</td>
-                        <td className="py-3 text-slate-900 text-right">
-                          Rp {payment.subtotal.toLocaleString('id-ID')}
-                        </td>
-                      </tr>
-                      <tr className="border-b border-slate-200">
-                        <td className="py-3 text-slate-700">Tax (10%)</td>
-                        <td className="py-3 text-slate-700 text-right">
-                          Rp {payment.tax.toLocaleString('id-ID')}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="py-4">
-                          <span className="text-slate-900">Total</span>
-                        </td>
-                        <td className="py-4 text-right">
-                          <span className="text-slate-900">
-                            Rp {payment.total.toLocaleString('id-ID')}
-                          </span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Payment Method */}
-                <div className="p-6 border-t border-slate-200 bg-slate-50">
-                  <h4 className="text-slate-800 mb-4">Payment Method</h4>
-                  <div className="grid grid-cols-3 gap-3 mb-4">
-                    <button className="p-4 border-2 border-blue-500 bg-blue-50 rounded-lg">
-                      <CreditCard className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                      <span className="text-slate-900">Cash</span>
-                    </button>
-                    <button className="p-4 border-2 border-slate-200 hover:border-slate-300 rounded-lg">
-                      <DollarSign className="w-6 h-6 text-slate-600 mx-auto mb-2" />
-                      <span className="text-slate-700">Transfer</span>
-                    </button>
-                    <button className="p-4 border-2 border-slate-200 hover:border-slate-300 rounded-lg">
-                      <CreditCard className="w-6 h-6 text-slate-600 mx-auto mb-2" />
-                      <span className="text-slate-700">Debit Card</span>
-                    </button>
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="block text-slate-700 mb-2">Amount Received</label>
-                    <input
-                      type="text"
-                      placeholder="Rp 0"
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="flex gap-3">
-                    <Button className="bg-emerald-500 hover:bg-emerald-600 text-white flex-1">
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Process Payment
-                    </Button>
-                    <Button variant="outline" className="border-slate-300">
-                      <Printer className="w-4 h-4 mr-2" />
-                      Print Invoice
-                    </Button>
-                  </div>
-                </div>
+          <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h3 className="text-slate-800">Outstanding Invoices</h3>
+                <p className="text-slate-500 text-sm">{openInvoices.length} invoice perlu ditindaklanjuti</p>
               </div>
-            ))}
+              <div className="text-right">
+                <p className="text-slate-500 text-sm">Total Outstanding</p>
+                <p className="text-slate-900 text-lg">{currencyFormatter.format(data?.totals?.outstanding_total || 0)}</p>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50">
+                    <th className="px-4 py-3 text-left text-slate-700">Invoice</th>
+                    <th className="px-4 py-3 text-left text-slate-700">Customer</th>
+                    <th className="px-4 py-3 text-left text-slate-700">Amount</th>
+                    <th className="px-4 py-3 text-left text-slate-700">Outstanding</th>
+                    <th className="px-4 py-3 text-left text-slate-700">Due Date</th>
+                    <th className="px-4 py-3 text-left text-slate-700">Branch</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {openInvoices.map((invoice) => (
+                    <tr key={invoice.name} className="border-b border-slate-100">
+                      <td className="px-4 py-3">
+                        <p className="text-slate-900">{invoice.name}</p>
+                        <p className="text-slate-500 text-sm">{invoice.status || '-'}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-slate-900">{invoice.customer || '-'}</p>
+                      </td>
+                      <td className="px-4 py-3 text-slate-900">{currencyFormatter.format(invoice.total_amount || 0)}</td>
+                      <td className="px-4 py-3 text-amber-600 font-medium">
+                        {currencyFormatter.format(invoice.outstanding_amount || 0)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">{formatDate(invoice.due_date)}</td>
+                      <td className="px-4 py-3 text-slate-700">{invoice.branch || invoice.branch_code || '-'}</td>
+                    </tr>
+                  ))}
+                  {openInvoices.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
+                        Semua invoice sudah terbayar.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Today's Revenue */}
+          <div className="space-y-6">
             <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h3 className="text-slate-800 mb-4">Today's Revenue</h3>
-              <div className="text-center py-6">
-                <p className="text-slate-600 mb-2">Total</p>
-                <h2 className="text-emerald-600 mb-4">Rp 8.5M</h2>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Cash</span>
-                    <span className="text-slate-900">Rp 3.2M</span>
+              <h3 className="text-slate-800 mb-4">Recent Payments</h3>
+              <div className="space-y-4">
+                {paymentEntries.map((payment) => (
+                  <div key={payment.name} className="border border-slate-200 rounded-lg p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="text-slate-900">{payment.customer || '-'}</p>
+                        <p className="text-slate-500 text-sm">{payment.mode_of_payment || 'Transfer'}</p>
+                      </div>
+                      <span className="text-slate-600 text-sm">{formatDate(payment.payment_date)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-slate-600">{payment.name}</p>
+                      <p className="text-slate-900">{currencyFormatter.format(payment.paid_amount || 0)}</p>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Transfer</span>
-                    <span className="text-slate-900">Rp 4.1M</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Card</span>
-                    <span className="text-slate-900">Rp 1.2M</span>
-                  </div>
-                </div>
+                ))}
+                {paymentEntries.length === 0 && (
+                  <p className="text-slate-500 text-sm">Belum ada pembayaran yang tercatat.</p>
+                )}
               </div>
             </div>
 
-            {/* Recent Payments */}
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h3 className="text-slate-800 mb-4">Recent Payments</h3>
-              <div className="space-y-3">
-                {recentPayments.map((payment) => (
-                  <div key={payment.id} className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                    <div className="flex justify-between mb-1">
-                      <span className="text-slate-900">{payment.customer}</span>
-                      <span className="text-slate-500">{payment.time}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">{payment.orderId}</span>
-                      <span className="text-emerald-600">
-                        Rp {(payment.amount / 1000000).toFixed(1)}M
-                      </span>
-                    </div>
-                    <span className="text-slate-500 text-xs">{payment.method}</span>
-                  </div>
-                ))}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-3">
+                <TrendingUp className="w-5 h-5 text-blue-600" />
+                <div>
+                  <p className="text-blue-900 font-medium">Collection Tips</p>
+                  <p className="text-blue-700 text-sm">Utamakan follow-up invoice yang melewati due date.</p>
+                </div>
               </div>
+              <ul className="text-blue-900 text-sm space-y-2">
+                <li>• Hubungi customer 1 hari sebelum jatuh tempo.</li>
+                <li>• Gunakan Payment Entry untuk mencatat DP dan pelunasan.</li>
+                <li>• Terbitkan Receipt Document setelah pembayaran diterima.</li>
+              </ul>
             </div>
           </div>
         </div>

@@ -1,62 +1,42 @@
 'use client';
-  
-import React from 'react';
-import { Badge } from './ui/badge';
+
+import React, { useMemo } from 'react';
+import { usePortalData } from '../context/PortalDataContext';
+
+const statusColorMap: Record<string, string> = {
+  Completed: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  'Work In Progress': 'bg-blue-100 text-blue-700 border-blue-200',
+  Draft: 'bg-slate-100 text-slate-700 border-slate-200',
+  Inspection: 'bg-amber-100 text-amber-700 border-amber-200',
+  'Awaiting Approval': 'bg-amber-100 text-amber-700 border-amber-200',
+  Cancelled: 'bg-red-100 text-red-700 border-red-200',
+};
 
 export function RecentOrders() {
-  const orders = [
-    {
-      id: 'ORD-001',
-      customer: 'Budi Santoso',
-      vehicle: 'Toyota Avanza 2020',
-      plate: 'B 1234 XYZ',
-      service: 'Engine Service',
-      status: 'In Progress',
-      statusColor: 'bg-blue-100 text-blue-700 border-blue-200'
-    },
-    {
-      id: 'ORD-002',
-      customer: 'Siti Rahayu',
-      vehicle: 'Honda Jazz 2019',
-      plate: 'B 5678 ABC',
-      service: 'Brake Replacement',
-      status: 'Completed',
-      statusColor: 'bg-emerald-100 text-emerald-700 border-emerald-200'
-    },
-    {
-      id: 'ORD-003',
-      customer: 'Ahmad Yani',
-      vehicle: 'Suzuki Ertiga 2021',
-      plate: 'B 9012 DEF',
-      service: 'Oil Change',
-      status: 'Waiting',
-      statusColor: 'bg-amber-100 text-amber-700 border-amber-200'
-    },
-    {
-      id: 'ORD-004',
-      customer: 'Dewi Lestari',
-      vehicle: 'Mitsubishi Xpander 2022',
-      plate: 'B 3456 GHI',
-      service: 'Transmission Repair',
-      status: 'Urgent',
-      statusColor: 'bg-red-100 text-red-700 border-red-200'
-    },
-    {
-      id: 'ORD-005',
-      customer: 'Rudi Hartono',
-      vehicle: 'Daihatsu Xenia 2018',
-      plate: 'B 7890 JKL',
-      service: 'AC Service',
-      status: 'In Progress',
-      statusColor: 'bg-blue-100 text-blue-700 border-blue-200'
-    },
-  ];
+  const { data } = usePortalData();
+  const customers = data?.customers || [];
+  const customerMap = useMemo(() => {
+    const map = new Map<string, string>();
+    customers.forEach((customer) => map.set(customer.name, customer.customer_name || customer.name));
+    return map;
+  }, [customers]);
+
+  const recentOrders = useMemo(() => {
+    const orders = data?.service_orders || [];
+    return [...orders]
+      .sort((a, b) => {
+        const dateA = a.service_booking_date ? new Date(a.service_booking_date).getTime() : 0;
+        const dateB = b.service_booking_date ? new Date(b.service_booking_date).getTime() : 0;
+        return dateB - dateA;
+      })
+      .slice(0, 5);
+  }, [data?.service_orders]);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200">
       <div className="p-6 border-b border-slate-200">
         <h3 className="text-slate-800 mb-1">Recent Service Orders</h3>
-        <p className="text-slate-600">Latest service requests and their status</p>
+        <p className="text-slate-600">Update terbaru dari order servis</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -71,16 +51,22 @@ export function RecentOrders() {
             </tr>
           </thead>
           <tbody>
-            {orders.map((order, index) => (
-              <tr key={index} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4 text-slate-900">{order.id}</td>
-                <td className="px-6 py-4 text-slate-700">{order.customer}</td>
-                <td className="px-6 py-4 text-slate-700">{order.vehicle}</td>
-                <td className="px-6 py-4 text-slate-700">{order.plate}</td>
-                <td className="px-6 py-4 text-slate-700">{order.service}</td>
+            {recentOrders.map((order) => (
+              <tr key={order.name} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                <td className="px-6 py-4 text-slate-900">{order.name}</td>
+                <td className="px-6 py-4 text-slate-700">{customerMap.get(order.customer || '') || order.customer}</td>
+                <td className="px-6 py-4 text-slate-700">
+                  {order.vehicle_brand || order.vehicle_model ? `${order.vehicle_brand || ''} ${order.vehicle_model || ''}` : '-'}
+                </td>
+                <td className="px-6 py-4 text-slate-700">{order.vehicle_plate || '-'}</td>
+                <td className="px-6 py-4 text-slate-700">{order.service_order_type || '-'}</td>
                 <td className="px-6 py-4">
-                  <span className={`inline-block px-3 py-1 rounded-full border ${order.statusColor}`}>
-                    {order.status}
+                  <span
+                    className={`inline-block px-3 py-1 rounded-full border ${
+                      statusColorMap[order.status || ''] || 'bg-slate-100 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    {order.status || 'Unknown'}
                   </span>
                 </td>
               </tr>

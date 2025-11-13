@@ -1,6 +1,6 @@
-'use client';  // Add this line at the top of Home.tsx
+'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Sidebar } from './components/Sidebard';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
@@ -16,34 +16,55 @@ import { Workshop } from './components/Workshop';
 import { Payment } from './components/Payment';
 import { Handover } from './components/Handover';
 import { FollowUp } from './components/FollowUp';
-import { Login, User } from './components/Login';
+import { Login } from './components/Login';
+import { PortalDataProvider } from './context/PortalDataContext';
+import { fetchSessionUser, loginPortal, logoutPortal } from '../lib/api';
+import { PortalUserProfile } from '../lib/types';
+
+export type User = PortalUserProfile;
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | undefined>(undefined);
 
-  // Check for existing session on mount
   useEffect(() => {
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
+      try {
+        setCurrentUser(JSON.parse(savedUser));
+      } catch (error) {
+        localStorage.removeItem('currentUser');
+      }
     }
   }, []);
 
-  const handleLogin = (user: User) => {
-    setCurrentUser(user);
-    localStorage.setItem('currentUser', JSON.stringify(user));
+  const handleLogin = async ({ username, password }: { username: string; password: string }) => {
+    setLoginLoading(true);
+    setLoginError(undefined);
+    try {
+      await loginPortal({ username, password });
+      const profile = await fetchSessionUser();
+      setCurrentUser(profile);
+      localStorage.setItem('currentUser', JSON.stringify(profile));
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : 'Login gagal, periksa kembali kredensial Anda.');
+      throw error;
+    } finally {
+      setLoginLoading(false);
+    }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logoutPortal();
     setCurrentUser(null);
     localStorage.removeItem('currentUser');
     setCurrentPage('dashboard');
   };
 
-  // If not logged in, show login page
   if (!currentUser) {
-    return <Login onLogin={handleLogin} />;
+    return <Login onLogin={handleLogin} loading={loginLoading} error={loginError} />;
   }
 
   const renderPage = () => {
@@ -51,7 +72,7 @@ export default function App() {
       case 'dashboard':
         return <Dashboard />;
       case 'registration':
-        return <Registration currentUser={currentUser} />;
+        return <Registration />;
       case 'inspection':
         return <Inspection />;
       case 'orders':
@@ -61,7 +82,7 @@ export default function App() {
       case 'spareparts':
         return <SpareParts />;
       case 'sparepartsrequest':
-        return <SparePartsRequest currentUser={currentUser} />;
+        return <SparePartsRequest />;
       case 'workshop':
         return <Workshop />;
       case 'payment':
@@ -80,14 +101,14 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-      <div className="flex-1 flex flex-col ml-64">
-        <Header currentUser={currentUser} onLogout={handleLogout} />
-        <main className="flex-1 overflow-auto">
-          {renderPage()}
-        </main>
+    <PortalDataProvider>
+      <div className="min-h-screen bg-slate-50 flex">
+        <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} currentUser={currentUser} />
+        <div className="flex-1 flex flex-col ml-64">
+          <Header currentUser={currentUser} onLogout={handleLogout} />
+          <main className="flex-1 overflow-auto">{renderPage()}</main>
+        </div>
       </div>
-    </div>
+    </PortalDataProvider>
   );
 }

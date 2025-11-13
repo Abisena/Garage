@@ -1,8 +1,8 @@
 'use client';
 
 
-import React, { useRef, useEffect } from 'react';
-import { X, Printer, CheckCircle, Package, User } from 'lucide-react';
+import React, { useRef, useEffect, useCallback } from 'react';
+import { X, Printer, CheckCircle, Package } from 'lucide-react';
 import { Button } from './ui/button';
 
 interface Part {
@@ -40,8 +40,21 @@ export function PartsDeliveryModal({ isOpen, onClose, orderData, onConfirm, exis
   const [isDrawing, setIsDrawing] = React.useState(false);
   const [hasSigned, setHasSigned] = React.useState(false);
   const [mechanicName, setMechanicName] = React.useState('');
+  const [generatedDeliveryId, setGeneratedDeliveryId] = React.useState(() =>
+    `${orderData.branch.substring(0, 3).toUpperCase()}-DEL-${Date.now().toString().slice(-6)}`,
+  );
 
   const isViewMode = !!existingDelivery;
+
+  const clearSignature = useCallback(() => {
+    if (mechanicSignatureRef.current) {
+      const ctx = mechanicSignatureRef.current.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, mechanicSignatureRef.current.width, mechanicSignatureRef.current.height);
+      }
+    }
+    setHasSigned(false);
+  }, []);
 
   useEffect(() => {
     if (isOpen && existingDelivery) {
@@ -56,6 +69,7 @@ export function PartsDeliveryModal({ isOpen, onClose, orderData, onConfirm, exis
         img.src = existingDelivery.mechanicSignature;
       }
       if (existingDelivery.mechanicName) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setMechanicName(existingDelivery.mechanicName);
       }
     } else if (isOpen && !existingDelivery) {
@@ -64,7 +78,14 @@ export function PartsDeliveryModal({ isOpen, onClose, orderData, onConfirm, exis
       setMechanicName('');
       clearSignature();
     }
-  }, [isOpen, existingDelivery]);
+  }, [clearSignature, existingDelivery, isOpen]);
+
+  useEffect(() => {
+    if (isOpen && !existingDelivery) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setGeneratedDeliveryId(`${orderData.branch.substring(0, 3).toUpperCase()}-DEL-${Date.now().toString().slice(-6)}`);
+    }
+  }, [existingDelivery, isOpen, orderData.branch]);
 
   if (!isOpen) return null;
 
@@ -79,7 +100,7 @@ export function PartsDeliveryModal({ isOpen, onClose, orderData, onConfirm, exis
     minute: '2-digit'
   });
 
-  const deliveryId = existingDelivery?.deliveryId || `${orderData.branch.substring(0, 3).toUpperCase()}-DEL-${Date.now().toString().slice(-6)}`;
+  const deliveryId = existingDelivery?.deliveryId || generatedDeliveryId;
   const preparedBy = existingDelivery?.preparedBy || 'Spareparts Staff';
 
   const startDrawing = () => {
@@ -120,16 +141,6 @@ export function PartsDeliveryModal({ isOpen, onClose, orderData, onConfirm, exis
       }
     }
     setIsDrawing(false);
-  };
-
-  const clearSignature = () => {
-    if (mechanicSignatureRef.current) {
-      const ctx = mechanicSignatureRef.current.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, mechanicSignatureRef.current.width, mechanicSignatureRef.current.height);
-        setHasSigned(false);
-      }
-    }
   };
 
   const handlePrint = () => {

@@ -39,6 +39,21 @@ Setelah role dibuat, buka masing-masing DocType lalu atur Permission Rules
 sesuai kebutuhan (misalnya Service Advisor dapat membuat Service Order, Inventory
 hanya bisa mengakses Procurement & Stock Movement, dan sebagainya).
 
+### Akun Portal Bawaan
+
+Patch `add_branch_portal_users` otomatis membuat user demo untuk setiap cabang
+default beserta hak aksesnya sehingga Anda dapat langsung mencoba portal web.
+Seluruh akun memakai sandi awal `garage123` dan dapat diganti melalui Desk.
+
+| Email | Cabang | Role |
+| --- | --- | --- |
+| `jakarta.branch@garage.local` | `JKT-001` | Garage Manager, Service Advisor |
+| `bandung.branch@garage.local` | `BDG-001` | Garage Manager, Service Advisor |
+| `surabaya.branch@garage.local` | `SBY-001` | Garage Manager, Service Advisor |
+
+Setiap akun otomatis mendapatkan dokumen **Garage Branch Access** sehingga data
+yang tampil di portal sesuai cabang masing-masing.
+
 ## 3. Instalasi di Site Pravenya
 
 1. Clone repositori ini ke direktori `apps/` pada bench Anda.
