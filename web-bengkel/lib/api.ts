@@ -30,8 +30,11 @@ const getBaseUrl = () => {
   throw new Error('NEXT_PUBLIC_PRAVENYA_URL is not configured');
 };
 
-interface RequestOptions extends RequestInit {
+type SerializableBody = Record<string, unknown> | unknown[] | null | undefined;
+
+interface RequestOptions extends Omit<RequestInit, 'body'> {
   rawBody?: BodyInit | null;
+  body?: BodyInit | SerializableBody;
 }
 
 async function apiRequest<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -70,7 +73,12 @@ async function apiRequest<T = unknown>(path: string, options: RequestOptions = {
   if (!response.ok || payloadObject?.exc || payloadObject?.exception) {
     const message =
       payloadObject?.message || payloadObject?._server_messages || payloadObject?.exc || 'Permintaan API gagal';
-    throw new Error(Array.isArray(message) ? message.join(', ') : message);
+    const messageText = Array.isArray(message)
+      ? message.join(', ')
+      : typeof message === 'string'
+        ? message
+        : JSON.stringify(message);
+    throw new Error(messageText);
   }
 
   if (payloadObject && Object.prototype.hasOwnProperty.call(payloadObject, 'message')) {
