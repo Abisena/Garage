@@ -1635,7 +1635,9 @@ body.parts-detail-mode .parts-table td.actions {
         <div class="action-buttons">
             <a href="/garage/service" class="btn btn-secondary">Batal</a>
             <button type="button" class="btn btn-primary" data-role="parts-save-button" onclick="submitInspection()"{% if is_parts_detail_mode %} disabled aria-disabled="true"{% endif %}>Save</button>
+            {% if not is_partial_reject_mode %}
             <button type="button" class="btn btn-outline" id="print_spk_button" disabled onclick="printSpkDocument()">Print SPK</button>
+            {% endif %}
         </div>
         <div class="action-info">
             <div class="action-tags">
