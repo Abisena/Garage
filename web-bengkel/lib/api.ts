@@ -4,12 +4,30 @@ import { PortalBootstrap, PortalBootstrapFilters, PortalNavigationItem, PortalUs
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
+let cachedBaseUrl: string | null = null;
+
+const normalizeBaseUrl = (value: string) => value.replace(/\/$/, '');
+
 const getBaseUrl = () => {
-  const base = process.env.NEXT_PUBLIC_PRAVENYA_URL;
-  if (!base) {
-    throw new Error('NEXT_PUBLIC_PRAVENYA_URL is not configured');
+  if (cachedBaseUrl) {
+    return cachedBaseUrl;
   }
-  return base.replace(/\/$/, '');
+
+  const envBase = process.env.NEXT_PUBLIC_PRAVENYA_URL;
+  if (envBase) {
+    cachedBaseUrl = normalizeBaseUrl(envBase);
+    return cachedBaseUrl;
+  }
+
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('NEXT_PUBLIC_PRAVENYA_URL is not configured; defaulting to current origin');
+    }
+    cachedBaseUrl = normalizeBaseUrl(window.location.origin);
+    return cachedBaseUrl;
+  }
+
+  throw new Error('NEXT_PUBLIC_PRAVENYA_URL is not configured');
 };
 
 interface RequestOptions extends RequestInit {
