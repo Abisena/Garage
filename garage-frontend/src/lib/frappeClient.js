@@ -1,16 +1,8 @@
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || 'http://localhost:8005';
-const API_KEY = import.meta.env.VITE_API_KEY || '';
-const API_SECRET = import.meta.env.VITE_API_SECRET || '';
 
 class FrappeClient {
   constructor() {
     this.baseURL = FRAPPE_URL;
-    this.apiKey = API_KEY;
-    this.apiSecret = API_SECRET;
-    
-    console.log('🔧 Frappe Client initialized');
-    console.log('📍 Base URL:', this.baseURL);
-    console.log('🔑 API Key:', this.apiKey ? '✅ Set' : '❌ Not set');
   }
 
   async request(endpoint, options = {}) {
@@ -20,44 +12,93 @@ class FrappeClient {
 
     const url = `${this.baseURL}${endpoint}`;
     
-    console.log('🌐 Fetching:', url);
-    
-    const headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      ...options.headers,
-    };
-
-    // Add API key if available
-    if (this.apiKey && this.apiSecret) {
-      headers['Authorization'] = `token ${this.apiKey}:${this.apiSecret}`;
-    }
-    
     try {
       const response = await fetch(url, {
         ...options,
-        credentials: 'include',
-        headers,
+        credentials: 'include', // PENTING: untuk session cookies
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...options.headers,
+        },
       });
-
-      console.log('📡 Response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Response error:', errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
-      const data = await response.json();
-      console.log('✅ Response data:', data);
-      
-      return data;
+      return await response.json();
     } catch (error) {
-      console.error('❌ Frappe API Error:', error);
+      console.error('Frappe API Error:', error);
       throw error;
     }
   }
 
+  // ✅ LOGIN API - CONSUME DI SINI
+  async login(username, password) {
+    try {
+      const response = await this.request('/api/method/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          usr: username,
+          pwd: password,
+        }),
+      });
+
+      console.log('Login response:', response);
+      
+      // Frappe login success response
+      if (response.message === 'Logged In') {
+        // Get user info
+        const userInfo = await this.getCurrentUser();
+        return {
+          success: true,
+          user: userInfo,
+        };
+      }
+
+      return {
+        success: false,
+        error: 'Login failed',
+      };
+    } catch (error) {
+      console.error('Login error:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  // Get current logged in user
+  async getCurrentUser() {
+    try {
+      const response = await this.request('/api/method/frappe.auth.get_logged_user');
+      return {
+        username: response.message,
+        full_name: response.full_name || response.message,
+      };
+    } catch (error) {
+      console.error('Failed to get current user:', error);
+      return null;
+    }
+  }
+
+  // Logout
+  async logout() {
+    try {
+      await this.request('/api/method/logout', {
+        method: 'POST',
+      });
+      return true;
+    } catch (error) {
+      console.error('Logout error:', error);
+      return false;
+    }
+  }
+
+  // List customers (existing method)
   async listGarageCustomers() {
     try {
       const response = await this.request(
@@ -67,18 +108,6 @@ class FrappeClient {
     } catch (error) {
       console.error('Failed to fetch customers:', error);
       throw error;
-    }
-  }
-
-  // Test connection
-  async testConnection() {
-    try {
-      const response = await this.request('/api/method/ping');
-      console.log('✅ Connection test successful:', response);
-      return true;
-    } catch (error) {
-      console.error('❌ Connection test failed:', error);
-      return false;
     }
   }
 }
