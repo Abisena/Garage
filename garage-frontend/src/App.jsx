@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { frappeClient } from './lib/frappeClient'
 import { Login } from './components/Login'
 import { Registration } from './components/Registration'
+import { Sidebar } from './components/Sidebar'
 
 function App() {
   const [currentUser, setCurrentUser] = useState(null)
@@ -73,6 +74,45 @@ function App() {
     return <Login onLogin={handleLogin} />
   }
 
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'dashboard':
+        return <Dashboard />;
+      case 'registration':
+        return <Registration currentUser={currentUser} />;
+      case 'inspection':
+        return <Inspection />;
+      case 'orders':
+        return <ServiceOrders currentUser={currentUser} />;
+      case 'inventory':
+        return <Inventory />;
+      case 'spareparts':
+        return <SpareParts />;
+      case 'sparepartsrequest':
+        return <SparePartsRequest currentUser={currentUser} />;
+      case 'buyingsparepart':
+        return <BuyingSparePartIntegrated currentUser={currentUser} />;
+      case 'directsales':
+        return <DirectSalesSparePart currentUser={currentUser} />;
+      case 'workshop':
+        return <Workshop currentUser={currentUser} />;
+      case 'payment':
+        return <Payment currentUser={currentUser} />;
+      case 'handover':
+        return <Handover />;
+      case 'followup':
+        return <FollowUp />;
+      case 'process':
+        return <ProcessFlow />;
+      case 'customers':
+        return <Customers />;
+      case 'reports':
+        return <Report currentUser={currentUser} />;
+      default:
+        return <Dashboard />;
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm">
@@ -99,6 +139,7 @@ function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
+        <Sidebar currentUser={currentUser} />
         <Registration currentUser={currentUser} />
       </main>
     </div>

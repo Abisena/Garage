@@ -1,7 +1,7 @@
-import { StatCard } from './StatCard';
-import { RecentOrders } from './RecentOrders';
-import { RevenueChart } from './RevenueChart';
-import { ServiceStatus } from './ServiceStatus';
+// import { StatCard } from './StatCard';
+// import { RecentOrders } from './RecentOrders';
+// import { RevenueChart } from './RevenueChart';
+// import { ServiceStatus } from './ServiceStatus';
 import { 
   ClipboardList, 
   Users, 
