@@ -139,7 +139,7 @@ function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <Sidebar currentUser={currentUser} />
+        {/* <Sidebar currentUser={currentUser} /> */}
         <Registration currentUser={currentUser} />
       </main>
     </div>
