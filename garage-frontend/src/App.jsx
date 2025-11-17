@@ -1,21 +1,39 @@
 import { useState, useEffect } from 'react'
 import { frappeClient } from './lib/frappeClient'
+import { Login } from './components/Login'
 import './App.css'
 
 function App() {
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [currentUser, setCurrentUser] = useState(null)
 
+  // Check for existing session on mount
   useEffect(() => {
+    const savedUser = localStorage.getItem('currentUser')
+    if (savedUser) {
+      try {
+        setCurrentUser(JSON.parse(savedUser))
+      } catch (err) {
+        console.error('Failed to restore session:', err)
+        localStorage.removeItem('currentUser')
+      }
+    }
+  }, [])
+
+  // Fetch customers when user is logged in
+  useEffect(() => {
+    if (!currentUser) return
+
     async function fetchCustomers() {
       try {
         setLoading(true)
         setError(null)
         
-        console.log('Fetching customers...') // Debug
+        console.log('Fetching customers...')
         const data = await frappeClient.listGarageCustomers()
-        console.log('Customers:', data) // Debug
+        console.log('Customers:', data)
         
         setCustomers(data)
       } catch (err) {
@@ -27,13 +45,41 @@ function App() {
     }
 
     fetchCustomers()
-  }, [])
+  }, [currentUser])
 
+  const handleLogin = (user) => {
+    setCurrentUser(user)
+    localStorage.setItem('currentUser', JSON.stringify(user))
+  }
+
+  const handleLogout = () => {
+    setCurrentUser(null)
+    localStorage.removeItem('currentUser')
+    setCustomers([])
+  }
+
+  // If not logged in, show login page
+  if (!currentUser) {
+    return <Login onLogin={handleLogin} />
+  }
+
+  // If logged in, show customer list
   return (
     <div className="App">
       <header>
-        <h1>Garage Web Portal</h1>
-        <p>Frontend menggunakan React + Vite. Backend menggunakan Frappe Framework.</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1>Garage Web Portal</h1>
+            <p>Frontend menggunakan React + Vite. Backend menggunakan Frappe Framework.</p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <p>Welcome, <strong>{currentUser.displayName}</strong></p>
+            <p className="muted">{currentUser.branch}</p>
+            <button onClick={handleLogout} className="btn-logout">
+              Logout
+            </button>
+          </div>
+        </div>
       </header>
 
       <main>
@@ -54,11 +100,11 @@ function App() {
               <h4>Troubleshooting:</h4>
               <ol>
                 <li>✅ Pastikan Frappe backend sudah berjalan: <code>cd ~/bengkel-dev && bench start</code></li>
-                <li>✅ Cek port Frappe (biasanya 8000, bukan 8005)</li>
+                <li>✅ Cek port Frappe (biasanya 8000 atau 8005)</li>
                 <li>✅ Cek CORS settings di <code>site_config.json</code></li>
                 <li>✅ Restart Frappe: <code>bench restart</code></li>
               </ol>
-              <p>API URL: <code>{import.meta.env.VITE_FRAPPE_URL || 'http://localhost:8000'}</code></p>
+              <p>API URL: <code>{import.meta.env.VITE_FRAPPE_URL || 'http://localhost:8005'}</code></p>
             </div>
           )}
           
