@@ -4719,32 +4719,39 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
                 )
 
     if not existing_customer:
-        user_email = cstr(user_record.get("email") or "").strip()
-        user_phone_candidates = (
-            cstr(user_record.get("phone") or "").strip(),
-            cstr(user_record.get("mobile_no") or "").strip(),
-        )
+        # Only try to match by the logged-in user's profile when the form
+        # does not provide explicit customer contact details. Otherwise a
+        # service advisor would unintentionally create/update records under
+        # their own account instead of the customer they entered on the form.
+        has_manual_customer = manual_customer_name or data.get("phone") or data.get("email")
 
-        if user_email:
-            with _ignoring_permissions():
-                matched_customer = frappe.db.get_value(
-                    "Garage Customer", {"email": user_email}, "name"
-                )
-            if matched_customer:
-                existing_customer = matched_customer
-                customer_name = matched_customer
-        if not existing_customer:
-            for phone in user_phone_candidates:
-                if not phone:
-                    continue
+        if not has_manual_customer:
+            user_email = cstr(user_record.get("email") or "").strip()
+            user_phone_candidates = (
+                cstr(user_record.get("phone") or "").strip(),
+                cstr(user_record.get("mobile_no") or "").strip(),
+            )
+
+            if user_email:
                 with _ignoring_permissions():
                     matched_customer = frappe.db.get_value(
-                        "Garage Customer", {"phone": phone}, "name"
+                        "Garage Customer", {"email": user_email}, "name"
                     )
                 if matched_customer:
                     existing_customer = matched_customer
                     customer_name = matched_customer
-                    break
+            if not existing_customer:
+                for phone in user_phone_candidates:
+                    if not phone:
+                        continue
+                    with _ignoring_permissions():
+                        matched_customer = frappe.db.get_value(
+                            "Garage Customer", {"phone": phone}, "name"
+                        )
+                    if matched_customer:
+                        existing_customer = matched_customer
+                        customer_name = matched_customer
+                        break
 
     if not existing_customer and manual_customer_name:
         with _ignoring_permissions():
