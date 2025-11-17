@@ -26,6 +26,9 @@ UI Frappe.
 * Pravenya/Frappe site maintainers can follow
   [`docs/pravenya_setup.md`](docs/pravenya_setup.md) to install the DocType
   catalogue and try the workflow end-to-end langsung dari Desk.
+* Frontend Next.js siap pakai tersedia di folder [`web`](web) agar web portal
+  tidak lagi bergantung ke template Jinja. Lihat panduan lengkap di
+  [`docs/nextjs_setup.md`](docs/nextjs_setup.md).
 
 ### DocType Catalogue
 
