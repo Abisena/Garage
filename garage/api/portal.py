@@ -4718,6 +4718,9 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
                     _("Kendaraan ini terdaftar di cabang {0}.").format(vehicle_branch)
                 )
 
+    user_email = ""
+    user_phone_candidates: Tuple[str, ...] = tuple()
+
     if not existing_customer:
         # Only try to match by the logged-in user's profile when the form
         # does not provide explicit customer contact details. Otherwise a
