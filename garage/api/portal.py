@@ -4673,6 +4673,32 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         or (data.get("existing_customer_search") or "").strip()
     )
 
+    vehicle_name: Optional[str] = None
+
+    license_plate = (data.get("license_plate") or "").strip()
+    if license_plate and not existing_customer and not manual_customer_name:
+        existing_vehicle = _find_vehicle_by_plate(
+            license_plate,
+            branch=branch_name,
+            fields=("name", "customer", "branch"),
+        )
+
+        if existing_vehicle:
+            vehicle_name = existing_vehicle.get("name")
+            if vehicle_name:
+                created["vehicle"] = vehicle_name
+
+            matched_customer = cstr(existing_vehicle.get("customer") or "").strip()
+            if matched_customer:
+                existing_customer = matched_customer
+                customer_name = matched_customer
+
+            vehicle_branch = cstr(existing_vehicle.get("branch") or "").strip()
+            if vehicle_branch and vehicle_branch != branch_name:
+                frappe.throw(
+                    _("Kendaraan ini terdaftar di cabang {0}.").format(vehicle_branch)
+                )
+
     if not existing_customer and manual_customer_name:
         with _ignoring_permissions():
             filters = {"customer_name": manual_customer_name}
@@ -4712,10 +4738,9 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
     vehicle_fields = ALLOWED_DOCS["Garage Vehicle"]["fields"] - {"customer"}
     vehicle_payload = _filter_fields(data, vehicle_fields)
     intake_notes = (data.get("notes") or "").strip()
-    vehicle_name: Optional[str] = None
     service_doc: Optional[frappe.Document] = None
 
-    if vehicle_payload:
+    if vehicle_payload and not vehicle_name:
         vehicle_doc = frappe.new_doc("Garage Vehicle")
         vehicle_doc.update(vehicle_payload)
         timestamp = now_datetime()
@@ -4731,9 +4756,9 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         vehicle_name = vehicle_doc.name
         created["vehicle"] = vehicle_doc.name
 
-    if not vehicle_name and data.get("license_plate"):
+    if not vehicle_name and license_plate:
         existing_vehicle = _find_vehicle_by_plate(
-            data.get("license_plate"),
+            license_plate,
             branch=branch_name,
             fields=("name", "customer", "branch"),
         )
