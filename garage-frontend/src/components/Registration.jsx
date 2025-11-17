@@ -3,65 +3,43 @@ import { Plus, User, Car } from 'lucide-react';
 import { Button } from './ui/button';
 import { WorkOrderModal } from './WorkOrderModall';
 import frappeClient from '../lib/frappeClient';
+import { loadFromStorage, saveToStorage } from '../lib/storage';
 
 export function Registration({ currentUser }) {
+  const defaultFormState = {
+    vehicleBrand: '',
+    vehicleModel: '',
+    vehicleYear: '',
+    vehicleType: '',
+    plateNumber: '',
+    chassisNumber: '',
+    engineNumber: '',
+    customerName: '',
+    phone: '',
+    email: '',
+    serviceType: '',
+    customerComplaint: '',
+    kilometer: '',
+    fuel: '',
+    assemblyType: '',
+    advisorNotes: ''
+  };
+
   // Load saved form data from localStorage on mount
-  const [formData, setFormData] = useState(() => {
-    const saved = localStorage.getItem('registrationFormDraft');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return {
-          vehicleBrand: '',
-          vehicleModel: '',
-          vehicleYear: '',
-          vehicleType: '',
-          plateNumber: '',
-          chassisNumber: '',
-          engineNumber: '',
-          customerName: '',
-          phone: '',
-          email: '',
-          serviceType: '',
-          customerComplaint: '',
-          kilometer: '',
-          fuel: '',
-          assemblyType: '',
-          advisorNotes: ''
-        };
-      }
-    }
-    return {
-      vehicleBrand: '',
-      vehicleModel: '',
-      vehicleYear: '',
-      vehicleType: '',
-      plateNumber: '',
-      chassisNumber: '',
-      engineNumber: '',
-      customerName: '',
-      phone: '',
-      email: '',
-      serviceType: '',
-      customerComplaint: '',
-      kilometer: '',
-      fuel: '',
-      assemblyType: '',
-      advisorNotes: ''
-    };
-  });
+  const [formData, setFormData] = useState(() =>
+    loadFromStorage('registrationFormDraft', defaultFormState)
+  );
 
   // Save form data to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('registrationFormDraft', JSON.stringify(formData));
+    saveToStorage('registrationFormDraft', formData);
   }, [formData]);
 
   const [focusedField, setFocusedField] = useState('');
   const [showWorkOrder, setShowWorkOrder] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [recentRegistrations, setRecentRegistrations] = useState([
+  const defaultRegistrations = [
     {
       id: 'JKT-REG-001',
       time: '10:30',
@@ -167,7 +145,11 @@ export function Registration({ currentUser }) {
       estimatedDays: '4',
       branch: 'Bandung'
     }
-  ]);
+  ];
+
+  const [recentRegistrations, setRecentRegistrations] = useState(() =>
+    loadFromStorage('registrations', defaultRegistrations)
+  );
 
   const serviceTypes = [
     'Oil Change',
@@ -234,18 +216,25 @@ export function Registration({ currentUser }) {
   // Get available models based on selected brand
   const availableModels = formData.vehicleBrand ? vehicleModelsByBrand[formData.vehicleBrand] || [] : [];
 
-  // Load registrations from localStorage on mount
-  useEffect(() => {
-    const savedRegistrations = localStorage.getItem('registrations');
-    if (savedRegistrations) {
-      setRecentRegistrations(JSON.parse(savedRegistrations));
-    }
-  }, []);
-
   // Save registrations to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('registrations', JSON.stringify(recentRegistrations));
+    saveToStorage('registrations', recentRegistrations);
   }, [recentRegistrations]);
+
+  // Keep registration list in sync when storage is updated (refresh/HMR)
+  useEffect(() => {
+    const refreshRegistrations = () => {
+      setRecentRegistrations(loadFromStorage('registrations', defaultRegistrations));
+    };
+
+    window.addEventListener('storage', refreshRegistrations);
+    window.addEventListener('focus', refreshRegistrations);
+
+    return () => {
+      window.removeEventListener('storage', refreshRegistrations);
+      window.removeEventListener('focus', refreshRegistrations);
+    };
+  }, []);
 
   // Helper function to get branch code
   const getBranchCode = (branch) => {
@@ -381,26 +370,7 @@ export function Registration({ currentUser }) {
       setRecentRegistrations([newRegistration, ...recentRegistrations]);
       
       // Reset form
-      setFormData({
-        plateNumber: '',
-        chassisNumber: '',
-        engineNumber: '',
-        vehicleBrand: '',
-        vehicleModel: '',
-        vehicleType: '',
-        kilometer: '',
-        fuel: '',
-        assemblyType: '',
-        vehicleYear: '',
-        customerName: '',
-        phone: '',
-        email: '',
-        serviceType: '',
-        customerComplaint: '',
-        estimatedCost: '',
-        estimatedDays: '',
-        advisorNotes: ''
-      });
+      setFormData({ ...defaultFormState });
 
       // Show success message with detailed info
       let successMessage = `✅ Registration Successful!\n\n`;
@@ -510,18 +480,6 @@ export function Registration({ currentUser }) {
 
 //   loadRegistrationsFromFrappe();
 // }, [currentUser.branch]);
-
-  useEffect(() => {
-    const savedRegistrations = localStorage.getItem('registrations');
-    if (savedRegistrations) {
-      setRecentRegistrations(JSON.parse(savedRegistrations));
-    }
-  }, []);
-
-  // Save registrations to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('registrations', JSON.stringify(recentRegistrations));
-  }, [recentRegistrations]);
 
   const handleWorkOrderConfirm = (customerSig, advisorSig) => {
     // Generate new registration
