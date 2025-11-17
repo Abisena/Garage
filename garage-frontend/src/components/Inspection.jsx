@@ -1,21 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, Camera, AlertTriangle, CheckCircle, Clock, FileText, X, Printer, ChevronRight, ClipboardList } from 'lucide-react';
 import { Button } from './ui/button';
 // import watermarkLogo from 'figma:asset/5ef42b457e7713cd266d609b04b7f121b13997b7.png';
+import { loadFromStorage, saveToStorage } from '../lib/storage';
 
 export function Inspection() {
-  const [registrations, setRegistrations] = useState(() => {
-    const savedRegistrations = localStorage.getItem('registrations');
-    if (!savedRegistrations) return [];
-
-    try {
-      return JSON.parse(savedRegistrations);
-    } catch (error) {
-      console.error('Failed to restore registrations from storage', error);
-      localStorage.removeItem('registrations');
-      return [];
-    }
-  });
+  const [registrations, setRegistrations] = useState(() =>
+    loadFromStorage('registrations', [])
+  );
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [showDiagnosisReport, setShowDiagnosisReport] = useState(false);
   const [createdWorkOrderId, setCreatedWorkOrderId] = useState('');
@@ -131,8 +123,7 @@ export function Inspection() {
     const branchCode = getBranchCode(selectedVehicle.branch);
     
     // Generate work order number with branch code
-    const savedWorkOrders = localStorage.getItem('workOrders');
-    const existingWorkOrders = savedWorkOrders ? JSON.parse(savedWorkOrders) : [];
+    const existingWorkOrders = loadFromStorage('workOrders', []);
     
     // Count work orders for this branch to get next number
     const branchWorkOrders = existingWorkOrders.filter((wo) => wo.branch === selectedVehicle.branch);
@@ -171,30 +162,44 @@ export function Inspection() {
     
     // Save work order to localStorage for Repair Order menu
     existingWorkOrders.push(workOrder);
-    localStorage.setItem('workOrders', JSON.stringify(existingWorkOrders));
-    
+    saveToStorage('workOrders', existingWorkOrders);
+
     // Update registration status to 'in-progress'
-    const savedRegistrations = localStorage.getItem('registrations');
-    if (savedRegistrations) {
-      const allRegistrations = JSON.parse(savedRegistrations);
-      const updatedRegistrations = allRegistrations.map((reg) => {
-        if (reg.id === selectedVehicle.id) {
-          return { ...reg, inspectionStatus: 'in-progress' };
-        }
-        return reg;
-      });
-      localStorage.setItem('registrations', JSON.stringify(updatedRegistrations));
-      
-      // Update local state
-      setRegistrations(updatedRegistrations);
-    }
+    const updatedRegistrations = loadFromStorage('registrations', registrations).map((reg) => {
+      if (reg.id === selectedVehicle.id) {
+        return { ...reg, inspectionStatus: 'in-progress' };
+      }
+      return reg;
+    });
+
+    saveToStorage('registrations', updatedRegistrations);
+    setRegistrations(updatedRegistrations);
     
     // Show diagnosis report
     setShowDiagnosisReport(true);
     setCreatedWorkOrderId(workOrderId);
-    
+
     console.log('Work Order Created:', workOrder);
   };
+
+  // Keep local state aligned with saved data so refresh/HMR doesn't wipe entries
+  useEffect(() => {
+    saveToStorage('registrations', registrations);
+  }, [registrations]);
+
+  useEffect(() => {
+    const reloadRegistrations = () => {
+      setRegistrations(loadFromStorage('registrations', []));
+    };
+
+    window.addEventListener('storage', reloadRegistrations);
+    window.addEventListener('focus', reloadRegistrations);
+
+    return () => {
+      window.removeEventListener('storage', reloadRegistrations);
+      window.removeEventListener('focus', reloadRegistrations);
+    };
+  }, []);
 
   const handlePrint = () => {
     window.print();
