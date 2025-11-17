@@ -4673,6 +4673,24 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         or (data.get("existing_customer_search") or "").strip()
     )
 
+    user_record: Dict[str, Any] = {}
+    with _ignoring_permissions():
+        user_record = (
+            frappe.db.get_value(
+                "User",
+                frappe.session.user,
+                ["full_name", "email", "phone", "mobile_no"],
+                as_dict=True,
+            )
+            or {}
+        )
+
+    if not manual_customer_name:
+        manual_customer_name = (
+            cstr(user_record.get("full_name") or "").strip()
+            or cstr(frappe.utils.get_fullname(frappe.session.user)).strip()
+        )
+
     vehicle_name: Optional[str] = None
 
     license_plate = (data.get("license_plate") or "").strip()
@@ -4699,6 +4717,34 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
                     _("Kendaraan ini terdaftar di cabang {0}.").format(vehicle_branch)
                 )
 
+    if not existing_customer:
+        user_email = cstr(user_record.get("email") or "").strip()
+        user_phone_candidates = (
+            cstr(user_record.get("phone") or "").strip(),
+            cstr(user_record.get("mobile_no") or "").strip(),
+        )
+
+        if user_email:
+            with _ignoring_permissions():
+                matched_customer = frappe.db.get_value(
+                    "Garage Customer", {"email": user_email}, "name"
+                )
+            if matched_customer:
+                existing_customer = matched_customer
+                customer_name = matched_customer
+        if not existing_customer:
+            for phone in user_phone_candidates:
+                if not phone:
+                    continue
+                with _ignoring_permissions():
+                    matched_customer = frappe.db.get_value(
+                        "Garage Customer", {"phone": phone}, "name"
+                    )
+                if matched_customer:
+                    existing_customer = matched_customer
+                    customer_name = matched_customer
+                    break
+
     if not existing_customer and manual_customer_name:
         with _ignoring_permissions():
             filters = {"customer_name": manual_customer_name}
@@ -4717,6 +4763,14 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         customer_payload = _filter_fields(data, ALLOWED_DOCS["Garage Customer"]["fields"])
         if manual_customer_name and not customer_payload.get("customer_name"):
             customer_payload["customer_name"] = manual_customer_name
+        if user_email and not customer_payload.get("email"):
+            customer_payload["email"] = user_email
+        for phone in user_phone_candidates:
+            if not phone:
+                continue
+            if not customer_payload.get("phone"):
+                customer_payload["phone"] = phone
+            break
         if branch_name:
             customer_payload["branch"] = branch_name
         if not customer_payload.get("customer_name"):
