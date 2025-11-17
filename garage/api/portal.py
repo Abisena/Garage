@@ -4632,7 +4632,7 @@ def lookup_customer(
     return {"customer": customer_doc, "vehicles": vehicles}
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
     """Create master data from the intake form and enqueue a service order."""
 

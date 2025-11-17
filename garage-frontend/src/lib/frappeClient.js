@@ -113,14 +113,19 @@ class FrappeClient {
 
   async registerCustomerVehicle(payload) {
     try {
+      console.log('Calling register_customer_vehicle with payload:', payload);
+      
       const response = await this.request(
         '/api/method/garage.api.portal.register_customer_vehicle',
         {
           method: 'POST',
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ payload }), // ← Wrap in payload key
         },
       );
 
+      console.log('API Response:', response);
+      
+      // Return response.message (karena Frappe wrap response)
       return response.message || response;
     } catch (error) {
       console.error('Failed to register customer/vehicle:', error);

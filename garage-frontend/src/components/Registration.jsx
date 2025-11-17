@@ -171,6 +171,7 @@ export function Registration({ currentUser }) {
 
   const serviceTypes = [
     'Oil Change',
+    'Service/Repair',
     'Paket Service Oil Change',
     'Engine Service',
     'Paket Service Engine Service',
@@ -207,9 +208,10 @@ export function Registration({ currentUser }) {
   ];
 
   const fuelTypes = [
-    'BBM',
-    'Listrik',
-    'Hybrid'
+    'Petrol',
+    'Diesel',
+    'Hybrid',
+    'Electric'
   ];
 
   const assemblyTypes = [
@@ -286,86 +288,240 @@ export function Registration({ currentUser }) {
     }
   };
 
-  const handleRegisterClick = () => {
-    // Validate required fields
-    if (!formData.plateNumber || !formData.chassisNumber || !formData.engineNumber ||
-        !formData.vehicleBrand || !formData.vehicleModel || !formData.vehicleType || 
-        !formData.kilometer || !formData.fuel || !formData.assemblyType || 
-        !formData.vehicleYear || !formData.customerName || !formData.phone || 
-        !formData.serviceType || !formData.customerComplaint) {
-      alert('Please complete all required fields (*)');
-      return;
-    }
+  const handleRegisterClick = async () => {
+  // Validate required fields
+  if (!formData.plateNumber || !formData.chassisNumber || !formData.engineNumber ||
+      !formData.vehicleBrand || !formData.vehicleModel || !formData.vehicleType || 
+      !formData.kilometer || !formData.fuel || !formData.assemblyType || 
+      !formData.vehicleYear || !formData.customerName || !formData.phone || 
+      !formData.serviceType || !formData.customerComplaint) {
+    alert('Please complete all required fields (*)');
+    return;
+  }
+  
+  try {
+    console.log('Sending registration data to Frappe...');
     
-    // Generate new registration and add to list immediately
-    const newTime = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    const branchCode = getBranchCode(currentUser.branch);
-    const branchRegistrations = recentRegistrations.filter(reg => reg.branch === currentUser.branch);
-    const nextNumber = branchRegistrations.length + 1;
-    const newId = `${branchCode}-REG-${String(nextNumber).padStart(3, '0')}`;
-    const newOrderId = getNextOrderNumber(currentUser.branch);
-    
-    const newRegistration = {
-      id: newId,
-      time: newTime,
-      orderId: newOrderId,
-      customerName: formData.customerName,
+    // ✅ PAYLOAD SESUAI DENGAN STRUKTUR API FRAPPE
+    const payload = {
+      // Customer fields (sesuai ALLOWED_DOCS["Garage Customer"]["fields"])
+      customer_name: formData.customerName,
       phone: formData.phone,
-      email: formData.email,
-      plateNumber: formData.plateNumber,
-      chassisNumber: formData.chassisNumber,
-      engineNumber: formData.engineNumber,
-      vehicleBrand: formData.vehicleBrand,
-      vehicleModel: formData.vehicleModel,
-      vehicleType: formData.vehicleType,
-      kilometer: formData.kilometer,
-      fuel: formData.fuel,
-      assemblyType: formData.assemblyType,
-      vehicleYear: formData.vehicleYear,
-      serviceType: formData.serviceType,
-      customerComplaint: formData.customerComplaint,
-      date: new Date().toLocaleDateString('id-ID'),
-      estimatedCost: '0',
-      estimatedDays: '1',
-      branch: currentUser.branch
+      email: formData.email || '',
+      
+      // Vehicle fields (sesuai ALLOWED_DOCS["Garage Vehicle"]["fields"])
+      license_plate: formData.plateNumber,
+      chassis_no: formData.chassisNumber,
+      engine_no: formData.engineNumber,
+      make: formData.vehicleBrand,
+      model: formData.vehicleModel,
+      vehicle_type: formData.vehicleType,
+      year: formData.vehicleYear,
+      odometer_value: parseInt(formData.kilometer) || 0,
+      fuel_type: formData.fuel,
+      assembly_type: formData.assemblyType,
+      
+      // Service Order fields
+      service_order_type: formData.serviceType,
+      notes: formData.customerComplaint,
+      intake_type: 'Walk-In',
+      priority: 'Normal',
+      
+      // Branch
+      branch: currentUser.branch,
+      
+      // Additional notes
+      service_notes: formData.advisorNotes || formData.customerComplaint
     };
 
-    // Add to list (at the beginning)
-    setRecentRegistrations([newRegistration, ...recentRegistrations]);
-    
-    // Reset form
-    setFormData({
-      plateNumber: '',
-      chassisNumber: '',
-      engineNumber: '',
-      vehicleBrand: '',
-      vehicleModel: '',
-      vehicleType: '',
-      kilometer: '',
-      fuel: '',
-      assemblyType: '',
-      vehicleYear: '',
-      customerName: '',
-      phone: '',
-      email: '',
-      serviceType: '',
-      customerComplaint: '',
-      estimatedCost: '',
-      estimatedDays: '',
-      advisorNotes: ''
-    });
+    console.log('Payload:', payload);
 
-    // Show success message
-    alert(`Registration successful!\nCustomer: ${newRegistration.customerName}\nVehicle: ${newRegistration.plateNumber}\nOrder ID: ${newOrderId}\n\nData has been added to today's registrations.`);
+    // ✅ CALL API dengan payload yang benar
+    const result = await frappeClient.registerCustomerVehicle(payload);
     
-    // Auto focus to first field for next entry
-    setTimeout(() => {
-      const firstInput = document.querySelector('[name="plateNumber"]');
-      if (firstInput) {
-        firstInput.focus();
+    console.log('Registration API Response:', result);
+
+    // ✅ CHECK RESPONSE STRUCTURE
+    if (result && result.created) {
+      const createdData = result.created;
+      
+      // Generate display data for UI
+      const newTime = new Date().toLocaleTimeString('id-ID', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      
+      const newRegistration = {
+        id: createdData.service_order || createdData.vehicle || Date.now().toString(),
+        time: newTime,
+        orderId: createdData.service_order || `ORD-${Date.now().toString().slice(-6)}`,
+        customerName: createdData.customer_name || formData.customerName,
+        phone: formData.phone,
+        email: formData.email,
+        plateNumber: formData.plateNumber,
+        chassisNumber: formData.chassisNumber,
+        engineNumber: formData.engineNumber,
+        vehicleBrand: formData.vehicleBrand,
+        vehicleModel: formData.vehicleModel,
+        vehicleType: formData.vehicleType,
+        kilometer: formData.kilometer,
+        fuel: formData.fuel,
+        assemblyType: formData.assemblyType,
+        vehicleYear: formData.vehicleYear,
+        serviceType: formData.serviceType,
+        customerComplaint: formData.customerComplaint,
+        date: new Date().toLocaleDateString('id-ID'),
+        estimatedCost: '0',
+        estimatedDays: '1',
+        branch: currentUser.branch,
+        status: result.service_order_status || 'Inspection'
+      };
+
+      // Add to list (at the beginning)
+      setRecentRegistrations([newRegistration, ...recentRegistrations]);
+      
+      // Reset form
+      setFormData({
+        plateNumber: '',
+        chassisNumber: '',
+        engineNumber: '',
+        vehicleBrand: '',
+        vehicleModel: '',
+        vehicleType: '',
+        kilometer: '',
+        fuel: '',
+        assemblyType: '',
+        vehicleYear: '',
+        customerName: '',
+        phone: '',
+        email: '',
+        serviceType: '',
+        customerComplaint: '',
+        estimatedCost: '',
+        estimatedDays: '',
+        advisorNotes: ''
+      });
+
+      // Show success message with detailed info
+      let successMessage = `✅ Registration Successful!\n\n`;
+      successMessage += `Customer: ${createdData.customer_name || formData.customerName}\n`;
+      successMessage += `Vehicle: ${formData.plateNumber}\n`;
+      
+      if (createdData.service_order) {
+        successMessage += `Service Order: ${createdData.service_order}\n`;
       }
-    }, 100);
-  };
+      if (createdData.customer) {
+        successMessage += `Customer ID: ${createdData.customer}\n`;
+      }
+      if (createdData.vehicle) {
+        successMessage += `Vehicle ID: ${createdData.vehicle}\n`;
+      }
+      
+      successMessage += `\nData has been saved to Frappe backend.`;
+      
+      // If PDF was generated
+      if (result.estimate_pdf || result.estimate_pdf_file) {
+        successMessage += `\n\n📄 Service estimate PDF has been generated.`;
+      }
+
+      alert(successMessage);
+      
+      // Auto focus to first field for next entry
+      setTimeout(() => {
+        const firstInput = document.querySelector('[name="plateNumber"]');
+        if (firstInput) {
+          firstInput.focus();
+        }
+      }, 100);
+      
+    } else {
+      // ❌ HANDLE ERROR
+      throw new Error('Registration failed: Invalid response from server');
+    }
+    
+  } catch (error) {
+    console.error('Registration error:', error);
+    
+    let errorMessage = '❌ Registration failed!\n\n';
+    errorMessage += `Error: ${error.message}\n\n`;
+    errorMessage += 'Please check:\n';
+    errorMessage += '1. You are logged in to Frappe\n';
+    errorMessage += '2. Backend API is running\n';
+    errorMessage += '3. Function is whitelisted (@frappe.whitelist)\n';
+    errorMessage += '4. Branch is properly configured\n';
+    errorMessage += '5. DocTypes (Garage Customer, Garage Vehicle, Garage Service Order) exist';
+    
+    alert(errorMessage);
+  }
+};
+
+  // Load registrations from Frappe backend on mount
+// useEffect(() => {
+//   const loadRegistrationsFromFrappe = async () => {
+//     try {
+//       console.log('Loading registrations from Frappe...');
+      
+//       // Call API to get registrations
+//       const result = await frappeClient.request('/api/method/garage.api.portal.get_customer_registrations');
+      
+//       if (result.message && result.message.success) {
+//         const registrationsData = result.message.data || [];
+        
+//         // Transform data untuk UI
+//         const transformedData = registrationsData.map(reg => ({
+//           id: reg.registration_id,
+//           time: new Date(reg.registration_date).toLocaleTimeString('id-ID', { 
+//             hour: '2-digit', 
+//             minute: '2-digit' 
+//           }),
+//           orderId: reg.registration_id,
+//           customerName: reg.customer_name,
+//           phone: reg.phone,
+//           email: reg.email,
+//           plateNumber: reg.plate_number,
+//           chassisNumber: reg.chassis_number || '',
+//           engineNumber: reg.engine_number || '',
+//           vehicleBrand: reg.vehicle_brand,
+//           vehicleModel: reg.vehicle_model,
+//           vehicleType: reg.vehicle_type,
+//           vehicleYear: reg.vehicle_year,
+//           serviceType: reg.service_type,
+//           customerComplaint: reg.customer_complaint,
+//           date: new Date(reg.registration_date).toLocaleDateString('id-ID'),
+//           estimatedCost: '0',
+//           estimatedDays: '1',
+//           branch: currentUser.branch,
+//           status: reg.status
+//         }));
+        
+//         setRecentRegistrations(transformedData);
+//         console.log('Loaded registrations:', transformedData);
+//       }
+//     } catch (error) {
+//       console.error('Failed to load registrations from Frappe:', error);
+      
+//       // Fallback to localStorage if Frappe fails
+//       const savedRegistrations = localStorage.getItem('registrations');
+//       if (savedRegistrations) {
+//         setRecentRegistrations(JSON.parse(savedRegistrations));
+//       }
+//     }
+//   };
+
+//   loadRegistrationsFromFrappe();
+// }, [currentUser.branch]);
+
+  useEffect(() => {
+    const savedRegistrations = localStorage.getItem('registrations');
+    if (savedRegistrations) {
+      setRecentRegistrations(JSON.parse(savedRegistrations));
+    }
+  }, []);
+
+  // Save registrations to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('registrations', JSON.stringify(recentRegistrations));
+  }, [recentRegistrations]);
 
   const handleWorkOrderConfirm = (customerSig, advisorSig) => {
     // Generate new registration
