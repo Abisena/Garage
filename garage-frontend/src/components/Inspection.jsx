@@ -1,10 +1,21 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Search, Camera, AlertTriangle, CheckCircle, Clock, FileText, X, Printer, ChevronRight, ClipboardList } from 'lucide-react';
 import { Button } from './ui/button';
 // import watermarkLogo from 'figma:asset/5ef42b457e7713cd266d609b04b7f121b13997b7.png';
 
 export function Inspection() {
-  const [registrations, setRegistrations] = useState([]);
+  const [registrations, setRegistrations] = useState(() => {
+    const savedRegistrations = localStorage.getItem('registrations');
+    if (!savedRegistrations) return [];
+
+    try {
+      return JSON.parse(savedRegistrations);
+    } catch (error) {
+      console.error('Failed to restore registrations from storage', error);
+      localStorage.removeItem('registrations');
+      return [];
+    }
+  });
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [showDiagnosisReport, setShowDiagnosisReport] = useState(false);
   const [createdWorkOrderId, setCreatedWorkOrderId] = useState('');
@@ -48,15 +59,7 @@ export function Inspection() {
     recommendedParts: '',
     photos: []
   });
-  const printRef = useRef(null);
-
-  useEffect(() => {
-    // Load registrations from localStorage
-    const savedRegistrations = localStorage.getItem('registrations');
-    if (savedRegistrations) {
-      setRegistrations(JSON.parse(savedRegistrations));
-    }
-  }, []);
+  
 
   const handleVehicleSelect = (registration) => {
     setSelectedVehicle(registration);
