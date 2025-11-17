@@ -7,21 +7,19 @@ import { Sidebar } from './components/Sidebar'
 import { TopBar } from './components/TopBar'
 
 function App() {
-  const [currentUser, setCurrentUser] = useState(null)
-  const [currentPage, setCurrentPage] = useState('registration')
-
-  // Check for existing session on mount
-  useEffect(() => {
+  const [currentUser, setCurrentUser] = useState(() => {
     const savedUser = localStorage.getItem('currentUser')
-    if (savedUser) {
-      try {
-        setCurrentUser(JSON.parse(savedUser))
-      } catch (err) {
-        console.error('Failed to restore session:', err)
-        localStorage.removeItem('currentUser')
-      }
+    if (!savedUser) return null
+
+    try {
+      return JSON.parse(savedUser)
+    } catch (err) {
+      console.error('Failed to restore session:', err)
+      localStorage.removeItem('currentUser')
+      return null
     }
-  }, [])
+  })
+  const [currentPage, setCurrentPage] = useState('registration')
 
   // Resolve default branch for the logged in user from Pravenya (Frappe)
   useEffect(() => {
