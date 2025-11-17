@@ -2383,6 +2383,7 @@ def portal_bootstrap(
             "vehicle",
             "branch",
             "branch_code",
+            "service_order_type",
             "priority",
             "service_booking_date",
             "estimated_delivery_date",

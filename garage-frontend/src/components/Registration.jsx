@@ -67,113 +67,7 @@ export function Registration({ currentUser }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  const [recentRegistrations, setRecentRegistrations] = useState([
-    {
-      id: 'JKT-REG-001',
-      time: '10:30',
-      orderId: 'JKT-001',
-      customerName: 'Budi Santoso',
-      phone: '+62 812-3456-7890',
-      email: 'budi.santoso@email.com',
-      vehicleBrand: 'Toyota',
-      vehicleModel: 'Avanza',
-      vehicleYear: '2020',
-      vehicleType: 'MPV',
-      plateNumber: 'B 1234 XYZ',
-      chassisNumber: 'MHKA42V159K123456',
-      engineNumber: '1NR-VE-1234567',
-      serviceType: 'Engine Service',
-      customerComplaint: 'Engine making unusual noise and reduced power',
-      date: new Date().toLocaleDateString('id-ID'),
-      estimatedCost: '500000',
-      estimatedDays: '3',
-      branch: 'Jakarta'
-    },
-    {
-      id: 'BDG-REG-001',
-      time: '11:15',
-      orderId: 'BDG-001',
-      customerName: 'Siti Rahayu',
-      phone: '+62 813-4567-8901',
-      email: 'siti.rahayu@email.com',
-      vehicleBrand: 'Honda',
-      vehicleModel: 'Jazz',
-      vehicleYear: '2019',
-      vehicleType: 'Hatchback',
-      plateNumber: 'D 5678 ABC',
-      chassisNumber: 'MRHGK8840KJ123456',
-      engineNumber: 'L15Z-1234567',
-      serviceType: 'Brake Service',
-      customerComplaint: 'Brake pedal feels soft and squeaking noise',
-      date: new Date().toLocaleDateString('id-ID'),
-      estimatedCost: '300000',
-      estimatedDays: '2',
-      branch: 'Bandung'
-    },
-    {
-      id: 'SBY-REG-001',
-      time: '12:00',
-      orderId: 'SBY-001',
-      customerName: 'Ahmad Yani',
-      phone: '+62 814-5678-9012',
-      email: 'ahmad.yani@email.com',
-      vehicleBrand: 'Suzuki',
-      vehicleModel: 'Ertiga',
-      vehicleYear: '2021',
-      vehicleType: 'MPV',
-      plateNumber: 'L 9012 DEF',
-      chassisNumber: 'MBJKS83B1LJ123456',
-      engineNumber: 'K15B-1234567',
-      serviceType: 'Oil Change',
-      customerComplaint: 'Regular maintenance service',
-      date: new Date().toLocaleDateString('id-ID'),
-      estimatedCost: '200000',
-      estimatedDays: '1',
-      branch: 'Surabaya'
-    },
-    {
-      id: 'JKT-REG-002',
-      time: '13:45',
-      orderId: 'JKT-002',
-      customerName: 'Dewi Lestari',
-      phone: '+62 815-1234-5678',
-      email: 'dewi.lestari@email.com',
-      vehicleBrand: 'Mitsubishi',
-      vehicleModel: 'Xpander',
-      vehicleYear: '2022',
-      vehicleType: 'MPV',
-      plateNumber: 'B 3456 GHI',
-      chassisNumber: 'MMBJNKB40NJ123456',
-      engineNumber: '4A91-1234567',
-      serviceType: 'AC Service',
-      customerComplaint: 'AC not cooling properly',
-      date: new Date().toLocaleDateString('id-ID'),
-      estimatedCost: '450000',
-      estimatedDays: '2',
-      branch: 'Jakarta'
-    },
-    {
-      id: 'BDG-REG-002',
-      time: '14:20',
-      orderId: 'BDG-002',
-      customerName: 'Rudi Hartono',
-      phone: '+62 816-2345-6789',
-      email: 'rudi.hartono@email.com',
-      vehicleBrand: 'Daihatsu',
-      vehicleModel: 'Terios',
-      vehicleYear: '2018',
-      vehicleType: 'SUV',
-      plateNumber: 'D 7890 JKL',
-      chassisNumber: 'MHKJ5EA1JJK123456',
-      engineNumber: '3SZ-VE-1234567',
-      serviceType: 'Transmission Service',
-      customerComplaint: 'Gear shifting is not smooth',
-      date: new Date().toLocaleDateString('id-ID'),
-      estimatedCost: '650000',
-      estimatedDays: '4',
-      branch: 'Bandung'
-    }
-  ]);
+  const [recentRegistrations, setRecentRegistrations] = useState([]);
 
   const serviceTypes = [
     'Oil Change',
@@ -227,6 +121,66 @@ export function Registration({ currentUser }) {
   // Get available models based on selected brand
   const availableModels = formData.vehicleBrand ? vehicleModelsByBrand[formData.vehicleBrand] || [] : [];
 
+  const toDateKey = (value) => {
+    if (!value) return '';
+    try {
+      const date = new Date(value);
+      return date.toISOString().slice(0, 10);
+    } catch (error) {
+      return '';
+    }
+  };
+
+  const mapServiceOrdersToRegistrations = (bootstrapData) => {
+    if (!bootstrapData) return [];
+
+    const customers = bootstrapData.customers || [];
+    const vehicles = bootstrapData.vehicles || [];
+    const serviceOrders = bootstrapData.service_orders || [];
+    const branchFallback = bootstrapData.active_branch || currentUser?.branch || 'all';
+
+    const customerMap = new Map(customers.map((customer) => [customer.name, customer]));
+    const vehicleMap = new Map(vehicles.map((vehicle) => [vehicle.name, vehicle]));
+
+    const todayKey = toDateKey(new Date());
+
+    return serviceOrders
+      .filter((order) => toDateKey(order.service_booking_date) === todayKey)
+      .map((order) => {
+        const customer = customerMap.get(order.customer) || {};
+        const vehicle = vehicleMap.get(order.vehicle) || {};
+        const bookingDate = order.service_booking_date ? new Date(order.service_booking_date) : null;
+
+        return {
+          id: order.name,
+          time: bookingDate
+            ? bookingDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+            : '--:--',
+          orderId: order.name,
+          serviceOrderName: order.name,
+          customerName: customer.customer_name || order.customer || 'Unknown Customer',
+          phone: customer.phone || '',
+          email: customer.email || '',
+          plateNumber: vehicle.license_plate || '',
+          chassisNumber: vehicle.vin || '',
+          engineNumber: vehicle.engine_number || '',
+          vehicleBrand: vehicle.brand || '',
+          vehicleModel: vehicle.model || vehicle.model_variant || '',
+          vehicleType: vehicle.type_model || '',
+          kilometer: vehicle.mileage || '',
+          fuel: vehicle.fuel_type || '',
+          assemblyType: vehicle.transmission || '',
+          vehicleYear: vehicle.vehicle_year ? String(vehicle.vehicle_year) : '',
+          serviceType: order.service_order_type || order.service_notes || 'Service',
+          customerComplaint: order.service_notes || '',
+          date: bookingDate ? bookingDate.toLocaleDateString('id-ID') : '',
+          estimatedCost: order.total_estimated_amount ? String(order.total_estimated_amount) : '',
+          estimatedDays: '',
+          branch: order.branch || branchFallback,
+        };
+      });
+  };
+
   // Load registrations from localStorage on mount
   useEffect(() => {
     const savedRegistrations = localStorage.getItem('registrations');
@@ -234,6 +188,31 @@ export function Registration({ currentUser }) {
       setRecentRegistrations(JSON.parse(savedRegistrations));
     }
   }, []);
+
+  // Load today's registrations from Frappe
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchRegistrations = async () => {
+      try {
+        const bootstrap = await frappeClient.getPortalBootstrap();
+        if (cancelled) return;
+
+        const mappedRegistrations = mapServiceOrdersToRegistrations(bootstrap);
+        if (mappedRegistrations.length) {
+          setRecentRegistrations(mappedRegistrations);
+        }
+      } catch (error) {
+        console.error('Failed to load registrations from Pravenya', error);
+      }
+    };
+
+    fetchRegistrations();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.branch]);
 
   // Save registrations to localStorage whenever it changes
   useEffect(() => {
