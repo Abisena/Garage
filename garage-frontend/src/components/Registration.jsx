@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Plus, User, Car, Phone, Mail } from 'lucide-react';
+import { Plus, User, Car, Phone, Mail, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { WorkOrderModal } from './WorkOrderModal';
+import { frappeClient } from '../lib/frappeClient';
 
 export function Registration({ currentUser }) {
   // Load saved form data from localStorage on mount
@@ -27,7 +28,9 @@ export function Registration({ currentUser }) {
           kilometer: '',
           fuel: '',
           assemblyType: '',
-          advisorNotes: ''
+          advisorNotes: '',
+          estimatedCost: '',
+          estimatedDays: ''
         };
       }
     }
@@ -47,7 +50,9 @@ export function Registration({ currentUser }) {
       kilometer: '',
       fuel: '',
       assemblyType: '',
-      advisorNotes: ''
+      advisorNotes: '',
+      estimatedCost: '',
+      estimatedDays: ''
     };
   });
 
@@ -60,6 +65,8 @@ export function Registration({ currentUser }) {
   const [showWorkOrder, setShowWorkOrder] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [recentRegistrations, setRecentRegistrations] = useState([
     {
       id: 'JKT-REG-001',
@@ -251,6 +258,113 @@ export function Registration({ currentUser }) {
     return `${branchCode}-${String(nextNumber).padStart(3, '0')}`;
   };
 
+  const validateRequiredFields = () => {
+    if (!formData.plateNumber || !formData.chassisNumber || !formData.engineNumber ||
+        !formData.vehicleBrand || !formData.vehicleModel || !formData.vehicleType ||
+        !formData.kilometer || !formData.fuel || !formData.assemblyType ||
+        !formData.vehicleYear || !formData.customerName || !formData.phone ||
+        !formData.serviceType || !formData.customerComplaint) {
+      alert('Please complete all required fields (*)');
+      return false;
+    }
+    return true;
+  };
+
+  const buildRegistrationPayload = () => {
+    const branchValue = currentUser?.branch && currentUser.branch !== 'all' ? currentUser.branch : undefined;
+    const payload = {
+      branch: branchValue,
+      customer_name: formData.customerName,
+      phone: formData.phone,
+      email: formData.email,
+      license_plate: formData.plateNumber,
+      vin: formData.chassisNumber,
+      engine_number: formData.engineNumber,
+      brand: formData.vehicleBrand,
+      model: formData.vehicleModel,
+      type_model: formData.vehicleType,
+      mileage: formData.kilometer ? Number(formData.kilometer) || undefined : undefined,
+      fuel_type: formData.fuel,
+      transmission: formData.assemblyType,
+      vehicle_year: formData.vehicleYear,
+      service_order_type: formData.serviceType,
+      service_notes: formData.customerComplaint,
+      inspection_summary: formData.customerComplaint,
+      intake_type: 'Walk-In'
+    };
+
+    if (formData.estimatedCost) {
+      payload.total_estimated_amount = Number(formData.estimatedCost) || 0;
+    }
+
+    return { payload, branchValue: branchValue || currentUser?.branch || 'all' };
+  };
+
+  const appendRegistrationToList = (branchValue, serviceOrderName = '', extraFields = {}) => {
+    const newTime = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    let createdRegistration = null;
+
+    setRecentRegistrations((prev) => {
+      const branchRegistrations = prev.filter(reg => reg.branch === branchValue);
+      const nextNumber = branchRegistrations.length + 1;
+      const newId = `${getBranchCode(branchValue)}-REG-${String(nextNumber).padStart(3, '0')}`;
+      const newOrderId = serviceOrderName || getNextOrderNumber(branchValue);
+      const registration = {
+        id: newId,
+        time: newTime,
+        orderId: newOrderId,
+        serviceOrderName,
+        customerName: formData.customerName,
+        phone: formData.phone,
+        email: formData.email,
+        plateNumber: formData.plateNumber,
+        chassisNumber: formData.chassisNumber,
+        engineNumber: formData.engineNumber,
+        vehicleBrand: formData.vehicleBrand,
+        vehicleModel: formData.vehicleModel,
+        vehicleType: formData.vehicleType,
+        kilometer: formData.kilometer,
+        fuel: formData.fuel,
+        assemblyType: formData.assemblyType,
+        vehicleYear: formData.vehicleYear,
+        serviceType: formData.serviceType,
+        customerComplaint: formData.customerComplaint,
+        date: new Date().toLocaleDateString('id-ID'),
+        estimatedCost: formData.estimatedCost || '0',
+        estimatedDays: formData.estimatedDays || '1',
+        branch: branchValue,
+        ...extraFields
+      };
+      createdRegistration = registration;
+      return [registration, ...prev];
+    });
+
+    return createdRegistration;
+  };
+
+  const resetForm = () => {
+    setFormData({
+      plateNumber: '',
+      chassisNumber: '',
+      engineNumber: '',
+      vehicleBrand: '',
+      vehicleModel: '',
+      vehicleType: '',
+      kilometer: '',
+      fuel: '',
+      assemblyType: '',
+      vehicleYear: '',
+      customerName: '',
+      phone: '',
+      email: '',
+      serviceType: '',
+      customerComplaint: '',
+      estimatedCost: '',
+      estimatedDays: '',
+      advisorNotes: ''
+    });
+  };
+
   const handleInputComplete = (currentField, value) => {
     if (!value) return;
     
@@ -274,149 +388,58 @@ export function Registration({ currentUser }) {
     }
   };
 
-  const handleRegisterClick = () => {
-    // Validate required fields
-    if (!formData.plateNumber || !formData.chassisNumber || !formData.engineNumber ||
-        !formData.vehicleBrand || !formData.vehicleModel || !formData.vehicleType || 
-        !formData.kilometer || !formData.fuel || !formData.assemblyType || 
-        !formData.vehicleYear || !formData.customerName || !formData.phone || 
-        !formData.serviceType || !formData.customerComplaint) {
-      alert('Please complete all required fields (*)');
-      return;
+  const handleRegisterClick = async () => {
+    setSubmitError('');
+    if (!validateRequiredFields()) return;
+
+    setSubmitting(true);
+    try {
+      const { payload, branchValue } = buildRegistrationPayload();
+      const response = await frappeClient.registerCustomerVehicle(payload);
+      const created = response?.created || {};
+      const serviceOrderName = response?.service_order || created.service_order || '';
+
+      appendRegistrationToList(branchValue, serviceOrderName);
+      resetForm();
+
+      const successMessage = serviceOrderName
+        ? `Registration successful!\nService Order: ${serviceOrderName}\n\nData has been sent to Pravenya.`
+        : 'Registration successful! Data has been added to today\'s registrations.';
+
+      alert(successMessage);
+    } catch (error) {
+      console.error('Failed to save registration', error);
+      setSubmitError(error.message || 'Failed to save registration to Pravenya.');
+    } finally {
+      setSubmitting(false);
     }
-    
-    // Generate new registration and add to list immediately
-    const newTime = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    const branchCode = getBranchCode(currentUser.branch);
-    const branchRegistrations = recentRegistrations.filter(reg => reg.branch === currentUser.branch);
-    const nextNumber = branchRegistrations.length + 1;
-    const newId = `${branchCode}-REG-${String(nextNumber).padStart(3, '0')}`;
-    const newOrderId = getNextOrderNumber(currentUser.branch);
-    
-    const newRegistration = {
-      id: newId,
-      time: newTime,
-      orderId: newOrderId,
-      customerName: formData.customerName,
-      phone: formData.phone,
-      email: formData.email,
-      plateNumber: formData.plateNumber,
-      chassisNumber: formData.chassisNumber,
-      engineNumber: formData.engineNumber,
-      vehicleBrand: formData.vehicleBrand,
-      vehicleModel: formData.vehicleModel,
-      vehicleType: formData.vehicleType,
-      kilometer: formData.kilometer,
-      fuel: formData.fuel,
-      assemblyType: formData.assemblyType,
-      vehicleYear: formData.vehicleYear,
-      serviceType: formData.serviceType,
-      customerComplaint: formData.customerComplaint,
-      date: new Date().toLocaleDateString('id-ID'),
-      estimatedCost: '0',
-      estimatedDays: '1',
-      branch: currentUser.branch
-    };
-
-    // Add to list (at the beginning)
-    setRecentRegistrations([newRegistration, ...recentRegistrations]);
-    
-    // Reset form
-    setFormData({
-      plateNumber: '',
-      chassisNumber: '',
-      engineNumber: '',
-      vehicleBrand: '',
-      vehicleModel: '',
-      vehicleType: '',
-      kilometer: '',
-      fuel: '',
-      assemblyType: '',
-      vehicleYear: '',
-      customerName: '',
-      phone: '',
-      email: '',
-      serviceType: '',
-      customerComplaint: '',
-      estimatedCost: '',
-      estimatedDays: '',
-      advisorNotes: ''
-    });
-
-    // Show success message
-    alert(`Registration successful!\nCustomer: ${newRegistration.customerName}\nVehicle: ${newRegistration.plateNumber}\nOrder ID: ${newOrderId}\n\nData has been added to today's registrations.`);
-    
-    // Auto focus to first field for next entry
-    setTimeout(() => {
-      const firstInput = document.querySelector('[name="plateNumber"]');
-      if (firstInput) {
-        firstInput.focus();
-      }
-    }, 100);
   };
 
-  const handleWorkOrderConfirm = (customerSig, advisorSig) => {
-    // Generate new registration
-    const newTime = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    const branchCode = getBranchCode(currentUser.branch);
-    const branchRegistrations = recentRegistrations.filter(reg => reg.branch === currentUser.branch);
-    const nextNumber = branchRegistrations.length + 1;
-    const newId = `${branchCode}-REG-${String(nextNumber).padStart(3, '0')}`;
-    const newOrderId = getNextOrderNumber(currentUser.branch);
-    
-    const newRegistration = {
-      id: newId,
-      time: newTime,
-      orderId: newOrderId,
-      customerName: formData.customerName,
-      phone: formData.phone,
-      email: formData.email,
-      plateNumber: formData.plateNumber,
-      chassisNumber: formData.chassisNumber,
-      engineNumber: formData.engineNumber,
-      vehicleBrand: formData.vehicleBrand,
-      vehicleModel: formData.vehicleModel,
-      vehicleType: formData.vehicleType,
-      kilometer: formData.kilometer,
-      fuel: formData.fuel,
-      assemblyType: formData.assemblyType,
-      vehicleYear: formData.vehicleYear,
-      serviceType: formData.serviceType,
-      customerComplaint: formData.customerComplaint,
-      customerSignature: customerSig,
-      advisorSignature: advisorSig,
-      date: new Date().toLocaleDateString('id-ID'),
-      estimatedCost: formData.estimatedCost,
-      estimatedDays: formData.estimatedDays,
-      branch: currentUser.branch
-    };
+  const handleWorkOrderConfirm = async (customerSig, advisorSig) => {
+    setSubmitError('');
+    if (!validateRequiredFields()) return;
 
-    // Add to list (at the beginning)
-    setRecentRegistrations([newRegistration, ...recentRegistrations]);
-    
-    // Reset form
-    setFormData({
-      plateNumber: '',
-      chassisNumber: '',
-      engineNumber: '',
-      vehicleBrand: '',
-      vehicleModel: '',
-      vehicleType: '',
-      kilometer: '',
-      fuel: '',
-      assemblyType: '',
-      vehicleYear: '',
-      customerName: '',
-      phone: '',
-      email: '',
-      serviceType: '',
-      customerComplaint: '',
-      estimatedCost: '',
-      estimatedDays: '',
-      advisorNotes: ''
-    });
+    setSubmitting(true);
+    try {
+      const { payload, branchValue } = buildRegistrationPayload();
+      const response = await frappeClient.registerCustomerVehicle(payload);
+      const created = response?.created || {};
+      const serviceOrderName = response?.service_order || created.service_order || '';
 
-    alert('Registration successful! Data has been added to today\'s registrations.');
+      appendRegistrationToList(branchValue, serviceOrderName, {
+        customerSignature: customerSig,
+        advisorSignature: advisorSig
+      });
+      resetForm();
+
+      alert('Registration successful! Data has been added to today\'s registrations.');
+    } catch (error) {
+      console.error('Failed to save registration', error);
+      setSubmitError(error.message || 'Failed to save registration to Pravenya.');
+    } finally {
+      setSubmitting(false);
+      setShowWorkOrder(false);
+    }
   };
 
   const handleViewRegistration = (registration) => {
@@ -805,42 +828,39 @@ export function Registration({ currentUser }) {
                 </div>
 
                 {/* Buttons */}
-                <div className="flex gap-3">
-                  <Button 
-                    type="button"
-                    onClick={handleRegisterClick}
-                    className="bg-blue-500 hover:bg-blue-600 text-white"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Register & Continue to Inspection
-                  </Button>
-                  <Button 
-                    type="button"
-                    variant="outline" 
-                    className="border-slate-300"
-                    onClick={() => setFormData({
-                      plateNumber: '',
-                      chassisNumber: '',
-                      engineNumber: '',
-                      vehicleBrand: '',
-                      vehicleModel: '',
-                      vehicleType: '',
-                      kilometer: '',
-                      fuel: '',
-                      assemblyType: '',
-                      vehicleYear: '',
-                      customerName: '',
-                      phone: '',
-                      email: '',
-                      serviceType: '',
-                      customerComplaint: '',
-                      estimatedCost: '',
-                      estimatedDays: '',
-                      advisorNotes: ''
-                    })}
-                  >
-                    Clear Form
-                  </Button>
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      onClick={handleRegisterClick}
+                      className="bg-blue-500 hover:bg-blue-600 text-white"
+                      disabled={submitting}
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Register & Continue to Inspection
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-slate-300"
+                      onClick={resetForm}
+                      disabled={submitting}
+                    >
+                      Clear Form
+                    </Button>
+                  </div>
+                  {submitError && (
+                    <p className="text-sm text-red-600">{submitError}</p>
+                  )}
                 </div>
               </form>
             </div>

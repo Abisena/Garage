@@ -110,6 +110,33 @@ class FrappeClient {
       throw error;
     }
   }
+
+  async registerCustomerVehicle(payload) {
+    try {
+      const response = await this.request(
+        '/api/method/garage.api.portal.register_customer_vehicle',
+        {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        },
+      );
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to register customer/vehicle:', error);
+      throw error;
+    }
+  }
+
+  async getPortalBootstrap() {
+    try {
+      const response = await this.request('/api/method/garage.api.portal.portal_bootstrap');
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to fetch portal bootstrap:', error);
+      throw error;
+    }
+  }
 }
 
 export const frappeClient = new FrappeClient();
