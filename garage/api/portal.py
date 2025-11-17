@@ -4639,8 +4639,26 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
     data = _ensure_dict(payload or {})
 
     branch_name = (data.get("branch") or "").strip()
+    allowed_branches = _allowed_branches(frappe.session.user)
+
+    if allowed_branches is not None and branch_name and branch_name not in allowed_branches:
+        branch_name = ""
+
     if not branch_name:
-        branch_name = _default_branch(frappe.session.user) or ""
+        branches = _list_dicts("Garage Branch", ["name"])
+        if allowed_branches is not None:
+            allowed_set = {branch for branch in allowed_branches if branch}
+            branches = [
+                branch for branch in branches if branch.get("name") in allowed_set
+            ]
+
+        preferred_branch = _default_branch(frappe.session.user) or ""
+        if preferred_branch and any(
+            branch.get("name") == preferred_branch for branch in branches
+        ):
+            branch_name = preferred_branch
+        elif branches:
+            branch_name = branches[0].get("name") or ""
     if not branch_name:
         frappe.throw(_("Cabang bengkel wajib dipilih."))
     _get_doc("Garage Branch", branch_name)
