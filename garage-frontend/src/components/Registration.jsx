@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, User, Car } from 'lucide-react';
 import { Button } from './ui/button';
-import { WorkOrderModal } from './WorkOrderModal';
+import { WorkOrderModal } from './WorkOrderModall';
 import frappeClient from '../lib/frappeClient';
 
 export function Registration({ currentUser }) {

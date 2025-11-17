@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react'
 import { frappeClient } from './lib/frappeClient'
 import { Login } from './components/Login'
 import { Registration } from './components/Registration'
+import { Inspection } from './components/Inspection'
 import { Sidebar } from './components/Sidebar'
+import { TopBar } from './components/TopBar'
 
 function App() {
   const [currentUser, setCurrentUser] = useState(null)
+  const [currentPage, setCurrentPage] = useState('registration')
 
   // Check for existing session on mount
   useEffect(() => {
@@ -54,22 +57,18 @@ function App() {
   const handleLogin = (user) => {
     const hydratedUser = {
       ...user,
-      branch: user.branch || 'all',
+      branch: user.branch || 'Jakarta',
     }
     setCurrentUser(hydratedUser)
     localStorage.setItem('currentUser', JSON.stringify(hydratedUser))
   }
 
   const handleLogout = async () => {
-    // Logout dari Frappe
     await frappeClient.logout()
-
-    // Clear local state
     setCurrentUser(null)
     localStorage.removeItem('currentUser')
   }
 
-  // If not logged in, show login page
   if (!currentUser) {
     return <Login onLogin={handleLogin} />
   }
@@ -77,71 +76,52 @@ function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard />;
+        return <div className="p-8"><h2 className="text-2xl font-bold">Dashboard</h2></div>
       case 'registration':
-        return <Registration currentUser={currentUser} />;
+        return <Registration currentUser={currentUser} />
       case 'inspection':
-        return <Inspection />;
+        return <Inspection />
       case 'orders':
-        return <ServiceOrders currentUser={currentUser} />;
-      case 'inventory':
-        return <Inventory />;
+        return <div className="p-8"><h2 className="text-2xl font-bold">Repair Orders</h2></div>
       case 'spareparts':
-        return <SpareParts />;
-      case 'sparepartsrequest':
-        return <SparePartsRequest currentUser={currentUser} />;
-      case 'buyingsparepart':
-        return <BuyingSparePartIntegrated currentUser={currentUser} />;
-      case 'directsales':
-        return <DirectSalesSparePart currentUser={currentUser} />;
+        return <div className="p-8"><h2 className="text-2xl font-bold">Spare Parts</h2></div>
       case 'workshop':
-        return <Workshop currentUser={currentUser} />;
+        return <div className="p-8"><h2 className="text-2xl font-bold">Repair & QC</h2></div>
       case 'payment':
-        return <Payment currentUser={currentUser} />;
+        return <div className="p-8"><h2 className="text-2xl font-bold">Payment</h2></div>
       case 'handover':
-        return <Handover />;
+        return <div className="p-8"><h2 className="text-2xl font-bold">Vehicle Handover</h2></div>
       case 'followup':
-        return <FollowUp />;
-      case 'process':
-        return <ProcessFlow />;
-      case 'customers':
-        return <Customers />;
+        return <div className="p-8"><h2 className="text-2xl font-bold">Follow-up</h2></div>
       case 'reports':
-        return <Report currentUser={currentUser} />;
+        return <div className="p-8"><h2 className="text-2xl font-bold">Reports</h2></div>
       default:
-        return <Dashboard />;
+        return <Registration currentUser={currentUser} />
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Garage Portal</h1>
-            <p className="text-gray-600 mt-1">Pravenya Integration</p>
-          </div>
-          <div className="text-right space-y-1">
-            <p className="text-sm text-gray-600">
-              Welcome, <strong>{currentUser.displayName}</strong>
-            </p>
-            <p className="text-xs text-gray-500">
-              Branch: <strong>{currentUser.branch || 'Not set'}</strong>
-            </p>
-            <button
-              onClick={handleLogout}
-              className="mt-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar */}
+      <Sidebar 
+        currentUser={currentUser} 
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+      />
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* <Sidebar currentUser={currentUser} /> */}
-        <Registration currentUser={currentUser} />
-      </main>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* TopBar */}
+        <TopBar 
+          currentUser={currentUser}
+          onLogout={handleLogout}
+        />
+
+        {/* Page Content */}
+        <main className="flex-1 overflow-auto">
+          {renderPage()}
+        </main>
+      </div>
     </div>
   )
 }
