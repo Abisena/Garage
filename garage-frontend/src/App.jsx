@@ -4,6 +4,8 @@ import { Login } from './components/Login'
 import './App.css'
 
 function App() {
+  const frappeUrl = import.meta.env.VITE_FRAPPE_URL || 'http://localhost:8005'
+
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -50,6 +52,9 @@ function App() {
   const handleLogin = (user) => {
     setCurrentUser(user)
     localStorage.setItem('currentUser', JSON.stringify(user))
+
+    const normalizedUrl = frappeUrl.endsWith('/') ? frappeUrl.slice(0, -1) : frappeUrl
+    window.location.assign(`${normalizedUrl}/app`)
   }
 
   const handleLogout = () => {
