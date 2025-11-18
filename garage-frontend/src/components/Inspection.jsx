@@ -192,6 +192,9 @@ export function Inspection() {
       setRegistrations(loadFromStorage('registrations', []));
     };
 
+    // Immediately hydrate from storage when landing on the page
+    reloadRegistrations();
+
     window.addEventListener('storage', reloadRegistrations);
     window.addEventListener('focus', reloadRegistrations);
 
