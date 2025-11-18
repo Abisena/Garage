@@ -391,6 +391,62 @@ export function Payment({ currentUser }) {
     setShowPrintInvoiceModal(true);
   };
 
+  const handleActualPrintPaymentOut = () => {
+    const printWindow = window.open('', '_blank');
+    const printContent = document.querySelector('.payment-out-print-content');
+
+    if (!printWindow || !printContent) {
+      alert('⚠️ Print window blocked atau konten tidak tersedia');
+      setShowPrintPaymentOutModal(false);
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Payment Out - ${selectedPO?.poNumber || ''}</title>
+          <style>
+            @page {
+              size: A5 landscape;
+              margin: 10mm;
+            }
+
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
+            }
+
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              background: white;
+            }
+          </style>
+        </head>
+        <body>
+          ${printContent.innerHTML}
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 400);
+            };
+
+            window.onafterprint = function() {
+              window.close();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   const handleActualPrintInvoice = () => {
     // Mark invoice as printed
     setIsInvoicePrinted(true);
@@ -1157,12 +1213,566 @@ export function Payment({ currentUser }) {
         </div>
       </div>
 
-      {/* MODALS akan dilanjutkan di file berikutnya karena terlalu panjang */}
-      {/* Silakan lihat komentar di bawah untuk petunjuk implementasi modal */}
+      {/* MODAL NOTA */}
+      {showNotaModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-5xl shadow-2xl flex flex-col max-h-[95vh]">
+            <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-4 rounded-t-2xl flex items-center justify-between">
+              <div className="flex items-center gap-3 text-white">
+                <ShoppingCart className="w-5 h-5" />
+                <div>
+                  <h3 className="text-xl font-semibold">Nota Pembayaran</h3>
+                  <p className="text-sm text-amber-100">{selectedOrder.orderId}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowNotaModal(false)}
+                className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-slate-500">Customer</p>
+                      <p className="text-slate-900 font-semibold">{selectedOrder.customerName}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Phone</p>
+                      <p className="text-slate-900">{selectedOrder.phone}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-slate-500">Vehicle</p>
+                      <p className="text-slate-900 font-semibold">{selectedOrder.vehicleBrand} {selectedOrder.vehicleModel}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Plate</p>
+                      <p className="text-slate-900">{selectedOrder.plateNumber}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-2 text-sm text-slate-800">
+                <Wrench className="w-4 h-4 text-blue-600" />
+                {selectedOrder.serviceType}
+              </div>
+
+              {selectedOrder.spareParts?.length > 0 && (
+                <div className="border border-slate-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead className="bg-slate-100">
+                      <tr>
+                        <th className="text-left p-2">Spare Part</th>
+                        <th className="text-center p-2 w-16">Qty</th>
+                        <th className="text-right p-2 w-24">Harga</th>
+                        <th className="text-right p-2 w-28">Total</th>
+                      </tr>
+                    </thead>
+                  </table>
+                  <div className="max-h-64 overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <tbody>
+                        {selectedOrder.spareParts.map((part, idx) => (
+                          <tr key={part.id} className={idx !== selectedOrder.spareParts.length - 1 ? 'border-b border-slate-100' : ''}>
+                            <td className="p-2 text-slate-900">{part.name}</td>
+                            <td className="p-2 text-center text-slate-900">{part.quantity}</td>
+                            <td className="p-2 text-right text-slate-600">{formatCurrency(part.unitPrice)}</td>
+                            <td className="p-2 text-right text-slate-900">{formatCurrency(part.totalPrice)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-slate-800 text-white rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-sm border-b border-white/10 pb-2">
+                  <span>Biaya Sparepart</span>
+                  <span>{formatCurrency(calculatePartsCost(selectedOrder.spareParts))}</span>
+                </div>
+                <div className="flex justify-between text-sm border-b border-white/10 pb-2">
+                  <span>Biaya Jasa / Labor</span>
+                  <span>{formatCurrency(getOrderLaborCost(selectedOrder))}</span>
+                </div>
+                <div className="flex justify-between text-lg font-semibold pt-1">
+                  <span>Total Tagihan</span>
+                  <span>{formatCurrency(calculateGrandTotal(selectedOrder))}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 p-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
+              <Button variant="outline" onClick={() => setShowNotaModal(false)} className="border-slate-300">
+                Tutup
+              </Button>
+              <Button onClick={handlePrintNota} className="bg-slate-600 hover:bg-slate-700 text-white">
+                <Printer className="w-4 h-4 mr-2" />
+                Cetak Nota
+              </Button>
+              <Button onClick={handleProceedToPayment} className="bg-amber-600 hover:bg-amber-700 text-white">
+                Lanjut Pembayaran
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PEMBAYARAN */}
+      {showPaymentModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 p-6 rounded-t-2xl flex items-center justify-between">
+              <div className="flex items-center gap-3 text-white">
+                <CreditCard className="w-6 h-6" />
+                <div>
+                  <h3 className="text-2xl font-semibold">Proses Pembayaran</h3>
+                  <p className="text-blue-100 text-sm">{selectedOrder.orderId}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setShowNotaModal(true);
+                }}
+                className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+                <p className="text-blue-700 mb-2">Total yang harus dibayar</p>
+                <p className="text-blue-900 text-4xl font-semibold">{formatCurrency(calculateGrandTotal(selectedOrder))}</p>
+              </div>
+
+              <div>
+                <h4 className="text-slate-800 mb-3 flex items-center gap-2">
+                  <CreditCard className="w-5 h-5" />
+                  Pilih Metode Pembayaran
+                </h4>
+                <div className="grid grid-cols-5 gap-3">
+                  {[{ value: 'cash', icon: Banknote, label: 'Cash' }, { value: 'transfer', icon: Smartphone, label: 'Transfer' }, { value: 'credit-card', icon: CreditCard, label: 'Credit Card' }, { value: 'debit-card', icon: CreditCard, label: 'Debit Card' }, { value: 'qris', icon: Smartphone, label: 'QRIS' }].map((method) => (
+                    <button
+                      key={method.value}
+                      onClick={() => setPaymentMethod(method.value)}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        paymentMethod === method.value
+                          ? 'border-blue-500 bg-blue-100 text-blue-700 shadow-md scale-105'
+                          : 'border-slate-300 bg-white text-slate-600 hover:border-blue-300'
+                      }`}
+                    >
+                      <method.icon className="w-6 h-6 mx-auto mb-2" />
+                      <p className="text-xs">{method.label}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {paymentMethod === 'cash' && (
+                <div className="bg-slate-50 rounded-xl p-6 border border-slate-200 space-y-3">
+                  <label className="text-slate-800 block">Jumlah Uang Diterima</label>
+                  <input
+                    type="number"
+                    value={cashReceived}
+                    onChange={(e) => setCashReceived(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Masukkan jumlah uang"
+                  />
+                  {cashReceived && (
+                    <div className="p-4 bg-white rounded-lg border border-slate-200 text-sm space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Total Tagihan</span>
+                        <span className="text-slate-900">{formatCurrency(calculateGrandTotal(selectedOrder))}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Uang Diterima</span>
+                        <span className="text-slate-900">{formatCurrency(parseFloat(cashReceived) || 0)}</span>
+                      </div>
+                      <div className="flex justify-between pt-2 border-t border-slate-200 text-blue-700 font-semibold">
+                        <span>Kembalian</span>
+                        <span>{formatCurrency(Math.max(0, (parseFloat(cashReceived) || 0) - calculateGrandTotal(selectedOrder)))}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {paymentMethod !== 'cash' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+                  <div className="bg-blue-500 rounded-lg p-2">
+                    <FileText className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="text-blue-900 font-semibold mb-1">Pembayaran {paymentMethod.toUpperCase()}</h4>
+                    <p className="text-blue-700 text-sm">Pastikan pembayaran telah diterima sebelum memproses transaksi.</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    setShowNotaModal(true);
+                  }}
+                  className="border-slate-300"
+                >
+                  Kembali
+                </Button>
+                <Button onClick={handleProcessPayment} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  <Check className="w-4 h-4 mr-2" />
+                  Konfirmasi Pembayaran
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL INVOICE */}
+      {showInvoiceModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl max-h-[95vh] overflow-y-auto">
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 rounded-t-2xl flex items-center justify-between">
+              <div className="flex items-center gap-3 text-white">
+                <Receipt className="w-6 h-6" />
+                <div>
+                  <h3 className="text-2xl font-semibold">Invoice Pembayaran</h3>
+                  <p className="text-emerald-100 text-sm">{selectedOrder.invoiceNumber || prePaymentInvoiceNumber}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowInvoiceModal(false)} className="text-white hover:bg-white/20 rounded-lg p-2">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-emerald-700">Total Pembayaran</p>
+                  <p className="text-3xl text-emerald-900 font-semibold">{formatCurrency(calculateGrandTotal(selectedOrder))}</p>
+                </div>
+                <div className="text-right text-sm text-emerald-700">
+                  <p>Metode: {selectedOrder.paymentMethod?.toUpperCase()}</p>
+                  <p>Tanggal: {selectedOrder.paymentDate}</p>
+                  <p>Kode Order: {selectedOrder.orderId}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 text-sm">
+                  <h4 className="text-slate-800 font-semibold flex items-center gap-2">
+                    <User className="w-4 h-4" /> Customer
+                  </h4>
+                  <div>
+                    <p className="text-slate-500">Nama</p>
+                    <p className="text-slate-900 font-semibold">{selectedOrder.customerName}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-slate-500">Phone</p>
+                      <p className="text-slate-900">{selectedOrder.phone}</p>
+                    </div>
+                    {selectedOrder.email && (
+                      <div>
+                        <p className="text-slate-500">Email</p>
+                        <p className="text-slate-900">{selectedOrder.email}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 space-y-2 text-sm">
+                  <h4 className="text-slate-800 font-semibold flex items-center gap-2">
+                    <Car className="w-4 h-4" /> Kendaraan
+                  </h4>
+                  <p className="text-slate-900 font-semibold">{selectedOrder.vehicleBrand} {selectedOrder.vehicleModel} ({selectedOrder.vehicleYear})</p>
+                  <p className="text-slate-600">{selectedOrder.plateNumber}</p>
+                  <p className="text-slate-600">{selectedOrder.serviceType}</p>
+                </div>
+              </div>
+
+              {selectedOrder.spareParts?.length > 0 && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                  <h4 className="text-slate-800 font-semibold mb-3 flex items-center gap-2">
+                    <Package className="w-4 h-4" /> Detail Spare Part
+                  </h4>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-slate-200 text-slate-700">
+                        <th className="text-left p-3 rounded-tl-lg">Nama</th>
+                        <th className="text-left p-3">Part Number</th>
+                        <th className="text-center p-3">Qty</th>
+                        <th className="text-right p-3">Unit Price</th>
+                        <th className="text-right p-3">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedOrder.spareParts.map((part) => (
+                        <tr key={part.id} className="border-b border-slate-200">
+                          <td className="p-3 text-slate-900">{part.name}</td>
+                          <td className="p-3 text-slate-600">{part.partNumber}</td>
+                          <td className="p-3 text-center text-slate-900">{part.quantity}</td>
+                          <td className="p-3 text-right text-slate-900">{formatCurrency(part.unitPrice)}</td>
+                          <td className="p-3 text-right text-slate-900">{formatCurrency(part.totalPrice)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="bg-slate-800 text-white rounded-xl p-5 space-y-3">
+                <h4 className="text-lg font-semibold">Ringkasan Pembayaran</h4>
+                <div className="flex justify-between text-sm border-b border-white/10 pb-2">
+                  <span>Parts Total</span>
+                  <span>{formatCurrency(calculatePartsCost(selectedOrder.spareParts))}</span>
+                </div>
+                <div className="flex justify-between text-sm border-b border-white/10 pb-2">
+                  <span>Labor Cost</span>
+                  <span>{formatCurrency(getOrderLaborCost(selectedOrder))}</span>
+                </div>
+                <div className="flex justify-between text-2xl font-semibold">
+                  <span>Grand Total</span>
+                  <span>{formatCurrency(calculateGrandTotal(selectedOrder))}</span>
+                </div>
+              </div>
+
+              <div className="text-center text-sm text-slate-500 border-t border-slate-200 pt-4">
+                <p>Terima kasih atas kepercayaan Anda</p>
+                <p className="text-xs mt-1">Invoice ini adalah bukti pembayaran yang sah</p>
+              </div>
+
+              <div className="flex gap-3 justify-end pt-2">
+                <Button variant="outline" onClick={() => setShowInvoiceModal(false)} className="border-slate-300">
+                  Tutup
+                </Button>
+                <Button onClick={handlePrintInvoice} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  <Printer className="w-4 h-4 mr-2" />
+                  Cetak Invoice
+                </Button>
+                <Button onClick={handleDownloadInvoice} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download PDF
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PRINT NOTA MODAL */}
+      {showPrintNotaModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b bg-slate-50">
+              <div className="flex items-center gap-2">
+                <Printer className="w-5 h-5 text-slate-700" />
+                <div>
+                  <p className="font-semibold text-slate-800">Preview Cetak Nota</p>
+                  <p className="text-xs text-slate-500">Pastikan data sudah benar sebelum mencetak</p>
+                </div>
+              </div>
+              <button onClick={() => setShowPrintNotaModal(false)} className="p-2 rounded-lg hover:bg-slate-200">
+                <X className="w-5 h-5 text-slate-600" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4 bg-slate-100">
+              <div className="bg-white rounded-xl shadow-inner p-4 nota-print-content">
+                <NotaPrintA5 order={{ ...selectedOrder, notaFakturNumber }} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 p-4 border-t bg-white">
+              <Button variant="outline" onClick={() => { setShowPrintNotaModal(false); setShowNotaModal(true); }} className="border-slate-300">
+                Kembali
+              </Button>
+              <Button onClick={handleActualPrint} className="bg-slate-800 hover:bg-slate-900 text-white">
+                <Printer className="w-4 h-4 mr-2" /> Cetak Sekarang
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PRINT INVOICE MODAL */}
+      {showPrintInvoiceModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b bg-slate-50">
+              <div className="flex items-center gap-2">
+                <Printer className="w-5 h-5 text-slate-700" />
+                <div>
+                  <p className="font-semibold text-slate-800">Preview Cetak Invoice</p>
+                  <p className="text-xs text-slate-500">Invoice akan dicetak ukuran A5 landscape</p>
+                </div>
+              </div>
+              <button onClick={() => setShowPrintInvoiceModal(false)} className="p-2 rounded-lg hover:bg-slate-200">
+                <X className="w-5 h-5 text-slate-600" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4 bg-slate-100">
+              <div className="bg-white rounded-xl shadow-inner p-4 invoice-print-content">
+                <InvoicePrintA5
+                  order={selectedOrder}
+                  invoiceNumber={selectedOrder.invoiceNumber || prePaymentInvoiceNumber}
+                  cashierName={currentUser?.name || 'Cashier'}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 p-4 border-t bg-white">
+              <Button variant="outline" onClick={() => { setShowPrintInvoiceModal(false); setShowInvoiceModal(true); }} className="border-slate-300">
+                Kembali
+              </Button>
+              <Button onClick={handleActualPrintInvoice} className="bg-blue-700 hover:bg-blue-800 text-white">
+                <Printer className="w-4 h-4 mr-2" /> Cetak Invoice
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PAYMENT OUT (PO) */}
+      {showPOPaymentModal && selectedPO && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6 rounded-t-2xl flex items-center justify-between">
+              <div className="flex items-center gap-3 text-white">
+                <Wallet className="w-6 h-6" />
+                <div>
+                  <h3 className="text-2xl font-semibold">Pembayaran Purchase Order</h3>
+                  <p className="text-emerald-100 text-sm">{selectedPO.poNumber}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowPOPaymentModal(false)} className="text-white hover:bg-white/20 rounded-lg p-2">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                <p className="text-emerald-700 text-sm">Total yang harus dibayar</p>
+                <p className="text-3xl text-emerald-900 font-semibold">{formatCurrency(selectedPO.totalAmount)}</p>
+              </div>
+
+              <div>
+                <h4 className="text-slate-800 mb-3 flex items-center gap-2">
+                  <CreditCard className="w-5 h-5" />
+                  Pilih Metode Pembayaran
+                </h4>
+                <div className="grid grid-cols-5 gap-3">
+                  {[{ value: 'cash', icon: Banknote, label: 'Cash' }, { value: 'transfer', icon: Smartphone, label: 'Transfer' }, { value: 'credit-card', icon: CreditCard, label: 'Credit Card' }, { value: 'debit-card', icon: CreditCard, label: 'Debit Card' }, { value: 'qris', icon: Smartphone, label: 'QRIS' }].map((method) => (
+                    <button
+                      key={method.value}
+                      onClick={() => setPaymentMethod(method.value)}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        paymentMethod === method.value
+                          ? 'border-emerald-500 bg-emerald-100 text-emerald-700 shadow-md scale-105'
+                          : 'border-slate-300 bg-white text-slate-600 hover:border-emerald-300'
+                      }`}
+                    >
+                      <method.icon className="w-6 h-6 mx-auto mb-2" />
+                      <p className="text-xs">{method.label}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {paymentMethod === 'cash' && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                  <label className="text-slate-800 block">Jumlah Uang Diterima</label>
+                  <input
+                    type="text"
+                    value={cashReceived}
+                    onChange={(e) => setCashReceived(formatNumberInput(e.target.value))}
+                    className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    placeholder="Masukkan jumlah uang"
+                  />
+                  {cashReceived && (
+                    <div className="p-4 bg-white rounded-lg border border-slate-200 text-sm space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Total Tagihan</span>
+                        <span className="text-slate-900">{formatCurrency(selectedPO.totalAmount)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Uang Diterima</span>
+                        <span className="text-slate-900">{formatCurrency(parseFormattedInput(cashReceived))}</span>
+                      </div>
+                      <div className="flex justify-between pt-2 border-t border-slate-200 text-emerald-700 font-semibold">
+                        <span>Kembalian</span>
+                        <span>{formatCurrency(Math.max(0, parseFormattedInput(cashReceived) - selectedPO.totalAmount))}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {paymentMethod !== 'cash' && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3 text-sm">
+                  <AlertCircle className="w-5 h-5 text-emerald-700" />
+                  <div className="text-emerald-800">
+                    Pastikan pembayaran sudah diterima dari vendor sebelum konfirmasi.
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                <Button variant="outline" onClick={() => setShowPOPaymentModal(false)} className="border-slate-300">
+                  Batal
+                </Button>
+                <Button onClick={handleProcessPOPayment} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <Check className="w-4 h-4 mr-2" />
+                  Proses Pembayaran
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PRINT PAYMENT OUT MODAL */}
+      {showPrintPaymentOutModal && selectedPO && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b bg-slate-50">
+              <div className="flex items-center gap-2">
+                <Printer className="w-5 h-5 text-slate-700" />
+                <div>
+                  <p className="font-semibold text-slate-800">Preview Payment Out</p>
+                  <p className="text-xs text-slate-500">Nomor: {payoutNumber}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowPrintPaymentOutModal(false)} className="p-2 rounded-lg hover:bg-slate-200">
+                <X className="w-5 h-5 text-slate-600" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4 bg-slate-100">
+              <div className="bg-white rounded-xl shadow-inner p-4 payment-out-print-content">
+                <PaymentOutPrintA5 po={selectedPO} payoutNumber={payoutNumber} paymentBy={currentUser?.name || 'Cashier'} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 p-4 border-t bg-white">
+              <Button variant="outline" onClick={() => setShowPrintPaymentOutModal(false)} className="border-slate-300">
+                Kembali
+              </Button>
+              <Button onClick={handleActualPrintPaymentOut} className="bg-emerald-700 hover:bg-emerald-800 text-white">
+                <Printer className="w-4 h-4 mr-2" /> Cetak Payment Out
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-// NOTE: File ini dipotong karena terlalu panjang (2000+ baris)
-// Modal components (MODAL NOTA, MODAL PAYMENT, dll) identik dengan original
-// hanya tanpa type annotations. Struktur JSX sama persis.
