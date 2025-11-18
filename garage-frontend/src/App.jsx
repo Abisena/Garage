@@ -10,6 +10,8 @@ import { ServiceOrders } from './components/ServiceOrders'
 import { SpareParts } from './components/SpareParts'
 import { SparePartsRequest } from './components/SparePartsRequest'
 import { Layout } from './components/Layout'
+import { BuyingSparePart } from './components/BuyingSpareParts'
+import { DirectSalesSparePart } from './components/DirectSaleSpareParts'
 
 function App() {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -92,8 +94,10 @@ function App() {
         return <SpareParts/>
       case 'sparepartsrequest':
         return <SparePartsRequest currentUser={currentUser} />;
-      case 'handover':
-        return <div className="p-8"><h2 className="text-2xl font-bold">Vehicle Handover</h2></div>
+      case 'buyingsparepart':
+        return <BuyingSparePart currentUser={currentUser} />;
+      case 'directsales':
+        return <DirectSalesSparePart currentUser={currentUser} />;
       case 'followup':
         return <div className="p-8"><h2 className="text-2xl font-bold">Follow-up</h2></div>
       case 'reports':

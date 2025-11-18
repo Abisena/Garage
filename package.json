@@ -2,6 +2,7 @@
   "dependencies": {
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "react-router-dom": "^7.9.6"
+    "react-router-dom": "^7.9.6",
+    "sonner": "^2.0.3"
   }
 }
