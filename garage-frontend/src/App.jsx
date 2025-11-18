@@ -7,6 +7,9 @@ import { Sidebar } from './components/Sidebar'
 import { TopBar } from './components/TopBar'
 import { Dashboard } from './components/Dashboard'
 import { ServiceOrders } from './components/ServiceOrders'
+import { SpareParts } from './components/SpareParts'
+import { SparePartsRequest } from './components/SparePartsRequest'
+import { Layout } from './components/Layout'
 
 function App() {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -76,19 +79,19 @@ function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard currentUser={currentUser} />
+        return <Dashboard />
       case 'registration':
         return <Registration currentUser={currentUser} />
       case 'inspection':
         return <Inspection />
       case 'orders':
         return <ServiceOrders currentUser={currentUser} />
+      case 'inventory':
+          return <div className="p-8"><h2 className="text-2xl font-bold">Iventory</h2></div>
       case 'spareparts':
-        return <div className="p-8"><h2 className="text-2xl font-bold">Spare Parts</h2></div>
-      case 'workshop':
-        return <div className="p-8"><h2 className="text-2xl font-bold">Repair & QC</h2></div>
-      case 'payment':
-        return <div className="p-8"><h2 className="text-2xl font-bold">Payment</h2></div>
+        return <SpareParts/>
+      case 'sparepartsrequest':
+        return <SparePartsRequest currentUser={currentUser} />;
       case 'handover':
         return <div className="p-8"><h2 className="text-2xl font-bold">Vehicle Handover</h2></div>
       case 'followup':
@@ -100,30 +103,16 @@ function App() {
     }
   }
 
-  return (
-    <div className="h-screen bg-gray-50 flex overflow-hidden"> {/* CHANGED: h-screen + overflow-hidden */}
-      {/* Sidebar */}
-      <Sidebar 
-        currentUser={currentUser} 
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-      />
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden"> {/* ADDED: overflow-hidden */}
-        {/* TopBar */}
-        <TopBar 
-          currentUser={currentUser}
-          onLogout={handleLogout}
-        />
-
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto bg-slate-50"> {/* ADDED: bg-slate-50 */}
-          {renderPage()}
-        </main>
-      </div>
-    </div>
-  )
+   return (
+    <Layout 
+      currentPage={currentPage} 
+      setCurrentPage={setCurrentPage}
+      currentUser={currentUser}
+      onLogout={handleLogout}
+    >
+      {renderPage()}
+    </Layout>
+  );
 }
 
 export default App

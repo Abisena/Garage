@@ -2,39 +2,8 @@ import React, { useRef, useEffect } from 'react';
 import { X, Printer, CheckCircle, Package, User } from 'lucide-react';
 import { Button } from './ui/button';
 
-interface Part {
-  partCode: string;
-  partName: string;
-  qty: number;
-  location: string;
-  unit: string;
-}
-
-interface PartsDeliveryModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  orderData: {
-    orderId: string;
-    customerName: string;
-    vehicleBrand: string;
-    vehicleModel: string;
-    plateNumber: string;
-    parts: Part[];
-    branch: string;
-    mechanicName?: string; // Add mechanic name from order
-  };
-  onConfirm: (mechanicSignature: string, mechanicName: string) => void;
-  existingDelivery?: {
-    deliveryId: string;
-    mechanicSignature?: string;
-    mechanicName?: string;
-    date: string;
-    preparedBy: string;
-  } | null;
-}
-
-export function PartsDeliveryModal({ isOpen, onClose, orderData, onConfirm, existingDelivery }: PartsDeliveryModalProps) {
-  const mechanicSignatureRef = useRef<HTMLCanvasElement>(null);
+export function PartsDeliveryModal({ isOpen, onClose, orderData, onConfirm, existingDelivery }) {
+  const mechanicSignatureRef = useRef(null);
   const [isDrawing, setIsDrawing] = React.useState(false);
   const [hasSigned, setHasSigned] = React.useState(false);
   const [mechanicName, setMechanicName] = React.useState('');
@@ -89,7 +58,7 @@ export function PartsDeliveryModal({ isOpen, onClose, orderData, onConfirm, exis
     }
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const draw = (e) => {
     if (!isDrawing || !mechanicSignatureRef.current || isViewMode) return;
     
     const ctx = mechanicSignatureRef.current.getContext('2d');
