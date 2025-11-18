@@ -39,127 +39,20 @@ export function Registration({ currentUser }) {
   const [showWorkOrder, setShowWorkOrder] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const defaultRegistrations = [
-    {
-      id: 'JKT-REG-001',
-      time: '10:30',
-      orderId: 'JKT-001',
-      customerName: 'Budi Santoso',
-      phone: '+62 812-3456-7890',
-      email: 'budi.santoso@email.com',
-      vehicleBrand: 'Toyota',
-      vehicleModel: 'Avanza',
-      vehicleYear: '2020',
-      vehicleType: 'MPV',
-      plateNumber: 'B 1234 XYZ',
-      chassisNumber: 'MHKA42V159K123456',
-      engineNumber: '1NR-VE-1234567',
-      serviceType: 'Engine Service',
-      customerComplaint: 'Engine making unusual noise and reduced power',
-      date: new Date().toLocaleDateString('id-ID'),
-      estimatedCost: '500000',
-      estimatedDays: '3',
-      branch: 'Jakarta'
-    },
-    {
-      id: 'BDG-REG-001',
-      time: '11:15',
-      orderId: 'BDG-001',
-      customerName: 'Siti Rahayu',
-      phone: '+62 813-4567-8901',
-      email: 'siti.rahayu@email.com',
-      vehicleBrand: 'Honda',
-      vehicleModel: 'Jazz',
-      vehicleYear: '2019',
-      vehicleType: 'Hatchback',
-      plateNumber: 'D 5678 ABC',
-      chassisNumber: 'MRHGK8840KJ123456',
-      engineNumber: 'L15Z-1234567',
-      serviceType: 'Brake Service',
-      customerComplaint: 'Brake pedal feels soft and squeaking noise',
-      date: new Date().toLocaleDateString('id-ID'),
-      estimatedCost: '300000',
-      estimatedDays: '2',
-      branch: 'Bandung'
-    },
-    {
-      id: 'SBY-REG-001',
-      time: '12:00',
-      orderId: 'SBY-001',
-      customerName: 'Ahmad Yani',
-      phone: '+62 814-5678-9012',
-      email: 'ahmad.yani@email.com',
-      vehicleBrand: 'Suzuki',
-      vehicleModel: 'Ertiga',
-      vehicleYear: '2021',
-      vehicleType: 'MPV',
-      plateNumber: 'L 9012 DEF',
-      chassisNumber: 'MBJKS83B1LJ123456',
-      engineNumber: 'K15B-1234567',
-      serviceType: 'Oil Change',
-      customerComplaint: 'Regular maintenance service',
-      date: new Date().toLocaleDateString('id-ID'),
-      estimatedCost: '200000',
-      estimatedDays: '1',
-      branch: 'Surabaya'
-    },
-    {
-      id: 'JKT-REG-002',
-      time: '13:45',
-      orderId: 'JKT-002',
-      customerName: 'Dewi Lestari',
-      phone: '+62 815-1234-5678',
-      email: 'dewi.lestari@email.com',
-      vehicleBrand: 'Mitsubishi',
-      vehicleModel: 'Xpander',
-      vehicleYear: '2022',
-      vehicleType: 'MPV',
-      plateNumber: 'B 3456 GHI',
-      chassisNumber: 'MMBJNKB40NJ123456',
-      engineNumber: '4A91-1234567',
-      serviceType: 'AC Service',
-      customerComplaint: 'AC not cooling properly',
-      date: new Date().toLocaleDateString('id-ID'),
-      estimatedCost: '450000',
-      estimatedDays: '2',
-      branch: 'Jakarta'
-    },
-    {
-      id: 'BDG-REG-002',
-      time: '14:20',
-      orderId: 'BDG-002',
-      customerName: 'Rudi Hartono',
-      phone: '+62 816-2345-6789',
-      email: 'rudi.hartono@email.com',
-      vehicleBrand: 'Daihatsu',
-      vehicleModel: 'Terios',
-      vehicleYear: '2018',
-      vehicleType: 'SUV',
-      plateNumber: 'D 7890 JKL',
-      chassisNumber: 'MHKJ5EA1JJK123456',
-      engineNumber: '3SZ-VE-1234567',
-      serviceType: 'Transmission Service',
-      customerComplaint: 'Gear shifting is not smooth',
-      date: new Date().toLocaleDateString('id-ID'),
-      estimatedCost: '650000',
-      estimatedDays: '4',
-      branch: 'Bandung'
-    }
-  ];
+  const todayDate = new Date().toLocaleDateString('id-ID');
 
-  const [recentRegistrations, setRecentRegistrations] = useState(() =>
-    loadFromStorage('registrations', defaultRegistrations)
-  );
+  const registrationsUpdate = () => {
+    const storedRegistrations = loadFromStorage('registrations', []);
+    return storedRegistrations.filter(reg => reg.date === todayDate);
+  };
+
+  const [recentRegistrations, setRecentRegistrations] = useState(registrationsUpdate);
 
   const addRegistration = (registration) => {
-    setRecentRegistrations((prev) => {
-      const currentList = (prev && prev.length > 0)
-        ? prev
-        : loadFromStorage('registrations', defaultRegistrations);
-      const updated = [registration, ...currentList];
-      saveToStorage('registrations', updated);
-      return updated;
-    });
+    const existingRegistrations = loadFromStorage('registrations', []);
+    const updatedAllRegistrations = [registration, ...existingRegistrations];
+    saveToStorage('registrations', updatedAllRegistrations);
+    setRecentRegistrations(registrationsUpdate());
   };
 
   const serviceTypes = [
@@ -227,18 +120,10 @@ export function Registration({ currentUser }) {
   // Get available models based on selected brand
   const availableModels = formData.vehicleBrand ? vehicleModelsByBrand[formData.vehicleBrand] || [] : [];
 
-  // Save registrations to localStorage whenever it changes
-  useEffect(() => {
-    saveToStorage('registrations', recentRegistrations);
-  }, [recentRegistrations]);
-
   // Keep registration list in sync when storage is updated (refresh/HMR)
   useEffect(() => {
     const refreshRegistrations = () => {
-      const stored = loadFromStorage('registrations', defaultRegistrations);
-      const nextValue = stored && stored.length > 0 ? stored : defaultRegistrations;
-      setRecentRegistrations(nextValue);
-      saveToStorage('registrations', nextValue);
+      setRecentRegistrations(registrationsUpdate());
     };
 
     // Ensure we rehydrate from localStorage when the page is revisited/refreshed
