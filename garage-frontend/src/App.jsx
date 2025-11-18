@@ -5,6 +5,8 @@ import { Registration } from './components/Registration'
 import { Inspection } from './components/Inspection'
 import { Sidebar } from './components/Sidebar'
 import { TopBar } from './components/TopBar'
+import { Dashboard } from './components/Dashboard'
+import { ServiceOrders } from './components/ServiceOrders'
 
 function App() {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -74,13 +76,13 @@ function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <div className="p-8"><h2 className="text-2xl font-bold">Dashboard</h2></div>
+        return <Dashboard currentUser={currentUser} />
       case 'registration':
         return <Registration currentUser={currentUser} />
       case 'inspection':
         return <Inspection />
       case 'orders':
-        return <div className="p-8"><h2 className="text-2xl font-bold">Repair Orders</h2></div>
+        return <ServiceOrders currentUser={currentUser} />
       case 'spareparts':
         return <div className="p-8"><h2 className="text-2xl font-bold">Spare Parts</h2></div>
       case 'workshop':

@@ -1,0 +1,1588 @@
+import React, { useState, useEffect } from 'react';
+import { Plus, Filter, Download, Eye, Wrench, ChevronRight, X, Save, Trash2, Package, Search, Send, CheckCircle, FileText, XCircle, AlertCircle } from 'lucide-react';
+import { Button } from './ui/button';
+import { SPKDocument } from './SPKDocument';
+
+export function ServiceOrders({ currentUser }) {
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [workOrders, setWorkOrders] = useState([]);
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
+  const [spareParts, setSpareParts] = useState([]);
+  const [newPart, setNewPart] = useState({
+    name: '',
+    partNumber: '',
+    quantity: 1,
+    unitPrice: 0,
+    discount: 0,
+    discountType: 'percent'
+  });
+  const [masterSpareParts, setMasterSpareParts] = useState([]);
+  const [filteredParts, setFilteredParts] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [partOrderSent, setPartOrderSent] = useState(false);
+  const [mechanicName, setMechanicName] = useState('');
+  
+  // Cancel Order States
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  
+  // Cancel Reason Options
+  const cancelReasons = [
+    'Customer Request - Biaya terlalu mahal',
+    'Customer Request - Butuh waktu perbaikan terlalu lama',
+    'Customer Request - Membatalkan servis',
+    'Parts Not Available - Sparepart tidak tersedia',
+    'Technical Issue - Kerusakan terlalu parah untuk diperbaiki'
+  ];
+  
+  // Helper function to get part status badge
+  const getPartStatusBadge = (part) => {
+    if (part.status === 'requested') {
+      return <span className="px-2 py-0.5 text-xs bg-emerald-100 text-emerald-700 border border-emerald-200 rounded">REQUESTED</span>;
+    } else if (part.status === 'prepared') {
+      return <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 border border-blue-200 rounded">PREPARED</span>;
+    } else if (part.status === 'rejected') {
+      return <span className="px-2 py-0.5 text-xs bg-red-100 text-red-700 border border-red-200 rounded">REJECTED</span>;
+    } else if (part.status === 'installed') {
+      return <span className="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 border border-purple-200 rounded">INSTALLED</span>;
+    } else {
+      return <span className="px-2 py-0.5 text-xs bg-slate-100 text-slate-600 border border-slate-200 rounded">DRAFT</span>;
+    }
+  };
+
+  // Helper function to check if there are package parts in the grid
+  const hasPackageParts = () => {
+    return spareParts.some(part => 
+      part.partNumber.startsWith('PKG-') || 
+      part.partNumber.startsWith('LABOR-')
+    );
+  };
+  
+  // List of available mechanics
+  const availableMechanics = [
+    'Ahmad Syahrul',
+    'Budi Santoso',
+    'Deni Pratama',
+    'Eko Wijaya',
+    'Fajar Ramadhan',
+    'Gunawan Prakoso',
+    'Hendra Kusuma',
+    'Irfan Hakim'
+  ];
+
+  useEffect(() => {
+    loadWorkOrders();
+    loadMasterSpareParts();
+  }, []);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      loadWorkOrders();
+    };
+
+    const handleWorkOrdersUpdate = () => {
+      loadWorkOrders();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', handleStorageChange);
+    window.addEventListener('workOrdersUpdated', handleWorkOrdersUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', handleStorageChange);
+      window.removeEventListener('workOrdersUpdated', handleWorkOrdersUpdate);
+    };
+  }, []);
+
+  const loadWorkOrders = () => {
+    const savedWorkOrders = localStorage.getItem('workOrders');
+    if (savedWorkOrders) {
+      setWorkOrders(JSON.parse(savedWorkOrders));
+    }
+  };
+
+  const loadMasterSpareParts = () => {
+    const savedParts = localStorage.getItem('masterSpareParts');
+    if (savedParts) {
+      setMasterSpareParts(JSON.parse(savedParts));
+    } else {
+      // Initialize with default parts if not exists
+      const defaultParts = [
+        // Toyota Avanza Parts
+        { id: '1', partName: 'Brake Pad Front', partNumber: 'BP-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Brake System', unitPrice: 450000, stock: 25, minStock: 10 },
+        { id: '2', partName: 'Brake Pad Rear', partNumber: 'BP-TOY-AVZ-002', compatibleModels: ['Avanza'], category: 'Brake System', unitPrice: 350000, stock: 20, minStock: 10 },
+        { id: '3', partName: 'Oil Filter', partNumber: 'OF-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Engine', unitPrice: 85000, stock: 50, minStock: 20 },
+        { id: '4', partName: 'Air Filter', partNumber: 'AF-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Engine', unitPrice: 125000, stock: 35, minStock: 15 },
+        { id: '5', partName: 'Spark Plug', partNumber: 'SP-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Engine', unitPrice: 95000, stock: 60, minStock: 30 },
+        { id: '6', partName: 'Engine Oil 5W-30', partNumber: 'EO-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Engine', unitPrice: 180000, stock: 40, minStock: 20 },
+        { id: '7', partName: 'Wiper Blade Front', partNumber: 'WB-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Accessories', unitPrice: 145000, stock: 30, minStock: 15 },
+        { id: '8', partName: 'Battery 12V', partNumber: 'BT-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Electrical', unitPrice: 850000, stock: 15, minStock: 5 },
+        { id: '9', partName: 'Alternator Belt', partNumber: 'AB-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Engine', unitPrice: 175000, stock: 25, minStock: 10 },
+        { id: '10', partName: 'Timing Belt', partNumber: 'TB-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Engine', unitPrice: 385000, stock: 18, minStock: 8 },
+        
+        // Honda Jazz Parts
+        { id: '11', partName: 'Brake Pad Front', partNumber: 'BP-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Brake System', unitPrice: 520000, stock: 22, minStock: 10 },
+        { id: '12', partName: 'Brake Pad Rear', partNumber: 'BP-HON-JAZ-002', compatibleModels: ['Jazz'], category: 'Brake System', unitPrice: 380000, stock: 18, minStock: 10 },
+        { id: '13', partName: 'Oil Filter', partNumber: 'OF-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Engine', unitPrice: 95000, stock: 45, minStock: 20 },
+        { id: '14', partName: 'Air Filter', partNumber: 'AF-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Engine', unitPrice: 145000, stock: 32, minStock: 15 },
+        { id: '15', partName: 'Spark Plug', partNumber: 'SP-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Engine', unitPrice: 115000, stock: 55, minStock: 30 },
+        { id: '16', partName: 'Engine Oil 0W-20', partNumber: 'EO-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Engine', unitPrice: 220000, stock: 38, minStock: 20 },
+        { id: '17', partName: 'Wiper Blade Front', partNumber: 'WB-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Accessories', unitPrice: 165000, stock: 28, minStock: 15 },
+        { id: '18', partName: 'Battery 12V', partNumber: 'BT-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Electrical', unitPrice: 920000, stock: 12, minStock: 5 },
+        { id: '19', partName: 'CVT Fluid', partNumber: 'CF-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Transmission', unitPrice: 385000, stock: 20, minStock: 10 },
+        { id: '20', partName: 'Cabin Air Filter', partNumber: 'CA-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Accessories', unitPrice: 195000, stock: 25, minStock: 12 },
+
+        // Mitsubishi Xpander Parts
+        { id: '21', partName: 'Brake Pad Front', partNumber: 'BP-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Brake System', unitPrice: 480000, stock: 24, minStock: 10 },
+        { id: '22', partName: 'Brake Pad Rear', partNumber: 'BP-MIT-XPD-002', compatibleModels: ['Xpander'], category: 'Brake System', unitPrice: 360000, stock: 19, minStock: 10 },
+        { id: '23', partName: 'Oil Filter', partNumber: 'OF-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Engine', unitPrice: 90000, stock: 48, minStock: 20 },
+        { id: '24', partName: 'Air Filter', partNumber: 'AF-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Engine', unitPrice: 135000, stock: 33, minStock: 15 },
+        { id: '25', partName: 'Spark Plug', partNumber: 'SP-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Engine', unitPrice: 105000, stock: 58, minStock: 30 },
+        { id: '26', partName: 'Engine Oil 5W-30', partNumber: 'EO-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Engine', unitPrice: 195000, stock: 42, minStock: 20 },
+        { id: '27', partName: 'Wiper Blade Front', partNumber: 'WB-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Accessories', unitPrice: 155000, stock: 29, minStock: 15 },
+        { id: '28', partName: 'Battery 12V', partNumber: 'BT-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Electrical', unitPrice: 880000, stock: 14, minStock: 5 },
+        { id: '29', partName: 'Drive Belt', partNumber: 'DB-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Engine', unitPrice: 185000, stock: 26, minStock: 10 },
+        { id: '30', partName: 'Radiator Coolant', partNumber: 'RC-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Engine', unitPrice: 165000, stock: 35, minStock: 15 },
+
+        // Honda CR-V Parts
+        { id: '31', partName: 'Brake Pad Front', partNumber: 'BP-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Brake System', unitPrice: 650000, stock: 18, minStock: 8 },
+        { id: '32', partName: 'Brake Pad Rear', partNumber: 'BP-HON-CRV-002', compatibleModels: ['CR-V'], category: 'Brake System', unitPrice: 480000, stock: 15, minStock: 8 },
+        { id: '33', partName: 'Oil Filter', partNumber: 'OF-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Engine', unitPrice: 110000, stock: 40, minStock: 20 },
+        { id: '34', partName: 'Air Filter', partNumber: 'AF-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Engine', unitPrice: 175000, stock: 28, minStock: 15 },
+        { id: '35', partName: 'Spark Plug', partNumber: 'SP-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Engine', unitPrice: 135000, stock: 50, minStock: 25 },
+        { id: '36', partName: 'Engine Oil 0W-20', partNumber: 'EO-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Engine', unitPrice: 250000, stock: 35, minStock: 18 },
+        { id: '37', partName: 'Wiper Blade Front', partNumber: 'WB-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Accessories', unitPrice: 185000, stock: 24, minStock: 12 },
+        { id: '38', partName: 'Battery 12V', partNumber: 'BT-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Electrical', unitPrice: 1050000, stock: 10, minStock: 5 },
+        { id: '39', partName: 'Cabin Air Filter', partNumber: 'CA-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Accessories', unitPrice: 225000, stock: 22, minStock: 10 },
+        { id: '40', partName: 'Transmission Oil', partNumber: 'TO-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Transmission', unitPrice: 420000, stock: 18, minStock: 10 },
+
+        // Toyota Fortuner Parts
+        { id: '41', partName: 'Brake Pad Front', partNumber: 'BP-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Brake System', unitPrice: 720000, stock: 16, minStock: 8 },
+        { id: '42', partName: 'Brake Pad Rear', partNumber: 'BP-TOY-FOR-002', compatibleModels: ['Fortuner'], category: 'Brake System', unitPrice: 550000, stock: 14, minStock: 8 },
+        { id: '43', partName: 'Oil Filter', partNumber: 'OF-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Engine', unitPrice: 125000, stock: 38, minStock: 18 },
+        { id: '44', partName: 'Air Filter', partNumber: 'AF-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Engine', unitPrice: 195000, stock: 26, minStock: 12 },
+        { id: '45', partName: 'Spark Plug', partNumber: 'SP-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Engine', unitPrice: 145000, stock: 45, minStock: 22 },
+        { id: '46', partName: 'Engine Oil 5W-30', partNumber: 'EO-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Engine', unitPrice: 285000, stock: 32, minStock: 16 },
+        { id: '47', partName: 'Wiper Blade Front', partNumber: 'WB-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Accessories', unitPrice: 205000, stock: 20, minStock: 10 },
+        { id: '48', partName: 'Battery 12V', partNumber: 'BT-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Electrical', unitPrice: 1250000, stock: 8, minStock: 4 },
+        { id: '49', partName: 'Fuel Filter', partNumber: 'FF-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Engine', unitPrice: 285000, stock: 22, minStock: 10 },
+        { id: '50', partName: 'Differential Oil', partNumber: 'DO-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Transmission', unitPrice: 385000, stock: 16, minStock: 8 },
+
+        // Toyota Innova Parts
+        { id: '51', partName: 'Brake Pad Front', partNumber: 'BP-TOY-INN-001', compatibleModels: ['Innova'], category: 'Brake System', unitPrice: 520000, stock: 20, minStock: 10 },
+        { id: '52', partName: 'Brake Pad Rear', partNumber: 'BP-TOY-INN-002', compatibleModels: ['Innova'], category: 'Brake System', unitPrice: 420000, stock: 18, minStock: 10 },
+        { id: '53', partName: 'Oil Filter', partNumber: 'OF-TOY-INN-001', compatibleModels: ['Innova'], category: 'Engine', unitPrice: 95000, stock: 42, minStock: 20 },
+        { id: '54', partName: 'Air Filter', partNumber: 'AF-TOY-INN-001', compatibleModels: ['Innova'], category: 'Engine', unitPrice: 155000, stock: 30, minStock: 15 },
+        { id: '55', partName: 'Spark Plug', partNumber: 'SP-TOY-INN-001', compatibleModels: ['Innova'], category: 'Engine', unitPrice: 110000, stock: 52, minStock: 28 },
+      ];
+      
+      setMasterSpareParts(defaultParts);
+      localStorage.setItem('masterSpareParts', JSON.stringify(defaultParts));
+    }
+  };
+
+  // Reload data when component becomes visible
+  useEffect(() => {
+    const handleStorageChange = () => {
+      console.log('🔄 Storage change detected in ServiceOrders');
+      loadWorkOrders();
+      loadMasterSpareParts();
+    };
+    
+    const handleWorkOrdersUpdated = () => {
+      console.log('📥 ServiceOrders received workOrdersUpdated event!');
+      loadWorkOrders();
+      loadMasterSpareParts();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', handleStorageChange);
+    window.addEventListener('workOrdersUpdated', handleWorkOrdersUpdated);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', handleStorageChange);
+      window.removeEventListener('workOrdersUpdated', handleWorkOrdersUpdated);
+    };
+  }, []);
+
+  // Filter parts based on vehicle model and part name input
+  useEffect(() => {
+    if (selectedWorkOrder && newPart.name && masterSpareParts.length > 0) {
+      const vehicleModel = selectedWorkOrder.vehicleModel;
+      const searchTerm = newPart.name.toLowerCase();
+      
+      const filtered = masterSpareParts.filter(part => 
+        part.compatibleModels.includes(vehicleModel) &&
+        part.partName.toLowerCase().includes(searchTerm)
+      );
+      
+      setFilteredParts(filtered);
+      setShowSuggestions(filtered.length > 0 && newPart.name.length > 0);
+    } else {
+      setFilteredParts([]);
+      setShowSuggestions(false);
+    }
+  }, [newPart.name, selectedWorkOrder, masterSpareParts]);
+
+  // Sync selectedWorkOrder with workOrders changes (important for status updates from Spare Parts Request)
+  useEffect(() => {
+    console.log('🔍 Checking if selectedWorkOrder needs sync...', {
+      hasSelectedWorkOrder: !!selectedWorkOrder,
+      workOrdersCount: workOrders.length
+    });
+    
+    if (selectedWorkOrder) {
+      const updated = workOrders.find(wo => wo.id === selectedWorkOrder.id);
+      console.log('🔍 Found updated work order:', !!updated);
+      
+      if (updated) {
+        console.log('🔄 FORCE syncing selectedWorkOrder with latest data from storage');
+        console.log('Current selected spare parts:', selectedWorkOrder.spareParts);
+        console.log('Updated spare parts from storage:', updated.spareParts);
+        
+        // ALWAYS sync to ensure UI reflects latest data
+        setSelectedWorkOrder({ ...updated }); // Create new object reference to force re-render
+        setSpareParts([...(updated.spareParts || [])]); // Create new array reference to force re-render
+      }
+    }
+  }, [workOrders]);
+
+  const handleSelectWorkOrder = (order) => {
+    setSelectedWorkOrder(order);
+    setSpareParts(order.spareParts || []);
+    setMechanicName(order.mechanicName || ''); // Load existing mechanic assignment
+  };
+
+  const handleMechanicChange = (newMechanic) => {
+    setMechanicName(newMechanic);
+    
+    // Auto-save to localStorage
+    if (selectedWorkOrder) {
+      const updatedWorkOrders = workOrders.map(wo => {
+        if (wo.id === selectedWorkOrder.id) {
+          return { ...wo, mechanicName: newMechanic };
+        }
+        return wo;
+      });
+      
+      localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
+      setWorkOrders(updatedWorkOrders);
+      setSelectedWorkOrder({ ...selectedWorkOrder, mechanicName: newMechanic });
+    }
+  };
+
+  const handleBackToList = () => {
+    setSelectedWorkOrder(null);
+    setSpareParts([]);
+    setNewPart({ name: '', partNumber: '', quantity: 1, unitPrice: 0, discount: 0, discountType: 'percent' });
+    setShowSuggestions(false);
+  };
+
+  const handleSelectSuggestedPart = (part) => {
+    // Langsung add part tanpa perlu klik tombol +
+    const subtotal = 1 * part.unitPrice; // quantity default = 1
+    let finalPrice = subtotal;
+    
+    const newSparePart = {
+      id: `PART-${Date.now()}`,
+      name: part.partName,
+      partNumber: part.partNumber,
+      quantity: 1,
+      unitPrice: part.unitPrice,
+      discount: 0,
+      discountType: 'percent',
+      totalPrice: finalPrice
+    };
+    
+    setSpareParts([...spareParts, newSparePart]);
+    setNewPart({ name: '', partNumber: '', quantity: 1, unitPrice: 0, discount: 0, discountType: 'percent' });
+    setShowSuggestions(false);
+  };
+
+  const handleAddPart = () => {
+    if (newPart.name && newPart.partNumber && newPart.quantity > 0 && newPart.unitPrice > 0) {
+      const subtotal = newPart.quantity * newPart.unitPrice;
+      let finalPrice = subtotal;
+      
+      // Calculate discount
+      if (newPart.discount > 0) {
+        if (newPart.discountType === 'percent') {
+          finalPrice = subtotal - (subtotal * newPart.discount / 100);
+        } else {
+          finalPrice = subtotal - newPart.discount;
+        }
+      }
+      
+      const part = {
+        id: `PART-${Date.now()}`,
+        name: newPart.name,
+        partNumber: newPart.partNumber,
+        quantity: newPart.quantity,
+        unitPrice: newPart.unitPrice,
+        discount: newPart.discount,
+        discountType: newPart.discountType,
+        totalPrice: finalPrice
+      };
+      
+      setSpareParts([...spareParts, part]);
+      setNewPart({ name: '', partNumber: '', quantity: 1, unitPrice: 0, discount: 0, discountType: 'percent' });
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleAddPackageParts = () => {
+    if (!selectedWorkOrder) return;
+
+    // Define service packages with parts and labor
+    const servicePackages = {
+      'Paket Service Oil Change': [
+        { name: 'Engine Oil 5W-30 (4L)', partNumber: 'PKG-OIL-001', qty: 1, unitPrice: 250000, discount: 0 },
+        { name: 'Oil Filter', partNumber: 'PKG-OIL-002', qty: 1, unitPrice: 75000, discount: 0 },
+        { name: 'Drain Plug Gasket', partNumber: 'PKG-OIL-003', qty: 1, unitPrice: 15000, discount: 0 },
+        { name: 'Labor - Oil Change Service', partNumber: 'LABOR-OIL-001', qty: 1, unitPrice: 100000, discount: 0 }
+      ],
+      'Paket Service Engine Service': [
+        { name: 'Engine Oil 5W-30 (4L)', partNumber: 'PKG-ENG-001', qty: 1, unitPrice: 250000, discount: 0 },
+        { name: 'Oil Filter', partNumber: 'PKG-ENG-002', qty: 1, unitPrice: 75000, discount: 0 },
+        { name: 'Air Filter', partNumber: 'PKG-ENG-003', qty: 1, unitPrice: 125000, discount: 0 },
+        { name: 'Spark Plug Set (4pcs)', partNumber: 'PKG-ENG-004', qty: 1, unitPrice: 280000, discount: 0 },
+        { name: 'Labor - Engine Service', partNumber: 'LABOR-ENG-001', qty: 1, unitPrice: 300000, discount: 0 }
+      ],
+      'Paket Service Brake Service': [
+        { name: 'Brake Pad Front', partNumber: 'PKG-BRK-001', qty: 1, unitPrice: 450000, discount: 0 },
+        { name: 'Brake Pad Rear', partNumber: 'PKG-BRK-002', qty: 1, unitPrice: 350000, discount: 0 },
+        { name: 'Brake Fluid DOT 4 (1L)', partNumber: 'PKG-BRK-003', qty: 1, unitPrice: 85000, discount: 0 },
+        { name: 'Labor - Brake Service', partNumber: 'LABOR-BRK-001', qty: 1, unitPrice: 250000, discount: 0 }
+      ],
+      'Paket Service Transmission Service': [
+        { name: 'Transmission Oil ATF (4L)', partNumber: 'PKG-TRS-001', qty: 1, unitPrice: 420000, discount: 0 },
+        { name: 'Transmission Filter', partNumber: 'PKG-TRS-002', qty: 1, unitPrice: 185000, discount: 0 },
+        { name: 'Gasket Set', partNumber: 'PKG-TRS-003', qty: 1, unitPrice: 95000, discount: 0 },
+        { name: 'Labor - Transmission Service', partNumber: 'LABOR-TRS-001', qty: 1, unitPrice: 350000, discount: 0 }
+      ],
+      'Paket Service AC Service': [
+        { name: 'AC Refrigerant R134a', partNumber: 'PKG-AC-001', qty: 2, unitPrice: 120000, discount: 0 },
+        { name: 'AC Filter/Evaporator Cleaner', partNumber: 'PKG-AC-002', qty: 1, unitPrice: 85000, discount: 0 },
+        { name: 'Cabin Air Filter', partNumber: 'PKG-AC-003', qty: 1, unitPrice: 125000, discount: 0 },
+        { name: 'Labor - AC Service', partNumber: 'LABOR-AC-001', qty: 1, unitPrice: 200000, discount: 0 }
+      ],
+      'Paket Service Battery Replacement': [
+        { name: 'Battery 12V 65Ah', partNumber: 'PKG-BAT-001', qty: 1, unitPrice: 1250000, discount: 0 },
+        { name: 'Battery Terminal Cleaner', partNumber: 'PKG-BAT-002', qty: 1, unitPrice: 35000, discount: 0 },
+        { name: 'Labor - Battery Replacement', partNumber: 'LABOR-BAT-001', qty: 1, unitPrice: 50000, discount: 0 }
+      ],
+      'Paket Service Tire Replacement': [
+        { name: 'Tire 205/55R16 (4pcs)', partNumber: 'PKG-TIR-001', qty: 4, unitPrice: 850000, discount: 0 },
+        { name: 'Wheel Balancing', partNumber: 'PKG-TIR-002', qty: 4, unitPrice: 25000, discount: 0 },
+        { name: 'Valve Stem (4pcs)', partNumber: 'PKG-TIR-003', qty: 4, unitPrice: 15000, discount: 0 },
+        { name: 'Labor - Tire Replacement', partNumber: 'LABOR-TIR-001', qty: 1, unitPrice: 150000, discount: 0 }
+      ],
+      'Paket Service Wheel Alignment': [
+        { name: 'Wheel Alignment 4-Wheel', partNumber: 'PKG-ALN-001', qty: 1, unitPrice: 200000, discount: 0 },
+        { name: 'Wheel Balancing (4 wheels)', partNumber: 'PKG-ALN-002', qty: 4, unitPrice: 25000, discount: 0 },
+        { name: 'Labor - Wheel Alignment', partNumber: 'LABOR-ALN-001', qty: 1, unitPrice: 150000, discount: 0 }
+      ],
+      'Paket Service General Inspection': [
+        { name: 'Engine Oil 5W-30 (4L)', partNumber: 'PKG-INS-001', qty: 1, unitPrice: 250000, discount: 0 },
+        { name: 'Oil Filter', partNumber: 'PKG-INS-002', qty: 1, unitPrice: 75000, discount: 0 },
+        { name: 'Air Filter', partNumber: 'PKG-INS-003', qty: 1, unitPrice: 125000, discount: 0 },
+        { name: 'Wiper Fluid (1L)', partNumber: 'PKG-INS-004', qty: 1, unitPrice: 25000, discount: 0 },
+        { name: 'Labor - General Inspection', partNumber: 'LABOR-INS-001', qty: 1, unitPrice: 200000, discount: 0 }
+      ],
+      'Paket Service Electrical Repair': [
+        { name: 'Fuse Set Assorted', partNumber: 'PKG-ELC-001', qty: 1, unitPrice: 45000, discount: 0 },
+        { name: 'Relay Set', partNumber: 'PKG-ELC-002', qty: 1, unitPrice: 85000, discount: 0 },
+        { name: 'Electrical Tape & Connectors', partNumber: 'PKG-ELC-003', qty: 1, unitPrice: 55000, discount: 0 },
+        { name: 'Labor - Electrical Repair', partNumber: 'LABOR-ELC-001', qty: 1, unitPrice: 250000, discount: 0 }
+      ],
+      'Paket Service Body Repair': [
+        { name: 'Body Filler & Putty', partNumber: 'PKG-BDY-001', qty: 1, unitPrice: 125000, discount: 0 },
+        { name: 'Primer & Paint (Color Match)', partNumber: 'PKG-BDY-002', qty: 1, unitPrice: 350000, discount: 0 },
+        { name: 'Clear Coat & Polish', partNumber: 'PKG-BDY-003', qty: 1, unitPrice: 175000, discount: 0 },
+        { name: 'Labor - Body Repair', partNumber: 'LABOR-BDY-001', qty: 1, unitPrice: 500000, discount: 0 }
+      ]
+    };
+
+    const packageItems = servicePackages[selectedWorkOrder.serviceType];
+    
+    if (!packageItems) {
+      alert('⚠️ Paket service tidak ditemukan untuk service type ini.');
+      return;
+    }
+
+    // Add all package items to spare parts grid
+    const newParts = packageItems.map(item => ({
+      id: `PART-${Date.now()}-${Math.random()}`,
+      name: item.name,
+      partNumber: item.partNumber,
+      quantity: item.qty,
+      unitPrice: item.unitPrice,
+      discount: item.discount,
+      discountType: 'percent',
+      totalPrice: item.qty * item.unitPrice
+    }));
+
+    const updatedParts = [...spareParts, ...newParts];
+    setSpareParts(updatedParts);
+
+    // Update localStorage
+    const updatedWorkOrders = workOrders.map(wo => {
+      if (wo.id === selectedWorkOrder.id) {
+        return { ...wo, spareParts: updatedParts };
+      }
+      return wo;
+    });
+
+    localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
+    setWorkOrders(updatedWorkOrders);
+    setSelectedWorkOrder({ ...selectedWorkOrder, spareParts: updatedParts });
+
+    alert('✅ Paket service berhasil ditambahkan!\n\n📦 ' + packageItems.length + ' items (parts + labor) telah ditambahkan ke spare parts grid.');
+  };
+
+  const handleUpdatePartDiscount = (partId, discount, discountType) => {
+    setSpareParts(spareParts.map(part => {
+      if (part.id === partId) {
+        const subtotal = part.quantity * part.unitPrice;
+        let finalPrice = subtotal;
+        
+        if (discount > 0) {
+          if (discountType === 'percent') {
+            finalPrice = subtotal - (subtotal * discount / 100);
+          } else {
+            finalPrice = subtotal - discount;
+          }
+        }
+        
+        return { ...part, discount, discountType, totalPrice: finalPrice };
+      }
+      return part;
+    }));
+  };
+
+  const handleUpdatePartQuantity = (partId, newQuantity) => {
+    // Validate quantity minimum 1
+    const validQuantity = Math.max(1, newQuantity);
+    
+    setSpareParts(spareParts.map(part => {
+      if (part.id === partId) {
+        const subtotal = validQuantity * part.unitPrice;
+        let finalPrice = subtotal;
+        
+        // Recalculate with existing discount
+        if (part.discount > 0) {
+          if (part.discountType === 'percent') {
+            finalPrice = subtotal - (subtotal * part.discount / 100);
+          } else {
+            // If discount amount is more than new subtotal, adjust it
+            const validDiscount = Math.min(part.discount, subtotal);
+            finalPrice = subtotal - validDiscount;
+          }
+        }
+        
+        return { ...part, quantity: validQuantity, totalPrice: finalPrice };
+      }
+      return part;
+    }));
+  };
+
+  const handleRemovePart = (partId) => {
+    const partToRemove = spareParts.find(p => p.id === partId);
+    // Hanya bisa remove part yang belum di-request (DRAFT status)
+    if (partToRemove && !partToRemove.requested) {
+      const updatedParts = spareParts.filter(p => p.id !== partId);
+      setSpareParts(updatedParts);
+
+      // Update localStorage
+      if (selectedWorkOrder) {
+        const updatedWorkOrders = workOrders.map(wo => {
+          if (wo.id === selectedWorkOrder.id) {
+            return { ...wo, spareParts: updatedParts };
+          }
+          return wo;
+        });
+
+        localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
+        setWorkOrders(updatedWorkOrders);
+        setSelectedWorkOrder({ ...selectedWorkOrder, spareParts: updatedParts });
+      }
+    } else if (partToRemove && partToRemove.requested) {
+      const statusText = partToRemove.status === 'prepared' ? 'PREPARED' : partToRemove.status === 'rejected' ? 'REJECTED' : partToRemove.status === 'installed' ? 'INSTALLED' : 'REQUESTED';
+      alert('❌ Part tidak bisa dihapus!\n\n📦 Status: ' + statusText + '\n💡 Part yang sudah diproses oleh petugas Spare Parts tidak dapat dihapus dari list.');
+    }
+  };
+
+  const handleCancelOrderClick = (order) => {
+    setOrderToCancel(order);
+    setCancelReason('');
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmCancel = () => {
+    if (!cancelReason) {
+      alert('⚠️ Mohon pilih alasan pembatalan order!');
+      return;
+    }
+
+    if (orderToCancel) {
+      // Update status order menjadi cancelled
+      const updatedWorkOrders = workOrders.map(wo => {
+        if (wo.id === orderToCancel.id) {
+          return { 
+            ...wo, 
+            repairStatus: 'cancelled',
+            cancelReason: cancelReason,
+            cancelDate: new Date().toISOString()
+          };
+        }
+        return wo;
+      });
+
+      localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
+      setWorkOrders(updatedWorkOrders);
+
+      // Close modal
+      setShowCancelModal(false);
+      setOrderToCancel(null);
+      setCancelReason('');
+
+      alert(`✅ Order ${orderToCancel.orderId} berhasil dibatalkan!\n\nAlasan: ${cancelReason}`);
+    }
+  };
+
+  const handleCancelModalClose = () => {
+    setShowCancelModal(false);
+    setOrderToCancel(null);
+    setCancelReason('');
+  };
+
+  const handleSendOrderPart = () => {
+    if (selectedWorkOrder) {
+      // Validate mechanic field - MANDATORY
+      if (!mechanicName || mechanicName.trim() === '') {
+        alert('❌ Mechanic belum dipilih!\n\n👨‍🔧 Mohon pilih mechanic yang akan mengerjakan order ini sebelum mengirim order part.\n\n💡 Field Mechanic adalah mandatory.');
+        return;
+      }
+      
+      // Filter hanya parts yang belum requested
+      const partsToSend = spareParts.filter(p => !p.requested);
+      
+      if (partsToSend.length === 0) {
+        alert('⚠️ Tidak ada parts baru untuk dikirim!\n\nSemua parts sudah di-request sebelumnya.');
+        return;
+      }
+      
+      // Separate physical parts (PKG-* and regular parts) from labor (LABOR-*)
+      const physicalParts = partsToSend.filter(p => !p.partNumber.startsWith('LABOR-'));
+      const laborParts = partsToSend.filter(p => p.partNumber.startsWith('LABOR-'));
+      
+      // Mark parts as requested
+      const updatedSpareParts = spareParts.map(part => {
+        if (!part.requested) {
+          return { ...part, requested: true, status: 'requested' };
+        }
+        return part;
+      });
+      
+      setSpareParts(updatedSpareParts);
+      
+      // Save to work order
+      const updatedWorkOrders = workOrders.map(wo => {
+        if (wo.id === selectedWorkOrder.id) {
+          return { ...wo, spareParts: updatedSpareParts };
+        }
+        return wo;
+      });
+      
+      localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
+      setWorkOrders(updatedWorkOrders);
+      
+      // Send ONLY physical parts to Spare Parts Request queue (exclude LABOR)
+      const currentTime = new Date();
+      
+      // Only create request if there are physical parts to send
+      if (physicalParts.length > 0) {
+        const partsRequest = {
+          orderId: selectedWorkOrder.orderId,
+          customerName: selectedWorkOrder.customerName,
+          vehicleBrand: selectedWorkOrder.vehicleBrand,
+          vehicleModel: selectedWorkOrder.vehicleModel,
+          plateNumber: selectedWorkOrder.plateNumber,
+          requestDate: currentTime.toISOString().split('T')[0],
+          requestTime: currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+          status: 'PENDING',
+          branch: selectedWorkOrder.branch,
+          mechanicName: selectedWorkOrder.mechanicName || '', // Include mechanic name
+          parts: physicalParts.map(part => {
+            // Find stock from master spareparts
+            const masterPart = masterSpareParts.find(mp => mp.partNumber === part.partNumber);
+            
+            // For package parts (PKG-*), set default stock to 999
+            const isPackagePart = part.partNumber.startsWith('PKG-');
+            const stockAvailable = isPackagePart ? 999 : (masterPart?.stock || 0);
+            
+            return {
+              partCode: part.partNumber,
+              partName: part.name,
+              requestedQty: part.quantity,
+              stockAvailable: stockAvailable,
+              unit: 'pcs',
+              location: masterPart ? `Rack ${String.fromCharCode(65 + Math.floor(Math.random() * 3))}-${String(Math.floor(Math.random() * 20) + 1).padStart(2, '0')}` : 'Workshop',
+              status: 'REQUESTED'
+            };
+          })
+        };
+        
+        // Save to localStorage for Spare Parts Request page
+        const existingRequests = localStorage.getItem('sparePartsRequests');
+        const requests = existingRequests ? JSON.parse(existingRequests) : [];
+        
+        // Check if there's already a request for this orderId
+        const existingRequestIndex = requests.findIndex((req) => req.orderId === selectedWorkOrder.orderId);
+        
+        if (existingRequestIndex !== -1) {
+          // UPDATE existing request - MERGE new parts with existing parts
+          const existingRequest = requests[existingRequestIndex];
+          
+          // Add new parts to existing parts list
+          const newParts = partsRequest.parts;
+          const mergedParts = [...existingRequest.parts];
+          
+          // FIXED: Don't aggregate parts - each request should be a separate line item
+          // Just push all new parts to the array, even if partCode is the same
+          newParts.forEach((newPart) => {
+            // Always add as new line item - don't check if exists
+            mergedParts.push(newPart);
+          });
+          
+          // Update the request with merged parts
+          requests[existingRequestIndex] = {
+            ...existingRequest,
+            parts: mergedParts,
+            requestDate: partsRequest.requestDate,
+            requestTime: partsRequest.requestTime,
+            // Recalculate status based on merged parts
+            status: mergedParts.every((p) => p.status === 'PREPARED') ? 'READY' :
+                    mergedParts.some((p) => p.status === 'PREPARED') ? 'PARTIAL' : 'PENDING'
+          };
+        } else {
+          // CREATE new request
+          requests.push(partsRequest);
+        }
+        
+        localStorage.setItem('sparePartsRequests', JSON.stringify(requests));
+      }
+      
+      // Prepare success message
+      let successMessage = `✅ Order Part berhasil dikirim!\n\n`;
+      
+      if (physicalParts.length > 0) {
+        successMessage += `📦 ${physicalParts.length} PHYSICAL PARTS dikirim ke Spare Parts Request\n`;
+        successMessage += `   Total Qty: ${physicalParts.reduce((sum, p) => sum + p.quantity, 0)} pcs\n`;
+      }
+      
+      if (laborParts.length > 0) {
+        successMessage += `\n👨‍🔧 ${laborParts.length} LABOR/JASA (tidak perlu prepare)\n`;
+        successMessage += `   ${laborParts.map(p => `• ${p.name}`).join('\n   ')}\n`;
+      }
+      
+      successMessage += `\nOrder ID: ${selectedWorkOrder.orderId}`;
+      successMessage += `\n\n💡 Parts yang sudah di-request akan ditandai dengan badge "REQUESTED".`;
+      
+      alert(successMessage);
+    }
+  };
+
+  const handleSaveSpareParts = () => {
+    if (selectedWorkOrder) {
+      // Update work order with spare parts
+      const updatedWorkOrders = workOrders.map(wo => {
+        if (wo.id === selectedWorkOrder.id) {
+          return { ...wo, spareParts: spareParts };
+        }
+        return wo;
+      });
+      
+      localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
+      setWorkOrders(updatedWorkOrders);
+      
+      alert('Spare parts saved successfully!');
+      handleBackToList();
+    }
+  };
+
+  const calculateTotalCost = () => {
+    return spareParts.reduce((sum, part) => sum + part.totalPrice, 0);
+  };
+
+  const calculateDPP = () => {
+    const total = calculateTotalCost();
+    return total / 1.11; // DPP = Total / 1.11 (jika PPN 11%)
+  };
+
+  const calculatePPN = () => {
+    const dpp = calculateDPP();
+    return dpp * 0.11; // PPN 11%
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const getStatusInfo = (repairStatus) => {
+    switch (repairStatus) {
+      case 'waiting-parts':
+        return {
+          label: 'Waiting Parts',
+          color: 'bg-amber-100 text-amber-700 border-amber-200'
+        };
+      case 'parts-prepared':
+        return {
+          label: 'Parts Prepared',
+          color: 'bg-cyan-100 text-cyan-700 border-cyan-200'
+        };
+      case 'in-progress':
+        return {
+          label: 'In Progress',
+          color: 'bg-blue-100 text-blue-700 border-blue-200'
+        };
+      case 'completed':
+        return {
+          label: 'Completed',
+          color: 'bg-emerald-100 text-emerald-700 border-emerald-200'
+        };
+      case 'final-inspection':
+        return {
+          label: 'Final Inspection',
+          color: 'bg-purple-100 text-purple-700 border-purple-200'
+        };
+      case 'qc-finished':
+        return {
+          label: 'QC Finished',
+          color: 'bg-indigo-100 text-indigo-700 border-indigo-200'
+        };
+      case 'quality-check':
+        return {
+          label: 'Quality Check',
+          color: 'bg-sky-100 text-sky-700 border-sky-200'
+        };
+      case 'urgent':
+        return {
+          label: 'Urgent',
+          color: 'bg-red-100 text-red-700 border-red-200'
+        };
+      case 'cancelled':
+        return {
+          label: 'Cancelled',
+          color: 'bg-slate-300 text-slate-600 border-slate-400'
+        };
+      default:
+        return {
+          label: 'Pending',
+          color: 'bg-slate-100 text-slate-700 border-slate-200'
+        };
+    }
+  };
+
+  const filteredOrders = filterStatus === 'all' 
+    ? workOrders 
+    : workOrders.filter(order => {
+        const statusInfo = getStatusInfo(order.repairStatus);
+        return statusInfo.label.toLowerCase().includes(filterStatus.toLowerCase());
+      });
+
+  // Filter by branch for branch users
+  const branchFilteredOrders = currentUser.role === 'branch' && currentUser.branch !== 'all'
+    ? filteredOrders.filter(order => order.branch === currentUser.branch)
+    : filteredOrders;
+
+  // Spare Parts Input View
+  if (selectedWorkOrder) {
+    return (
+      <div className="p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button variant="outline" onClick={handleBackToList}>
+                <ChevronRight className="w-4 h-4 mr-2 rotate-180" />
+                Back to List
+              </Button>
+              <div>
+                <h1 className="text-slate-800">Sparepart Order</h1>
+                <p className="text-slate-600">Work Order: {selectedWorkOrder.id} - {selectedWorkOrder.vehicleBrand} {selectedWorkOrder.vehicleModel}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {spareParts.some(p => p.requested) && (
+                <div className="px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  <span className="text-sm">
+                    {spareParts.filter(p => p.status === 'prepared').length} prepared / {spareParts.filter(p => p.requested).length} requested
+                  </span>
+                </div>
+              )}
+              {!mechanicName && spareParts.length > 0 && (
+                <div className="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm">Mechanic must be assigned</span>
+                </div>
+              )}
+              <Button 
+                onClick={handleSendOrderPart}
+                disabled={spareParts.length === 0 || !spareParts.some(p => !p.requested)}
+                className="bg-blue-500 hover:bg-blue-600 text-white disabled:bg-slate-300 disabled:cursor-not-allowed"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Send Order Part
+              </Button>
+              <Button 
+                onClick={() => window.print()}
+                className="bg-slate-700 hover:bg-slate-800 text-white"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Print Dokumen SPK
+              </Button>
+            </div>
+          </div>
+
+          {/* Work Order Info - Horizontal Card at Top */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6 sticky top-0 z-10 shadow-sm">
+            <h3 className="text-slate-800 mb-4">Work Order Info</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+              <div>
+                <p className="text-slate-600 text-xs mb-1">Work Order ID</p>
+                <p className="text-slate-900">{selectedWorkOrder.id}</p>
+              </div>
+              <div>
+                <p className="text-slate-600 text-xs mb-1">Order ID</p>
+                <p className="text-slate-900">{selectedWorkOrder.orderId}</p>
+              </div>
+              <div>
+                <p className="text-slate-600 text-xs mb-1">Customer</p>
+                <p className="text-slate-900">{selectedWorkOrder.customerName}</p>
+              </div>
+              <div>
+                <p className="text-slate-600 text-xs mb-1">Phone</p>
+                <p className="text-slate-900">{selectedWorkOrder.phone}</p>
+              </div>
+              <div>
+                <p className="text-slate-600 text-xs mb-1">Plate Number</p>
+                <p className="text-slate-900">{selectedWorkOrder.plateNumber}</p>
+              </div>
+              <div>
+                <p className="text-slate-600 text-xs mb-1">Status</p>
+                <span className={`inline-block px-2 py-1 rounded text-xs ${getStatusInfo(selectedWorkOrder.repairStatus).color}`}>
+                  {getStatusInfo(selectedWorkOrder.repairStatus).label}
+                </span>
+              </div>
+              <div>
+                <p className="text-slate-600 text-xs mb-1">
+                  Mechanic <span className="text-red-500">*</span>
+                </p>
+                <select
+                  value={mechanicName}
+                  onChange={(e) => handleMechanicChange(e.target.value)}
+                  className={`w-full px-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    !mechanicName ? 'border-red-300 bg-red-50' : 'border-slate-300'
+                  }`}
+                >
+                  <option value="">Select Mechanic</option>
+                  {availableMechanics.map(mechanic => (
+                    <option key={mechanic} value={mechanic}>{mechanic}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-span-2">
+                <p className="text-slate-600 text-xs mb-1">Service Type</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-slate-900 flex-1">{selectedWorkOrder.serviceType}</p>
+                  {selectedWorkOrder.serviceType.startsWith('Paket Service') && (
+                    <Button
+                      onClick={handleAddPackageParts}
+                      disabled={hasPackageParts()}
+                      className="bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1.5 h-auto disabled:bg-slate-300 disabled:cursor-not-allowed"
+                    >
+                      <Package className="w-3 h-3 mr-1" />
+                      Add Part & Package
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="col-span-3">
+                <p className="text-slate-600 text-xs mb-1">Diagnosis</p>
+                <p className="text-slate-900 text-sm">{selectedWorkOrder.diagnosis}</p>
+              </div>
+              <div className="col-span-3">
+                <p className="text-slate-600 text-xs mb-1">Recommended Parts</p>
+                <p className="text-slate-900 text-sm">{selectedWorkOrder.recommendedParts}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Spare Parts Grid - Full Width */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-slate-800">Spare Parts Grid</h3>
+              <div className="text-sm text-slate-600">
+                <Package className="w-4 h-4 inline mr-1" />
+                Smart part finder enabled for {selectedWorkOrder.vehicleModel}
+              </div>
+            </div>
+            
+            <div className="max-h-[500px] overflow-y-auto overflow-x-auto border border-slate-200 rounded-lg">
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b-2 border-slate-300 sticky top-0 z-20">
+                  <tr>
+                    <th className="text-left px-3 py-3 text-slate-700 w-8 bg-slate-50">#</th>
+                    <th className="text-left px-3 py-3 text-slate-700 bg-slate-50" style={{ width: '22%' }}>Part Name</th>
+                    <th className="text-left px-3 py-3 text-slate-700 bg-slate-50" style={{ width: '18%' }}>Part Number</th>
+                    <th className="text-center px-3 py-3 text-slate-700 bg-slate-50" style={{ width: '8%' }}>Qty</th>
+                    <th className="text-right px-3 py-3 text-slate-700 bg-slate-50" style={{ width: '12%' }}>Unit Price</th>
+                    <th className="text-center px-3 py-3 text-slate-700 bg-slate-50" style={{ width: '12%' }}>Discount</th>
+                    <th className="text-right px-3 py-3 text-slate-700 bg-slate-50" style={{ width: '12%' }}>Total</th>
+                    <th className="text-center px-3 py-3 text-slate-700 w-16 bg-slate-50">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Input Row - Always at top */}
+                  <tr className="bg-blue-50 border-b-2 border-blue-300">
+                    <td className="px-3 py-2">
+                      <Plus className="w-4 h-4 text-blue-600" />
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Type part name..."
+                          value={newPart.name}
+                          onChange={(e) => setNewPart({ ...newPart, name: e.target.value })}
+                          onFocus={() => newPart.name && setShowSuggestions(filteredParts.length > 0)}
+                          className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        {/* Auto-suggestions dropdown */}
+                        {showSuggestions && (
+                          <div className="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-xl max-h-64 overflow-y-auto">
+                            {filteredParts.length === 0 ? (
+                              <div className="p-3 text-slate-500 text-sm">
+                                No matching parts for {selectedWorkOrder.vehicleModel}
+                              </div>
+                            ) : (
+                              <>
+                                <div className="p-2 bg-blue-50 border-b border-blue-200 sticky top-0">
+                                  <p className="text-blue-700 text-xs">
+                                    ✓ Compatible parts for {selectedWorkOrder.vehicleModel}
+                                  </p>
+                                </div>
+                                {filteredParts.map((part, index) => (
+                                  <div
+                                    key={index}
+                                    onClick={() => handleSelectSuggestedPart(part)}
+                                    className="p-2 hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-b-0"
+                                  >
+                                    <div className="flex justify-between items-start">
+                                      <div className="flex-1">
+                                        <p className="text-slate-900 text-sm">{part.partName}</p>
+                                        <p className="text-slate-600 text-xs">{part.partNumber} • {part.category}</p>
+                                      </div>
+                                      <div className="text-right ml-2">
+                                        <p className="text-blue-600 text-sm">{formatCurrency(part.unitPrice)}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="text"
+                        placeholder="Auto-fill"
+                        value={newPart.partNumber}
+                        readOnly
+                        className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded bg-slate-100 text-slate-600"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="number"
+                        min="1"
+                        value={newPart.quantity}
+                        onChange={(e) => setNewPart({ ...newPart, quantity: parseInt(e.target.value) || 1 })}
+                        className="w-full px-2 py-1.5 text-sm text-center border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="text"
+                        placeholder="Auto-fill"
+                        value={newPart.unitPrice ? formatCurrency(newPart.unitPrice) : ''}
+                        readOnly
+                        className="w-full px-2 py-1.5 text-sm text-right border border-slate-300 rounded bg-slate-100 text-slate-600"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          value={newPart.discount || ''}
+                          onChange={(e) => setNewPart({ ...newPart, discount: parseFloat(e.target.value) || 0 })}
+                          className="w-full px-2 py-1.5 text-sm text-center border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setNewPart({ ...newPart, discountType: newPart.discountType === 'percent' ? 'amount' : 'percent' })}
+                          className="px-2 py-1.5 text-xs bg-slate-200 hover:bg-slate-300 rounded border border-slate-300 transition-colors"
+                        >
+                          {newPart.discountType === 'percent' ? '%' : 'Rp'}
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="text-right text-sm text-blue-700 py-1.5 px-2">
+                        {formatCurrency((() => {
+                          const subtotal = newPart.quantity * newPart.unitPrice;
+                          if (newPart.discount > 0) {
+                            if (newPart.discountType === 'percent') {
+                              return subtotal - (subtotal * newPart.discount / 100);
+                            } else {
+                              return subtotal - newPart.discount;
+                            }
+                          }
+                          return subtotal;
+                        })())}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <Button
+                        size="sm"
+                        onClick={handleAddPart}
+                        className="bg-blue-500 hover:bg-blue-600 text-white h-8 px-3"
+                        disabled={!newPart.name || !newPart.partNumber || !newPart.unitPrice}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    </td>
+                  </tr>
+
+                  {/* Existing Parts */}
+                  {spareParts.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="text-center py-12 text-slate-500">
+                        <Package className="w-10 h-10 mx-auto mb-2 text-slate-400" />
+                        <p className="text-sm">No spare parts added yet</p>
+                        <p className="text-xs mt-1">Use the input row above to add parts</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    spareParts.map((part, index) => {
+                      // Debug log
+                      if (index === 0) {
+                        console.log('🎨 Rendering spare parts. First part:', {
+                          name: part.name,
+                          partNumber: part.partNumber,
+                          status: part.status,
+                          requested: part.requested
+                        });
+                      }
+                      
+                      return (
+                        <tr key={part.id} className={`border-b border-slate-100 ${part.requested ? 'bg-slate-50' : 'hover:bg-slate-50'}`}>
+                          <td className="px-3 py-3 text-slate-600 text-sm">{index + 1}</td>
+                          <td className="px-3 py-3 text-slate-900 text-sm">
+                            <div className="flex items-center gap-2">
+                              {part.name}
+                              {getPartStatusBadge(part)}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-slate-700 text-sm">{part.partNumber}</td>
+                          <td className="px-3 py-3 text-center">
+                            <input
+                              type="number"
+                              min="1"
+                              value={part.quantity}
+                              onChange={(e) => handleUpdatePartQuantity(part.id, parseInt(e.target.value) || 1)}
+                              className="w-16 px-2 py-1 text-sm text-center border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                              disabled={part.requested}
+                            />
+                          </td>
+                          <td className="px-3 py-3 text-right text-slate-900 text-sm">{formatCurrency(part.unitPrice)}</td>
+                          <td className="px-3 py-3 text-center">
+                            <div className="flex items-center gap-1 justify-center">
+                              <input
+                                type="number"
+                                min="0"
+                                value={part.discount || ''}
+                                onChange={(e) => handleUpdatePartDiscount(part.id, parseFloat(e.target.value) || 0, part.discountType)}
+                                className="w-16 px-2 py-1 text-xs text-center border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleUpdatePartDiscount(part.id, part.discount, part.discountType === 'percent' ? 'amount' : 'percent')}
+                                className="px-1.5 py-1 text-xs bg-slate-200 hover:bg-slate-300 rounded border border-slate-300 transition-colors"
+                              >
+                                {part.discountType === 'percent' ? '%' : 'Rp'}
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-right text-slate-900 text-sm">{formatCurrency(part.totalPrice)}</td>
+                          <td className="px-3 py-3 text-center">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-red-300 text-red-600 hover:bg-red-50 h-7 px-2"
+                              onClick={() => handleRemovePart(part.id)}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+
+                {/* Summary Footer */}
+                {spareParts.length > 0 && (
+                  <tfoot className="bg-slate-50 border-t-2 border-slate-300">
+                    <tr>
+                      <td colSpan={6} className="px-3 py-2 text-right text-slate-700">Subtotal (DPP):</td>
+                      <td className="px-3 py-2 text-right text-slate-900">{formatCurrency(calculateDPP())}</td>
+                      <td></td>
+                    </tr>
+                    <tr>
+                      <td colSpan={6} className="px-3 py-2 text-right text-slate-700">PPN 11%:</td>
+                      <td className="px-3 py-2 text-right text-slate-900">{formatCurrency(calculatePPN())}</td>
+                      <td></td>
+                    </tr>
+                    <tr className="bg-gradient-to-r from-blue-500 to-blue-600 border-t-2 border-blue-700">
+                      <td colSpan={6} className="px-3 py-4 text-right text-white text-xl">Total Cost:</td>
+                      <td className="px-3 py-4 text-right text-white text-3xl">{formatCurrency(calculateTotalCost())}</td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          </div>
+
+          {/* Helper Info */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-blue-50 rounded-lg border border-blue-200 p-4">
+              <div className="flex items-start gap-3">
+                <Search className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-blue-900 text-sm mb-1">Smart Part Finder</h4>
+                  <p className="text-blue-700 text-xs">Type part name to get auto-suggestions with correct part numbers and prices from master data.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-4">
+              <div className="flex items-start gap-3">
+                <Package className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-emerald-900 text-sm mb-1">Editable Grid with Auto-Calculate</h4>
+                  <p className="text-emerald-700 text-xs">Edit quantity directly in the grid - total will auto-calculate. Use discount column to apply percentage (%) or amount (Rp) discount per item.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SPK Document - Hidden on screen, visible on print */}
+          <div className="hidden print:block">
+            <SPKDocument workOrder={selectedWorkOrder} spareParts={spareParts} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Main List View
+  return (
+    <div className="p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-slate-800 mb-1">Repair Orders</h1>
+            <p className="text-slate-600">Manage and track all repair orders from inspection</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+              <span className="text-blue-600">Total Orders: {workOrders.length}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Stats - Moved to Top */}
+        {workOrders.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-amber-700 text-sm mb-1">Waiting Parts</p>
+                  <p className="text-amber-900 text-2xl">
+                    {workOrders.filter(o => o.repairStatus === 'waiting-parts').length}
+                  </p>
+                </div>
+                <div className="bg-amber-200/50 rounded-lg p-3">
+                  <Filter className="w-6 h-6 text-amber-700" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl border border-blue-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-700 text-sm mb-1">In Progress</p>
+                  <p className="text-blue-900 text-2xl">
+                    {workOrders.filter(o => o.repairStatus === 'in-progress').length}
+                  </p>
+                </div>
+                <div className="bg-blue-200/50 rounded-lg p-3">
+                  <Wrench className="w-6 h-6 text-blue-700" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-emerald-700 text-sm mb-1">Completed</p>
+                  <p className="text-emerald-900 text-2xl">
+                    {workOrders.filter(o => o.repairStatus === 'completed').length}
+                  </p>
+                </div>
+                <div className="bg-emerald-200/50 rounded-lg p-3">
+                  <Eye className="w-6 h-6 text-emerald-700" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-xl border border-slate-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-slate-700 text-sm mb-1">Cancelled</p>
+                  <p className="text-slate-900 text-2xl">
+                    {workOrders.filter(o => o.repairStatus === 'cancelled').length}
+                  </p>
+                </div>
+                <div className="bg-slate-200/50 rounded-lg p-3">
+                  <XCircle className="w-6 h-6 text-slate-700" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl border border-violet-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-violet-700 text-sm mb-1">Total Orders</p>
+                  <p className="text-violet-900 text-2xl">{workOrders.length}</p>
+                </div>
+                <div className="bg-violet-200/50 rounded-lg p-3">
+                  <Filter className="w-6 h-6 text-violet-700" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl p-4 border border-slate-200">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-slate-600" />
+              <span className="text-slate-700">Filter by Status:</span>
+            </div>
+            <button
+              onClick={() => setFilterStatus('all')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filterStatus === 'all'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              All Orders
+            </button>
+            <button
+              onClick={() => setFilterStatus('waiting')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filterStatus === 'waiting'
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              Waiting Parts
+            </button>
+            <button
+              onClick={() => setFilterStatus('in progress')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filterStatus === 'in progress'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              In Progress
+            </button>
+            <button
+              onClick={() => setFilterStatus('completed')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filterStatus === 'completed'
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              Completed
+            </button>
+            <button
+              onClick={() => setFilterStatus('urgent')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filterStatus === 'urgent'
+                  ? 'bg-red-500 text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              Urgent
+            </button>
+            <button
+              onClick={() => setFilterStatus('cancelled')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                filterStatus === 'cancelled'
+                  ? 'bg-slate-500 text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              Cancelled
+            </button>
+            <div className="ml-auto">
+              <Button variant="outline" className="border-slate-300">
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Orders Table */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          {branchFilteredOrders.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">
+              <Wrench className="w-12 h-12 mx-auto mb-3 text-slate-400" />
+              <p>No repair orders yet</p>
+              <p className="text-sm mt-1">Work orders from Vehicle Inspection will appear here</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50">
+                    <th className="px-6 py-4 text-left text-slate-700">Work Order ID</th>
+                    <th className="px-6 py-4 text-left text-slate-700">Order ID</th>
+                    <th className="px-6 py-4 text-left text-slate-700">Customer</th>
+                    <th className="px-6 py-4 text-left text-slate-700">Vehicle</th>
+                    <th className="px-6 py-4 text-left text-slate-700">Service Type</th>
+                    <th className="px-6 py-4 text-left text-slate-700">Branch</th>
+                    <th className="px-6 py-4 text-left text-slate-700">Status</th>
+                    <th className="px-6 py-4 text-left text-slate-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {branchFilteredOrders.map((order, index) => {
+                    const statusInfo = getStatusInfo(order.repairStatus);
+                    const isCancelled = order.repairStatus === 'cancelled';
+                    const isCompleted = order.repairStatus === 'completed' || 
+                                       order.repairStatus === 'final-inspection';
+                    // Check if order has parts that have been processed by parts staff
+                    const hasProcessedParts = order.spareParts?.some(part => 
+                      part.status === 'prepared' || part.status === 'installed'
+                    ) || false;
+                    const isDisabled = isCancelled || isCompleted;
+                    const cannotCancel = isDisabled || hasProcessedParts;
+                    
+                    return (
+                      <tr 
+                        key={index} 
+                        className={`border-b border-slate-100 transition-colors ${
+                          isDisabled
+                            ? 'bg-slate-200 opacity-60 cursor-not-allowed' 
+                            : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <td className="px-6 py-4">
+                          <span className={isDisabled ? "text-slate-500" : "text-blue-600"}>{order.id}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={isDisabled ? "text-slate-500" : "text-slate-900"}>{order.orderId}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div>
+                            <p className={isDisabled ? "text-slate-500" : "text-slate-900"}>{order.customerName}</p>
+                            <p className="text-slate-500 text-sm">{order.plateNumber}</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className={isDisabled ? "text-slate-500" : "text-slate-700"}>{order.vehicleBrand} {order.vehicleModel}</p>
+                          <p className="text-slate-500 text-sm">{order.vehicleYear}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={isDisabled ? "text-slate-500" : "text-slate-700"}>{order.serviceType}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-block px-3 py-1 rounded-full text-sm ${
+                            isDisabled ? 'bg-slate-300 text-slate-600' : 'bg-slate-100 text-slate-700'
+                          }`}>
+                            {order.branch}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-block px-3 py-1 rounded-full border text-sm ${statusInfo.color}`}>
+                            {statusInfo.label}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              size="sm" 
+                              className={isDisabled
+                                ? "bg-slate-400 text-slate-200 cursor-not-allowed" 
+                                : "bg-blue-500 hover:bg-blue-600 text-white"
+                              }
+                              onClick={() => !isDisabled && handleSelectWorkOrder(order)}
+                              disabled={isDisabled}
+                            >
+                              <Package className="w-4 h-4 mr-1" />
+                              Spare Parts
+                            </Button>
+                            {!cannotCancel && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="border-red-300 text-red-600 hover:bg-red-50"
+                                onClick={() => handleCancelOrderClick(order)}
+                              >
+                                <XCircle className="w-4 h-4 mr-1" />
+                                Cancel
+                              </Button>
+                            )}
+                            {hasProcessedParts && !isDisabled && (
+                              <span className="text-xs text-amber-600 italic">
+                                ⚠️ Cannot cancel - parts processed
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Cancel Order Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-red-100 rounded-lg p-2">
+                  <XCircle className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-slate-900">Cancel Order</h3>
+                  <p className="text-slate-600 text-sm">Order ID: {orderToCancel?.orderId}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleCancelModalClose}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-6 py-6 space-y-4">
+              <div>
+                <p className="text-slate-700 mb-2">Pilih alasan pembatalan order:</p>
+                <div className="space-y-2">
+                  {cancelReasons.map((reason, index) => (
+                    <label
+                      key={index}
+                      className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-all ${
+                        cancelReason === reason
+                          ? 'border-red-500 bg-red-50'
+                          : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="cancelReason"
+                        value={reason}
+                        checked={cancelReason === reason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        className="mt-1 w-4 h-4 text-red-600 focus:ring-red-500"
+                      />
+                      <span className="text-slate-700 text-sm flex-1">{reason}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Warning Message */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="flex gap-3">
+                  <div className="text-amber-600 flex-shrink-0">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-amber-900 text-sm">
+                      Order yang sudah dibatalkan tidak dapat dikembalikan. Pastikan keputusan ini sudah final.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={handleCancelModalClose}
+                className="border-slate-300"
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleConfirmCancel}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                disabled={!cancelReason}
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Konfirmasi Pembatalan
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
