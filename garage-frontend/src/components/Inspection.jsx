@@ -5,9 +5,14 @@ import { Button } from './ui/button';
 import { loadFromStorage, saveToStorage } from '../lib/storage';
 
 export function Inspection() {
-  const [registrations, setRegistrations] = useState(() =>
-    loadFromStorage('registrations', [])
-  );
+  const todayDate = new Date().toLocaleDateString('id-ID');
+
+  const getTodayRegistrations = () => {
+    const storedRegistrations = loadFromStorage('registrations', []);
+    return storedRegistrations.filter(reg => reg.date === todayDate);
+  };
+
+  const [registrations, setRegistrations] = useState(getTodayRegistrations);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [showDiagnosisReport, setShowDiagnosisReport] = useState(false);
   const [createdWorkOrderId, setCreatedWorkOrderId] = useState('');
@@ -173,7 +178,7 @@ export function Inspection() {
     });
 
     saveToStorage('registrations', updatedRegistrations);
-    setRegistrations(updatedRegistrations);
+    setRegistrations(getTodayRegistrations());
     
     // Show diagnosis report
     setShowDiagnosisReport(true);
@@ -182,15 +187,9 @@ export function Inspection() {
     console.log('Work Order Created:', workOrder);
   };
 
-  // Keep local state aligned with saved data so refresh/HMR doesn't wipe entries
-  useEffect(() => {
-    if (!registrations || registrations.length === 0) return;
-    saveToStorage('registrations', registrations);
-  }, [registrations]);
-
   useEffect(() => {
     const reloadRegistrations = () => {
-      setRegistrations(loadFromStorage('registrations', []));
+      setRegistrations(getTodayRegistrations());
     };
 
     // Immediately hydrate from storage when landing on the page
