@@ -586,10 +586,14 @@ export function Registration({ currentUser }) {
     setShowWorkOrder(true);
   };
 
-  // Filter registrations based on user branch
-  const filteredRegistrations = currentUser.role === 'admin' && currentUser.branch === 'all'
+  // Filter registrations based on user branch, but fall back to all data if branch doesn't match any
+  const branchFilteredRegistrations = currentUser.role === 'admin' && currentUser.branch === 'all'
     ? recentRegistrations
     : recentRegistrations.filter(reg => reg.branch === currentUser.branch);
+
+  const filteredRegistrations = branchFilteredRegistrations.length > 0
+    ? branchFilteredRegistrations
+    : recentRegistrations;
 
   return (
     <>
