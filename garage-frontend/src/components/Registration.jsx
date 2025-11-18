@@ -235,6 +235,11 @@ export function Registration({ currentUser }) {
       // ✅ CHECK RESPONSE STRUCTURE
       if (result && result.created) {
         const createdData = result.created;
+        const apiCustomerName = createdData.customer_name;
+        const displayCustomerName =
+          (apiCustomerName && apiCustomerName !== createdData.customer)
+            ? apiCustomerName
+            : (createdData.customer_display_name || formData.customerName);
 
         // Generate display data for UI
         const newTime = new Date().toLocaleTimeString('id-ID', {
@@ -246,7 +251,7 @@ export function Registration({ currentUser }) {
           id: createdData.service_order || createdData.vehicle || Date.now().toString(),
           time: newTime,
           orderId: createdData.service_order || `ORD-${Date.now().toString().slice(-6)}`,
-          customerName: createdData.customer_name || formData.customerName,
+          customerName: displayCustomerName,
           phone: formData.phone,
           email: formData.email,
           plateNumber: formData.plateNumber,
@@ -277,7 +282,7 @@ export function Registration({ currentUser }) {
 
         // Show success message with detailed info
         let successMessage = `✅ Registration Successful!\n\n`;
-        successMessage += `Customer: ${createdData.customer_name || formData.customerName}\n`;
+        successMessage += `Customer: ${displayCustomerName}\n`;
         successMessage += `Vehicle: ${formData.plateNumber}\n`;
 
         if (createdData.service_order) {
