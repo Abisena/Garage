@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Filter, Download, Eye, Wrench, ChevronRight, X, Save, Trash2, Package, Search, Send, CheckCircle, FileText, XCircle, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { SPKDocument } from './SPKDocument';
+import { frappeClient } from '../lib/frappeClient';
 
 export function ServiceOrders({ currentUser }) {
   const [filterStatus, setFilterStatus] = useState('all');
@@ -21,6 +22,16 @@ export function ServiceOrders({ currentUser }) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [partOrderSent, setPartOrderSent] = useState(false);
   const [mechanicName, setMechanicName] = useState('');
+  const [availableMechanics, setAvailableMechanics] = useState([
+    'Ahmad Syahrul',
+    'Budi Santoso',
+    'Deni Pratama',
+    'Eko Wijaya',
+    'Fajar Ramadhan',
+    'Gunawan Prakoso',
+    'Hendra Kusuma',
+    'Irfan Hakim'
+  ]);
   
   // Cancel Order States
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -59,18 +70,6 @@ export function ServiceOrders({ currentUser }) {
     );
   };
   
-  // List of available mechanics
-  const availableMechanics = [
-    'Ahmad Syahrul',
-    'Budi Santoso',
-    'Deni Pratama',
-    'Eko Wijaya',
-    'Fajar Ramadhan',
-    'Gunawan Prakoso',
-    'Hendra Kusuma',
-    'Irfan Hakim'
-  ];
-
   useEffect(() => {
     loadWorkOrders();
     loadMasterSpareParts();
@@ -79,10 +78,12 @@ export function ServiceOrders({ currentUser }) {
   useEffect(() => {
     const handleStorageChange = () => {
       loadWorkOrders();
+      loadMasterSpareParts(selectedWorkOrder?.id);
     };
 
     const handleWorkOrdersUpdate = () => {
       loadWorkOrders();
+      loadMasterSpareParts(selectedWorkOrder?.id);
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -94,7 +95,7 @@ export function ServiceOrders({ currentUser }) {
       window.removeEventListener('focus', handleStorageChange);
       window.removeEventListener('workOrdersUpdated', handleWorkOrdersUpdate);
     };
-  }, []);
+  }, [selectedWorkOrder?.id]);
 
   const loadWorkOrders = () => {
     const savedWorkOrders = localStorage.getItem('workOrders');
@@ -103,11 +104,80 @@ export function ServiceOrders({ currentUser }) {
     }
   };
 
-  const loadMasterSpareParts = () => {
+  const mapProfilePart = (part) => ({
+    id: part.id || part.name || part.part_code || part.partNumber,
+    partName: part.part_name || part.partName || part.description || part.name,
+    partNumber: part.part_code || part.partNumber || part.item_code,
+    compatibleModels: Array.isArray(part.compatible_models) ? part.compatible_models : (Array.isArray(part.compatibleModels) ? part.compatibleModels : []),
+    category: part.category || part.brand || 'General',
+    unitPrice: Number(part.unit_price || part.rate || part.unitPrice || 0),
+    stock: Number(part.stock_qty ?? part.stock ?? 0),
+    minStock: Number(part.reorder_level ?? part.minStock ?? 0)
+  });
+
+  const updateMechanicOptions = (technicians) => {
+    if (!technicians || !Array.isArray(technicians)) return;
+
+    const names = technicians
+      .map((technician) =>
+        technician?.employee_name ||
+        technician?.employee ||
+        technician?.name ||
+        technician?.full_name ||
+        technician?.user_id
+      )
+      .filter(Boolean);
+
+    if (names.length > 0) {
+      const uniqueNames = Array.from(new Set(names));
+      setAvailableMechanics(uniqueNames);
+    }
+  };
+
+  const loadMasterSpareParts = async (orderId) => {
     const savedParts = localStorage.getItem('masterSpareParts');
     if (savedParts) {
       setMasterSpareParts(JSON.parse(savedParts));
-    } else {
+    }
+
+    try {
+      let profileParts = [];
+
+      if (orderId) {
+        const details = await frappeClient.getServiceOrderDetails(orderId);
+        const payload = details?.message || details;
+
+        if (payload?.available_spare_parts?.length) {
+          profileParts = payload.available_spare_parts;
+        }
+
+        if (payload?.available_technicians) {
+          updateMechanicOptions(payload.available_technicians);
+        }
+      }
+
+      if (profileParts.length === 0) {
+        const bootstrap = await frappeClient.getPortalBootstrap();
+        profileParts = bootstrap?.spare_parts || bootstrap?.available_spare_parts || [];
+        updateMechanicOptions(bootstrap?.available_technicians);
+      }
+
+      if (profileParts.length > 0) {
+        const mappedParts = profileParts
+          .map(mapProfilePart)
+          .filter((part) => part.partName && part.partNumber);
+
+        if (mappedParts.length > 0) {
+          setMasterSpareParts(mappedParts);
+          localStorage.setItem('masterSpareParts', JSON.stringify(mappedParts));
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load master spare parts from profile', error);
+    }
+
+    if (!savedParts) {
       // Initialize with default parts if not exists
       const defaultParts = [
         // Toyota Avanza Parts
@@ -121,7 +191,7 @@ export function ServiceOrders({ currentUser }) {
         { id: '8', partName: 'Battery 12V', partNumber: 'BT-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Electrical', unitPrice: 850000, stock: 15, minStock: 5 },
         { id: '9', partName: 'Alternator Belt', partNumber: 'AB-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Engine', unitPrice: 175000, stock: 25, minStock: 10 },
         { id: '10', partName: 'Timing Belt', partNumber: 'TB-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Engine', unitPrice: 385000, stock: 18, minStock: 8 },
-        
+
         // Honda Jazz Parts
         { id: '11', partName: 'Brake Pad Front', partNumber: 'BP-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Brake System', unitPrice: 520000, stock: 22, minStock: 10 },
         { id: '12', partName: 'Brake Pad Rear', partNumber: 'BP-HON-JAZ-002', compatibleModels: ['Jazz'], category: 'Brake System', unitPrice: 380000, stock: 18, minStock: 10 },
@@ -177,7 +247,7 @@ export function ServiceOrders({ currentUser }) {
         { id: '54', partName: 'Air Filter', partNumber: 'AF-TOY-INN-001', compatibleModels: ['Innova'], category: 'Engine', unitPrice: 155000, stock: 30, minStock: 15 },
         { id: '55', partName: 'Spark Plug', partNumber: 'SP-TOY-INN-001', compatibleModels: ['Innova'], category: 'Engine', unitPrice: 110000, stock: 52, minStock: 28 },
       ];
-      
+
       setMasterSpareParts(defaultParts);
       localStorage.setItem('masterSpareParts', JSON.stringify(defaultParts));
     }
@@ -214,10 +284,13 @@ export function ServiceOrders({ currentUser }) {
       const vehicleModel = selectedWorkOrder.vehicleModel;
       const searchTerm = newPart.name.toLowerCase();
       
-      const filtered = masterSpareParts.filter(part => 
-        part.compatibleModels.includes(vehicleModel) &&
-        part.partName.toLowerCase().includes(searchTerm)
-      );
+      const filtered = masterSpareParts.filter(part => {
+        const compatibleModels = Array.isArray(part.compatibleModels) ? part.compatibleModels : [];
+        const matchesModel = compatibleModels.length === 0 || compatibleModels.includes(vehicleModel);
+        const partName = (part.partName || '').toLowerCase();
+
+        return matchesModel && partName.includes(searchTerm);
+      });
       
       setFilteredParts(filtered);
       setShowSuggestions(filtered.length > 0 && newPart.name.length > 0);
@@ -254,6 +327,7 @@ export function ServiceOrders({ currentUser }) {
     setSelectedWorkOrder(order);
     setSpareParts(order.spareParts || []);
     setMechanicName(order.mechanicName || ''); // Load existing mechanic assignment
+    loadMasterSpareParts(order.id);
   };
 
   const handleMechanicChange = (newMechanic) => {

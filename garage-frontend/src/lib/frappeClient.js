@@ -142,6 +142,23 @@ class FrappeClient {
       throw error;
     }
   }
+
+  async getServiceOrderDetails(orderId) {
+    if (!orderId) {
+      return null;
+    }
+
+    try {
+      const response = await this.request(
+        `/api/method/garage.api.portal.get_service_order_details?order_id=${encodeURIComponent(orderId)}`
+      );
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to fetch service order details:', error);
+      throw error;
+    }
+  }
 }
 
 export const frappeClient = new FrappeClient();
