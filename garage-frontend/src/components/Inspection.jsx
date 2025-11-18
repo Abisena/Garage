@@ -184,6 +184,7 @@ export function Inspection() {
 
   // Keep local state aligned with saved data so refresh/HMR doesn't wipe entries
   useEffect(() => {
+    if (!registrations || registrations.length === 0) return;
     saveToStorage('registrations', registrations);
   }, [registrations]);
 
@@ -191,6 +192,9 @@ export function Inspection() {
     const reloadRegistrations = () => {
       setRegistrations(loadFromStorage('registrations', []));
     };
+
+    // Immediately hydrate from storage when landing on the page
+    reloadRegistrations();
 
     window.addEventListener('storage', reloadRegistrations);
     window.addEventListener('focus', reloadRegistrations);
