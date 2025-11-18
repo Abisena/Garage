@@ -235,6 +235,9 @@ export function Registration({ currentUser }) {
       setRecentRegistrations(loadFromStorage('registrations', defaultRegistrations));
     };
 
+    // Ensure we rehydrate from localStorage when the page is revisited/refreshed
+    refreshRegistrations();
+
     window.addEventListener('storage', refreshRegistrations);
     window.addEventListener('focus', refreshRegistrations);
 
