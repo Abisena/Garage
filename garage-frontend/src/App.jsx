@@ -101,7 +101,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="h-screen bg-gray-50 flex overflow-hidden"> {/* CHANGED: h-screen + overflow-hidden */}
       {/* Sidebar */}
       <Sidebar 
         currentUser={currentUser} 
@@ -110,7 +110,7 @@ function App() {
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden"> {/* ADDED: overflow-hidden */}
         {/* TopBar */}
         <TopBar 
           currentUser={currentUser}
@@ -118,7 +118,7 @@ function App() {
         />
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto bg-slate-50"> {/* ADDED: bg-slate-50 */}
           {renderPage()}
         </main>
       </div>
