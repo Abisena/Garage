@@ -153,7 +153,10 @@ export function Registration({ currentUser }) {
 
   const addRegistration = (registration) => {
     setRecentRegistrations((prev) => {
-      const updated = [registration, ...prev];
+      const currentList = (prev && prev.length > 0)
+        ? prev
+        : loadFromStorage('registrations', defaultRegistrations);
+      const updated = [registration, ...currentList];
       saveToStorage('registrations', updated);
       return updated;
     });
@@ -232,7 +235,10 @@ export function Registration({ currentUser }) {
   // Keep registration list in sync when storage is updated (refresh/HMR)
   useEffect(() => {
     const refreshRegistrations = () => {
-      setRecentRegistrations(loadFromStorage('registrations', defaultRegistrations));
+      const stored = loadFromStorage('registrations', defaultRegistrations);
+      const nextValue = stored && stored.length > 0 ? stored : defaultRegistrations;
+      setRecentRegistrations(nextValue);
+      saveToStorage('registrations', nextValue);
     };
 
     // Ensure we rehydrate from localStorage when the page is revisited/refreshed
