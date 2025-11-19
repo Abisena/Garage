@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, LogOut, MapPin, User, Calendar, Clock, ChevronDown } from 'lucide-react';
+import { Bell, LogOut, MapPin, User, Calendar, Clock, ChevronDown, Menu } from 'lucide-react';
 
-export function TopBar({ currentUser, onLogout, branches = [], onBranchChange }) {
+export function TopBar({ currentUser, onLogout, branches = [], onBranchChange, onToggleSidebar }) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const isAdmin = (currentUser?.role === 'admin') || ((currentUser?.username || '').toLowerCase() === 'administrator');
   const activeBranchValue = currentUser?.branch || 'all';
@@ -48,10 +48,20 @@ export function TopBar({ currentUser, onLogout, branches = [], onBranchChange })
   };
 
   return (
-    <div className="bg-white border-b border-slate-200 px-6 py-3">
+    <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3">
       <div className="flex items-center justify-between">
         {/* Left side - Date & Time */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 sm:gap-6">
+          {onToggleSidebar && (
+            <button
+              type="button"
+              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors lg:hidden"
+              onClick={onToggleSidebar}
+              aria-label="Toggle sidebar"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
           {/* Date */}
           <div className="flex items-center gap-2 text-slate-700">
             <Calendar className="w-5 h-5 text-slate-500" />
