@@ -63,7 +63,8 @@ export const hasRoleInGroup = (roleSet, groupName) => {
   }
 
   for (const role of targetGroup) {
-    if (roleSet.has(role)) {
+    const normalizedRole = toSlug(role);
+    if (roleSet.has(normalizedRole)) {
       return true;
     }
   }
