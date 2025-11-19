@@ -304,8 +304,9 @@ export function BuyingSparePart({ currentUser }) {
 
   const filteredPOs = purchaseOrders.filter(po => {
     // Filter by branch
-    if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
-      if (po.branch !== currentUser.branch) return false;
+    const shouldFilterByBranch = currentUser.branch && currentUser.branch !== 'all';
+    if (shouldFilterByBranch && po.branch !== currentUser.branch) {
+      return false;
     }
 
     // Filter by search

@@ -873,7 +873,8 @@ export function ServiceOrders({ currentUser }) {
       });
 
   // Filter by branch for branch users
-  const branchFilteredOrders = currentUser.role === 'branch' && currentUser.branch !== 'all'
+  const shouldFilterByBranch = currentUser.branch && currentUser.branch !== 'all';
+  const branchFilteredOrders = shouldFilterByBranch
     ? filteredOrders.filter(order => order.branch === currentUser.branch)
     : filteredOrders;
 

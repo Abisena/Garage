@@ -467,9 +467,10 @@ export function Registration({ currentUser }) {
   };
 
   // Filter registrations based on user branch, but fall back to all data if branch doesn't match any
-  const branchFilteredRegistrations = currentUser.role === 'admin' && currentUser.branch === 'all'
-    ? recentRegistrations
-    : recentRegistrations.filter(reg => reg.branch === currentUser.branch);
+  const shouldFilterByBranch = currentUser.branch && currentUser.branch !== 'all';
+  const branchFilteredRegistrations = shouldFilterByBranch
+    ? recentRegistrations.filter(reg => reg.branch === currentUser.branch)
+    : recentRegistrations;
 
   const filteredRegistrations = branchFilteredRegistrations.length > 0
     ? branchFilteredRegistrations
