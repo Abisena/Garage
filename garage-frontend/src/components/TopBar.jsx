@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, LogOut, MapPin, User, Calendar, Clock } from 'lucide-react';
+import { Bell, LogOut, MapPin, User, Calendar, Clock, ChevronDown } from 'lucide-react';
 
-export function TopBar({ currentUser, onLogout }) {
+export function TopBar({ currentUser, onLogout, branches = [], onBranchChange }) {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const isAdmin = (currentUser?.role === 'admin') || ((currentUser?.username || '').toLowerCase() === 'administrator');
+  const activeBranchValue = currentUser?.branch || 'all';
+
+  const handleBranchSelect = (event) => {
+    const value = event.target.value;
+    if (onBranchChange) {
+      onBranchChange(value);
+    }
+  };
 
   // Update time every second
   useEffect(() => {
@@ -67,9 +76,29 @@ export function TopBar({ currentUser, onLogout }) {
           {/* Branch Info */}
           <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg">
             <MapPin className="w-4 h-4 text-slate-600" />
-            <span className="text-sm text-slate-700">
-              {currentUser?.branch === 'all' ? 'All Branches' : currentUser?.branch}
-            </span>
+            {isAdmin ? (
+              <div className="relative">
+                <select
+                  value={activeBranchValue}
+                  onChange={handleBranchSelect}
+                  className="appearance-none bg-transparent pr-6 text-sm text-slate-700 focus:outline-none cursor-pointer"
+                >
+                  <option value="all">All Branches</option>
+                  {branches
+                    .filter((branch) => branch?.name)
+                    .map((branch) => (
+                      <option key={branch.name} value={branch.name}>
+                        {branch.branch_name || branch.name}
+                      </option>
+                    ))}
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-500 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            ) : (
+              <span className="text-sm text-slate-700">
+                {currentUser?.branch === 'all' ? 'All Branches' : currentUser?.branch}
+              </span>
+            )}
           </div>
 
           {/* User Info */}
@@ -82,7 +111,7 @@ export function TopBar({ currentUser, onLogout }) {
                 {currentUser?.displayName || 'Admin User'}
               </p>
               <p className="text-xs text-slate-600">
-                {currentUser?.role === 'admin' ? 'Administrator' : 'Branch User'}
+                {isAdmin ? 'Administrator' : `Cabang ${currentUser?.branch || '-'}`}
               </p>
             </div>
           </div>

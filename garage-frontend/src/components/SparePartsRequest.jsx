@@ -42,8 +42,9 @@ export function SparePartsRequest({ currentUser }) {
   };
 
   const filteredRequests = requests.filter(req => {
-    if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
-      if (req.branch !== currentUser.branch) return false;
+    const shouldFilterByBranch = currentUser.branch && currentUser.branch !== 'all';
+    if (shouldFilterByBranch && req.branch !== currentUser.branch) {
+      return false;
     }
     
     if (searchQuery) {

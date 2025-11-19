@@ -275,7 +275,8 @@ export function DirectSalesSparePart({ currentUser }) {
     const matchesStatus = filterStatus === 'all' || sale.paymentStatus === filterStatus;
 
     // Branch filter
-    const matchesBranch = currentUser.role === 'administrator' || sale.branch === currentUser.branch;
+    const shouldFilterByBranch = currentUser.branch && currentUser.branch !== 'all';
+    const matchesBranch = !shouldFilterByBranch || sale.branch === currentUser.branch;
 
     return matchesSearch && matchesStatus && matchesBranch;
   });
@@ -315,7 +316,7 @@ export function DirectSalesSparePart({ currentUser }) {
             Direct Sales Sparepart
           </h1>
           <p className="text-slate-500 mt-2">
-            Penjualan langsung sparepart tanpa work order • Cabang: {currentUser.branch}
+            Penjualan langsung sparepart tanpa work order • Cabang: {currentUser.branch === 'all' ? 'Semua Cabang' : currentUser.branch}
           </p>
         </div>
         <Button onClick={() => setShowNewSaleModal(true)} className="bg-blue-600 hover:bg-blue-700">

@@ -32,6 +32,7 @@ function App() {
     }
   })
   const [currentPage, setCurrentPage] = useState('registration')
+  const [availableBranches, setAvailableBranches] = useState([])
 
   // Resolve default branch for the logged in user from Pravenya (Frappe)
   useEffect(() => {
@@ -43,14 +44,18 @@ function App() {
       try {
         const bootstrap = await frappeClient.getPortalBootstrap()
         const activeBranch = bootstrap?.active_branch
+        const branches = Array.isArray(bootstrap?.branches) ? bootstrap.branches : []
 
-        if (!cancelled && activeBranch) {
-          setCurrentUser((prev) => {
-            if (!prev) return prev
-            const updatedUser = { ...prev, branch: activeBranch }
-            localStorage.setItem('currentUser', JSON.stringify(updatedUser))
-            return updatedUser
-          })
+        if (!cancelled) {
+          setAvailableBranches(branches)
+          if (activeBranch) {
+            setCurrentUser((prev) => {
+              if (!prev) return prev
+              const updatedUser = { ...prev, branch: activeBranch }
+              localStorage.setItem('currentUser', JSON.stringify(updatedUser))
+              return updatedUser
+            })
+          }
         }
       } catch (err) {
         console.error('Failed to resolve branch', err)
@@ -71,6 +76,15 @@ function App() {
     }
     setCurrentUser(hydratedUser)
     localStorage.setItem('currentUser', JSON.stringify(hydratedUser))
+  }
+
+  const handleBranchChange = (branchName) => {
+    setCurrentUser((prev) => {
+      if (!prev) return prev
+      const updatedUser = { ...prev, branch: branchName }
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser))
+      return updatedUser
+    })
   }
 
   const handleLogout = async () => {
@@ -118,12 +132,14 @@ function App() {
     }
   }
 
-   return (
-    <Layout 
-      currentPage={currentPage} 
+  return (
+    <Layout
+      currentPage={currentPage}
       setCurrentPage={setCurrentPage}
       currentUser={currentUser}
       onLogout={handleLogout}
+      availableBranches={availableBranches}
+      onBranchChange={handleBranchChange}
     >
       {renderPage()}
     </Layout>

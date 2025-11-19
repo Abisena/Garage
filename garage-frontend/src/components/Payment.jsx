@@ -67,7 +67,8 @@ export function Payment({ currentUser }) {
       );
       
       // Filter by branch if user is not admin
-      if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
+      const shouldFilterByBranch = currentUser.branch && currentUser.branch !== 'all';
+      if (shouldFilterByBranch) {
         paymentOrders = paymentOrders.filter(order => order.branch === currentUser.branch);
       }
       
@@ -85,7 +86,8 @@ export function Payment({ currentUser }) {
       );
       
       // Filter by branch if user is not admin
-      if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
+      const shouldFilterByBranch = currentUser.branch && currentUser.branch !== 'all';
+      if (shouldFilterByBranch) {
         paymentPOs = paymentPOs.filter(po => po.branch === currentUser.branch);
       }
       

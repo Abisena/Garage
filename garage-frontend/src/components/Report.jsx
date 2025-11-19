@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Download, Calendar as CalendarIcon, Building2, Search, X, ArrowLeft, Filter } from 'lucide-react';
 import { Button } from './ui/button';
 import DatePicker from 'react-datepicker';
@@ -22,8 +22,12 @@ export function Report({ currentUser }) {
   const [selectedReport, setSelectedReport] = useState(null);
   const [dateFrom, setDateFrom] = useState(null);
   const [dateTo, setDateTo] = useState(null);
-  const [selectedBranch, setSelectedBranch] = useState(currentUser.role === 'branch' ? currentUser.branch : 'all');
+  const [selectedBranch, setSelectedBranch] = useState(currentUser.branch || 'all');
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    setSelectedBranch(currentUser.branch || 'all');
+  }, [currentUser.branch]);
 
   const reportCategories = [
     {
@@ -440,7 +444,7 @@ export function Report({ currentUser }) {
                       setSelectedBranch(e.target.value);
                       setShowPreview(false);
                     }}
-                    disabled={currentUser.role === 'branch'}
+                    disabled={currentUser.role !== 'admin'}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
                   >
                     {branches.map(branch => (

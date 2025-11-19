@@ -2,12 +2,14 @@ import React from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 
-export function Layout({ 
-  children, 
-  currentPage, 
-  setCurrentPage, 
+export function Layout({
+  children,
+  currentPage,
+  setCurrentPage,
   currentUser,
-  onLogout 
+  onLogout,
+  availableBranches = [],
+  onBranchChange,
 }) {
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">
@@ -21,9 +23,11 @@ export function Layout({
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* TopBar */}
-        <TopBar 
+        <TopBar
           currentUser={currentUser}
           onLogout={onLogout}
+          branches={availableBranches}
+          onBranchChange={onBranchChange}
         />
 
         {/* Page Content */}

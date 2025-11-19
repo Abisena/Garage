@@ -20,10 +20,13 @@ export function Login({ onLogin }) {
 
       if (result.success) {
         // Login berhasil
+        const normalizedUsername = (result.user.username || '').toLowerCase();
+        const role = normalizedUsername === 'administrator' ? 'admin' : 'branch';
+
         onLogin({
           username: result.user.username,
           displayName: result.user.full_name,
-          role: 'user', // You can customize this
+          role,
           branch: 'all',
         });
       } else {
