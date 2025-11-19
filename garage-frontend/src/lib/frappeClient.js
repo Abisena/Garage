@@ -85,6 +85,17 @@ class FrappeClient {
     }
   }
 
+  async getUserRoles() {
+    try {
+      const response = await this.request('/api/method/garage.api.auth.get_user_roles');
+      const roles = Array.isArray(response.roles) ? response.roles : [];
+      return { user: response.user, roles };
+    } catch (error) {
+      console.error('Failed to fetch user roles:', error);
+      return { user: null, roles: [] };
+    }
+  }
+
   // Logout
   async logout() {
     try {

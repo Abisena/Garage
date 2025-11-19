@@ -18,9 +18,55 @@ import {
   ShoppingCart,
   DollarSign
 } from 'lucide-react';
+import { buildRoleSet, hasRoleInGroup, isUserPrivileged, SPECIALIST_ROLE_GROUPS } from '../lib/roleUtils';
+
+const MENU_ROLE_RULES = {
+  registration: ['admin'],
+  inspection: ['serviceAdvisor', 'foreman'],
+  orders: ['serviceAdvisor'],
+  workshop: ['serviceAdvisor', 'foreman', 'mechanic'],
+  'spareparts-menu': ['sparepart'],
+  sparepartsrequest: ['sparepart'],
+  buyingsparepart: ['sparepart'],
+  directsales: ['sparepart'],
+  spareparts: ['sparepart'],
+};
+
+const ALWAYS_VISIBLE_MENUS = new Set(['dashboard']);
 
 export function Sidebar({ currentPage, setCurrentPage, currentUser }) {
   const [expandedMenus, setExpandedMenus] = React.useState(['spareparts-menu']);
+  const roleSet = React.useMemo(() => buildRoleSet(currentUser?.roles || []), [currentUser?.roles]);
+  const isPrivilegedUser = React.useMemo(() => isUserPrivileged(currentUser, roleSet), [currentUser, roleSet]);
+
+  const hasRoleGroup = React.useCallback((groupName) => {
+    return hasRoleInGroup(roleSet, groupName);
+  }, [roleSet]);
+
+  const hasSpecialistRole = React.useMemo(() => {
+    return SPECIALIST_ROLE_GROUPS.some((group) => hasRoleGroup(group));
+  }, [hasRoleGroup]);
+
+  const canViewMenu = React.useCallback((menuId) => {
+    if (isPrivilegedUser) {
+      return true;
+    }
+
+    if (ALWAYS_VISIBLE_MENUS.has(menuId)) {
+      return true;
+    }
+
+    const allowedGroups = MENU_ROLE_RULES[menuId];
+    if (allowedGroups && allowedGroups.length > 0) {
+      return allowedGroups.some((group) => hasRoleGroup(group));
+    }
+
+    if (hasSpecialistRole) {
+      return false;
+    }
+
+    return true;
+  }, [hasRoleGroup, hasSpecialistRole, isPrivilegedUser]);
 
   const toggleMenu = (menuId) => {
     setExpandedMenus(prev => 
@@ -129,6 +175,10 @@ export function Sidebar({ currentPage, setCurrentPage, currentUser }) {
             if (item.id === 'divider-1' || item.id === 'divider-2') {
               return <li key={item.id} className="border-t border-slate-800 my-4"></li>;
             }
+
+            if (!canViewMenu(item.id)) {
+              return null;
+            }
             
             const Icon = item.icon;
             const isActive = currentPage === item.id;
@@ -165,6 +215,9 @@ export function Sidebar({ currentPage, setCurrentPage, currentUser }) {
                     {isExpanded && item.subItems && (
                       <ul className="mt-1 space-y-1 ml-4 pl-4 border-l border-slate-700">
                         {item.subItems.map(subItem => {
+                          if (!canViewMenu(subItem.id)) {
+                            return null;
+                          }
                           const SubIcon = subItem.icon;
                           const isSubActive = currentPage === subItem.id;
                           return (

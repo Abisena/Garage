@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { frappeClient } from './lib/frappeClient'
+import { determinePrimaryRole } from './lib/roleUtils'
 import { Login } from './components/Login'
 import { Registration } from './components/Registration'
 import { Inspection } from './components/Inspection'
@@ -70,13 +71,52 @@ function App() {
   }, [currentUser?.username])
 
   const handleLogin = (user) => {
+    const resolvedRoles = Array.isArray(user.roles) ? user.roles : []
     const hydratedUser = {
       ...user,
       branch: user.branch || 'Jakarta',
+      roles: resolvedRoles,
+      role: user.role || determinePrimaryRole(resolvedRoles, user.username),
     }
     setCurrentUser(hydratedUser)
     localStorage.setItem('currentUser', JSON.stringify(hydratedUser))
   }
+
+  useEffect(() => {
+    if (!currentUser || (Array.isArray(currentUser.roles) && currentUser.roles.length)) {
+      return
+    }
+
+    let cancelled = false
+
+    const hydrateRoles = async () => {
+      try {
+        const payload = await frappeClient.getUserRoles()
+        const roles = Array.isArray(payload.roles) ? payload.roles : []
+
+        if (!cancelled && roles.length) {
+          setCurrentUser((prev) => {
+            if (!prev) return prev
+            const updatedUser = {
+              ...prev,
+              roles,
+              role: determinePrimaryRole(roles, prev.username),
+            }
+            localStorage.setItem('currentUser', JSON.stringify(updatedUser))
+            return updatedUser
+          })
+        }
+      } catch (err) {
+        console.error('Failed to hydrate user roles', err)
+      }
+    }
+
+    hydrateRoles()
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentUser])
 
   const handleBranchChange = (branchName) => {
     setCurrentUser((prev) => {

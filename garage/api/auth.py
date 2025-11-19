@@ -113,6 +113,17 @@ def get_portal_home() -> Dict[str, str]:
     return {"route": role_map.get_portal_home_for_user(user)}
 
 
+@frappe.whitelist(allow_guest=False)
+def get_user_roles() -> Dict[str, List[str]]:
+    """Return all roles assigned to the authenticated portal user."""
+
+    user = frappe.session.user
+    if user == "Guest":
+        raise frappe.PermissionError(frappe._("Please log in to access the portal."))
+
+    return {"user": user, "roles": frappe.get_roles(user)}
+
+
 def _coerce_roles(value: Sequence[str] | Iterable[str] | str | None) -> List[str]:
     """Normalise potential role payloads received from the client."""
 

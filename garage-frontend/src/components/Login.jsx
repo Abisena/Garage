@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Wrench, LogIn, Loader2 } from 'lucide-react';
 import { frappeClient } from '../lib/frappeClient';
+import { determinePrimaryRole } from '../lib/roleUtils';
 
 export function Login({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -19,14 +20,21 @@ export function Login({ onLogin }) {
       const result = await frappeClient.login(username, password);
 
       if (result.success) {
-        // Login berhasil
-        const normalizedUsername = (result.user.username || '').toLowerCase();
-        const role = normalizedUsername === 'administrator' ? 'admin' : 'branch';
+        let roles = [];
+        try {
+          const payload = await frappeClient.getUserRoles();
+          roles = Array.isArray(payload.roles) ? payload.roles : [];
+        } catch (fetchError) {
+          console.error('Failed to resolve user roles after login:', fetchError);
+        }
+
+        const userRole = determinePrimaryRole(roles, result.user.username);
 
         onLogin({
           username: result.user.username,
           displayName: result.user.full_name,
-          role,
+          role: userRole,
+          roles,
           branch: 'all',
         });
       } else {
