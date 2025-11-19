@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { NotaPrintA5 } from './NotaPrintA5';
 import { InvoicePrintA5 } from './InvoicePrintA5';
 import { PaymentOutPrintA5 } from './PaymentOutPrintA5';
+import { getStoredWorkOrders } from '../lib/workOrdersStorage';
 
 export function Payment({ currentUser }) {
   const [activeTab, setActiveTab] = useState('service');
@@ -58,22 +59,19 @@ export function Payment({ currentUser }) {
   }, []);
 
   const loadWorkOrders = () => {
-    const savedWorkOrders = localStorage.getItem('workOrders');
-    if (savedWorkOrders) {
-      const orders = JSON.parse(savedWorkOrders);
-      // Filter orders ready for payment
-      let paymentOrders = orders.filter(order => 
-        order.status === 'ready-for-payment' || order.paymentStatus === 'pending' || order.paymentStatus === 'paid'
-      );
-      
-      // Filter by branch if user is not admin
-      const shouldFilterByBranch = currentUser.branch && currentUser.branch !== 'all';
-      if (shouldFilterByBranch) {
-        paymentOrders = paymentOrders.filter(order => order.branch === currentUser.branch);
-      }
-      
-      setWorkOrders(paymentOrders);
+    const orders = getStoredWorkOrders();
+    // Filter orders ready for payment
+    let paymentOrders = orders.filter(order =>
+      order.status === 'ready-for-payment' || order.paymentStatus === 'pending' || order.paymentStatus === 'paid'
+    );
+
+    // Filter by branch if user is not admin
+    const shouldFilterByBranch = currentUser.branch && currentUser.branch !== 'all';
+    if (shouldFilterByBranch) {
+      paymentOrders = paymentOrders.filter(order => order.branch === currentUser.branch);
     }
+
+    setWorkOrders(paymentOrders);
   };
 
   const loadPurchaseOrders = () => {
@@ -106,14 +104,15 @@ export function Payment({ currentUser }) {
   };
 
   const saveWorkOrders = (updatedOrders) => {
-    const allOrders = JSON.parse(localStorage.getItem('workOrders') || '[]');
-    const mergedOrders = allOrders.map(order => {
+    const allOrders = getStoredWorkOrders();
+    const sourceOrders = allOrders.length > 0 ? allOrders : updatedOrders;
+    const mergedOrders = sourceOrders.map(order => {
       const updated = updatedOrders.find(o => o.id === order.id);
       return updated || order;
     });
     localStorage.setItem('workOrders', JSON.stringify(mergedOrders));
     setWorkOrders(updatedOrders);
-    
+
     // Trigger event untuk update components lain (Workshop, etc)
     window.dispatchEvent(new CustomEvent('workOrdersUpdated'));
   };
@@ -198,9 +197,9 @@ export function Payment({ currentUser }) {
   const generateNotaFakturNumber = (branch) => {
     // Get branch code (first 3 letters)
     const branchCode = branch.substring(0, 3).toUpperCase();
-    
+
     // Get all orders from localStorage to calculate next number
-    const allOrders = JSON.parse(localStorage.getItem('workOrders') || '[]');
+    const allOrders = getStoredWorkOrders();
     
     // Filter orders with nota faktur numbers for this branch
     const branchNotaNumbers = allOrders

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Card } from './ui/card';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getStoredWorkOrders } from '../lib/workOrdersStorage';
 
 export function Dashboard() {
   const [orders, setOrders] = useState([]);
@@ -26,92 +27,8 @@ export function Dashboard() {
   }, []);
 
   const loadOrders = () => {
-    const savedOrders = localStorage.getItem('workOrders');
-    if (savedOrders) {
-      const parsedOrders = JSON.parse(savedOrders);
-      // If no orders or very few orders, use demo data
-      if (parsedOrders.length < 5) {
-        const demoData = generateDemoData();
-        setOrders(demoData);
-        // Save demo data to localStorage
-        localStorage.setItem('workOrders', JSON.stringify(demoData));
-      } else {
-        setOrders(parsedOrders);
-      }
-    } else {
-      // No data at all, use demo data
-      const demoData = generateDemoData();
-      setOrders(demoData);
-      // Save demo data to localStorage
-      localStorage.setItem('workOrders', JSON.stringify(demoData));
-    }
-  };
-
-  const generateDemoData = () => {
-    const branches = ['Jakarta', 'Bandung', 'Surabaya'];
-    const statuses = ['registration', 'inspection', 'estimation', 'approval', 'repair', 'quality-check', 'payment', 'handover', 'completed'];
-    const customers = [
-      'Budi Santoso', 'Siti Aminah', 'Rudi Hartono', 'Ani Wijaya', 'Agus Setiawan',
-      'Dewi Lestari', 'Hendra Gunawan', 'Maya Sari', 'Eko Prasetyo', 'Rina Wati',
-      'Bambang Susilo', 'Lina Marlina', 'Dedi Kurniawan', 'Sri Mulyani', 'Yanto Wijaya',
-      'Putri Amelia', 'Joko Widodo', 'Ratna Sari', 'Arif Rahman', 'Lia Kusuma'
-    ];
-    const vehicles = [
-      { brand: 'Toyota', model: 'Avanza' },
-      { brand: 'Honda', model: 'Civic' },
-      { brand: 'Suzuki', model: 'Ertiga' },
-      { brand: 'Daihatsu', model: 'Xenia' },
-      { brand: 'Mitsubishi', model: 'Pajero' },
-      { brand: 'Nissan', model: 'Grand Livina' },
-      { brand: 'Toyota', model: 'Fortuner' },
-      { brand: 'Honda', model: 'CR-V' },
-      { brand: 'Mazda', model: 'CX-5' },
-      { brand: 'Toyota', model: 'Innova' }
-    ];
-
-    const demoOrders = [];
-    
-    // Generate 45 demo orders (15 per branch)
-    branches.forEach((branch, branchIdx) => {
-      for (let i = 0; i < 15; i++) {
-        const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
-        const randomCustomer = customers[Math.floor(Math.random() * customers.length)];
-        const randomVehicle = vehicles[Math.floor(Math.random() * vehicles.length)];
-        const isCompleted = randomStatus === 'completed' || Math.random() > 0.6;
-        const isPaid = isCompleted || Math.random() > 0.5;
-        
-        // Generate spare parts
-        const numParts = Math.floor(Math.random() * 4) + 1;
-        const spareParts = Array.from({ length: numParts }, (_, idx) => ({
-          price: Math.floor(Math.random() * 2000000) + 100000,
-          quantity: Math.floor(Math.random() * 3) + 1
-        }));
-
-        const laborCost = Math.floor(Math.random() * 1500000) + 300000;
-        
-        // Random date in last 30 days
-        const daysAgo = Math.floor(Math.random() * 30);
-        const orderDate = new Date();
-        orderDate.setDate(orderDate.getDate() - daysAgo);
-
-        const orderNum = String(branchIdx * 15 + i + 1).padStart(3, '0');
-        const branchCode = branch === 'Jakarta' ? 'JKT' : branch === 'Bandung' ? 'BDG' : 'SBY';
-
-        demoOrders.push({
-          id: `demo-${branchCode}-${orderNum}`,
-          orderId: `${branchCode}-${orderNum}`,
-          customerName: randomCustomer,
-          branch: branch,
-          status: isCompleted ? 'completed' : randomStatus,
-          date: orderDate.toISOString(),
-          spareParts: spareParts,
-          laborCost: laborCost,
-          paymentStatus: isPaid ? 'paid' : Math.random() > 0.5 ? 'pending' : 'partial'
-        });
-      }
-    });
-
-    return demoOrders;
+    const sanitizedOrders = getStoredWorkOrders();
+    setOrders(sanitizedOrders);
   };
 
   // Calculate metrics
