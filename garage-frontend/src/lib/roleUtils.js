@@ -37,6 +37,14 @@ export const ROLE_GROUPS = {
     'Teknisi',
     'Head Teknisi',
   ]),
+  cashier: new Set([
+    'Cashier',
+    'Head Cashier',
+  ]),
+  receptionist: new Set([
+    'Front Desk',
+    'Registrasi',
+  ]),
 };
 
 export const SPECIALIST_ROLE_GROUPS = ['sparepart', 'serviceAdvisor', 'foreman', 'mechanic'];
@@ -80,15 +88,43 @@ export const isUserPrivileged = (user, roleSet) => {
   return hasRoleInGroup(normalized, 'admin');
 };
 
+// ✅ IMPROVED: Return more specific role
 export const determinePrimaryRole = (roles = [], username) => {
   if (username && username.toLowerCase() === 'administrator') {
     return 'admin';
   }
 
   const normalized = buildRoleSet(roles);
+  
+  // Check in priority order
   if (hasRoleInGroup(normalized, 'admin')) {
     return 'admin';
   }
+  
+  if (hasRoleInGroup(normalized, 'foreman')) {
+    return 'foreman';
+  }
+  
+  if (hasRoleInGroup(normalized, 'mechanic')) {
+    return 'mechanic';
+  }
+  
+  if (hasRoleInGroup(normalized, 'serviceAdvisor')) {
+    return 'serviceAdvisor';
+  }
+  
+  if (hasRoleInGroup(normalized, 'sparepart')) {
+    return 'sparepart';
+  }
+  
+  if (hasRoleInGroup(normalized, 'cashier')) {
+    return 'cashier';
+  }
+  
+  if (hasRoleInGroup(normalized, 'receptionist')) {
+    return 'receptionist';
+  }
 
+  // Default fallback
   return 'branch';
 };

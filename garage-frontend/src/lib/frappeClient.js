@@ -15,7 +15,7 @@ class FrappeClient {
     try {
       const response = await fetch(url, {
         ...options,
-        credentials: 'include', // PENTING: untuk session cookies
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -35,7 +35,6 @@ class FrappeClient {
     }
   }
 
-  // ✅ LOGIN API - CONSUME DI SINI
   async login(username, password) {
     try {
       const response = await this.request('/api/method/login', {
@@ -48,9 +47,7 @@ class FrappeClient {
 
       console.log('Login response:', response);
       
-      // Frappe login success response
       if (response.message === 'Logged In') {
-        // Get user info
         const userInfo = await this.getCurrentUser();
         return {
           success: true,
@@ -71,7 +68,6 @@ class FrappeClient {
     }
   }
 
-  // Get current logged in user
   async getCurrentUser() {
     try {
       const response = await this.request('/api/method/frappe.auth.get_logged_user');
@@ -85,18 +81,30 @@ class FrappeClient {
     }
   }
 
+  // ✅ FIXED: Handle Frappe's message wrapping
   async getUserRoles() {
     try {
+      console.log('🔄 Fetching user roles from API...');
       const response = await this.request('/api/method/garage.api.auth.get_user_roles');
-      const roles = Array.isArray(response.roles) ? response.roles : [];
-      return { user: response.user, roles };
+      console.log('📦 Raw API response:', response);
+      
+      // ✅ Frappe wraps response in "message"
+      const data = response.message || response;
+      console.log('📋 Extracted data:', data);
+      
+      const roles = Array.isArray(data.roles) ? data.roles : [];
+      const user = data.user || null;
+      
+      console.log('✅ Final extracted roles:', roles);
+      console.log('✅ Final extracted user:', user);
+      
+      return { user, roles };
     } catch (error) {
-      console.error('Failed to fetch user roles:', error);
+      console.error('❌ Failed to fetch user roles:', error);
       return { user: null, roles: [] };
     }
   }
 
-  // Logout
   async logout() {
     try {
       await this.request('/api/method/logout', {
@@ -109,7 +117,6 @@ class FrappeClient {
     }
   }
 
-  // List customers (existing method)
   async listGarageCustomers() {
     try {
       const response = await this.request(
@@ -130,13 +137,12 @@ class FrappeClient {
         '/api/method/garage.api.portal.register_customer_vehicle',
         {
           method: 'POST',
-          body: JSON.stringify({ payload }), // ← Wrap in payload key
+          body: JSON.stringify({ payload }),
         },
       );
 
       console.log('API Response:', response);
       
-      // Return response.message (karena Frappe wrap response)
       return response.message || response;
     } catch (error) {
       console.error('Failed to register customer/vehicle:', error);
