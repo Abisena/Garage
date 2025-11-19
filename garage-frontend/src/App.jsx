@@ -16,6 +16,7 @@ import { Workshop } from './components/Workshop'
 import { Payment } from './components/Payment'
 import { Handover } from './components/Handover'
 import { FollowUp } from './components/FollowUp'
+import { Report } from './components/Report'
 
 function App() {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -111,7 +112,7 @@ function App() {
       case 'followup':
         return <FollowUp/>
       case 'reports':
-        return <div className="p-8"><h2 className="text-2xl font-bold">Reports</h2></div>
+        return <Report currentUser={currentUser} />;
       default:
         return <Registration currentUser={currentUser} />
     }
