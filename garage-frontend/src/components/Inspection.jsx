@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Search, Camera, AlertTriangle, CheckCircle, Clock, FileText, X, Printer, ChevronRight, ClipboardList } from 'lucide-react';
 import { Button } from './ui/button';
-// import watermarkLogo from 'figma:asset/5ef42b457e7713cd266d609b04b7f121b13997b7.png';
 import { loadFromStorage, saveToStorage } from '../lib/storage';
 
 export function Inspection() {
@@ -416,7 +415,7 @@ export function Inspection() {
               <div className="flex items-center justify-between mb-6 border-b-2 border-slate-800 pb-4">
                 {/* Logo IMOGI - Placeholder */}
                 <div className="h-16 w-16 bg-slate-200 rounded flex items-center justify-center text-slate-600 text-xs">
-                  LOGO
+                  <img src="/home/abisena/bengkel-dev/apps/garage/garage-frontend/src/assets/imogi.png" alt="LOGOs" />
                 </div>
                 
                 {/* Title */}
