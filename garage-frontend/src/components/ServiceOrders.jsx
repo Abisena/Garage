@@ -176,25 +176,6 @@ export function ServiceOrders({ currentUser }) {
       console.error('Failed to load master spare parts from profile', error);
     }
 
-    };
-    
-    const handleWorkOrdersUpdated = () => {
-      console.log('📥 ServiceOrders received workOrdersUpdated event!');
-      loadWorkOrders();
-      loadMasterSpareParts();
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('focus', handleStorageChange);
-    window.addEventListener('workOrdersUpdated', handleWorkOrdersUpdated);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('focus', handleStorageChange);
-      window.removeEventListener('workOrdersUpdated', handleWorkOrdersUpdated);
-    };
-  }, []);
-
   // Filter parts based on vehicle model and part name input
   useEffect(() => {
     if (selectedWorkOrder && newPart.name && masterSpareParts.length > 0) {
@@ -1577,4 +1558,5 @@ export function ServiceOrders({ currentUser }) {
       )}
     </div>
   );
+}
 }
