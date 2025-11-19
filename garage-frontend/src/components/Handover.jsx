@@ -1,22 +1,49 @@
-import React from 'react';
-import { Car, CheckCircle, FileText, Key } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Car, CheckCircle, FileText, Key, User, Phone, Mail, MapPin, Wrench, Package, Receipt, Calendar, Clock, DollarSign, CreditCard, Printer, AlertCircle, ChevronDown, ChevronUp, Search, Filter } from 'lucide-react';
 import { Button } from './ui/button';
+import { SIKKPrint } from './SIKKPrint';
 
 export function Handover() {
-  const readyForHandover = [
-    {
-      orderId: 'ORD-002',
-      customer: 'Siti Rahayu',
-      phone: '+62 813-4567-8901',
-      vehicle: 'Honda Jazz 2019',
-      plate: 'B 5678 ABC',
-      servicesCompleted: ['Brake Pad Replacement', 'Brake Fluid Change'],
-      paymentStatus: 'Paid',
-      parkingBay: 'A-12'
-    }
-  ];
+  const [workOrders, setWorkOrders] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [expandedOrder, setExpandedOrder] = useState(null);
+  const [handoverNotes, setHandoverNotes] = useState({});
+  const [nextServiceDate, setNextServiceDate] = useState({});
+  const [handoverChecklist, setHandoverChecklist] = useState({});
+  const [showSIKKModal, setShowSIKKModal] = useState(false);
+  const [selectedOrderForSIKK, setSelectedOrderForSIKK] = useState(null);
 
-  const handoverChecklist = [
+  useEffect(() => {
+    loadWorkOrders();
+    
+    // Listen for localStorage changes
+    const handleStorageChange = () => {
+      loadWorkOrders();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', handleStorageChange);
+    };
+  }, []);
+
+  const loadWorkOrders = () => {
+    const savedWorkOrders = localStorage.getItem('workOrders');
+    if (savedWorkOrders) {
+      const orders = JSON.parse(savedWorkOrders);
+      // Filter orders with receipt number (sudah ada di Payment)
+      const readyOrders = orders.filter(order => 
+        order.paymentStatus === 'paid' && order.receiptNumber
+      );
+      setWorkOrders(readyOrders);
+    }
+  };
+
+  const checklistItems = [
     'Vehicle cleaned and washed',
     'All tools and equipment removed',
     'Work order signed and completed',
@@ -29,166 +56,245 @@ export function Handover() {
     'Check brake fluid every 6 months',
     'Inspect brake pads every 10,000 km',
     'Avoid sudden braking when possible',
-    'Schedule next service in 3 months'
+    'Regular maintenance every 5,000 km recommended'
   ];
 
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const calculateGrandTotal = (order) => {
+    const sparePartsTotal = order.spareParts?.reduce((sum, part) => sum + part.totalPrice, 0) || 0;
+    const labor = order.laborCost || 0;
+    return sparePartsTotal + labor;
+  };
+
+  const toggleChecklist = (orderId, item) => {
+    setHandoverChecklist(prev => ({
+      ...prev,
+      [orderId]: {
+        ...(prev[orderId] || {}),
+        [item]: !(prev[orderId]?.[item] || false)
+      }
+    }));
+  };
+
+  const isAllChecklistComplete = (orderId) => {
+    const orderChecklist = handoverChecklist[orderId] || {};
+    return checklistItems.every(item => orderChecklist[item] === true);
+  };
+
+  // Generate SIKK Number
+  const generateSIKKNumber = (order) => {
+    if (order.sikkNumber) return order.sikkNumber;
+    
+    const branchCode = order.branch === 'Jakarta' ? 'JKT' : 
+                      order.branch === 'Bandung' ? 'BDG' : 'SBY';
+    return `SIKK-${branchCode}-${order.orderId.split('-')[1]}`;
+  };
+
+  // Handle Open SIKK Modal
+  const handleOpenSIKK = (order) => {
+    // Increment print count
+    const savedOrders = localStorage.getItem('workOrders');
+    if (savedOrders) {
+      const orders = JSON.parse(savedOrders);
+      const updatedOrders = orders.map(o => {
+        if (o.id === order.id) {
+          const currentPrintCount = o.sikkPrintCount || 0;
+          const newPrintCount = currentPrintCount + 1;
+          
+          return { 
+            ...o, 
+            sikkNumber: o.sikkNumber || generateSIKKNumber(o),
+            vehicleColor: o.vehicleColor || 'Silver',
+            sikkPrintCount: newPrintCount
+          };
+        }
+        return o;
+      });
+      localStorage.setItem('workOrders', JSON.stringify(updatedOrders));
+      
+      // Update order object with new print count
+      const updatedOrder = updatedOrders.find(o => o.id === order.id);
+      if (updatedOrder) {
+        setSelectedOrderForSIKK(updatedOrder);
+        setShowSIKKModal(true);
+        // Reload to update button label
+        loadWorkOrders();
+      }
+    }
+  };
+
+  // Handle Print SIKK
+  const handlePrintSIKK = () => {
+    window.print();
+  };
+
+  const handleCompleteHandover = (orderId) => {
+    const confirmMsg = `✅ Apakah Anda yakin ingin menyelesaikan handover untuk Order ${orderId}?\n\nOrder ini akan dipindahkan ke status "Completed".`;
+    
+    if (confirm(confirmMsg)) {
+      // Update order status
+      const savedOrders = localStorage.getItem('workOrders');
+      if (savedOrders) {
+        const orders = JSON.parse(savedOrders);
+        const updatedOrders = orders.map(order => 
+          order.orderId === orderId 
+            ? { ...order, status: 'completed', handoverDate: new Date().toISOString() }
+            : order
+        );
+        localStorage.setItem('workOrders', JSON.stringify(updatedOrders));
+        loadWorkOrders();
+        alert('✅ Handover berhasil diselesaikan!');
+      }
+    }
+  };
+
+  const filteredOrders = workOrders.filter(order => {
+    const matchesSearch = 
+      order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.plateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.receiptNumber && order.receiptNumber.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    return matchesSearch;
+  });
+
+  const stats = {
+    ready: workOrders.filter(o => o.status !== 'completed').length,
+    completed: workOrders.filter(o => o.status === 'completed').length,
+    totalRevenue: workOrders.reduce((sum, o) => sum + calculateGrandTotal(o), 0)
+  };
+
   return (
-    <div className="p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-blue-500 rounded-lg p-2">
-                <Car className="w-6 h-6 text-white" />
+        {/* Header - Simplified */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-6 shadow-xl">
+          <div className="absolute inset-0 bg-grid-white/[0.05] pointer-events-none"></div>
+          <div className="relative">
+            <div className="flex items-center gap-4">
+              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3 shadow-lg">
+                <Car className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-slate-800">Vehicle Handover</h1>
-                <p className="text-slate-600">Step 8: Return vehicle to customer</p>
+                <h1 className="text-white text-3xl mb-1">Vehicle Handover</h1>
+                <p className="text-blue-100">Step 8: Return vehicle to customer</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Ready for Handover */}
-            {readyForHandover.map((item, index) => (
-              <div key={index} className="bg-white rounded-xl border border-slate-200">
-                <div className="p-6 border-b border-slate-200">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-slate-900 mb-1">{item.orderId} - {item.customer}</h3>
-                      <p className="text-slate-600">{item.vehicle}</p>
-                      <p className="text-slate-500">{item.plate}</p>
+        {/* Search */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 relative">
+              <Search className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search by Order ID, Customer, Plate Number, or Receipt Number..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Orders List - Simplified */}
+        <div className="space-y-3">
+          {filteredOrders.length === 0 ? (
+            <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+              <div className="bg-slate-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-slate-400" />
+              </div>
+              <h3 className="text-slate-700 mb-2">No Orders Ready for Handover</h3>
+              <p className="text-slate-500">Orders with payment receipts will appear here</p>
+            </div>
+          ) : (
+            filteredOrders.map((order) => (
+              <div key={order.id} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="p-4">
+                  <div className="flex items-center justify-between gap-6">
+                    {/* Customer Info */}
+                    <div className="flex items-center gap-3">
+                      <div className="bg-blue-100 rounded-lg p-2">
+                        <User className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-slate-900">{order.customerName}</h3>
+                        <p className="text-slate-500 text-sm">{order.phone}</p>
+                      </div>
                     </div>
-                    <span className="px-3 py-1 rounded-full border bg-emerald-100 text-emerald-700 border-emerald-200">
-                      {item.paymentStatus}
-                    </span>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-slate-500 mb-1">Contact</p>
-                      <p className="text-slate-900">{item.phone}</p>
+                    {/* Order ID */}
+                    <div className="text-center">
+                      <p className="text-slate-500 text-xs">Order ID</p>
+                      <p className="text-slate-900 font-mono text-sm">{order.orderId}</p>
                     </div>
-                    <div>
-                      <p className="text-slate-500 mb-1">Parking Bay</p>
-                      <p className="text-slate-900">{item.parkingBay}</p>
+
+                    {/* Receipt */}
+                    <div className="text-center">
+                      <p className="text-slate-500 text-xs">Receipt</p>
+                      <p className="text-emerald-600 font-mono text-sm">{order.receiptNumber}</p>
                     </div>
-                  </div>
-                </div>
 
-                <div className="p-6 border-b border-slate-200">
-                  <h4 className="text-slate-800 mb-3">Services Completed</h4>
-                  <ul className="space-y-2">
-                    {item.servicesCompleted.map((service, idx) => (
-                      <li key={idx} className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-emerald-500" />
-                        <span className="text-slate-700">{service}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                    {/* Vehicle */}
+                    <div className="text-center">
+                      <p className="text-slate-500 text-xs">Vehicle</p>
+                      <p className="text-slate-900 text-sm">{order.vehicleBrand} {order.vehicleModel}</p>
+                    </div>
 
-                <div className="p-6 border-b border-slate-200 bg-slate-50">
-                  <h4 className="text-slate-800 mb-3">Handover Checklist</h4>
-                  <div className="space-y-2">
-                    {handoverChecklist.map((item, idx) => (
-                      <label key={idx} className="flex items-center gap-3 p-2 hover:bg-white rounded cursor-pointer">
-                        <input type="checkbox" className="w-4 h-4 rounded border-slate-300" defaultChecked />
-                        <span className="text-slate-700">{item}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                    {/* Plate Number */}
+                    <div className="text-center">
+                      <p className="text-slate-500 text-xs">Plate Number</p>
+                      <p className="text-slate-900 font-mono">{order.plateNumber}</p>
+                    </div>
 
-                <div className="p-6">
-                  <h4 className="text-slate-800 mb-3">Maintenance Tips for Customer</h4>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                    <ul className="space-y-2">
-                      {maintenanceTips.map((tip, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <span className="text-blue-600 mt-1">•</span>
-                          <span className="text-slate-700">{tip}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                    {/* Total Payment */}
+                    <div className="text-right">
+                      <p className="text-slate-500 text-xs">Total Payment</p>
+                      <p className="text-blue-600">{formatCurrency(calculateGrandTotal(order))}</p>
+                      <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700 border border-emerald-200 mt-0.5">
+                        Paid
+                      </span>
+                    </div>
 
-                  <div className="mb-4">
-                    <label className="block text-slate-700 mb-2">Next Service Date</label>
-                    <input
-                      type="date"
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="block text-slate-700 mb-2">Additional Notes</label>
-                    <textarea
-                      rows={3}
-                      placeholder="Any additional information for the customer..."
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="flex gap-3">
-                    <Button className="bg-blue-500 hover:bg-blue-600 text-white flex-1">
-                      <Key className="w-4 h-4 mr-2" />
-                      Complete Handover
-                    </Button>
-                    <Button variant="outline" className="border-slate-300">
-                      <FileText className="w-4 h-4 mr-2" />
-                      Print Report
-                    </Button>
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleOpenSIKK(order)}
+                        className={`text-sm py-2 ${
+                          order.sikkPrintCount && order.sikkPrintCount > 0
+                            ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white'
+                            : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white'
+                        }`}
+                      >
+                        <FileText className="w-4 h-4 mr-1.5" />
+                        {order.sikkPrintCount && order.sikkPrintCount > 0 ? 'SIKK Cetak Ulang' : 'Cetak SIKK'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h3 className="text-slate-800 mb-4">Today's Handovers</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <span className="text-slate-700">Ready</span>
-                  <span className="text-slate-900">3</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                  <span className="text-slate-700">Completed</span>
-                  <span className="text-slate-900">12</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
-              <h4 className="text-blue-900 mb-3">Customer Experience Tips</h4>
-              <ul className="space-y-2 text-blue-800">
-                <li className="flex items-start gap-2">
-                  <span>•</span>
-                  <span>Explain all work performed</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span>•</span>
-                  <span>Show replaced parts if applicable</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span>•</span>
-                  <span>Schedule next maintenance</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span>•</span>
-                  <span>Ensure customer satisfaction</span>
-                </li>
-              </ul>
-            </div>
-          </div>
+            ))
+          )}
         </div>
       </div>
+
+      {/* SIKK Modal */}
+      {showSIKKModal && selectedOrderForSIKK && (
+        <SIKKPrint 
+          order={selectedOrderForSIKK}
+          onClose={() => setShowSIKKModal(false)}
+        />
+      )}
     </div>
   );
 }

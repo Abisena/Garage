@@ -14,6 +14,8 @@ import { BuyingSparePart } from './components/BuyingSpareParts'
 import { DirectSalesSparePart } from './components/DirectSaleSpareParts'
 import { Workshop } from './components/Workshop'
 import { Payment } from './components/Payment'
+import { Handover } from './components/Handover'
+import { FollowUp } from './components/FollowUp'
 
 function App() {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -104,8 +106,10 @@ function App() {
         return <Workshop currentUser={currentUser} />;
       case 'payment':
         return <Payment currentUser={currentUser} />;
+      case 'handover':
+        return <Handover />;
       case 'followup':
-        return <div className="p-8"><h2 className="text-2xl font-bold">Follow-up</h2></div>
+        return <FollowUp/>
       case 'reports':
         return <div className="p-8"><h2 className="text-2xl font-bold">Reports</h2></div>
       default:
