@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Package, Search, CheckCircle, Clock, AlertCircle, Truck, Eye, FileText, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { PartsDeliveryModal } from './PartsDeliveryModal';
+import { getStoredWorkOrders } from '../lib/workOrdersStorage';
 
 export function SparePartsRequest({ currentUser }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,14 +117,13 @@ export function SparePartsRequest({ currentUser }) {
     }
 
     // Update workOrders to mark part as PREPARED
-    const savedWorkOrders = localStorage.getItem('workOrders');
-    if (savedWorkOrders) {
-      const workOrders = JSON.parse(savedWorkOrders);
-      
+    const workOrders = getStoredWorkOrders();
+    if (workOrders.length > 0) {
+
       console.log('🔍 Looking for orderId:', orderId);
       console.log('🔍 Looking for partCode:', partCode);
       console.log('🔍 partCode type:', typeof partCode);
-      
+
       const updatedWorkOrders = workOrders.map((wo) => {
         if (wo.orderId === orderId) {
           console.log('✅ Found work order:', wo.orderId);
@@ -308,9 +308,8 @@ export function SparePartsRequest({ currentUser }) {
     saveRequests(updatedRequests);
 
     // Update workOrders to mark part as REJECTED
-    const savedWorkOrders = localStorage.getItem('workOrders');
-    if (savedWorkOrders) {
-      const workOrders = JSON.parse(savedWorkOrders);
+    const workOrders = getStoredWorkOrders();
+    if (workOrders.length > 0) {
       const updatedWorkOrders = workOrders.map((wo) => {
         if (wo.orderId === orderId && wo.spareParts) {
           const updatedSpareParts = wo.spareParts.map((part) => {
@@ -705,16 +704,16 @@ export function SparePartsRequest({ currentUser }) {
               <p className="text-slate-600">Step 4: Prepare and deliver spare parts</p>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              const wo = localStorage.getItem('workOrders');
-              const pr = localStorage.getItem('sparePartsRequests');
-              console.log('=== DEBUG DATA ===');
-              console.log('Work Orders:', JSON.parse(wo || '[]'));
-              console.log('Parts Requests:', JSON.parse(pr || '[]'));
-              alert('Check browser console (F12) for data dump');
-            }}
+            <Button
+              variant="outline"
+              onClick={() => {
+                const wo = getStoredWorkOrders();
+                const pr = localStorage.getItem('sparePartsRequests');
+                console.log('=== DEBUG DATA ===');
+                console.log('Work Orders:', wo);
+                console.log('Parts Requests:', JSON.parse(pr || '[]'));
+                alert('Check browser console (F12) for data dump');
+              }}
             className="text-xs"
           >
             🔍 Debug Data

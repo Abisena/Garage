@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Wrench, CheckCircle, Clock, AlertCircle, X, Eye, FileText, ClipboardCheck, Play, Check, PackageCheck, ListChecks, RotateCcw } from 'lucide-react';
 import { Button } from './ui/button';
+import { getStoredWorkOrders } from '../lib/workOrdersStorage';
 
 export function Workshop({ currentUser }) {
   const [workOrders, setWorkOrders] = useState([]);
@@ -74,24 +75,20 @@ export function Workshop({ currentUser }) {
   }, []);
 
   const loadWorkOrders = () => {
-    const savedWorkOrders = localStorage.getItem('workOrders');
-    if (savedWorkOrders) {
-      const orders = JSON.parse(savedWorkOrders);
-      const activeOrders = orders.filter((order) => 
-        (order.mechanicName && order.mechanicName !== '') || 
-        order.repairStatus === 'in-progress' || 
-        order.repairStatus === 'quality-check' ||
-        order.repairStatus === 'qc-finished' ||
-        order.repairStatus === 'final-inspection'
-      );
-      setWorkOrders(activeOrders);
-    }
+    const orders = getStoredWorkOrders();
+    const activeOrders = orders.filter((order) =>
+      (order.mechanicName && order.mechanicName !== '') ||
+      order.repairStatus === 'in-progress' ||
+      order.repairStatus === 'quality-check' ||
+      order.repairStatus === 'qc-finished' ||
+      order.repairStatus === 'final-inspection'
+    );
+    setWorkOrders(activeOrders);
   };
 
   const saveWorkOrders = (updatedOrders) => {
-    const savedWorkOrders = localStorage.getItem('workOrders');
-    if (savedWorkOrders) {
-      const allOrders = JSON.parse(savedWorkOrders);
+    const allOrders = getStoredWorkOrders();
+    if (allOrders.length > 0) {
       const updatedAllOrders = allOrders.map((order) => {
         const updated = updatedOrders.find(o => o.id === order.id);
         return updated || order;
@@ -129,14 +126,13 @@ export function Workshop({ currentUser }) {
     const inProgress = workOrders.filter(o => o.repairStatus === 'in-progress').length;
     const qualityCheck = workOrders.filter(o => o.repairStatus === 'quality-check' || o.repairStatus === 'qc-finished').length;
     
-    const savedWorkOrders = localStorage.getItem('workOrders');
+    const allOrders = getStoredWorkOrders();
     let completed = 0;
     let delayed = 0;
-    
-    if (savedWorkOrders) {
-      const allOrders = JSON.parse(savedWorkOrders);
+
+    if (allOrders.length > 0) {
       completed = allOrders.filter((o) => o.repairStatus === 'completed' && o.qcApproved).length;
-      
+
       const now = new Date();
       delayed = workOrders.filter((o) => {
         if (!o.repairStartTime || !o.estimatedRepairTime) return false;
@@ -541,23 +537,22 @@ export function Workshop({ currentUser }) {
     };
 
     // 2. Update workOrders in localStorage
-    const savedWorkOrders = localStorage.getItem('workOrders');
-    if (savedWorkOrders) {
-      const allOrders = JSON.parse(savedWorkOrders);
-      const updatedOrders = allOrders.map((o) => 
-        o.id === order.id ? updatedOrder : o
-      );
-      localStorage.setItem('workOrders', JSON.stringify(updatedOrders));
-      
-      const filteredOrders = updatedOrders.filter((o) => 
-        (o.mechanicName && o.mechanicName !== '') || 
-        o.repairStatus === 'in-progress' || 
-        o.repairStatus === 'quality-check' ||
-        o.repairStatus === 'qc-finished' ||
-        o.repairStatus === 'final-inspection'
-      );
-      setWorkOrders(filteredOrders);
-    }
+      const allOrders = getStoredWorkOrders();
+      if (allOrders.length > 0) {
+        const updatedOrders = allOrders.map((o) =>
+          o.id === order.id ? updatedOrder : o
+        );
+        localStorage.setItem('workOrders', JSON.stringify(updatedOrders));
+
+        const filteredOrders = updatedOrders.filter((o) =>
+          (o.mechanicName && o.mechanicName !== '') ||
+          o.repairStatus === 'in-progress' ||
+          o.repairStatus === 'quality-check' ||
+          o.repairStatus === 'qc-finished' ||
+          o.repairStatus === 'final-inspection'
+        );
+        setWorkOrders(filteredOrders);
+      }
 
     // 3. Remove from Payment (if exists)
     const savedPayments = localStorage.getItem('payments');

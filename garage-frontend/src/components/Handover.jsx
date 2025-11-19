@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Car, CheckCircle, FileText, Key, User, Phone, Mail, MapPin, Wrench, Package, Receipt, Calendar, Clock, DollarSign, CreditCard, Printer, AlertCircle, ChevronDown, ChevronUp, Search, Filter } from 'lucide-react';
 import { Button } from './ui/button';
 import { SIKKPrint } from './SIKKPrint';
+import { getStoredWorkOrders } from '../lib/workOrdersStorage';
 
 export function Handover() {
   const [workOrders, setWorkOrders] = useState([]);
@@ -32,15 +33,12 @@ export function Handover() {
   }, []);
 
   const loadWorkOrders = () => {
-    const savedWorkOrders = localStorage.getItem('workOrders');
-    if (savedWorkOrders) {
-      const orders = JSON.parse(savedWorkOrders);
-      // Filter orders with receipt number (sudah ada di Payment)
-      const readyOrders = orders.filter(order => 
-        order.paymentStatus === 'paid' && order.receiptNumber
-      );
-      setWorkOrders(readyOrders);
-    }
+    const orders = getStoredWorkOrders();
+    // Filter orders with receipt number (sudah ada di Payment)
+    const readyOrders = orders.filter(order =>
+      order.paymentStatus === 'paid' && order.receiptNumber
+    );
+    setWorkOrders(readyOrders);
   };
 
   const checklistItems = [
@@ -101,33 +99,31 @@ export function Handover() {
   // Handle Open SIKK Modal
   const handleOpenSIKK = (order) => {
     // Increment print count
-    const savedOrders = localStorage.getItem('workOrders');
-    if (savedOrders) {
-      const orders = JSON.parse(savedOrders);
-      const updatedOrders = orders.map(o => {
-        if (o.id === order.id) {
-          const currentPrintCount = o.sikkPrintCount || 0;
-          const newPrintCount = currentPrintCount + 1;
-          
-          return { 
-            ...o, 
-            sikkNumber: o.sikkNumber || generateSIKKNumber(o),
-            vehicleColor: o.vehicleColor || 'Silver',
-            sikkPrintCount: newPrintCount
-          };
-        }
-        return o;
-      });
-      localStorage.setItem('workOrders', JSON.stringify(updatedOrders));
-      
-      // Update order object with new print count
-      const updatedOrder = updatedOrders.find(o => o.id === order.id);
-      if (updatedOrder) {
-        setSelectedOrderForSIKK(updatedOrder);
-        setShowSIKKModal(true);
-        // Reload to update button label
-        loadWorkOrders();
+    const orders = getStoredWorkOrders();
+    if (orders.length === 0) return;
+    const updatedOrders = orders.map(o => {
+      if (o.id === order.id) {
+        const currentPrintCount = o.sikkPrintCount || 0;
+        const newPrintCount = currentPrintCount + 1;
+
+        return {
+          ...o,
+          sikkNumber: o.sikkNumber || generateSIKKNumber(o),
+          vehicleColor: o.vehicleColor || 'Silver',
+          sikkPrintCount: newPrintCount
+        };
       }
+      return o;
+    });
+    localStorage.setItem('workOrders', JSON.stringify(updatedOrders));
+
+    // Update order object with new print count
+    const updatedOrder = updatedOrders.find(o => o.id === order.id);
+    if (updatedOrder) {
+      setSelectedOrderForSIKK(updatedOrder);
+      setShowSIKKModal(true);
+      // Reload to update button label
+      loadWorkOrders();
     }
   };
 
@@ -141,18 +137,16 @@ export function Handover() {
     
     if (confirm(confirmMsg)) {
       // Update order status
-      const savedOrders = localStorage.getItem('workOrders');
-      if (savedOrders) {
-        const orders = JSON.parse(savedOrders);
-        const updatedOrders = orders.map(order => 
-          order.orderId === orderId 
-            ? { ...order, status: 'completed', handoverDate: new Date().toISOString() }
-            : order
-        );
-        localStorage.setItem('workOrders', JSON.stringify(updatedOrders));
-        loadWorkOrders();
-        alert('✅ Handover berhasil diselesaikan!');
-      }
+      const orders = getStoredWorkOrders();
+      if (orders.length === 0) return;
+      const updatedOrders = orders.map(order =>
+        order.orderId === orderId
+          ? { ...order, status: 'completed', handoverDate: new Date().toISOString() }
+          : order
+      );
+      localStorage.setItem('workOrders', JSON.stringify(updatedOrders));
+      loadWorkOrders();
+      alert('✅ Handover berhasil diselesaikan!');
     }
   };
 

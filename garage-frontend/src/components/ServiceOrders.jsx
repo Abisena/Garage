@@ -3,6 +3,7 @@ import { Plus, Filter, Download, Eye, Wrench, ChevronRight, X, Save, Trash2, Pac
 import { Button } from './ui/button';
 import { SPKDocument } from './SPKDocument';
 import { frappeClient } from '../lib/frappeClient';
+import { getStoredWorkOrders } from '../lib/workOrdersStorage';
 
 export function ServiceOrders({ currentUser }) {
   const [filterStatus, setFilterStatus] = useState('all');
@@ -98,10 +99,8 @@ export function ServiceOrders({ currentUser }) {
   }, [selectedWorkOrder?.id]);
 
   const loadWorkOrders = () => {
-    const savedWorkOrders = localStorage.getItem('workOrders');
-    if (savedWorkOrders) {
-      setWorkOrders(JSON.parse(savedWorkOrders));
-    }
+    const storedOrders = getStoredWorkOrders();
+    setWorkOrders(storedOrders);
   };
 
   const mapProfilePart = (part) => ({
@@ -177,88 +176,6 @@ export function ServiceOrders({ currentUser }) {
       console.error('Failed to load master spare parts from profile', error);
     }
 
-    if (!savedParts) {
-      // Initialize with default parts if not exists
-      const defaultParts = [
-        // Toyota Avanza Parts
-        { id: '1', partName: 'Brake Pad Front', partNumber: 'BP-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Brake System', unitPrice: 450000, stock: 25, minStock: 10 },
-        { id: '2', partName: 'Brake Pad Rear', partNumber: 'BP-TOY-AVZ-002', compatibleModels: ['Avanza'], category: 'Brake System', unitPrice: 350000, stock: 20, minStock: 10 },
-        { id: '3', partName: 'Oil Filter', partNumber: 'OF-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Engine', unitPrice: 85000, stock: 50, minStock: 20 },
-        { id: '4', partName: 'Air Filter', partNumber: 'AF-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Engine', unitPrice: 125000, stock: 35, minStock: 15 },
-        { id: '5', partName: 'Spark Plug', partNumber: 'SP-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Engine', unitPrice: 95000, stock: 60, minStock: 30 },
-        { id: '6', partName: 'Engine Oil 5W-30', partNumber: 'EO-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Engine', unitPrice: 180000, stock: 40, minStock: 20 },
-        { id: '7', partName: 'Wiper Blade Front', partNumber: 'WB-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Accessories', unitPrice: 145000, stock: 30, minStock: 15 },
-        { id: '8', partName: 'Battery 12V', partNumber: 'BT-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Electrical', unitPrice: 850000, stock: 15, minStock: 5 },
-        { id: '9', partName: 'Alternator Belt', partNumber: 'AB-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Engine', unitPrice: 175000, stock: 25, minStock: 10 },
-        { id: '10', partName: 'Timing Belt', partNumber: 'TB-TOY-AVZ-001', compatibleModels: ['Avanza'], category: 'Engine', unitPrice: 385000, stock: 18, minStock: 8 },
-
-        // Honda Jazz Parts
-        { id: '11', partName: 'Brake Pad Front', partNumber: 'BP-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Brake System', unitPrice: 520000, stock: 22, minStock: 10 },
-        { id: '12', partName: 'Brake Pad Rear', partNumber: 'BP-HON-JAZ-002', compatibleModels: ['Jazz'], category: 'Brake System', unitPrice: 380000, stock: 18, minStock: 10 },
-        { id: '13', partName: 'Oil Filter', partNumber: 'OF-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Engine', unitPrice: 95000, stock: 45, minStock: 20 },
-        { id: '14', partName: 'Air Filter', partNumber: 'AF-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Engine', unitPrice: 145000, stock: 32, minStock: 15 },
-        { id: '15', partName: 'Spark Plug', partNumber: 'SP-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Engine', unitPrice: 115000, stock: 55, minStock: 30 },
-        { id: '16', partName: 'Engine Oil 0W-20', partNumber: 'EO-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Engine', unitPrice: 220000, stock: 38, minStock: 20 },
-        { id: '17', partName: 'Wiper Blade Front', partNumber: 'WB-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Accessories', unitPrice: 165000, stock: 28, minStock: 15 },
-        { id: '18', partName: 'Battery 12V', partNumber: 'BT-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Electrical', unitPrice: 920000, stock: 12, minStock: 5 },
-        { id: '19', partName: 'CVT Fluid', partNumber: 'CF-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Transmission', unitPrice: 385000, stock: 20, minStock: 10 },
-        { id: '20', partName: 'Cabin Air Filter', partNumber: 'CA-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Accessories', unitPrice: 195000, stock: 25, minStock: 12 },
-
-        // Mitsubishi Xpander Parts
-        { id: '21', partName: 'Brake Pad Front', partNumber: 'BP-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Brake System', unitPrice: 480000, stock: 24, minStock: 10 },
-        { id: '22', partName: 'Brake Pad Rear', partNumber: 'BP-MIT-XPD-002', compatibleModels: ['Xpander'], category: 'Brake System', unitPrice: 360000, stock: 19, minStock: 10 },
-        { id: '23', partName: 'Oil Filter', partNumber: 'OF-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Engine', unitPrice: 90000, stock: 48, minStock: 20 },
-        { id: '24', partName: 'Air Filter', partNumber: 'AF-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Engine', unitPrice: 135000, stock: 33, minStock: 15 },
-        { id: '25', partName: 'Spark Plug', partNumber: 'SP-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Engine', unitPrice: 105000, stock: 58, minStock: 30 },
-        { id: '26', partName: 'Engine Oil 5W-30', partNumber: 'EO-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Engine', unitPrice: 195000, stock: 42, minStock: 20 },
-        { id: '27', partName: 'Wiper Blade Front', partNumber: 'WB-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Accessories', unitPrice: 155000, stock: 29, minStock: 15 },
-        { id: '28', partName: 'Battery 12V', partNumber: 'BT-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Electrical', unitPrice: 880000, stock: 14, minStock: 5 },
-        { id: '29', partName: 'Drive Belt', partNumber: 'DB-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Engine', unitPrice: 185000, stock: 26, minStock: 10 },
-        { id: '30', partName: 'Radiator Coolant', partNumber: 'RC-MIT-XPD-001', compatibleModels: ['Xpander'], category: 'Engine', unitPrice: 165000, stock: 35, minStock: 15 },
-
-        // Honda CR-V Parts
-        { id: '31', partName: 'Brake Pad Front', partNumber: 'BP-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Brake System', unitPrice: 650000, stock: 18, minStock: 8 },
-        { id: '32', partName: 'Brake Pad Rear', partNumber: 'BP-HON-CRV-002', compatibleModels: ['CR-V'], category: 'Brake System', unitPrice: 480000, stock: 15, minStock: 8 },
-        { id: '33', partName: 'Oil Filter', partNumber: 'OF-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Engine', unitPrice: 110000, stock: 40, minStock: 20 },
-        { id: '34', partName: 'Air Filter', partNumber: 'AF-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Engine', unitPrice: 175000, stock: 28, minStock: 15 },
-        { id: '35', partName: 'Spark Plug', partNumber: 'SP-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Engine', unitPrice: 135000, stock: 50, minStock: 25 },
-        { id: '36', partName: 'Engine Oil 0W-20', partNumber: 'EO-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Engine', unitPrice: 250000, stock: 35, minStock: 18 },
-        { id: '37', partName: 'Wiper Blade Front', partNumber: 'WB-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Accessories', unitPrice: 185000, stock: 24, minStock: 12 },
-        { id: '38', partName: 'Battery 12V', partNumber: 'BT-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Electrical', unitPrice: 1050000, stock: 10, minStock: 5 },
-        { id: '39', partName: 'Cabin Air Filter', partNumber: 'CA-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Accessories', unitPrice: 225000, stock: 22, minStock: 10 },
-        { id: '40', partName: 'Transmission Oil', partNumber: 'TO-HON-CRV-001', compatibleModels: ['CR-V'], category: 'Transmission', unitPrice: 420000, stock: 18, minStock: 10 },
-
-        // Toyota Fortuner Parts
-        { id: '41', partName: 'Brake Pad Front', partNumber: 'BP-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Brake System', unitPrice: 720000, stock: 16, minStock: 8 },
-        { id: '42', partName: 'Brake Pad Rear', partNumber: 'BP-TOY-FOR-002', compatibleModels: ['Fortuner'], category: 'Brake System', unitPrice: 550000, stock: 14, minStock: 8 },
-        { id: '43', partName: 'Oil Filter', partNumber: 'OF-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Engine', unitPrice: 125000, stock: 38, minStock: 18 },
-        { id: '44', partName: 'Air Filter', partNumber: 'AF-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Engine', unitPrice: 195000, stock: 26, minStock: 12 },
-        { id: '45', partName: 'Spark Plug', partNumber: 'SP-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Engine', unitPrice: 145000, stock: 45, minStock: 22 },
-        { id: '46', partName: 'Engine Oil 5W-30', partNumber: 'EO-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Engine', unitPrice: 285000, stock: 32, minStock: 16 },
-        { id: '47', partName: 'Wiper Blade Front', partNumber: 'WB-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Accessories', unitPrice: 205000, stock: 20, minStock: 10 },
-        { id: '48', partName: 'Battery 12V', partNumber: 'BT-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Electrical', unitPrice: 1250000, stock: 8, minStock: 4 },
-        { id: '49', partName: 'Fuel Filter', partNumber: 'FF-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Engine', unitPrice: 285000, stock: 22, minStock: 10 },
-        { id: '50', partName: 'Differential Oil', partNumber: 'DO-TOY-FOR-001', compatibleModels: ['Fortuner'], category: 'Transmission', unitPrice: 385000, stock: 16, minStock: 8 },
-
-        // Toyota Innova Parts
-        { id: '51', partName: 'Brake Pad Front', partNumber: 'BP-TOY-INN-001', compatibleModels: ['Innova'], category: 'Brake System', unitPrice: 520000, stock: 20, minStock: 10 },
-        { id: '52', partName: 'Brake Pad Rear', partNumber: 'BP-TOY-INN-002', compatibleModels: ['Innova'], category: 'Brake System', unitPrice: 420000, stock: 18, minStock: 10 },
-        { id: '53', partName: 'Oil Filter', partNumber: 'OF-TOY-INN-001', compatibleModels: ['Innova'], category: 'Engine', unitPrice: 95000, stock: 42, minStock: 20 },
-        { id: '54', partName: 'Air Filter', partNumber: 'AF-TOY-INN-001', compatibleModels: ['Innova'], category: 'Engine', unitPrice: 155000, stock: 30, minStock: 15 },
-        { id: '55', partName: 'Spark Plug', partNumber: 'SP-TOY-INN-001', compatibleModels: ['Innova'], category: 'Engine', unitPrice: 110000, stock: 52, minStock: 28 },
-      ];
-
-      setMasterSpareParts(defaultParts);
-      localStorage.setItem('masterSpareParts', JSON.stringify(defaultParts));
-    }
-  };
-
-  // Reload data when component becomes visible
-  useEffect(() => {
-    const handleStorageChange = () => {
-      console.log('🔄 Storage change detected in ServiceOrders');
-      loadWorkOrders();
-      loadMasterSpareParts();
     };
     
     const handleWorkOrdersUpdated = () => {
