@@ -868,9 +868,9 @@ export function Registration({ currentUser }) {
         {/* RIGHT: Today's Registrations - 40% width, scrollable */}
         <div className="w-[40%] overflow-y-auto bg-gray-50">
           <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Today's Registrations</h3>
-              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+            <div className="flex items-center justify-between mb-4 text-2xl">
+              <h3 className="text-2xl font-semibold text-gray-900">Today's Registrations</h3>
+              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-lg font-semibold">
                 {filteredRegistrations.length}
               </span>
             </div>

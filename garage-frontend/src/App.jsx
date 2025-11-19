@@ -11,7 +11,7 @@ import { ServiceOrders } from './components/ServiceOrders'
 import { SpareParts } from './components/SpareParts'
 import { SparePartsRequest } from './components/SparePartsRequest'
 import { Layout } from './components/Layout'
-import { BuyingSparePart } from './components/BuyingSpareParts'
+import { BuyingSparePartIntegrated } from './components/BuyingSpareParts'
 import { DirectSalesSparePart } from './components/DirectSaleSpareParts'
 import { Workshop } from './components/Workshop'
 import { Payment } from './components/Payment'
@@ -154,7 +154,7 @@ function App() {
       case 'sparepartsrequest':
         return <SparePartsRequest currentUser={currentUser} />;
       case 'buyingsparepart':
-        return <BuyingSparePart currentUser={currentUser} />;
+        return <BuyingSparePartIntegrated currentUser={currentUser} />;
       case 'directsales':
         return <DirectSalesSparePart currentUser={currentUser} />;
       case 'workshop':
