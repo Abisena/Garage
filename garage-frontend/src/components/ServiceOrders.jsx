@@ -175,6 +175,7 @@ export function ServiceOrders({ currentUser }) {
     } catch (error) {
       console.error('Failed to load master spare parts from profile', error);
     }
+  };
 
   // Filter parts based on vehicle model and part name input
   useEffect(() => {
@@ -1558,5 +1559,4 @@ export function ServiceOrders({ currentUser }) {
       )}
     </div>
   );
-}
 }
