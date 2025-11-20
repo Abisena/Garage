@@ -150,9 +150,22 @@ class FrappeClient {
     }
   }
 
-  async getPortalBootstrap() {
+  async getPortalBootstrap(params = {}) {
     try {
-      const response = await this.request('/api/method/garage.api.portal.portal_bootstrap');
+      const searchParams = new URLSearchParams();
+
+      Object.entries(params).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+        if (typeof value === 'string' && value.trim() === '') return;
+        searchParams.append(key, value);
+      });
+
+      const query = searchParams.toString();
+      const endpoint = query
+        ? `/api/method/garage.api.portal.portal_bootstrap?${query}`
+        : '/api/method/garage.api.portal.portal_bootstrap';
+
+      const response = await this.request(endpoint);
       return response.message || response;
     } catch (error) {
       console.error('Failed to fetch portal bootstrap:', error);
