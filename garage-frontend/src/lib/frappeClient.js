@@ -211,6 +211,43 @@ class FrappeClient {
     }
   }
 
+  async listSpareParts(filters = {}, branch) {
+    try {
+      const payload = {};
+
+      if (filters && Object.keys(filters).length > 0) {
+        payload.filters = filters;
+      }
+
+      if (branch) {
+        payload.branch = branch;
+      }
+
+      const response = await this.request(
+        '/api/method/garage.api.portal.list_spare_parts',
+        {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        }
+      );
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to list spare parts:', error);
+      throw error;
+    }
+  }
+
+  async getSparePartStats() {
+    try {
+      const response = await this.request('/api/method/garage.api.portal.get_spare_part_stats');
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to fetch spare part stats:', error);
+      throw error;
+    }
+  }
+
   async syncWorkOrders(workOrders) {
     try {
       const response = await this.request(
