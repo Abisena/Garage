@@ -39,6 +39,8 @@ export function ServiceOrders({ currentUser }) {
   const [orderToCancel, setOrderToCancel] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
+
+  const [serviceBundles, setServiceBundles] = useState([]);
   
   // Cancel Reason Options
   const cancelReasons = [
@@ -66,9 +68,31 @@ export function ServiceOrders({ currentUser }) {
 
   // Helper function to check if there are package parts in the grid
   const hasPackageParts = () => {
-    return spareParts.some(part => 
-      part.partNumber.startsWith('PKG-') || 
+    return spareParts.some(part =>
+      part.partNumber.startsWith('PKG-') ||
       part.partNumber.startsWith('LABOR-')
+    );
+  };
+
+  const resolveServiceBundle = () => {
+    if (!selectedWorkOrder || serviceBundles.length === 0) return null;
+
+    const bundleIdCandidates = [
+      selectedWorkOrder.serviceBundleId,
+      selectedWorkOrder.serviceBundle,
+      selectedWorkOrder.service_bundle_id
+    ].filter(Boolean);
+
+    const bundleById = serviceBundles.find((bundle) =>
+      bundleIdCandidates.some(
+        (candidate) => candidate === bundle.id || candidate === bundle.name
+      )
+    );
+
+    if (bundleById) return bundleById;
+
+    return serviceBundles.find(
+      (bundle) => (bundle.bundle_name || bundle.name) === selectedWorkOrder.serviceType
     );
   };
   
@@ -156,10 +180,14 @@ export function ServiceOrders({ currentUser }) {
         }
       }
 
-      if (profileParts.length === 0) {
+      if (profileParts.length === 0 || serviceBundles.length === 0) {
         const bootstrap = await frappeClient.getPortalBootstrap();
-        profileParts = bootstrap?.spare_parts || bootstrap?.available_spare_parts || [];
+        profileParts = bootstrap?.spare_parts || bootstrap?.available_spare_parts || profileParts;
         updateMechanicOptions(bootstrap?.available_technicians);
+
+        if (Array.isArray(bootstrap?.service_bundles) && bootstrap.service_bundles.length > 0) {
+          setServiceBundles(bootstrap.service_bundles);
+        }
       }
 
       if (profileParts.length > 0) {
@@ -310,111 +338,69 @@ export function ServiceOrders({ currentUser }) {
   const handleAddPackageParts = () => {
     if (!selectedWorkOrder) return;
 
-    // Define service packages with parts and labor
-    const servicePackages = {
-      'Paket Service Oil Change': [
-        { name: 'Engine Oil 5W-30 (4L)', partNumber: 'PKG-OIL-001', qty: 1, unitPrice: 250000, discount: 0 },
-        { name: 'Oil Filter', partNumber: 'PKG-OIL-002', qty: 1, unitPrice: 75000, discount: 0 },
-        { name: 'Drain Plug Gasket', partNumber: 'PKG-OIL-003', qty: 1, unitPrice: 15000, discount: 0 },
-        { name: 'Labor - Oil Change Service', partNumber: 'LABOR-OIL-001', qty: 1, unitPrice: 100000, discount: 0 }
-      ],
-      'Paket Service Engine Service': [
-        { name: 'Engine Oil 5W-30 (4L)', partNumber: 'PKG-ENG-001', qty: 1, unitPrice: 250000, discount: 0 },
-        { name: 'Oil Filter', partNumber: 'PKG-ENG-002', qty: 1, unitPrice: 75000, discount: 0 },
-        { name: 'Air Filter', partNumber: 'PKG-ENG-003', qty: 1, unitPrice: 125000, discount: 0 },
-        { name: 'Spark Plug Set (4pcs)', partNumber: 'PKG-ENG-004', qty: 1, unitPrice: 280000, discount: 0 },
-        { name: 'Labor - Engine Service', partNumber: 'LABOR-ENG-001', qty: 1, unitPrice: 300000, discount: 0 }
-      ],
-      'Paket Service Brake Service': [
-        { name: 'Brake Pad Front', partNumber: 'PKG-BRK-001', qty: 1, unitPrice: 450000, discount: 0 },
-        { name: 'Brake Pad Rear', partNumber: 'PKG-BRK-002', qty: 1, unitPrice: 350000, discount: 0 },
-        { name: 'Brake Fluid DOT 4 (1L)', partNumber: 'PKG-BRK-003', qty: 1, unitPrice: 85000, discount: 0 },
-        { name: 'Labor - Brake Service', partNumber: 'LABOR-BRK-001', qty: 1, unitPrice: 250000, discount: 0 }
-      ],
-      'Paket Service Transmission Service': [
-        { name: 'Transmission Oil ATF (4L)', partNumber: 'PKG-TRS-001', qty: 1, unitPrice: 420000, discount: 0 },
-        { name: 'Transmission Filter', partNumber: 'PKG-TRS-002', qty: 1, unitPrice: 185000, discount: 0 },
-        { name: 'Gasket Set', partNumber: 'PKG-TRS-003', qty: 1, unitPrice: 95000, discount: 0 },
-        { name: 'Labor - Transmission Service', partNumber: 'LABOR-TRS-001', qty: 1, unitPrice: 350000, discount: 0 }
-      ],
-      'Paket Service AC Service': [
-        { name: 'AC Refrigerant R134a', partNumber: 'PKG-AC-001', qty: 2, unitPrice: 120000, discount: 0 },
-        { name: 'AC Filter/Evaporator Cleaner', partNumber: 'PKG-AC-002', qty: 1, unitPrice: 85000, discount: 0 },
-        { name: 'Cabin Air Filter', partNumber: 'PKG-AC-003', qty: 1, unitPrice: 125000, discount: 0 },
-        { name: 'Labor - AC Service', partNumber: 'LABOR-AC-001', qty: 1, unitPrice: 200000, discount: 0 }
-      ],
-      'Paket Service Battery Replacement': [
-        { name: 'Battery 12V 65Ah', partNumber: 'PKG-BAT-001', qty: 1, unitPrice: 1250000, discount: 0 },
-        { name: 'Battery Terminal Cleaner', partNumber: 'PKG-BAT-002', qty: 1, unitPrice: 35000, discount: 0 },
-        { name: 'Labor - Battery Replacement', partNumber: 'LABOR-BAT-001', qty: 1, unitPrice: 50000, discount: 0 }
-      ],
-      'Paket Service Tire Replacement': [
-        { name: 'Tire 205/55R16 (4pcs)', partNumber: 'PKG-TIR-001', qty: 4, unitPrice: 850000, discount: 0 },
-        { name: 'Wheel Balancing', partNumber: 'PKG-TIR-002', qty: 4, unitPrice: 25000, discount: 0 },
-        { name: 'Valve Stem (4pcs)', partNumber: 'PKG-TIR-003', qty: 4, unitPrice: 15000, discount: 0 },
-        { name: 'Labor - Tire Replacement', partNumber: 'LABOR-TIR-001', qty: 1, unitPrice: 150000, discount: 0 }
-      ],
-      'Paket Service Wheel Alignment': [
-        { name: 'Wheel Alignment 4-Wheel', partNumber: 'PKG-ALN-001', qty: 1, unitPrice: 200000, discount: 0 },
-        { name: 'Wheel Balancing (4 wheels)', partNumber: 'PKG-ALN-002', qty: 4, unitPrice: 25000, discount: 0 },
-        { name: 'Labor - Wheel Alignment', partNumber: 'LABOR-ALN-001', qty: 1, unitPrice: 150000, discount: 0 }
-      ],
-      'Paket Service General Inspection': [
-        { name: 'Engine Oil 5W-30 (4L)', partNumber: 'PKG-INS-001', qty: 1, unitPrice: 250000, discount: 0 },
-        { name: 'Oil Filter', partNumber: 'PKG-INS-002', qty: 1, unitPrice: 75000, discount: 0 },
-        { name: 'Air Filter', partNumber: 'PKG-INS-003', qty: 1, unitPrice: 125000, discount: 0 },
-        { name: 'Wiper Fluid (1L)', partNumber: 'PKG-INS-004', qty: 1, unitPrice: 25000, discount: 0 },
-        { name: 'Labor - General Inspection', partNumber: 'LABOR-INS-001', qty: 1, unitPrice: 200000, discount: 0 }
-      ],
-      'Paket Service Electrical Repair': [
-        { name: 'Fuse Set Assorted', partNumber: 'PKG-ELC-001', qty: 1, unitPrice: 45000, discount: 0 },
-        { name: 'Relay Set', partNumber: 'PKG-ELC-002', qty: 1, unitPrice: 85000, discount: 0 },
-        { name: 'Electrical Tape & Connectors', partNumber: 'PKG-ELC-003', qty: 1, unitPrice: 55000, discount: 0 },
-        { name: 'Labor - Electrical Repair', partNumber: 'LABOR-ELC-001', qty: 1, unitPrice: 250000, discount: 0 }
-      ],
-      'Paket Service Body Repair': [
-        { name: 'Body Filler & Putty', partNumber: 'PKG-BDY-001', qty: 1, unitPrice: 125000, discount: 0 },
-        { name: 'Primer & Paint (Color Match)', partNumber: 'PKG-BDY-002', qty: 1, unitPrice: 350000, discount: 0 },
-        { name: 'Clear Coat & Polish', partNumber: 'PKG-BDY-003', qty: 1, unitPrice: 175000, discount: 0 },
-        { name: 'Labor - Body Repair', partNumber: 'LABOR-BDY-001', qty: 1, unitPrice: 500000, discount: 0 }
-      ]
-    };
+    const bundle = resolveServiceBundle();
 
-    const packageItems = servicePackages[selectedWorkOrder.serviceType];
-    
-    if (!packageItems) {
-      alert('⚠️ Paket service tidak ditemukan untuk service type ini.');
+    if (!bundle) {
+      alert('⚠️ Paket servis tidak ditemukan untuk order ini. Pastikan service type terhubung ke Service Bundle di Frappe.');
       return;
     }
 
-    // Add all package items to spare parts grid
-    const newParts = packageItems.map(item => ({
-      id: `PART-${Date.now()}-${Math.random()}`,
-      name: item.name,
-      partNumber: item.partNumber,
-      quantity: item.qty,
-      unitPrice: item.unitPrice,
-      discount: item.discount,
-      discountType: 'percent',
-      totalPrice: item.qty * item.unitPrice
-    }));
+    const bundleParts = Array.isArray(bundle.parts) ? bundle.parts : [];
+
+    if (bundleParts.length === 0) {
+      alert('⚠️ Paket ini belum memiliki daftar sparepart di Frappe.');
+      return;
+    }
+
+    const newParts = bundleParts.map((item, index) => {
+      const quantity = Math.max(1, Number(item.quantity) || 1);
+      const unitPrice = Number(item.unitPrice || 0);
+
+      return {
+        id: `BUNDLE-${bundle.id || bundle.name}-${index}-${Date.now()}`,
+        name: item.partName || item.partCode || 'Bundle Item',
+        partNumber: item.partCode || item.partName || `PART-${index + 1}`,
+        quantity,
+        unitPrice,
+        discount: 0,
+        discountType: 'percent',
+        totalPrice: quantity * unitPrice,
+        usage: item.usage,
+        warehouse: item.warehouse_location,
+        bundleId: bundle.id || bundle.name
+      };
+    });
 
     const updatedParts = [...spareParts, ...newParts];
     setSpareParts(updatedParts);
 
+    const bundleName = bundle.bundle_name || bundle.name || selectedWorkOrder.serviceType;
+
     // Update localStorage
     const updatedWorkOrders = workOrders.map(wo => {
       if (wo.id === selectedWorkOrder.id) {
-        return { ...wo, spareParts: updatedParts };
+        return {
+          ...wo,
+          spareParts: updatedParts,
+          serviceBundleId: bundle.id || wo.serviceBundleId || wo.serviceBundle,
+          serviceBundleName: bundleName
+        };
       }
       return wo;
     });
 
+    const updatedSelectedWorkOrder = {
+      ...selectedWorkOrder,
+      spareParts: updatedParts,
+      serviceBundleId: bundle.id || selectedWorkOrder.serviceBundleId || selectedWorkOrder.serviceBundle,
+      serviceBundleName: bundleName
+    };
+
     persistWorkOrders(updatedWorkOrders);
     setWorkOrders(updatedWorkOrders);
-    setSelectedWorkOrder({ ...selectedWorkOrder, spareParts: updatedParts });
+    setSelectedWorkOrder(updatedSelectedWorkOrder);
 
-    alert('✅ Paket service berhasil ditambahkan!\n\n📦 ' + packageItems.length + ' items (parts + labor) telah ditambahkan ke spare parts grid.');
+    alert('✅ Paket service berhasil ditambahkan!\n\n📦 ' + bundleParts.length + ' items (parts + labor) telah ditambahkan ke spare parts grid.');
   };
 
   const handleUpdatePartDiscount = (partId, discount, discountType) => {

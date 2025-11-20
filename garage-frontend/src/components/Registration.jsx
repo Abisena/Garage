@@ -18,6 +18,7 @@ export function Registration({ currentUser }) {
     phone: '',
     email: '',
     serviceType: '',
+    serviceBundle: '',
     customerComplaint: '',
     kilometer: '',
     fuel: '',
@@ -30,6 +31,16 @@ export function Registration({ currentUser }) {
     loadFromStorage('registrationFormDraft', defaultFormState)
   );
 
+  const DEFAULT_SERVICE_TYPES = [
+    'Service/Repair',
+    'Inspection',
+    'Warranty',
+    'Insurance Claim'
+  ];
+
+  const [serviceTypeOptions, setServiceTypeOptions] = useState(DEFAULT_SERVICE_TYPES);
+  const [serviceBundles, setServiceBundles] = useState([]);
+
   // Save form data to localStorage whenever it changes
   useEffect(() => {
     saveToStorage('registrationFormDraft', formData);
@@ -40,6 +51,36 @@ export function Registration({ currentUser }) {
   const [selectedRegistration, setSelectedRegistration] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const todayDate = new Date().toLocaleDateString('id-ID');
+
+  useEffect(() => {
+    const loadServiceBundles = async () => {
+      try {
+        const bootstrap = await frappeClient.getPortalBootstrap({ branch: currentUser?.branch });
+        const bundles = Array.isArray(bootstrap?.service_bundles) ? bootstrap.service_bundles : [];
+
+        if (bundles.length > 0) {
+          setServiceBundles(bundles);
+
+          const bundleNames = bundles
+            .map((bundle) => bundle.bundle_name || bundle.name)
+            .filter(Boolean);
+
+          const uniqueOptions = Array.from(
+            new Set([...DEFAULT_SERVICE_TYPES, ...bundleNames])
+          );
+
+          setServiceTypeOptions(uniqueOptions);
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to load service bundles from Frappe:', error);
+      }
+
+      setServiceTypeOptions((prev) => (prev.length > 0 ? prev : DEFAULT_SERVICE_TYPES));
+    };
+
+    loadServiceBundles();
+  }, [currentUser?.branch]);
 
   const registrationsUpdate = () => {
     const storedRegistrations = loadFromStorage('registrations', []);
@@ -54,33 +95,6 @@ export function Registration({ currentUser }) {
     saveToStorage('registrations', updatedAllRegistrations);
     setRecentRegistrations(registrationsUpdate());
   };
-
-  const serviceTypes = [
-    'Oil Change',
-    'Service/Repair',
-    'Paket Service Oil Change',
-    'Engine Service',
-    'Paket Service Engine Service',
-    'Brake Service',
-    'Paket Service Brake Service',
-    'Transmission Service',
-    'Paket Service Transmission Service',
-    'AC Service',
-    'Paket Service AC Service',
-    'Battery Replacement',
-    'Paket Service Battery Replacement',
-    'Tire Replacement',
-    'Paket Service Tire Replacement',
-    'Wheel Alignment',
-    'Paket Service Wheel Alignment',
-    'General Inspection',
-    'Paket Service General Inspection',
-    'Electrical Repair',
-    'Paket Service Electrical Repair',
-    'Body Repair',
-    'Paket Service Body Repair',
-    'Other'
-  ];
 
   const vehicleTypes = [
     'Sedan',
@@ -193,6 +207,10 @@ export function Registration({ currentUser }) {
   try {
     console.log('Sending registration data to Frappe...');
 
+    const selectedBundle = serviceBundles.find(
+      (bundle) => (bundle.bundle_name || bundle.name) === formData.serviceType
+    );
+
     const payload = {
       customer_name: formData.customerName,
       phone: formData.phone,
@@ -208,6 +226,8 @@ export function Registration({ currentUser }) {
       fuel_type: formData.fuel,
       assembly_type: formData.assemblyType,
       service_order_type: formData.serviceType,
+      service_bundle: selectedBundle?.id || formData.serviceBundle || '',
+      service_bundle_name: selectedBundle?.bundle_name || selectedBundle?.name || '',
       notes: formData.customerComplaint,
       intake_type: 'Walk-In',
       priority: 'Normal',
@@ -253,6 +273,8 @@ export function Registration({ currentUser }) {
         assemblyType: formData.assemblyType,
         vehicleYear: formData.vehicleYear,
         serviceType: formData.serviceType,
+        serviceBundleId: selectedBundle?.id || formData.serviceBundle || '',
+        serviceBundleName: selectedBundle?.bundle_name || selectedBundle?.name || '',
         customerComplaint: formData.customerComplaint,
         date: new Date().toLocaleDateString('id-ID'),
         estimatedCost: '0',
@@ -321,6 +343,8 @@ export function Registration({ currentUser }) {
       assemblyType: formData.assemblyType,
       vehicleYear: formData.vehicleYear,
       serviceType: formData.serviceType,
+      serviceBundleId: formData.serviceBundle,
+      serviceBundleName: selectedBundle?.bundle_name || selectedBundle?.name || '',
       customerComplaint: formData.customerComplaint,
       date: new Date().toLocaleDateString('id-ID'),
       estimatedCost: '0',
@@ -404,7 +428,11 @@ export function Registration({ currentUser }) {
     const nextNumber = branchRegistrations.length + 1;
     const newId = `${branchCode}-REG-${String(nextNumber).padStart(3, '0')}`;
     const newOrderId = getNextOrderNumber(currentUser.branch);
-    
+
+    const matchedBundle = serviceBundles.find(
+      (bundle) => (bundle.bundle_name || bundle.name) === formData.serviceType
+    );
+
     const newRegistration = {
       id: newId,
       time: newTime,
@@ -423,6 +451,8 @@ export function Registration({ currentUser }) {
       assemblyType: formData.assemblyType,
       vehicleYear: formData.vehicleYear,
       serviceType: formData.serviceType,
+      serviceBundleId: matchedBundle?.id || formData.serviceBundle || '',
+      serviceBundleName: matchedBundle?.bundle_name || matchedBundle?.name || '',
       customerComplaint: formData.customerComplaint,
       customerSignature: customerSig,
       advisorSignature: advisorSig,
@@ -435,30 +465,23 @@ export function Registration({ currentUser }) {
 
     // Add to list (at the beginning)
     addRegistration(newRegistration);
-    
+
     // Reset form
-    setFormData({
-      plateNumber: '',
-      chassisNumber: '',
-      engineNumber: '',
-      vehicleBrand: '',
-      vehicleModel: '',
-      vehicleType: '',
-      kilometer: '',
-      fuel: '',
-      assemblyType: '',
-      vehicleYear: '',
-      customerName: '',
-      phone: '',
-      email: '',
-      serviceType: '',
-      customerComplaint: '',
-      estimatedCost: '',
-      estimatedDays: '',
-      advisorNotes: ''
-    });
+    setFormData({ ...defaultFormState });
 
     alert('Registration successful! Data has been added to today\'s registrations.');
+  };
+
+  const handleServiceTypeChange = (value) => {
+    const matchedBundle = serviceBundles.find(
+      (bundle) => (bundle.bundle_name || bundle.name) === value
+    );
+
+    setFormData({
+      ...formData,
+      serviceType: value,
+      serviceBundle: matchedBundle?.id || ''
+    });
   };
 
   const handleViewRegistration = (registration) => {
@@ -791,14 +814,14 @@ export function Registration({ currentUser }) {
                   }`}
                   value={formData.serviceType}
                   onChange={(e) => {
-                    setFormData({...formData, serviceType: e.target.value});
+                    handleServiceTypeChange(e.target.value);
                     handleInputComplete('serviceType', e.target.value);
                   }}
                   onFocus={() => setFocusedField('serviceType')}
                   onBlur={() => setFocusedField('')}
                 >
                   <option value="">Select service type</option>
-                  {serviceTypes.map(service => (
+                  {serviceTypeOptions.map(service => (
                     <option key={service} value={service}>{service}</option>
                   ))}
                 </select>
@@ -850,13 +873,7 @@ export function Registration({ currentUser }) {
                 <button
                   type="button"
                   className="px-6 py-3 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 font-medium rounded-lg transition-colors"
-                  onClick={() => setFormData({
-                    plateNumber: '', chassisNumber: '', engineNumber: '',
-                    vehicleBrand: '', vehicleModel: '', vehicleType: '',
-                    kilometer: '', fuel: '', assemblyType: '', vehicleYear: '',
-                    customerName: '', phone: '', email: '',
-                    serviceType: '', customerComplaint: '', advisorNotes: ''
-                  })}
+                  onClick={() => setFormData({ ...defaultFormState })}
                 >
                   Clear Form
                 </button>
