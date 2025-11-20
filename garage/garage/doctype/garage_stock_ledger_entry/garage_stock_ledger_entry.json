@@ -7,49 +7,48 @@
   "autoname": "autoincrement",
   "beta": 0,
   "creation": "2024-06-02 00:00:00.000000",
-  "default_view": "Form",
+  "default_view": "List",
   "disable_prepared_report": 0,
   "docstatus": 0,
   "doctype": "DocType",
   "editable_grid": 0,
   "engine": "InnoDB",
   "field_order": [
+    "spare_part",
     "movement_type",
-    "reference_type",
-    "reference_name",
     "posting_date",
     "posting_time",
     "warehouse",
-    "status",
-    "remarks",
-    "items"
+    "qty",
+    "balance_after",
+    "reference_doctype",
+    "reference_name",
+    "is_cancelled",
+    "remarks"
   ],
   "fields": [
     {
-      "fieldname": "movement_type",
-      "fieldtype": "Select",
-      "label": "Movement Type",
-      "options": "Receipt\nIssue",
+      "fieldname": "spare_part",
+      "fieldtype": "Link",
+      "label": "Spare Part",
+      "options": "Garage Spare Part",
       "reqd": 1,
       "in_list_view": 1
     },
     {
-      "fieldname": "reference_type",
+      "fieldname": "movement_type",
       "fieldtype": "Select",
-      "label": "Reference Type",
-      "options": "Garage Procurement Order\nGarage Service Order\nGarage Spare Part Order"
-    },
-    {
-      "fieldname": "reference_name",
-      "fieldtype": "Dynamic Link",
-      "label": "Reference Document",
-      "options": "reference_type"
+      "label": "Movement Type",
+      "options": "Receipt\nIssue\nTransfer",
+      "reqd": 1,
+      "in_list_view": 1
     },
     {
       "fieldname": "posting_date",
       "fieldtype": "Date",
       "label": "Posting Date",
-      "reqd": 1
+      "reqd": 1,
+      "in_list_view": 1
     },
     {
       "fieldname": "posting_time",
@@ -59,26 +58,43 @@
     {
       "fieldname": "warehouse",
       "fieldtype": "Data",
-      "label": "Primary Warehouse"
+      "label": "Warehouse",
+      "in_list_view": 1
     },
     {
-      "fieldname": "status",
-      "fieldtype": "Select",
-      "label": "Status",
-      "options": "Draft\nSubmitted\nCancelled",
-      "default": "Draft",
+      "fieldname": "qty",
+      "fieldtype": "Float",
+      "label": "Quantity",
+      "reqd": 1,
       "in_list_view": 1
+    },
+    {
+      "fieldname": "balance_after",
+      "fieldtype": "Float",
+      "label": "Balance After"
+    },
+    {
+      "fieldname": "reference_doctype",
+      "fieldtype": "Link",
+      "label": "Reference Type",
+      "options": "DocType"
+    },
+    {
+      "fieldname": "reference_name",
+      "fieldtype": "Dynamic Link",
+      "label": "Reference Document",
+      "options": "reference_doctype"
+    },
+    {
+      "fieldname": "is_cancelled",
+      "fieldtype": "Check",
+      "label": "Is Cancelled",
+      "default": "0"
     },
     {
       "fieldname": "remarks",
       "fieldtype": "Small Text",
       "label": "Remarks"
-    },
-    {
-      "fieldname": "items",
-      "fieldtype": "Table",
-      "label": "Items",
-      "options": "Garage Stock Movement Item"
     }
   ],
   "has_web_view": 0,
@@ -88,7 +104,7 @@
   "image_field": "",
   "in_create": 0,
   "info_fields": [],
-  "is_submittable": 1,
+  "is_submittable": 0,
   "issingle": 0,
   "istable": 0,
   "links": [],
@@ -96,7 +112,7 @@
   "max_attachments": 0,
   "modified": "2024-06-02 00:00:00.000000",
   "module": "Garage",
-  "name": "Garage Stock Movement",
+  "name": "Garage Stock Ledger Entry",
   "naming_rule": "",
   "owner": "Administrator",
   "permissions": [
@@ -125,5 +141,5 @@
   "track_seen": 0,
   "translated_doctype": 0,
   "migration_hash": "",
-  "description": "Stock receipt/issue linked to garage operations."
+  "description": "Ledger of spare part stock changes with running balance."
 }
