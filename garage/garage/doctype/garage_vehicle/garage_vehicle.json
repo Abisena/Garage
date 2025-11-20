@@ -19,11 +19,8 @@
     "license_plate",
     "vin",
     "brand",
-    "type_model",
     "model",
-    "model_variant",
     "vehicle_year",
-    "color",
     "transmission",
     "fuel_type",
     "mileage",
@@ -68,31 +65,15 @@
       "in_list_view": 1
     },
     {
-      "fieldname": "type_model",
-      "fieldtype": "Data",
-      "label": "Tipe Model",
-      "in_list_view": 1
-    },
-    {
       "fieldname": "model",
       "fieldtype": "Data",
       "label": "Model",
       "in_list_view": 1
     },
     {
-      "fieldname": "model_variant",
-      "fieldtype": "Data",
-      "label": "Model Variant"
-    },
-    {
       "fieldname": "vehicle_year",
       "fieldtype": "Int",
       "label": "Year"
-    },
-    {
-      "fieldname": "color",
-      "fieldtype": "Data",
-      "label": "Color"
     },
     {
       "fieldname": "transmission",

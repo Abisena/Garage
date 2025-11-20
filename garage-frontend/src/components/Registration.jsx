@@ -213,18 +213,43 @@ export function Registration({ currentUser }) {
     try {
       console.log('Sending registration data to Frappe...');
 
+
+    //   const payload = {
+    //   customer_name: formData.customerName,
+    //   phone: formData.phone,
+    //   email: formData.email || '',
+    //   license_plate: formData.plateNumber,
+    //   vin: formData.chassisNumber,
+    //   engine_number: formData.engineNumber,
+    //   brand: formData.vehicleBrand,
+    //   model: formData.vehicleModel,
+    //   vehicle_type: formData.vehicleType,
+    //   year: formData.vehicleYear,
+    //   vehicle_year: formData.vehicleYear,
+    //   mileage: parseInt(formData.kilometer) || 0,
+    //   fuel_type: formData.fuel,
+    //   assembly_type: formData.assemblyType,
+    //   service_order_type: formData.serviceType,
+    //   notes: formData.customerComplaint,
+    //   intake_type: 'Walk-In',
+    //   priority: 'Normal',
+    //   branch: currentUser.branch,
+    //   service_notes: formData.advisorNotes || formData.customerComplaint
+    // };
+
       const payload = {
         customer_name: formData.customerName,
         phone: formData.phone,
         email: formData.email || '',
         license_plate: formData.plateNumber,
-        chassis_no: formData.chassisNumber,
-        engine_no: formData.engineNumber,
-        make: formData.vehicleBrand,
+        vin: formData.chassisNumber,
+        engine_number: formData.engineNumber,
+        brand: formData.vehicleBrand,
         model: formData.vehicleModel,
         vehicle_type: formData.vehicleType,
         year: formData.vehicleYear,
-        odometer_value: parseInt(formData.kilometer) || 0,
+        vehicle_year: formData.vehicleYear,
+        mileage: parseInt(formData.kilometer) || 0,
         fuel_type: formData.fuel,
         assembly_type: formData.assemblyType,
         service_order_type: formData.serviceType,

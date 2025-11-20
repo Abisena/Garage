@@ -3592,6 +3592,14 @@ def get_spare_part_detail(name: str) -> Dict[str, Any]:
     if not spare_parts:
         spare_parts = _fetch_item_spare_parts({"item_code": identifier}, limit=1)
 
+        if not spare_parts:
+            spare_parts = _list_dicts(
+                "Garage Spare Part",
+                fields,
+                filters=[["part_code", "=", identifier]],
+                limit=1,
+            )
+
     if not spare_parts:
         frappe.throw(_("Sparepart tidak ditemukan di master Item."))
 

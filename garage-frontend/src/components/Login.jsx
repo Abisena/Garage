@@ -58,14 +58,14 @@ export function Login({ onLogin }) {
               <Wrench className="w-8 h-8" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-center mb-2">Garage Portal</h1>
-          <p className="text-center text-blue-100 text-sm">Sistem Manajemen Bengkel</p>
+          <h1 className="text-2xl font-bold text-center mb-2">IMOGI Workshop</h1>
+          <p className="text-center text-blue-100 text-sm">Sistem Manajemen Bengkel Multi Cabang</p>
         </div>
 
         {/* Login Form */}
         <div className="p-8">
           <h2 className="text-xl font-semibold text-slate-800 mb-6 text-center">
-            Login dengan Frappe Account
+            Login To Your Branch
           </h2>
           
           <form onSubmit={handleSubmit} className="space-y-4">
