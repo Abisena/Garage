@@ -3592,34 +3592,6 @@ def get_spare_part_detail(name: str) -> Dict[str, Any]:
     if not spare_parts:
         spare_parts = _fetch_item_spare_parts({"item_code": identifier}, limit=1)
 
-    if not spare_parts:
-        fields = [
-            "name",
-            "part_code",
-            "part_name",
-            "description",
-            "category",
-            "brand",
-            "uom",
-            "unit_price",
-            "stock_qty",
-            "reserved_qty",
-            "reorder_level",
-            "warehouse_location",
-            "managed_by",
-            "status",
-            "last_restocked_on",
-            "image",
-            "notes",
-        ]
-
-        spare_parts = _list_dicts(
-            "Garage Spare Part",
-            fields,
-            filters=[["name", "=", identifier]],
-            limit=1,
-        )
-
         if not spare_parts:
             spare_parts = _list_dicts(
                 "Garage Spare Part",
@@ -3629,7 +3601,7 @@ def get_spare_part_detail(name: str) -> Dict[str, Any]:
             )
 
     if not spare_parts:
-        return {"spare_part": None, "open_requests": []}
+        frappe.throw(_("Sparepart tidak ditemukan di master Item."))
 
     spare_part = spare_parts[0]
 
@@ -3762,77 +3734,6 @@ def list_spare_parts(
     branch_filter = requested_branch or None
     
     spare_parts = _fetch_item_spare_parts(data, limit=500)
-
-    if not spare_parts:
-        # Build filters for legacy Garage Spare Part records
-        filter_conditions = []
-
-        # Status filter
-        if data.get("status"):
-            if data["status"] == "Low Stock":
-                # Special handling for low stock - will be filtered after query
-                pass
-            else:
-                filter_conditions.append(["status", "=", data["status"]])
-
-        # Category filter
-        if data.get("category"):
-            filter_conditions.append(["category", "=", data["category"]])
-
-        # Stock range filters
-        if data.get("min_stock"):
-            filter_conditions.append(["stock_qty", ">=", data["min_stock"]])
-
-        if data.get("max_stock"):
-            filter_conditions.append(["stock_qty", "<=", data["max_stock"]])
-
-        # Get all spare parts
-        spare_part_fields = [
-            "name",
-            "part_code",
-            "part_name",
-            "description",
-            "category",
-            "brand",
-            "uom",
-            "unit_price",
-            "stock_qty",
-            "reserved_qty",
-            "reorder_level",
-            "warehouse_location",
-            "managed_by",
-            "status",
-            "last_restocked_on",
-            "image",
-            "notes",
-            "modified",
-            "owner",
-        ]
-
-        optional_part_fields = [
-            "branch",
-            "default_warehouse",
-            "warehouse",
-            "stock_uom",
-            "purchase_uom",
-            "selling_price",
-            "last_purchase_rate",
-            "last_purchase_supplier",
-            "last_supplier",
-            "supplier",
-            "buying_price",
-        ]
-
-        for field in optional_part_fields:
-            if _doctype_has_field("Garage Spare Part", field):
-                spare_part_fields.append(field)
-
-        spare_parts = _list_dicts(
-            "Garage Spare Part",
-            spare_part_fields,
-            filters=filter_conditions if filter_conditions else None,
-            limit=500,
-        )
 
     # Fetch open spare part requests from service orders so the portal can
     # surface new needs from the workshop.
@@ -4243,22 +4144,8 @@ def get_spare_part_stats() -> Dict[str, Any]:
     """
     _require_login()
 
-    # Get all spare parts
+    # Get all spare parts from ERPNext Item master
     spare_parts = _fetch_item_spare_parts({}, limit=1000)
-
-    if not spare_parts:
-        spare_parts = _list_dicts(
-            "Garage Spare Part",
-            [
-                "name",
-                "status",
-                "stock_qty",
-                "reserved_qty",
-                "reorder_level",
-                "unit_price",
-            ],
-            limit=1000,
-        )
     
     # Calculate statistics
     total_parts = len(spare_parts)
