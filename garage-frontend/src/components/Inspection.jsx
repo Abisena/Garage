@@ -4,15 +4,19 @@ import { Button } from './ui/button';
 import { loadFromStorage, saveToStorage } from '../lib/storage';
 import watermarkLogo from '../assets/imogi.png';
 
-export function Inspection() {
+export function Inspection({ currentUser }) {
   const todayDate = new Date().toLocaleDateString('id-ID');
 
-  const getTodayRegistrations = () => {
+  const getTodayRegistrations = (branch) => {
     const storedRegistrations = loadFromStorage('registrations', []);
-    return storedRegistrations.filter(reg => reg.date === todayDate);
+    const todaysRegistrations = storedRegistrations.filter(reg => reg.date === todayDate);
+
+    if (!branch || branch === 'all') return todaysRegistrations;
+
+    return todaysRegistrations.filter((reg) => reg.branch === branch);
   };
 
-  const [registrations, setRegistrations] = useState(getTodayRegistrations);
+  const [registrations, setRegistrations] = useState(() => getTodayRegistrations(currentUser?.branch));
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [showDiagnosisReport, setShowDiagnosisReport] = useState(false);
   const [createdWorkOrderId, setCreatedWorkOrderId] = useState('');
@@ -180,7 +184,7 @@ export function Inspection() {
     });
 
     saveToStorage('registrations', updatedRegistrations);
-    setRegistrations(getTodayRegistrations());
+    setRegistrations(getTodayRegistrations(currentUser?.branch));
     
     // Show diagnosis report
     setShowDiagnosisReport(true);
@@ -191,7 +195,7 @@ export function Inspection() {
 
   useEffect(() => {
     const reloadRegistrations = () => {
-      setRegistrations(getTodayRegistrations());
+      setRegistrations(getTodayRegistrations(currentUser?.branch));
     };
 
     // Immediately hydrate from storage when landing on the page
@@ -204,7 +208,11 @@ export function Inspection() {
       window.removeEventListener('storage', reloadRegistrations);
       window.removeEventListener('focus', reloadRegistrations);
     };
-  }, []);
+  }, [currentUser?.branch]);
+
+  useEffect(() => {
+    setRegistrations(getTodayRegistrations(currentUser?.branch));
+  }, [currentUser?.branch]);
 
   const handlePrint = () => {
     window.print();

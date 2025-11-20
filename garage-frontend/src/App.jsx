@@ -418,7 +418,7 @@ function App() {
       case 'registration':
         return <Registration currentUser={currentUser} />
       case 'inspection':
-        return <Inspection />
+        return <Inspection currentUser={currentUser} />
       case 'orders':
         return <ServiceOrders currentUser={currentUser} />
       case 'inventory':
