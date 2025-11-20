@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Plus, Search, Package, Trash2, FileText, CheckCircle, Clock, Printer, Edit2, Database, AlertCircle, Save, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { ReceivePartDocument } from './ReceivePartDocument';
+import { frappeClient } from '../lib/frappeClient';
 
 export function BuyingSparePartIntegrated({ currentUser }) {
   // Tab state
@@ -21,6 +22,8 @@ export function BuyingSparePartIntegrated({ currentUser }) {
     minStock: 10
   });
   const [partSearchQuery, setPartSearchQuery] = useState('');
+  const [partsLoading, setPartsLoading] = useState(false);
+  const [partsError, setPartsError] = useState('');
   
   // PO state
   const [purchaseOrders, setPurchaseOrders] = useState([]);
@@ -73,7 +76,7 @@ export function BuyingSparePartIntegrated({ currentUser }) {
   useEffect(() => {
     loadMasterSpareParts();
     loadPurchaseOrders();
-  }, []);
+  }, [currentUser?.branch]);
 
   // Initialize default master parts if empty
   useEffect(() => {
@@ -96,16 +99,60 @@ export function BuyingSparePartIntegrated({ currentUser }) {
       { id: '11', partName: 'Brake Pad Front', partNumber: 'BP-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Brake System', unitPrice: 520000, stock: 22, minStock: 10 },
       { id: '12', partName: 'Oil Filter', partNumber: 'OF-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Engine', unitPrice: 95000, stock: 45, minStock: 20 },
       { id: '13', partName: 'Air Filter', partNumber: 'AF-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Engine', unitPrice: 145000, stock: 32, minStock: 15 },
-    ];
+    ].map((part) => ({ ...part, isCustom: true }));
     
     setMasterSpareParts(defaultParts);
     localStorage.setItem('masterSpareParts', JSON.stringify(defaultParts));
   };
 
-  const loadMasterSpareParts = () => {
-    const savedParts = localStorage.getItem('masterSpareParts');
-    if (savedParts) {
-      setMasterSpareParts(JSON.parse(savedParts));
+  const loadCustomParts = () => {
+    const savedCustomParts = localStorage.getItem('customMasterSpareParts');
+    return savedCustomParts ? JSON.parse(savedCustomParts) : [];
+  };
+
+  const saveCustomParts = (parts) => {
+    localStorage.setItem('customMasterSpareParts', JSON.stringify(parts));
+  };
+
+  const loadMasterSpareParts = async () => {
+    setPartsLoading(true);
+    setPartsError('');
+
+    try {
+      const response = await frappeClient.listSpareParts({}, currentUser?.branch === 'all' ? undefined : currentUser?.branch);
+      const parts = Array.isArray(response?.spare_parts) ? response.spare_parts : [];
+
+      const mappedParts = parts.map((part, index) => ({
+        id: part.part_code || part.name || `part-${index}`,
+        partName: part.part_name || part.item_name || part.partName || 'Unknown Part',
+        partNumber: part.part_code || part.part_number || part.name || `PART-${index}`,
+        compatibleModels: Array.isArray(part.compatible_models)
+          ? part.compatible_models
+          : Array.isArray(part.compatibleModels)
+            ? part.compatibleModels
+            : [],
+        category: part.category || part.item_group || 'General',
+        unitPrice: Number(part.unit_price) || Number(part.standard_rate) || 0,
+        stock: Number(part.stock_qty) || Number(part.actual_qty) || 0,
+        minStock: Number(part.reorder_level) || Number(part.minStock) || 0,
+        isCustom: false
+      }));
+
+      const customParts = loadCustomParts();
+      const filteredRemoteParts = mappedParts.filter((remote) => !customParts.some((custom) => custom.id === remote.id));
+      const mergedParts = [...customParts, ...filteredRemoteParts];
+
+      saveMasterSpareParts(mergedParts);
+    } catch (error) {
+      console.error('Failed to load master spare parts from Stock Item', error);
+      setPartsError('Gagal memuat master spare parts dari Stock Item. Menampilkan data lokal sebagai cadangan.');
+
+      const savedParts = localStorage.getItem('masterSpareParts');
+      if (savedParts) {
+        setMasterSpareParts(JSON.parse(savedParts));
+      }
+    } finally {
+      setPartsLoading(false);
     }
   };
 
@@ -160,15 +207,43 @@ export function BuyingSparePartIntegrated({ currentUser }) {
         category: partFormData.category || '',
         unitPrice: partFormData.unitPrice || 0,
         stock: partFormData.stock || 0,
-        minStock: partFormData.minStock || 10
+        minStock: partFormData.minStock || 10,
+        isCustom: true
       };
-      saveMasterSpareParts([...masterSpareParts, newPart]);
+      const updatedCustomParts = [...loadCustomParts(), newPart];
+      saveCustomParts(updatedCustomParts);
+
+      const mergedParts = [...updatedCustomParts, ...masterSpareParts.filter((part) => part.id !== newPart.id)];
+      saveMasterSpareParts(mergedParts);
       alert('✅ Part baru berhasil ditambahkan!');
     } else if (editingPartId) {
-      const updatedParts = masterSpareParts.map(part => 
-        part.id === editingPartId ? { ...part, ...partFormData } : part
-      );
-      saveMasterSpareParts(updatedParts);
+      const partToUpdate = masterSpareParts.find((part) => part.id === editingPartId);
+
+      if (partToUpdate?.isCustom || !partToUpdate) {
+        const customParts = loadCustomParts();
+        const updatedCustom = customParts.map((part) =>
+          part.id === editingPartId ? { ...part, ...partFormData, isCustom: true } : part
+        );
+        saveCustomParts(updatedCustom);
+
+        const mergedParts = [
+          ...updatedCustom,
+          ...masterSpareParts.filter((part) => part.id !== editingPartId && !updatedCustom.some((cp) => cp.id === part.id))
+        ];
+
+        saveMasterSpareParts(mergedParts);
+      } else {
+        const customOverride = { ...partToUpdate, ...partFormData, isCustom: true };
+        const updatedCustom = [...loadCustomParts().filter((part) => part.id !== editingPartId), customOverride];
+        saveCustomParts(updatedCustom);
+
+        const mergedParts = [
+          ...updatedCustom,
+          ...masterSpareParts.filter((part) => part.id !== editingPartId && !updatedCustom.some((cp) => cp.id === part.id))
+        ];
+
+        saveMasterSpareParts(mergedParts);
+      }
       alert('✅ Part berhasil diupdate!');
     }
     
@@ -190,8 +265,23 @@ export function BuyingSparePartIntegrated({ currentUser }) {
   };
 
   const handleDeletePart = (id) => {
+    const partToDelete = masterSpareParts.find((part) => part.id === id);
+
+    if (!partToDelete?.isCustom) {
+      alert('⚠️ Part ini berasal dari Stock Item sehingga tidak bisa dihapus di sini.');
+      return;
+    }
+
     if (confirm('🗑️ Yakin ingin menghapus part ini dari master?\n\nPerhatian: Part yang sudah digunakan dalam PO tidak akan terhapus dari PO tersebut.')) {
-      saveMasterSpareParts(masterSpareParts.filter(part => part.id !== id));
+      const updatedCustom = loadCustomParts().filter((part) => part.id !== id);
+      saveCustomParts(updatedCustom);
+
+      const mergedParts = [
+        ...updatedCustom,
+        ...masterSpareParts.filter((part) => part.id !== id && !updatedCustom.some((cp) => cp.id === part.id))
+      ];
+
+      saveMasterSpareParts(mergedParts);
       alert('✅ Part berhasil dihapus!');
     }
   };
@@ -753,6 +843,12 @@ export function BuyingSparePartIntegrated({ currentUser }) {
                     Custom Part
                   </Button>
                 </div>
+                {partsError && (
+                  <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>{partsError}</span>
+                  </div>
+                )}
                 {masterSpareParts.length === 0 && (
                   <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
                     <p className="text-amber-700 text-sm">⚠️ Master Parts masih kosong. Silakan tambahkan di tab "Master Parts" terlebih dahulu.</p>
@@ -761,7 +857,9 @@ export function BuyingSparePartIntegrated({ currentUser }) {
               </div>
 
               <div className="flex-1 overflow-y-auto p-6">
-                {masterSpareParts.length === 0 ? (
+                {partsLoading ? (
+                  <div className="text-center py-10 text-slate-600">Memuat data stok dari Garage Spare Part...</div>
+                ) : masterSpareParts.length === 0 ? (
                   <div className="text-center py-8">
                     <Database className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                     <p className="text-slate-500 mb-4">Belum ada master spare parts</p>
@@ -1395,6 +1493,17 @@ export function BuyingSparePartIntegrated({ currentUser }) {
         ) : (
           // Master Parts List
           <div>
+            {partsLoading && (
+              <div className="bg-white border border-slate-200 rounded-lg p-4 mb-4 text-slate-700">
+                Sedang memuat master spare parts dari Garage Spare Part...
+              </div>
+            )}
+            {partsError && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4 text-amber-800 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                <span>{partsError}</span>
+              </div>
+            )}
             {filteredParts.length === 0 && masterSpareParts.length === 0 ? (
               <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
                 <Database className="w-16 h-16 text-slate-300 mx-auto mb-4" />
