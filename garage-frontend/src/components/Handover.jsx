@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Car, CheckCircle, FileText, Key, User, Phone, Mail, MapPin, Wrench, Package, Receipt, Calendar, Clock, DollarSign, CreditCard, Printer, AlertCircle, ChevronDown, ChevronUp, Search, Filter } from 'lucide-react';
 import { Button } from './ui/button';
 import { SIKKPrint } from './SIKKPrint';
-import { getStoredWorkOrders } from '../lib/workOrdersStorage';
+import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
 
 export function Handover() {
   const [workOrders, setWorkOrders] = useState([]);
@@ -115,7 +115,7 @@ export function Handover() {
       }
       return o;
     });
-    localStorage.setItem('workOrders', JSON.stringify(updatedOrders));
+    persistWorkOrders(updatedOrders);
 
     // Update order object with new print count
     const updatedOrder = updatedOrders.find(o => o.id === order.id);
@@ -144,7 +144,7 @@ export function Handover() {
           ? { ...order, status: 'completed', handoverDate: new Date().toISOString() }
           : order
       );
-      localStorage.setItem('workOrders', JSON.stringify(updatedOrders));
+      persistWorkOrders(updatedOrders);
       loadWorkOrders();
       alert('✅ Handover berhasil diselesaikan!');
     }

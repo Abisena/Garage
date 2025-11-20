@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Wrench, CheckCircle, Clock, AlertCircle, X, Eye, FileText, ClipboardCheck, Play, Check, PackageCheck, ListChecks, RotateCcw } from 'lucide-react';
 import { Button } from './ui/button';
-import { getStoredWorkOrders } from '../lib/workOrdersStorage';
+import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
 
 export function Workshop({ currentUser }) {
   const [workOrders, setWorkOrders] = useState([]);
@@ -93,9 +93,8 @@ export function Workshop({ currentUser }) {
         const updated = updatedOrders.find(o => o.id === order.id);
         return updated || order;
       });
-      localStorage.setItem('workOrders', JSON.stringify(updatedAllOrders));
+      persistWorkOrders(updatedAllOrders);
       loadWorkOrders();
-      window.dispatchEvent(new Event('storage'));
     }
   };
 
@@ -536,23 +535,23 @@ export function Workshop({ currentUser }) {
       // Only new parts (without approved flag) will need to be checked
     };
 
-    // 2. Update workOrders in localStorage
-      const allOrders = getStoredWorkOrders();
-      if (allOrders.length > 0) {
-        const updatedOrders = allOrders.map((o) =>
-          o.id === order.id ? updatedOrder : o
-        );
-        localStorage.setItem('workOrders', JSON.stringify(updatedOrders));
+    // 2. Update workOrders in localStorage and backend
+    const allOrders = getStoredWorkOrders();
+    if (allOrders.length > 0) {
+      const updatedOrders = allOrders.map((o) =>
+        o.id === order.id ? updatedOrder : o
+      );
+      persistWorkOrders(updatedOrders);
 
-        const filteredOrders = updatedOrders.filter((o) =>
-          (o.mechanicName && o.mechanicName !== '') ||
-          o.repairStatus === 'in-progress' ||
-          o.repairStatus === 'quality-check' ||
-          o.repairStatus === 'qc-finished' ||
-          o.repairStatus === 'final-inspection'
-        );
-        setWorkOrders(filteredOrders);
-      }
+      const filteredOrders = updatedOrders.filter((o) =>
+        (o.mechanicName && o.mechanicName !== '') ||
+        o.repairStatus === 'in-progress' ||
+        o.repairStatus === 'quality-check' ||
+        o.repairStatus === 'qc-finished' ||
+        o.repairStatus === 'final-inspection'
+      );
+      setWorkOrders(filteredOrders);
+    }
 
     // 3. Remove from Payment (if exists)
     const savedPayments = localStorage.getItem('payments');

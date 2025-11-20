@@ -3020,6 +3020,221 @@ def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, An
 
     return {"vehicle": vehicle, "customer": customer_doc}
 
+
+def _log_integration_snapshot(service: str, payload: Dict[str, Any], result: Dict[str, Any]) -> Optional[str]:
+    """Persist incoming portal sync payloads for auditability and reporting."""
+
+    try:
+        doc = frappe.get_doc(
+            {
+                "doctype": "Integration Request",
+                "integration_request_service": service,
+                "status": "Completed",
+                "data": frappe.as_json(payload),
+                "output": frappe.as_json(result),
+                "method": "garage.api.portal.sync_frontend_work_orders",
+            }
+        )
+        doc.insert(ignore_permissions=True)
+        return doc.name
+    except Exception:
+        frappe.log_error(
+            title="Garage Frontend Sync Log Failed",
+            message=f"Payload: {frappe.as_json(payload, indent=2)}",
+        )
+        return None
+
+
+def _map_repair_status(status: str) -> Dict[str, Optional[str]]:
+    normalized = cstr(status or "").strip().lower()
+    mapping: Dict[str, Dict[str, Optional[str]]] = {
+        "waiting-parts": {
+            "status": "Work In Progress",
+            "work_order_status": "Awaiting Parts",
+            "job_card_status": "Work In Progress",
+            "qc_status": "Pending",
+        },
+        "parts-prepared": {
+            "status": "Work In Progress",
+            "work_order_status": "Awaiting Parts",
+            "job_card_status": "Work In Progress",
+            "qc_status": "Pending",
+        },
+        "in-progress": {
+            "status": "Work In Progress",
+            "work_order_status": "In Progress",
+            "job_card_status": "Work In Progress",
+            "qc_status": "Pending",
+        },
+        "quality-check": {
+            "status": "Awaiting QC",
+            "work_order_status": "Completed",
+            "job_card_status": "Completed",
+            "qc_status": "Pending",
+        },
+        "final-inspection": {
+            "status": "Awaiting QC",
+            "work_order_status": "Completed",
+            "job_card_status": "Completed",
+            "qc_status": "Pending",
+        },
+        "qc-finished": {
+            "status": "Awaiting QC",
+            "work_order_status": "Completed",
+            "job_card_status": "Completed",
+            "qc_status": "Passed",
+        },
+        "completed": {
+            "status": "Completed",
+            "work_order_status": "Completed",
+            "job_card_status": "Completed",
+            "qc_status": "Passed",
+        },
+        "cancelled": {
+            "status": "Cancelled",
+            "work_order_status": "Cancelled",
+            "job_card_status": "Cancelled",
+            "qc_status": "Failed",
+        },
+    }
+    return mapping.get(normalized, {})
+
+
+def _map_part_status(status: str) -> Optional[str]:
+    normalized = cstr(status or "").strip().lower()
+    mapping = {
+        "requested": "Pending Check",
+        "prepared": "Available",
+        "installed": "Issued",
+        "rejected": "Rejected",
+    }
+    return mapping.get(normalized)
+
+
+def _append_progress_logs(doc: frappe.Document, history: Sequence[Mapping[str, Any]]) -> int:
+    if not history:
+        return 0
+
+    existing: Set[Tuple[str, Optional[int], str]] = set()
+    for row in getattr(doc, "progress_logs", []) or []:
+        existing.add(
+            (
+                cstr(getattr(row, "log_date", "")),
+                cint(getattr(row, "percent_complete", 0)),
+                cstr(getattr(row, "progress_notes", "")),
+            )
+        )
+
+    added = 0
+    for entry in history:
+        note = cstr(entry.get("notes") or entry.get("progressNotes") or entry.get("progress") or "")
+        percent = cint(entry.get("progress") or entry.get("repairProgress") or 0)
+        ts = entry.get("timestamp") or entry.get("date") or entry.get("time")
+
+        try:
+            log_date = getdate(ts) if ts else nowdate()
+        except Exception:
+            log_date = nowdate()
+
+        fingerprint = (cstr(log_date), percent, note)
+        if fingerprint in existing:
+            continue
+
+        doc.append(
+            "progress_logs",
+            {
+                "log_date": log_date,
+                "status": "In Progress" if percent and percent < 100 else "Completed",
+                "percent_complete": percent,
+                "progress_notes": note,
+            },
+        )
+        existing.add(fingerprint)
+        added += 1
+
+    return added
+
+
+@frappe.whitelist()
+def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, Any]:
+    """Persist portal/localStorage work order state into real Garage Service Orders.
+
+    Frontend flows still rely on localStorage for responsiveness. This endpoint
+    ingests the current snapshot and applies best-effort updates to the
+    corresponding ``Garage Service Order`` documents so the backend remains the
+    source of truth for reporting and audits.
+    """
+
+    _require_login()
+
+    orders = work_orders or []
+    if isinstance(orders, str):
+        try:
+            orders = frappe.parse_json(orders)
+        except Exception:
+            orders = []
+
+    if not isinstance(orders, (list, tuple)):
+        orders = []
+
+    results: List[Dict[str, Any]] = []
+    updated = 0
+
+    for payload in orders:
+        order = _ensure_dict(payload)
+        identifier = order.get("orderId") or order.get("id")
+        if not identifier:
+            results.append({"status": "skipped", "reason": "missing id", "payload": order})
+            continue
+
+        try:
+            doc = _get_doc("Garage Service Order", identifier)
+        except Exception:
+            results.append({"status": "missing", "order_id": identifier})
+            continue
+
+        applied: Dict[str, Any] = {}
+
+        status_updates = _map_repair_status(order.get("repairStatus") or order.get("status"))
+        for field, value in status_updates.items():
+            if value is None or not hasattr(doc, field):
+                continue
+            setattr(doc, field, value)
+            applied[field] = value
+
+        if order.get("cancelReason") and hasattr(doc, "rejection_reason"):
+            doc.rejection_reason = cstr(order.get("cancelReason"))
+            applied["rejection_reason"] = doc.rejection_reason
+
+        # Progress logs
+        history = order.get("progressHistory") or []
+        added_logs = _append_progress_logs(doc, history)
+        if added_logs:
+            applied["progress_logs_added"] = added_logs
+
+        # Spare part statuses
+        part_rows = {getattr(row, "item_code", ""): row for row in getattr(doc, "required_parts", []) or []}
+        for part in order.get("spareParts") or []:
+            part_code = cstr(part.get("partNumber") or part.get("part_code") or part.get("item_code") or "").strip()
+            if not part_code or part_code not in part_rows:
+                continue
+            mapped_status = _map_part_status(part.get("status"))
+            if mapped_status:
+                part_row = part_rows[part_code]
+                part_row.stock_status = mapped_status
+                applied.setdefault("required_parts", []).append({"item_code": part_code, "stock_status": mapped_status})
+
+        _save_doc(doc)
+        updated += 1
+        results.append({"status": "updated", "order_id": doc.name, "applied": applied})
+
+    summary = {"processed": len(orders), "updated": updated, "results": results}
+    log_name = _log_integration_snapshot("Garage Frontend Sync", {"work_orders": orders}, summary)
+    if log_name:
+        summary["integration_request"] = log_name
+
+    return summary
+
 # ============================================================================
 # SERVICE MANAGEMENT API ENDPOINTS - FIXED VERSION
 # Tambahkan code ini ke file portal.py yang sudah ada

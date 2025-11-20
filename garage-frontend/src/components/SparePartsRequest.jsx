@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Package, Search, CheckCircle, Clock, AlertCircle, Truck, Eye, FileText, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { PartsDeliveryModal } from './PartsDeliveryModal';
-import { getStoredWorkOrders } from '../lib/workOrdersStorage';
+import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
 
 export function SparePartsRequest({ currentUser }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -224,14 +224,8 @@ export function SparePartsRequest({ currentUser }) {
         }
         return wo;
       });
-      localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
-      
-      // Trigger storage event for other tabs/components
-      window.dispatchEvent(new Event('storage'));
-      
-      // Also trigger a custom event for same-tab updates
-      window.dispatchEvent(new CustomEvent('workOrdersUpdated', { detail: { updatedWorkOrders } }));
-      
+      persistWorkOrders(updatedWorkOrders);
+
       console.log('💾 WorkOrders updated and saved');
     }
 
@@ -322,7 +316,7 @@ export function SparePartsRequest({ currentUser }) {
         }
         return wo;
       });
-      localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
+      persistWorkOrders(updatedWorkOrders);
     }
 
     // Update selected request if in detail view

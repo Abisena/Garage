@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { NotaPrintA5 } from './NotaPrintA5';
 import { InvoicePrintA5 } from './InvoicePrintA5';
 import { PaymentOutPrintA5 } from './PaymentOutPrintA5';
-import { getStoredWorkOrders } from '../lib/workOrdersStorage';
+import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
 
 export function Payment({ currentUser }) {
   const [activeTab, setActiveTab] = useState('service');
@@ -110,11 +110,8 @@ export function Payment({ currentUser }) {
       const updated = updatedOrders.find(o => o.id === order.id);
       return updated || order;
     });
-    localStorage.setItem('workOrders', JSON.stringify(mergedOrders));
-    setWorkOrders(updatedOrders);
-
-    // Trigger event untuk update components lain (Workshop, etc)
-    window.dispatchEvent(new CustomEvent('workOrdersUpdated'));
+    persistWorkOrders(mergedOrders);
+    setWorkOrders(mergedOrders);
   };
 
   const formatCurrency = (amount) => {

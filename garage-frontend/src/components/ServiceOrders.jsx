@@ -3,7 +3,7 @@ import { Plus, Filter, Download, Eye, Wrench, ChevronRight, X, Save, Trash2, Pac
 import { Button } from './ui/button';
 import { SPKDocument } from './SPKDocument';
 import { frappeClient } from '../lib/frappeClient';
-import { getStoredWorkOrders } from '../lib/workOrdersStorage';
+import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
 
 export function ServiceOrders({ currentUser }) {
   const [filterStatus, setFilterStatus] = useState('all');
@@ -242,8 +242,8 @@ export function ServiceOrders({ currentUser }) {
         return wo;
       });
       
-      localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
-      setWorkOrders(updatedWorkOrders);
+        persistWorkOrders(updatedWorkOrders);
+        setWorkOrders(updatedWorkOrders);
       setSelectedWorkOrder({ ...selectedWorkOrder, mechanicName: newMechanic });
     }
   };
@@ -410,7 +410,7 @@ export function ServiceOrders({ currentUser }) {
       return wo;
     });
 
-    localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
+    persistWorkOrders(updatedWorkOrders);
     setWorkOrders(updatedWorkOrders);
     setSelectedWorkOrder({ ...selectedWorkOrder, spareParts: updatedParts });
 
@@ -479,7 +479,7 @@ export function ServiceOrders({ currentUser }) {
           return wo;
         });
 
-        localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
+        persistWorkOrders(updatedWorkOrders);
         setWorkOrders(updatedWorkOrders);
         setSelectedWorkOrder({ ...selectedWorkOrder, spareParts: updatedParts });
       }
@@ -528,7 +528,7 @@ export function ServiceOrders({ currentUser }) {
       return wo;
     });
 
-    localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
+    persistWorkOrders(updatedWorkOrders);
     setWorkOrders(updatedWorkOrders);
 
     // Update today's registrations so entries are not removed from the dashboard
@@ -604,7 +604,7 @@ export function ServiceOrders({ currentUser }) {
         return wo;
       });
       
-      localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
+      persistWorkOrders(updatedWorkOrders);
       setWorkOrders(updatedWorkOrders);
       
       // Send ONLY physical parts to Spare Parts Request queue (exclude LABOR)
@@ -713,7 +713,7 @@ export function ServiceOrders({ currentUser }) {
         return wo;
       });
       
-      localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
+      persistWorkOrders(updatedWorkOrders);
       setWorkOrders(updatedWorkOrders);
       
       alert('Spare parts saved successfully!');
