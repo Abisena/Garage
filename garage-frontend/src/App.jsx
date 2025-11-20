@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { frappeClient } from './lib/frappeClient'
 import { determinePrimaryRole, buildRoleSet, hasRoleInGroup, ROLE_GROUPS } from './lib/roleUtils'
+import { clearStoredUser, persistCurrentUser, restoreCurrentUser } from './lib/secureStorage'
 import { Login } from './components/Login'
 import { Registration } from './components/Registration'
 import { Inspection } from './components/Inspection'
@@ -19,41 +21,81 @@ import { FollowUp } from './components/FollowUp'
 import { Report } from './components/Report'
 
 const PAGE_ROLES = {
-  dashboard: ['admin', 'sparepart', 'serviceAdvisor', 'foreman', 'mechanic', 'cashier', 'receptionist'], 
-  registration: ['admin', 'serviceAdvisor', 'receptionist'], 
-  inspection: ['admin', 'foreman', 'mechanic', 'serviceAdvisor'], 
-  orders: ['admin', 'serviceAdvisor', 'foreman', 'mechanic'], 
-  inventory: ['admin', 'sparepart'], 
-  spareparts: ['admin', 'sparepart'], 
-  sparepartsrequest: ['admin', 'sparepart', 'foreman', 'mechanic'], 
-  buyingsparepart: ['admin', 'sparepart'], 
-  directsales: ['admin', 'sparepart', 'cashier', 'receptionist'], 
-  workshop: ['admin', 'foreman', 'mechanic'], 
-  paymentprocess: ['admin', 'cashier', 'receptionist', 'serviceAdvisor'], 
-  paymentlist: ['admin', 'cashier', 'receptionist', 'serviceAdvisor'], 
-  handover: ['admin', 'serviceAdvisor', 'receptionist'], 
-  followup: ['admin', 'serviceAdvisor', 'receptionist'], 
-  reports: ['admin'], 
+  dashboard: ['admin', 'sparepart', 'serviceAdvisor', 'foreman', 'mechanic', 'cashier', 'receptionist'],
+  registration: ['admin', 'serviceAdvisor', 'receptionist'],
+  inspection: ['admin', 'foreman', 'mechanic', 'serviceAdvisor'],
+  orders: ['admin', 'serviceAdvisor', 'foreman', 'mechanic'],
+  inventory: ['admin', 'sparepart'],
+  spareparts: ['admin', 'sparepart'],
+  sparepartsrequest: ['admin', 'sparepart', 'foreman', 'mechanic'],
+  buyingsparepart: ['admin', 'sparepart'],
+  directsales: ['admin', 'sparepart', 'cashier', 'receptionist'],
+  workshop: ['admin', 'foreman', 'mechanic'],
+  paymentprocess: ['admin', 'cashier', 'receptionist', 'serviceAdvisor'],
+  paymentlist: ['admin', 'cashier', 'receptionist', 'serviceAdvisor'],
+  handover: ['admin', 'serviceAdvisor', 'receptionist'],
+  followup: ['admin', 'serviceAdvisor', 'receptionist'],
+  reports: ['admin'],
+};
+
+const PAGE_PATHS = {
+  dashboard: '/dashboard',
+  registration: '/registration',
+  inspection: '/inspection',
+  orders: '/orders',
+  inventory: '/inventory',
+  spareparts: '/spare-parts',
+  sparepartsrequest: '/spare-parts/request',
+  buyingsparepart: '/spare-parts/buying',
+  directsales: '/spare-parts/direct-sales',
+  workshop: '/workshop',
+  paymentprocess: '/payment/process',
+  paymentlist: '/payment/list',
+  handover: '/handover',
+  followup: '/follow-up',
+  reports: '/reports',
+};
+
+const DEFAULT_PAGE = 'dashboard';
+const normalizePath = (path) => {
+  if (!path) return '/';
+  if (path.length > 1 && path.endsWith('/')) return path.slice(0, -1);
+  return path;
 };
 
 function App() {
-  const [currentUser, setCurrentUser] = useState(() => {
-    const savedUser = localStorage.getItem('currentUser')
-    if (!savedUser) return null
-
-    try {
-      const parsed = JSON.parse(savedUser)
-      console.log('🔄 Restored user from localStorage:', parsed)
-      return parsed
-    } catch (err) {
-      console.error('Failed to restore session:', err)
-      localStorage.removeItem('currentUser')
-      return null
-    }
-  })
-  const [currentPage, setCurrentPage] = useState('dashboard')
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [currentUser, setCurrentUser] = useState(null)
   const [availableBranches, setAvailableBranches] = useState([])
-  const [isLoadingRoles, setIsLoadingRoles] = useState(false) // ✅ NEW: Loading state
+  const [isLoadingRoles, setIsLoadingRoles] = useState(false)
+  const [isRestoringSession, setIsRestoringSession] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const hydrateSession = async () => {
+      const restored = await restoreCurrentUser()
+      if (!cancelled && restored) {
+        setCurrentUser(restored)
+      }
+      if (!cancelled) {
+        setIsRestoringSession(false)
+      }
+    }
+
+    hydrateSession()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const activePage = useMemo(() => {
+    const normalizedPath = normalizePath(location.pathname)
+    const entry = Object.entries(PAGE_PATHS).find(([, path]) => path === normalizedPath)
+    return entry ? entry[0] : DEFAULT_PAGE
+  }, [location.pathname])
 
   const hasPageAccess = (page, user) => {
     if (!user) {
@@ -165,9 +207,9 @@ function App() {
               roles: roles,
               role: determinePrimaryRole(roles, prev.username),
             }
-            
+
             console.log('✅ Updated user object:', updatedUser)
-            localStorage.setItem('currentUser', JSON.stringify(updatedUser))
+            persistCurrentUser(updatedUser)
             return updatedUser
           })
         } else {
@@ -209,7 +251,7 @@ function App() {
             setCurrentUser((prev) => {
               if (!prev) return prev
               const updatedUser = { ...prev, branch: activeBranch }
-              localStorage.setItem('currentUser', JSON.stringify(updatedUser))
+              persistCurrentUser(updatedUser)
               return updatedUser
             })
           }
@@ -256,12 +298,12 @@ function App() {
       roles: roles,
       role: determinePrimaryRole(roles, user.username),
     }
-    
+
     console.log('💾 Final user object to save:', hydratedUser)
     console.log('🔑 ========== LOGIN END ==========')
-    
+
     setCurrentUser(hydratedUser)
-    localStorage.setItem('currentUser', JSON.stringify(hydratedUser))
+    persistCurrentUser(hydratedUser)
     setIsLoadingRoles(false)
   }
 
@@ -269,7 +311,7 @@ function App() {
     setCurrentUser((prev) => {
       if (!prev) return prev
       const updatedUser = { ...prev, branch: branchName }
-      localStorage.setItem('currentUser', JSON.stringify(updatedUser))
+      persistCurrentUser(updatedUser)
       return updatedUser
     })
   }
@@ -277,7 +319,33 @@ function App() {
   const handleLogout = async () => {
     await frappeClient.logout()
     setCurrentUser(null)
-    localStorage.removeItem('currentUser')
+    clearStoredUser()
+  }
+
+  const handleNavigate = (pageId) => {
+    const targetPath = PAGE_PATHS[pageId] || PAGE_PATHS[DEFAULT_PAGE]
+    navigate(targetPath)
+  }
+
+  useEffect(() => {
+    if (!currentUser || isRestoringSession) return
+
+    const normalizedPath = normalizePath(location.pathname)
+    const knownPaths = Object.values(PAGE_PATHS)
+    if (!knownPaths.includes(normalizedPath)) {
+      navigate(PAGE_PATHS[DEFAULT_PAGE], { replace: true })
+    }
+  }, [currentUser, isRestoringSession, location.pathname, navigate])
+
+  if (isRestoringSession) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Memulihkan sesi aman...</p>
+        </div>
+      </div>
+    )
   }
 
   if (!currentUser) {
@@ -296,7 +364,7 @@ function App() {
     );
   }
 
-  const AccessDenied = () => {
+  const AccessDenied = ({ pageId }) => {
     const userRoleSet = buildRoleSet(currentUser.roles);
     const detectedRoles = [];
     
@@ -316,7 +384,7 @@ function App() {
           </div>
           <h2 className="text-2xl font-bold text-slate-800 mb-2">Access Denied</h2>
           <p className="text-slate-600 mb-4">
-            Anda tidak memiliki akses ke halaman <strong>{currentPage}</strong>
+            Anda tidak memiliki akses ke halaman <strong>{pageId}</strong>
           </p>
           <div className="bg-slate-50 rounded-lg p-4 mb-4 text-left">
             <p className="text-slate-500 text-sm mb-2">
@@ -333,7 +401,7 @@ function App() {
             </p>
           </div>
           <button
-            onClick={() => setCurrentPage('dashboard')}
+            onClick={() => handleNavigate('dashboard')}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Kembali ke Dashboard
@@ -343,12 +411,8 @@ function App() {
     );
   };
 
-  const renderPage = () => {
-    if (!hasPageAccess(currentPage, currentUser)) {
-      return <AccessDenied />;
-    }
-
-    switch (currentPage) {
+  const renderPage = (pageId) => {
+    switch (pageId) {
       case 'dashboard':
         return <Dashboard />
       case 'registration':
@@ -386,15 +450,24 @@ function App() {
 
   return (
     <Layout
-      currentPage={currentPage}
-      setCurrentPage={setCurrentPage}
+      currentPage={activePage}
+      onNavigate={handleNavigate}
       currentUser={currentUser}
       onLogout={handleLogout}
       availableBranches={availableBranches}
       onBranchChange={handleBranchChange}
-      hasPageAccess={hasPageAccess}
     >
-      {renderPage()}
+      <Routes>
+        <Route path="/" element={<Navigate to={PAGE_PATHS[DEFAULT_PAGE]} replace />} />
+        {Object.entries(PAGE_PATHS).map(([pageId, path]) => (
+          <Route
+            key={pageId}
+            path={path}
+            element={hasPageAccess(pageId, currentUser) ? renderPage(pageId) : <AccessDenied pageId={pageId} />}
+          />
+        ))}
+        <Route path="*" element={<Navigate to={PAGE_PATHS[DEFAULT_PAGE]} replace />} />
+      </Routes>
     </Layout>
   );
 }
