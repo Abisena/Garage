@@ -26,19 +26,19 @@ import {
   Receipt
 } from 'lucide-react';
 
-export function Sidebar({ currentPage, setCurrentPage, isMobileMenuOpen = false, onMobileMenuClose }) {
+export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onMobileMenuClose }) {
   const [expandedMenus, setExpandedMenus] = React.useState(['spareparts-menu', 'payment-menu']);
 
   const toggleMenu = (menuId) => {
-    setExpandedMenus(prev => 
-      prev.includes(menuId) 
+    setExpandedMenus(prev =>
+      prev.includes(menuId)
         ? prev.filter(id => id !== menuId)
         : [...prev, menuId]
     );
   };
 
   const handleMenuClick = (pageId) => {
-    setCurrentPage(pageId);
+    onNavigate(pageId);
     // Close mobile menu after selection
     if (onMobileMenuClose) {
       onMobileMenuClose();

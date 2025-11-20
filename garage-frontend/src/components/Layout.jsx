@@ -5,7 +5,7 @@ import { TopBar } from './TopBar';
 export function Layout({
   children,
   currentPage,
-  setCurrentPage,
+  onNavigate,
   currentUser,
   onLogout,
   availableBranches = [],
@@ -50,8 +50,8 @@ export function Layout({
         <Sidebar
           currentUser={currentUser}
           currentPage={currentPage}
-          setCurrentPage={(page) => {
-            setCurrentPage(page);
+          onNavigate={(page) => {
+            onNavigate(page);
             if (typeof window !== 'undefined' && window.innerWidth < 1024) {
               closeSidebar();
             }
