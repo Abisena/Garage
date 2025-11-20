@@ -260,20 +260,22 @@ export function ServiceOrders({ currentUser }) {
 
   const handleMechanicChange = (newMechanic) => {
     setMechanicName(newMechanic);
-    
-    // Auto-save to localStorage
-    if (selectedWorkOrder) {
-      const updatedWorkOrders = workOrders.map(wo => {
-        if (wo.id === selectedWorkOrder.id) {
-          return { ...wo, mechanicName: newMechanic };
-        }
-        return wo;
-      });
-      
-        persistWorkOrders(updatedWorkOrders);
-        setWorkOrders(updatedWorkOrders);
-      setSelectedWorkOrder({ ...selectedWorkOrder, mechanicName: newMechanic });
-    }
+
+    if (!selectedWorkOrder) return;
+
+    const updatedOrder = {
+      ...selectedWorkOrder,
+      mechanicName: newMechanic,
+      branch: selectedWorkOrder.branch // keep original branch untouched
+    };
+
+    const updatedWorkOrders = workOrders.map(wo =>
+      wo.id === selectedWorkOrder.id ? updatedOrder : wo
+    );
+
+    persistWorkOrders(updatedWorkOrders);
+    setWorkOrders(updatedWorkOrders);
+    setSelectedWorkOrder(updatedOrder);
   };
 
   const handleServiceBundleChange = (value) => {
@@ -938,36 +940,40 @@ export function ServiceOrders({ currentUser }) {
                   </div>
                 )}
               </div>
-              <div className="col-span-3">
-                <p className="text-slate-600 text-xs mb-1">Service Package</p>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={selectedWorkOrder.serviceBundleId || selectedWorkOrder.serviceBundle || selectedWorkOrder.serviceBundleName || ''}
-                    onChange={(e) => handleServiceBundleChange(e.target.value)}
-                    className="flex-1 px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                  >
-                    <option value="">{serviceBundles.length > 0 ? 'Select service package' : 'No service packages available'}</option>
-                    {serviceBundles.map((bundle) => (
-                      <option key={bundle.id || bundle.name} value={bundle.id || bundle.name}>
-                        {bundle.bundle_name || bundle.name}
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    onClick={handleAddPackageParts}
-                    disabled={!resolvedBundle || hasPackageParts()}
-                    className="bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1.5 h-auto disabled:bg-slate-300 disabled:cursor-not-allowed"
-                  >
-                    <Package className="w-3 h-3 mr-1" />
-                    Add Part & Package
-                  </Button>
-                </div>
-                <p className="text-xs text-slate-600 mt-1">
-                  {resolvedBundle
-                    ? 'Klik tombol untuk menarik sparepart & labor dari paket.'
-                    : 'Pilih paket service untuk mengisi sparepart otomatis.'}
-                </p>
-              </div>
+              {(() => {
+                const bundleDisplayName =
+                  resolvedBundle?.bundle_name ||
+                  resolvedBundle?.name ||
+                  selectedWorkOrder.serviceBundleName ||
+                  selectedWorkOrder.serviceBundleId ||
+                  selectedWorkOrder.serviceBundle;
+
+                if (!bundleDisplayName) return null;
+
+                return (
+                  <div className="col-span-3">
+                    <p className="text-slate-600 text-xs mb-1">Service Package</p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded bg-slate-50 text-slate-800">
+                        {bundleDisplayName}
+                      </div>
+                      <Button
+                        onClick={handleAddPackageParts}
+                        disabled={!resolvedBundle || hasPackageParts()}
+                        className="bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1.5 h-auto disabled:bg-slate-300 disabled:cursor-not-allowed"
+                      >
+                        <Package className="w-3 h-3 mr-1" />
+                        Add Part & Package
+                      </Button>
+                    </div>
+                    {resolvedBundle && (
+                      <p className="text-xs text-slate-600 mt-1">
+                        Klik tombol untuk menarik sparepart & labor dari paket.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
               <div className="col-span-3">
                 <p className="text-slate-600 text-xs mb-1">Diagnosis</p>
                 <p className="text-slate-900 text-sm">{selectedWorkOrder.diagnosis}</p>
