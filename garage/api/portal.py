@@ -1179,11 +1179,68 @@ def _item_stock_map(item_codes: Sequence[str]) -> Dict[str, Dict[str, float]]:
     }
 
 
+@lru_cache(maxsize=None)
+def _default_selling_price_list() -> Optional[str]:
+    try:
+        price_list = cstr(
+            frappe.db.get_single_value("Selling Settings", "selling_price_list")
+            or frappe.db.get_default("selling_price_list")
+            or ""
+        ).strip()
+    except Exception:
+        return None
+    return price_list or None
+
+
+def _item_price_map(
+    item_codes: Sequence[str], price_list: Optional[str] = None
+) -> Dict[str, float]:
+    codes = [cstr(code or "").strip() for code in (item_codes or []) if code]
+    if not codes:
+        return {}
+
+    active_price_list = cstr(price_list or _default_selling_price_list() or "").strip()
+    if not active_price_list:
+        return {}
+
+    try:
+        with _ignoring_permissions():
+            rows = frappe.db.get_all(
+                "Item Price",
+                fields=["item_code", "price_list_rate"],
+                filters={
+                    "item_code": ["in", codes],
+                    "price_list": active_price_list,
+                    "selling": 1,
+                },
+                order_by="modified desc",
+                limit=max(len(codes) * 2, 20),
+            )
+    except Exception:
+        return {}
+
+    prices: Dict[str, float] = {}
+    for row in rows:
+        code = cstr(row.get("item_code") or "").strip()
+        if not code or code in prices:
+            continue
+        prices[code] = flt(row.get("price_list_rate") or 0)
+    return prices
+
+
 def _item_to_spare_part_record(
-    item: Mapping[str, Any], stock_map: Mapping[str, Mapping[str, float]]
+    item: Mapping[str, Any],
+    stock_map: Mapping[str, Mapping[str, float]],
+    price_map: Optional[Mapping[str, float]] = None,
 ) -> Dict[str, Any]:
     part_code = cstr(item.get("item_code") or item.get("name") or "").strip()
     stock_info = stock_map.get(part_code) or {}
+
+    price = 0
+    if price_map:
+        price = flt(price_map.get(part_code) or 0)
+    if not price:
+        price = flt(item.get("standard_rate") or item.get("last_purchase_rate") or 0)
 
     return {
         "name": item.get("name"),
@@ -1193,9 +1250,7 @@ def _item_to_spare_part_record(
         "category": item.get("item_group"),
         "brand": item.get("brand"),
         "uom": item.get("stock_uom"),
-        "unit_price": flt(
-            item.get("standard_rate") or item.get("last_purchase_rate") or 0
-        ),
+        "unit_price": price,
         "stock_qty": flt(stock_info.get("stock_qty", 0)),
         "reserved_qty": flt(stock_info.get("reserved_qty", 0)),
         "reorder_level": flt(item.get("safety_stock") or 0),
@@ -1246,9 +1301,13 @@ def _fetch_item_spare_parts(
         filters.append(["item_code", "=", data.get("item_code")])
 
     items = _list_dicts("Item", item_fields, filters=filters, limit=limit)
-    stock_map = _item_stock_map([item.get("item_code") for item in items])
+    item_codes = [item.get("item_code") for item in items]
+    stock_map = _item_stock_map(item_codes)
+    price_map = _item_price_map(item_codes)
 
-    return [_item_to_spare_part_record(item, stock_map) for item in items]
+    return [
+        _item_to_spare_part_record(item, stock_map, price_map=price_map) for item in items
+    ]
 
     source = "On Hand"
     if usage == "material" and not warehouse:
