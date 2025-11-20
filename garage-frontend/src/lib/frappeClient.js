@@ -197,6 +197,23 @@ class FrappeClient {
       throw error;
     }
   }
+
+  async syncWorkOrders(workOrders) {
+    try {
+      const response = await this.request(
+        '/api/method/garage.api.portal.sync_frontend_work_orders',
+        {
+          method: 'POST',
+          body: JSON.stringify({ work_orders: workOrders })
+        }
+      );
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to sync work orders to Frappe:', error);
+      throw error;
+    }
+  }
 }
 
 export const frappeClient = new FrappeClient();

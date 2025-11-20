@@ -1,3 +1,5 @@
+import { frappeClient } from './frappeClient';
+
 const hasStorage = () => typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 
 const notifyWorkOrdersChange = () => {
@@ -46,5 +48,24 @@ export const getStoredWorkOrders = () => {
 export const purgeDemoWorkOrders = () => {
   if (!hasStorage()) return [];
   const sanitized = getStoredWorkOrders();
+  return sanitized;
+};
+
+export const persistWorkOrders = async (orders, { skipSync = false } = {}) => {
+  const sanitized = sanitizeWorkOrders(orders);
+
+  if (hasStorage()) {
+    window.localStorage.setItem('workOrders', JSON.stringify(sanitized));
+    notifyWorkOrdersChange();
+  }
+
+  if (!skipSync && sanitized.length > 0) {
+    try {
+      await frappeClient.syncWorkOrders(sanitized);
+    } catch (error) {
+      console.error('Unable to sync work orders to Frappe backend:', error);
+    }
+  }
+
   return sanitized;
 };
