@@ -2593,30 +2593,7 @@ def portal_bootstrap(
         date_range=date_range,
         date_field="order_date",
     )
-    spare_parts = _list_dicts(
-        "Garage Spare Part",
-        [
-            "name",
-            "part_code",
-            "part_name",
-            "description",
-            "category",
-            "brand",
-            "uom",
-            "unit_price",
-            "stock_qty",
-            "reserved_qty",
-            "reorder_level",
-            "warehouse_location",
-            "managed_by",
-            "status",
-            "last_restocked_on",
-            "image",
-            "notes",
-        ],
-        limit=200,
-        branch=branch_filter,
-    )
+    spare_parts = _fetch_item_spare_parts({}, limit=200)
     spare_part_requests = _list_dicts(
         "Garage Service Order Part",
         [
@@ -4423,29 +4400,7 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
 
     # ========== CRITICAL: GET AVAILABLE SPARE PARTS ==========
     # This is needed for the dropdown in inspection page
-    result["available_spare_parts"] = _list_dicts(
-        "Garage Spare Part",
-        [
-            "name",
-            "part_code",
-            "part_name",
-            "category",
-            "brand",
-            "uom",
-            "unit_price",
-            "stock_qty",
-            "reserved_qty",
-            "reorder_level",
-            "warehouse_location",
-            "managed_by",
-            "status",
-            "last_restocked_on",
-            "image",
-            "notes",
-        ],
-        filters=[["status", "=", "Active"]],
-        limit=200,
-    )
+    result["available_spare_parts"] = _fetch_item_spare_parts({}, limit=200)
     # =========================================================
 
     result["available_technicians"] = _get_technician_roster(
