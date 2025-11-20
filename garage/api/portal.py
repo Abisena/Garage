@@ -4340,6 +4340,55 @@ def move_to_in_progress(order_id: str) -> Dict[str, Any]:
 
 
 @frappe.whitelist()
+def cancel_service_order(order_id: str, reason: Optional[str] = None) -> Dict[str, Any]:
+    """Cancel a service order without deleting any linked data.
+
+    Updates the service order status to Cancelled, stores the provided reason,
+    and records the action as a comment so it remains visible in the desk.
+    """
+
+    _require_login()
+
+    if not order_id:
+        frappe.throw(_("Service Order ID diperlukan."))
+
+    doc = _get_doc("Garage Service Order", order_id)
+
+    # If already cancelled, return current state to avoid duplicate writes
+    if cstr(doc.status) == "Cancelled":
+        return {
+            "name": doc.name,
+            "status": doc.status,
+            "cancellation_reason": getattr(doc, "rejection_reason", ""),
+            "message": _("Service order sudah dibatalkan."),
+        }
+
+    doc.status = "Cancelled"
+
+    if hasattr(doc, "job_card_status"):
+        doc.job_card_status = "Cancelled"
+
+    # Store the reason in an existing text field so it is visible on the desk
+    if hasattr(doc, "rejection_reason"):
+        doc.rejection_reason = reason or ""
+
+    _save_doc(doc)
+
+    if reason:
+        try:
+            doc.add_comment("Comment", _("Cancellation reason: {0}").format(reason))
+        except Exception:
+            frappe.log_error(f"Failed to add cancellation comment for {doc.name}")
+
+    return {
+        "name": doc.name,
+        "status": doc.status,
+        "cancellation_reason": getattr(doc, "rejection_reason", ""),
+        "message": _("Service order berhasil dibatalkan."),
+    }
+
+
+@frappe.whitelist()
 def complete_service_order(order_id: str, completion_data: Optional[Any] = None) -> Dict[str, Any]:
     """Mark service order as completed."""
     
