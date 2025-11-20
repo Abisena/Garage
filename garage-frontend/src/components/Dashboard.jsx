@@ -16,77 +16,140 @@ import {
 } from 'lucide-react';
 import { Card } from './ui/card';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getStoredWorkOrders } from '../lib/workOrdersStorage';
+import { frappeClient } from '../lib/frappeClient';
 
 export function Dashboard() {
   const [orders, setOrders] = useState([]);
   const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const [branches, setBranches] = useState([]);
+  const [branchMetrics, setBranchMetrics] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadOrders = async () => {
+      setIsLoading(true);
+      setError('');
+      try {
+        const bootstrap = await frappeClient.getPortalBootstrap();
+        let availableBranches = Array.isArray(bootstrap?.branches) ? bootstrap.branches : [];
+
+        if (availableBranches.length === 0 && bootstrap) {
+          availableBranches = [{ name: bootstrap?.active_branch || 'Default Branch', branch_name: bootstrap?.active_branch }];
+        }
+
+        const branchResults = [];
+
+        for (const branch of availableBranches) {
+          const branchName = branch?.name || branch?.branch_name;
+          if (!branchName) continue;
+
+          const branchData = await frappeClient.getPortalBootstrap({ branch: branchName });
+          branchResults.push({ branch, data: branchData });
+        }
+
+        const allOrders = branchResults.flatMap((result) =>
+          Array.isArray(result.data?.service_orders) ? result.data.service_orders : []
+        );
+
+        const metrics = branchResults
+          .map(({ branch, data }) => {
+            const branchName = branch?.name || branch?.branch_name;
+            const displayName = branch?.branch_name || branchName || 'Unknown Branch';
+            const branchOrders = Array.isArray(data?.service_orders) ? data.service_orders : [];
+            const payments = Array.isArray(data?.payment_entries) ? data.payment_entries : [];
+            const completed = branchOrders.filter((o) => (o.status || '').toLowerCase() === 'completed').length;
+            const active = branchOrders.filter((o) => !['completed', 'cancelled'].includes((o.status || '').toLowerCase())).length;
+            const revenueFromTotals = data?.totals?.payments_total;
+            const revenueFromPayments = payments.reduce(
+              (sum, entry) => sum + (Number(entry?.paid_amount) || 0),
+              0
+            );
+            const revenue = typeof revenueFromTotals === 'number' ? revenueFromTotals : revenueFromPayments;
+
+            return {
+              key: branchName || displayName,
+              name: branchName || displayName,
+              displayName,
+              orders: branchOrders.length,
+              payments: payments.length,
+              completed,
+              active,
+              revenue,
+            };
+          })
+          .filter((item) => item.name);
+
+        if (!cancelled) {
+          setBranches(availableBranches);
+          setOrders(allOrders);
+          setBranchMetrics(metrics);
+        }
+      } catch (err) {
+        console.error('Failed to load dashboard data', err);
+        if (!cancelled) {
+          setError('Gagal memuat data dashboard.');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
     loadOrders();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const loadOrders = () => {
-    const sanitizedOrders = getStoredWorkOrders();
-    setOrders(sanitizedOrders);
-  };
-
-  // Calculate metrics
-  const calculateGrandTotal = (order) => {
-    const partsTotal = order.spareParts?.reduce((sum, part) => sum + (part.price * part.quantity), 0) || 0;
-    const labor = order.laborCost || 0;
-    return partsTotal + labor;
-  };
-
-  const getBranchMetrics = (branch) => {
-    const branchOrders = orders.filter(o => o.branch === branch);
-    const completed = branchOrders.filter(o => o.status === 'completed').length;
-    const active = branchOrders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length;
-    const revenue = branchOrders
-      .filter(o => o.paymentStatus === 'paid')
-      .reduce((sum, o) => sum + calculateGrandTotal(o), 0);
-    
-    return { total: branchOrders.length, completed, active, revenue };
-  };
-
-  const branches = ['Jakarta', 'Bandung', 'Surabaya'];
   const branchColors = {
     Jakarta: { primary: '#3b82f6', light: '#dbeafe', gradient: 'from-blue-500 to-blue-600' },
     Bandung: { primary: '#10b981', light: '#d1fae5', gradient: 'from-emerald-500 to-emerald-600' },
     Surabaya: { primary: '#f59e0b', light: '#fef3c7', gradient: 'from-amber-500 to-amber-600' }
   };
 
+  const fallbackThemes = [
+    { primary: '#0ea5e9', light: '#e0f2fe', gradient: 'from-sky-500 to-blue-600' },
+    { primary: '#22c55e', light: '#dcfce7', gradient: 'from-emerald-500 to-green-600' },
+    { primary: '#a855f7', light: '#f3e8ff', gradient: 'from-purple-500 to-violet-600' },
+    { primary: '#f97316', light: '#ffedd5', gradient: 'from-orange-500 to-amber-600' },
+  ];
+
+  const getBranchTheme = (branchName, index) => {
+    return branchColors[branchName] || fallbackThemes[index % fallbackThemes.length];
+  };
+
   // Overall metrics
-  const totalRevenue = orders
-    .filter(o => o.paymentStatus === 'paid')
-    .reduce((sum, o) => sum + calculateGrandTotal(o), 0);
+  const totalRevenue = branchMetrics.reduce((sum, branch) => sum + (Number(branch.revenue) || 0), 0);
   const totalOrders = orders.length;
-  const completedOrders = orders.filter(o => o.status === 'completed').length;
-  const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length;
+  const paidOrderCount = branchMetrics.reduce((sum, branch) => sum + (Number(branch.payments) || 0), 0);
+  const completedOrders = orders.filter(o => (o.status || '').toLowerCase() === 'completed').length;
+  const activeOrders = orders.filter(o => !['completed', 'cancelled'].includes((o.status || '').toLowerCase())).length;
 
   // Branch comparison data for charts
-  const branchData = branches.map(branch => {
-    const metrics = getBranchMetrics(branch);
-    return {
-      name: branch,
-      revenue: metrics.revenue,
-      orders: metrics.total,
-      completed: metrics.completed,
-      active: metrics.active
-    };
-  });
+  const branchData = branchMetrics.map(branch => ({
+    name: branch.displayName,
+    revenue: branch.revenue,
+    orders: branch.orders,
+    completed: branch.completed,
+    active: branch.active
+  }));
 
   // Status distribution
   const statusData = [
-    { name: 'Registration', value: orders.filter(o => o.status === 'registration').length, color: '#3b82f6' },
-    { name: 'Inspection', value: orders.filter(o => o.status === 'inspection').length, color: '#8b5cf6' },
-    { name: 'Estimation', value: orders.filter(o => o.status === 'estimation').length, color: '#ec4899' },
-    { name: 'Approval', value: orders.filter(o => o.status === 'approval').length, color: '#f59e0b' },
-    { name: 'Repair', value: orders.filter(o => o.status === 'repair').length, color: '#10b981' },
-    { name: 'Quality Check', value: orders.filter(o => o.status === 'quality-check').length, color: '#06b6d4' },
-    { name: 'Payment', value: orders.filter(o => o.status === 'payment').length, color: '#f97316' },
-    { name: 'Handover', value: orders.filter(o => o.status === 'handover').length, color: '#14b8a6' },
-    { name: 'Completed', value: orders.filter(o => o.status === 'completed').length, color: '#22c55e' },
+    { name: 'Draft', value: orders.filter(o => (o.status || '').toLowerCase() === 'draft').length, color: '#3b82f6' },
+    { name: 'Inspection', value: orders.filter(o => (o.status || '').toLowerCase() === 'inspection').length, color: '#8b5cf6' },
+    { name: 'Estimate', value: orders.filter(o => (o.status || '').toLowerCase() === 'estimate').length, color: '#ec4899' },
+    { name: 'Awaiting Approval', value: orders.filter(o => (o.status || '').toLowerCase() === 'awaiting approval').length, color: '#f59e0b' },
+    { name: 'Approved', value: orders.filter(o => (o.status || '').toLowerCase() === 'approved').length, color: '#10b981' },
+    { name: 'Work In Progress', value: orders.filter(o => (o.status || '').toLowerCase() === 'work in progress').length, color: '#06b6d4' },
+    { name: 'Awaiting QC', value: orders.filter(o => (o.status || '').toLowerCase() === 'awaiting qc').length, color: '#0ea5e9' },
+    { name: 'Quality Check', value: orders.filter(o => (o.status || '').toLowerCase() === 'quality check').length, color: '#14b8a6' },
+    { name: 'Completed', value: orders.filter(o => (o.status || '').toLowerCase() === 'completed').length, color: '#22c55e' },
   ].filter(item => item.value > 0);
 
   const formatCurrency = (amount) => {
@@ -108,7 +171,19 @@ export function Dashboard() {
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
       <div className="max-w-[1600px] mx-auto space-y-8">
-        
+
+        {isLoading && (
+          <div className="p-4 bg-blue-50 border border-blue-100 text-blue-800 rounded-xl text-sm">
+            Memuat data dashboard realtime...
+          </div>
+        )}
+
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm">
+            {error}
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -160,7 +235,7 @@ export function Dashboard() {
                 </div>
                 <p className="text-white/70 text-sm mb-1">Total Revenue</p>
                 <p className="text-3xl mb-2" style={{ fontWeight: 700 }}>{formatCompactCurrency(totalRevenue)}</p>
-                <p className="text-white/60 text-xs">From {orders.filter(o => o.paymentStatus === 'paid').length} paid orders</p>
+                <p className="text-white/60 text-xs">From {paidOrderCount} paid orders</p>
               </div>
             </Card>
 
@@ -211,12 +286,16 @@ export function Dashboard() {
                   </div>
                   <div className="flex items-center gap-1 text-xs bg-emerald-400 text-white px-2.5 py-1 rounded-full">
                     <Activity className="w-3.5 h-3.5" />
-                    <span>All Active</span>
+                    <span>Realtime</span>
                   </div>
                 </div>
                 <p className="text-white/70 text-sm mb-1">Active Branches</p>
-                <p className="text-3xl mb-2" style={{ fontWeight: 700 }}>3 / 3</p>
-                <p className="text-white/60 text-xs">JKT · BDG · SBY</p>
+                <p className="text-3xl mb-2" style={{ fontWeight: 700 }}>
+                  {branchMetrics.length} / {branches.length || branchMetrics.length || 0}
+                </p>
+                <p className="text-white/60 text-xs">
+                  {branchMetrics.length > 0 ? branchMetrics.map(b => b.displayName).join(' · ') : 'No branch data'}
+                </p>
               </div>
             </Card>
           </div>
@@ -233,12 +312,11 @@ export function Dashboard() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {branches.map(branch => {
-              const metrics = getBranchMetrics(branch);
-              const colors = branchColors[branch];
-              
+            {branchMetrics.map((branch, index) => {
+              const colors = getBranchTheme(branch.name, index);
+
               return (
-                <Card key={branch} className="overflow-hidden border border-slate-200 shadow-md hover:shadow-lg transition-all">
+                <Card key={branch.key} className="overflow-hidden border border-slate-200 shadow-md hover:shadow-lg transition-all">
                   {/* Header */}
                   <div className={`bg-gradient-to-r ${colors.gradient} text-white p-5`}>
                     <div className="flex items-center justify-between mb-3">
@@ -247,7 +325,7 @@ export function Dashboard() {
                           <Building2 className="w-5 h-5" />
                         </div>
                         <div>
-                          <h3 className="text-lg" style={{ fontWeight: 600 }}>{branch}</h3>
+                          <h3 className="text-lg" style={{ fontWeight: 600 }}>{branch.displayName}</h3>
                           <p className="text-white/70 text-xs">Branch Office</p>
                         </div>
                       </div>
@@ -255,41 +333,41 @@ export function Dashboard() {
                     <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
                       <p className="text-white/70 text-xs mb-1">Total Revenue</p>
                       <p className="text-2xl" style={{ fontWeight: 700 }}>
-                        {formatCompactCurrency(metrics.revenue)}
+                        {formatCompactCurrency(branch.revenue)}
                       </p>
                     </div>
                   </div>
-                  
+
                   {/* Body */}
                   <div className="p-5 bg-white">
                     {/* Metrics Grid */}
                     <div className="grid grid-cols-3 gap-4 mb-4">
                       <div className="text-center">
                         <p className="text-slate-500 text-xs mb-1.5">Total Orders</p>
-                        <p className="text-slate-900 text-2xl" style={{ fontWeight: 700 }}>{metrics.total}</p>
+                        <p className="text-slate-900 text-2xl" style={{ fontWeight: 700 }}>{branch.orders}</p>
                       </div>
                       <div className="text-center">
                         <p className="text-slate-500 text-xs mb-1.5">Active</p>
-                        <p className="text-blue-600 text-2xl" style={{ fontWeight: 700 }}>{metrics.active}</p>
+                        <p className="text-blue-600 text-2xl" style={{ fontWeight: 700 }}>{branch.active}</p>
                       </div>
                       <div className="text-center">
                         <p className="text-slate-500 text-xs mb-1.5">Completed</p>
-                        <p className="text-emerald-600 text-2xl" style={{ fontWeight: 700 }}>{metrics.completed}</p>
+                        <p className="text-emerald-600 text-2xl" style={{ fontWeight: 700 }}>{branch.completed}</p>
                       </div>
                     </div>
-                    
+
                     {/* Progress Section */}
                     <div className="pt-4 border-t border-slate-100">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-slate-600 text-sm">Completion Progress</span>
                         <span className="text-slate-900 text-sm" style={{ fontWeight: 600 }}>
-                          {metrics.total > 0 ? Math.round((metrics.completed / metrics.total) * 100) : 0}%
+                          {branch.orders > 0 ? Math.round((branch.completed / branch.orders) * 100) : 0}%
                         </span>
                       </div>
                       <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                        <div 
+                        <div
                           className={`h-full bg-gradient-to-r ${colors.gradient} transition-all duration-500`}
-                          style={{ width: `${metrics.total > 0 ? (metrics.completed / metrics.total) * 100 : 0}%` }}
+                          style={{ width: `${branch.orders > 0 ? (branch.completed / branch.orders) * 100 : 0}%` }}
                         />
                       </div>
                     </div>
@@ -479,7 +557,7 @@ export function Dashboard() {
                 <div>
                   <p className="text-slate-500 text-sm mb-2">Pending Approvals</p>
                   <p className="text-slate-900 text-2xl mb-1" style={{ fontWeight: 700 }}>
-                    {orders.filter(o => o.status === 'approval').length}
+                    {orders.filter(o => (o.status || '').toLowerCase() === 'awaiting approval').length}
                   </p>
                   <p className="text-slate-500 text-xs">Awaiting decision</p>
                 </div>
@@ -494,7 +572,7 @@ export function Dashboard() {
                 <div>
                   <p className="text-slate-500 text-sm mb-2">In Progress</p>
                   <p className="text-slate-900 text-2xl mb-1" style={{ fontWeight: 700 }}>
-                    {orders.filter(o => o.status === 'repair').length}
+                    {orders.filter(o => (o.status || '').toLowerCase() === 'work in progress').length}
                   </p>
                   <p className="text-slate-500 text-xs">Active repairs</p>
                 </div>
@@ -509,7 +587,7 @@ export function Dashboard() {
                 <div>
                   <p className="text-slate-500 text-sm mb-2">Needs Attention</p>
                   <p className="text-slate-900 text-2xl mb-1" style={{ fontWeight: 700 }}>
-                    {orders.filter(o => o.status === 'quality-check' || o.status === 'inspection').length}
+                    {orders.filter(o => ['quality check', 'inspection', 'awaiting qc'].includes((o.status || '').toLowerCase())).length}
                   </p>
                   <p className="text-slate-500 text-xs">QC & Inspection</p>
                 </div>
