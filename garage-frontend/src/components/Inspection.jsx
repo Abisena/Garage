@@ -152,6 +152,8 @@ export function Inspection() {
       engineNumber: selectedVehicle.engineNumber,
       vehicleType: selectedVehicle.vehicleType,
       serviceType: selectedVehicle.serviceType,
+      serviceBundleId: selectedVehicle.serviceBundleId || selectedVehicle.serviceBundle,
+      serviceBundleName: selectedVehicle.serviceBundleName,
       customerComplaint: selectedVehicle.customerComplaint,
       diagnosis: inspectionData.diagnosis,
       estimatedRepairTime: inspectionData.estimatedRepairTime,
