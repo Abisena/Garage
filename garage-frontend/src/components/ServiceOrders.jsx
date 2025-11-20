@@ -276,6 +276,38 @@ export function ServiceOrders({ currentUser }) {
     }
   };
 
+  const handleServiceBundleChange = (value) => {
+    if (!selectedWorkOrder) return;
+
+    const matchedBundle = serviceBundles.find((bundle) =>
+      bundle.id === value ||
+      bundle.name === value ||
+      (bundle.bundle_name && bundle.bundle_name === value)
+    );
+
+    const bundleId = matchedBundle?.id || value || '';
+    const bundleName = matchedBundle?.bundle_name || matchedBundle?.name || '';
+
+    const updatedWorkOrders = workOrders.map((wo) => {
+      if (wo.id === selectedWorkOrder.id) {
+        return {
+          ...wo,
+          serviceBundleId: bundleId,
+          serviceBundleName: bundleName
+        };
+      }
+      return wo;
+    });
+
+    persistWorkOrders(updatedWorkOrders);
+    setWorkOrders(updatedWorkOrders);
+    setSelectedWorkOrder({
+      ...selectedWorkOrder,
+      serviceBundleId: bundleId,
+      serviceBundleName: bundleName
+    });
+  };
+
   const handleBackToList = () => {
     setSelectedWorkOrder(null);
     setSpareParts([]);
@@ -784,8 +816,8 @@ export function ServiceOrders({ currentUser }) {
     }
   };
 
-  const filteredOrders = filterStatus === 'all' 
-    ? workOrders 
+  const filteredOrders = filterStatus === 'all'
+    ? workOrders
     : workOrders.filter(order => {
         const statusInfo = getStatusInfo(order.repairStatus);
         return statusInfo.label.toLowerCase().includes(filterStatus.toLowerCase());
@@ -799,6 +831,8 @@ export function ServiceOrders({ currentUser }) {
 
   // Spare Parts Input View
   if (selectedWorkOrder) {
+    const resolvedBundle = resolveServiceBundle();
+
     return (
       <div className="p-8">
         <div className="max-w-7xl mx-auto space-y-6">
@@ -896,19 +930,43 @@ export function ServiceOrders({ currentUser }) {
               </div>
               <div className="col-span-2">
                 <p className="text-slate-600 text-xs mb-1">Service Type</p>
+                <p className="text-slate-900 flex-1">{selectedWorkOrder.serviceType}</p>
+                {resolvedBundle && (
+                  <div className="mt-2 inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg px-3 py-2 text-xs">
+                    <Package className="w-3 h-3" />
+                    <span>Paket Service: {resolvedBundle.bundle_name || resolvedBundle.name}</span>
+                  </div>
+                )}
+              </div>
+              <div className="col-span-3">
+                <p className="text-slate-600 text-xs mb-1">Service Package</p>
                 <div className="flex items-center gap-2">
-                  <p className="text-slate-900 flex-1">{selectedWorkOrder.serviceType}</p>
-                  {selectedWorkOrder.serviceType.startsWith('Paket Service') && (
-                    <Button
-                      onClick={handleAddPackageParts}
-                      disabled={hasPackageParts()}
-                      className="bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1.5 h-auto disabled:bg-slate-300 disabled:cursor-not-allowed"
-                    >
-                      <Package className="w-3 h-3 mr-1" />
-                      Add Part & Package
-                    </Button>
-                  )}
+                  <select
+                    value={selectedWorkOrder.serviceBundleId || selectedWorkOrder.serviceBundle || selectedWorkOrder.serviceBundleName || ''}
+                    onChange={(e) => handleServiceBundleChange(e.target.value)}
+                    className="flex-1 px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="">{serviceBundles.length > 0 ? 'Select service package' : 'No service packages available'}</option>
+                    {serviceBundles.map((bundle) => (
+                      <option key={bundle.id || bundle.name} value={bundle.id || bundle.name}>
+                        {bundle.bundle_name || bundle.name}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    onClick={handleAddPackageParts}
+                    disabled={!resolvedBundle || hasPackageParts()}
+                    className="bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1.5 h-auto disabled:bg-slate-300 disabled:cursor-not-allowed"
+                  >
+                    <Package className="w-3 h-3 mr-1" />
+                    Add Part & Package
+                  </Button>
                 </div>
+                <p className="text-xs text-slate-600 mt-1">
+                  {resolvedBundle
+                    ? 'Klik tombol untuk menarik sparepart & labor dari paket.'
+                    : 'Pilih paket service untuk mengisi sparepart otomatis.'}
+                </p>
               </div>
               <div className="col-span-3">
                 <p className="text-slate-600 text-xs mb-1">Diagnosis</p>
