@@ -5157,6 +5157,7 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
             service_payload["total_estimated_amount"] = amount_value
 
         bundle_name = (data.get("service_bundle") or "").strip()
+        bundle_label = None
         if bundle_name:
             required_parts: List[Dict[str, Any]] = []
             bundle_label = bundle_name
@@ -5189,6 +5190,10 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
 
             if bundle_label:
                 service_payload["service_bundle_name"] = bundle_label
+
+        if not service_payload.get("service_order_type"):
+            fallback_service = bundle_label if bundle_name else None
+            service_payload["service_order_type"] = fallback_service or "Service/Repair"
 
         service_doc = _insert_document("Garage Service Order", service_payload)
         created["service_order"] = service_doc.name
@@ -5632,9 +5637,12 @@ def create_service_intake(data):
         if not license_plate:
             frappe.throw(_("License plate is required"))
 
-        service_order_type = data.get('service_order_type')
-        if not service_order_type:
-            frappe.throw(_("Service order type is required"))
+        service_order_type = cstr(data.get('service_order_type') or '').strip()
+        service_bundle_id = cstr(data.get('service_bundle') or '').strip()
+        if not service_order_type and not service_bundle_id:
+            frappe.throw(_("Service is required"))
+        if not service_order_type and service_bundle_id:
+            service_order_type = service_bundle_id
         
         # 1. Handle Customer (existing atau baru)
         customer_name = None
@@ -5759,7 +5767,7 @@ def create_service_intake(data):
             frappe.db.commit()
         
         # 2.5. Load bundle parts jika ada
-        service_bundle_id = data.get('service_bundle')
+        service_bundle_id = service_bundle_id or data.get('service_bundle')
         bundle_parts = []
         bundle_stages = []
         

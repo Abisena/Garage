@@ -72,10 +72,8 @@
     },
     {
       "fieldname": "service_order_type",
-      "fieldtype": "Select",
-      "label": "Service Type",
-      "options": "Service/Repair\nInspection\nWarranty\nInsurance Claim",
-      "default": "Service/Repair",
+      "fieldtype": "Data",
+      "label": "Service",
       "reqd": 1
     },
     {

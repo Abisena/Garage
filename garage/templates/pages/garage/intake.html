@@ -2183,14 +2183,23 @@ button:disabled {
                                 </div>
 
                                 <div class="form-field">
-                                    <label for="service_order_type">Jenis Service</label>
-                                    <select id="service_order_type" name="service_order_type" required>
-                                        <option value="">— Pilih Jenis Service —</option>
-                                        <option value="Service/Repair">Service/Repair</option>
-                                        <option value="Body Repair">Body Repair</option>
-                                        <option value="Warranty">Warranty</option>
-                                    </select>
-                                    <p class="form-hint">Pilih jenis layanan utama yang akan dikerjakan.</p>
+                                    <label for="service_order_type">Service</label>
+                                    <input
+                                        type="text"
+                                        id="service_order_type"
+                                        name="service_order_type"
+                                        list="service_options_list"
+                                        placeholder="Ketik atau pilih service/paket"
+                                        required
+                                    />
+                                    <datalist id="service_options_list">
+                                        <option value="Service/Repair"></option>
+                                        <option value="Inspection"></option>
+                                        <option value="Warranty"></option>
+                                        <option value="Insurance Claim"></option>
+                                        <option value="Body Repair"></option>
+                                    </datalist>
+                                    <p class="form-hint">Pilih jenis layanan atau paket servis yang tersedia.</p>
                                 </div>
                                 <div class="form-field">
                                     <label for="priority">Prioritas Servis</label>
@@ -2506,10 +2515,13 @@ button:disabled {
         minimumFractionDigits: 0,
     });
 
+    const baseServiceOptions = ['Service/Repair', 'Inspection', 'Warranty', 'Insurance Claim', 'Body Repair'];
     let computedBundles = [];
     let bundleSelect = null;
     let totalInput = null;
     let nodes = null;
+    let serviceInput = null;
+    let serviceOptionsList = null;
 
     function escapeHtml(value) {
         return String(value || '')
@@ -2699,6 +2711,7 @@ button:disabled {
             .filter((bundle) => bundle && bundle.id);
         computedBundles = normalized;
         rebuildOptions();
+        refreshServiceOptions();
     }
 
     function renderBundleDescription(bundle) {
@@ -2806,6 +2819,26 @@ button:disabled {
         updateBundles(records);
     }
 
+    function refreshServiceOptions() {
+        if (!serviceOptionsList) {
+            return;
+        }
+
+        const options = new Set(baseServiceOptions);
+        computedBundles.forEach((bundle) => {
+            if (bundle && bundle.name) {
+                options.add(bundle.name);
+            }
+        });
+
+        serviceOptionsList.innerHTML = '';
+        options.forEach((value) => {
+            const option = document.createElement('option');
+            option.value = value;
+            serviceOptionsList.appendChild(option);
+        });
+    }
+
     document.addEventListener('garage-portal:state-updated', (event) => {
         handleStateUpdate(event?.detail?.state || {});
     });
@@ -2815,6 +2848,8 @@ button:disabled {
         
         bundleSelect = document.getElementById('service_bundle');
         totalInput = document.getElementById('total_estimated_amount');
+        serviceInput = document.getElementById('service_order_type');
+        serviceOptionsList = document.getElementById('service_options_list');
         nodes = {
             service: document.getElementById('estimate_service_amount'),
             spare: document.getElementById('estimate_spare_amount'),
@@ -2825,6 +2860,8 @@ button:disabled {
             spareList: document.getElementById('estimate_spare_list'),
             materialList: document.getElementById('estimate_material_list'),
         };
+
+        refreshServiceOptions();
 
         if (!bundleSelect || !nodes.service || !nodes.spare || !nodes.material || !nodes.total) {
             console.warn('❌ Bundle estimator: Required elements not found');
@@ -2868,6 +2905,9 @@ button:disabled {
             const selected = computedBundles.find((bundle) => bundle.id === event.target.value);
             console.log('🎯 Selected bundle data:', selected);
             applyBundleToForm(selected || null);
+            if (serviceInput && selected && selected.name) {
+                serviceInput.value = selected.name;
+            }
         });
 
         if (totalInput) {
