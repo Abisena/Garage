@@ -38,6 +38,7 @@ export function ServiceOrders({ currentUser }) {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
   
   // Cancel Reason Options
   const cancelReasons = [
@@ -494,36 +495,69 @@ export function ServiceOrders({ currentUser }) {
     setShowCancelModal(true);
   };
 
-  const handleConfirmCancel = () => {
+  const handleConfirmCancel = async () => {
     if (!cancelReason) {
       alert('⚠️ Mohon pilih alasan pembatalan order!');
       return;
     }
 
-    if (orderToCancel) {
-      // Update status order menjadi cancelled
-      const updatedWorkOrders = workOrders.map(wo => {
-        if (wo.id === orderToCancel.id) {
-          return { 
-            ...wo, 
-            repairStatus: 'cancelled',
-            cancelReason: cancelReason,
-            cancelDate: new Date().toISOString()
+    if (!orderToCancel) return;
+
+    setIsCancelling(true);
+
+    try {
+      await frappeClient.cancelServiceOrder(orderToCancel.orderId, cancelReason);
+    } catch (error) {
+      console.error('Failed to cancel order in backend:', error);
+      alert('❌ Gagal membatalkan order di backend. Silakan coba lagi.');
+      setIsCancelling(false);
+      return;
+    }
+
+    // Update status order menjadi cancelled di local storage
+    const updatedWorkOrders = workOrders.map(wo => {
+      if (wo.id === orderToCancel.id) {
+        return {
+          ...wo,
+          repairStatus: 'cancelled',
+          cancelReason: cancelReason,
+          cancellationReason: cancelReason,
+          cancelDate: new Date().toISOString()
+        };
+      }
+      return wo;
+    });
+
+    localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
+    setWorkOrders(updatedWorkOrders);
+
+    // Update today's registrations so entries are not removed from the dashboard
+    try {
+      const storedRegistrations = JSON.parse(localStorage.getItem('registrations') || '[]');
+      const updatedRegistrations = storedRegistrations.map((reg) => {
+        if (reg.orderId === orderToCancel.orderId) {
+          return {
+            ...reg,
+            status: 'cancelled',
+            cancellationReason: cancelReason
           };
         }
-        return wo;
+        return reg;
       });
 
-      localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
-      setWorkOrders(updatedWorkOrders);
-
-      // Close modal
-      setShowCancelModal(false);
-      setOrderToCancel(null);
-      setCancelReason('');
-
-      alert(`✅ Order ${orderToCancel.orderId} berhasil dibatalkan!\n\nAlasan: ${cancelReason}`);
+      localStorage.setItem('registrations', JSON.stringify(updatedRegistrations));
+      window.dispatchEvent(new Event('storage'));
+    } catch (error) {
+      console.error('Failed to update registrations for cancellation:', error);
     }
+
+    // Close modal
+    setShowCancelModal(false);
+    setOrderToCancel(null);
+    setCancelReason('');
+    setIsCancelling(false);
+
+    alert(`✅ Order ${orderToCancel.orderId} berhasil dibatalkan!\n\nAlasan: ${cancelReason}`);
   };
 
   const handleCancelModalClose = () => {
@@ -1548,10 +1582,10 @@ export function ServiceOrders({ currentUser }) {
               <Button
                 onClick={handleConfirmCancel}
                 className="bg-red-600 hover:bg-red-700 text-white"
-                disabled={!cancelReason}
+                disabled={!cancelReason || isCancelling}
               >
                 <XCircle className="w-4 h-4 mr-2" />
-                Konfirmasi Pembatalan
+                {isCancelling ? 'Memproses...' : 'Konfirmasi Pembatalan'}
               </Button>
             </div>
           </div>

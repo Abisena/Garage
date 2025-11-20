@@ -176,6 +176,27 @@ class FrappeClient {
       throw error;
     }
   }
+
+  async cancelServiceOrder(orderId, reason = '') {
+    if (!orderId) {
+      throw new Error('Service Order ID is required to cancel an order');
+    }
+
+    try {
+      const response = await this.request(
+        '/api/method/garage.api.portal.cancel_service_order',
+        {
+          method: 'POST',
+          body: JSON.stringify({ order_id: orderId, reason })
+        }
+      );
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to cancel service order:', error);
+      throw error;
+    }
+  }
 }
 
 export const frappeClient = new FrappeClient();
