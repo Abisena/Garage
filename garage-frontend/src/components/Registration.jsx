@@ -19,6 +19,7 @@ export function Registration({ currentUser }) {
     email: '',
     serviceType: '',
     serviceBundle: '',
+    serviceBundleName: '',
     customerComplaint: '',
     kilometer: '',
     fuel: '',
@@ -27,9 +28,10 @@ export function Registration({ currentUser }) {
   };
 
   // Load saved form data from localStorage on mount
-  const [formData, setFormData] = useState(() =>
-    loadFromStorage('registrationFormDraft', defaultFormState)
-  );
+  const [formData, setFormData] = useState(() => ({
+    ...defaultFormState,
+    ...loadFromStorage('registrationFormDraft', defaultFormState)
+  }));
 
   const DEFAULT_SERVICE_TYPES = [
     'Service/Repair',
@@ -60,18 +62,16 @@ export function Registration({ currentUser }) {
 
         if (bundles.length > 0) {
           setServiceBundles(bundles);
-
-          const bundleNames = bundles
-            .map((bundle) => bundle.bundle_name || bundle.name)
-            .filter(Boolean);
-
-          const uniqueOptions = Array.from(
-            new Set([...DEFAULT_SERVICE_TYPES, ...bundleNames])
-          );
-
-          setServiceTypeOptions(uniqueOptions);
-          return;
         }
+
+        const serviceTypes = Array.isArray(bootstrap?.service_order_types)
+          ? bootstrap.service_order_types
+          : [];
+
+        setServiceTypeOptions(
+          serviceTypes.length > 0 ? serviceTypes : DEFAULT_SERVICE_TYPES
+        );
+        return;
       } catch (error) {
         console.error('Failed to load service bundles from Frappe:', error);
       }
@@ -177,8 +177,8 @@ export function Registration({ currentUser }) {
     const fieldOrder = [
       'plateNumber', 'chassisNumber', 'engineNumber', 'vehicleBrand', 
       'vehicleModel', 'vehicleType', 'kilometer', 'fuel', 
-      'assemblyType', 'vehicleYear', 'customerName', 'phone', 
-      'email', 'serviceType', 'customerComplaint'
+      'assemblyType', 'vehicleYear', 'customerName', 'phone',
+      'email', 'serviceType', 'serviceBundle', 'customerComplaint'
     ];
     
     const currentIndex = fieldOrder.indexOf(currentField);
@@ -194,72 +194,144 @@ export function Registration({ currentUser }) {
   };
 
   const handleRegisterClick = async () => {
-  // Validate required fields
-  if (!formData.plateNumber || !formData.chassisNumber || !formData.engineNumber ||
-      !formData.vehicleBrand || !formData.vehicleModel || !formData.vehicleType ||
-      !formData.kilometer || !formData.fuel || !formData.assemblyType ||
-      !formData.vehicleYear || !formData.customerName || !formData.phone ||
-      !formData.serviceType || !formData.customerComplaint) {
-    alert('Please complete all required fields (*)');
-    return;
-  }
+    // Validate required fields
+    if (!formData.plateNumber || !formData.chassisNumber || !formData.engineNumber ||
+        !formData.vehicleBrand || !formData.vehicleModel || !formData.vehicleType ||
+        !formData.kilometer || !formData.fuel || !formData.assemblyType ||
+        !formData.vehicleYear || !formData.customerName || !formData.phone ||
+        !formData.serviceType || !formData.customerComplaint) {
+      alert('Please complete all required fields (*)');
+      return;
+    }
 
-  try {
-    console.log('Sending registration data to Frappe...');
-
-    const selectedBundle = serviceBundles.find(
-      (bundle) => (bundle.bundle_name || bundle.name) === formData.serviceType
+    const matchedBundle = serviceBundles.find((bundle) =>
+      bundle.id === formData.serviceBundle ||
+      bundle.name === formData.serviceBundle ||
+      (bundle.bundle_name && bundle.bundle_name === formData.serviceBundle)
     );
 
-    const payload = {
-      customer_name: formData.customerName,
-      phone: formData.phone,
-      email: formData.email || '',
-      license_plate: formData.plateNumber,
-      chassis_no: formData.chassisNumber,
-      engine_no: formData.engineNumber,
-      make: formData.vehicleBrand,
-      model: formData.vehicleModel,
-      vehicle_type: formData.vehicleType,
-      year: formData.vehicleYear,
-      odometer_value: parseInt(formData.kilometer) || 0,
-      fuel_type: formData.fuel,
-      assembly_type: formData.assemblyType,
-      service_order_type: formData.serviceType,
-      service_bundle: selectedBundle?.id || formData.serviceBundle || '',
-      service_bundle_name: selectedBundle?.bundle_name || selectedBundle?.name || '',
-      notes: formData.customerComplaint,
-      intake_type: 'Walk-In',
-      priority: 'Normal',
-      branch: currentUser.branch,
-      service_notes: formData.advisorNotes || formData.customerComplaint
-    };
+    try {
+      console.log('Sending registration data to Frappe...');
 
-    console.log('Payload:', payload);
+      const payload = {
+        customer_name: formData.customerName,
+        phone: formData.phone,
+        email: formData.email || '',
+        license_plate: formData.plateNumber,
+        chassis_no: formData.chassisNumber,
+        engine_no: formData.engineNumber,
+        make: formData.vehicleBrand,
+        model: formData.vehicleModel,
+        vehicle_type: formData.vehicleType,
+        year: formData.vehicleYear,
+        odometer_value: parseInt(formData.kilometer) || 0,
+        fuel_type: formData.fuel,
+        assembly_type: formData.assemblyType,
+        service_order_type: formData.serviceType,
+        service_bundle: matchedBundle?.id || formData.serviceBundle || '',
+        service_bundle_name: matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
+        notes: formData.customerComplaint,
+        intake_type: 'Walk-In',
+        priority: 'Normal',
+        branch: currentUser.branch,
+        service_notes: formData.advisorNotes || formData.customerComplaint
+      };
 
-    const result = await frappeClient.registerCustomerVehicle(payload);
-    console.log('Registration API Response:', result);
+      console.log('Payload:', payload);
 
-    if (result && result.created) {
-      const createdData = result.created;
-      
-      // ✅ FIX: Prioritize user input, fallback to API
-      const displayCustomerName = 
-        formData.customerName || 
-        createdData.customer_display_name || 
-        createdData.full_name ||
-        'Customer';
+      const result = await frappeClient.registerCustomerVehicle(payload);
+      console.log('Registration API Response:', result);
 
-      const newTime = new Date().toLocaleTimeString('id-ID', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      if (result && result.created) {
+        const createdData = result.created;
 
-      const newRegistration = {
-        id: createdData.service_order || createdData.vehicle || Date.now().toString(),
-        time: newTime,
-        orderId: createdData.service_order || `ORD-${Date.now().toString().slice(-6)}`,
-        customerName: displayCustomerName,  // ✅ NOW USING CORRECT NAME
+        // ✅ FIX: Prioritize user input, fallback to API
+        const displayCustomerName =
+          formData.customerName ||
+          createdData.customer_display_name ||
+          createdData.full_name ||
+          'Customer';
+
+        const newTime = new Date().toLocaleTimeString('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        const newRegistration = {
+          id: createdData.service_order || createdData.vehicle || Date.now().toString(),
+          time: newTime,
+          orderId: createdData.service_order || `ORD-${Date.now().toString().slice(-6)}`,
+          customerName: displayCustomerName,  // ✅ NOW USING CORRECT NAME
+          phone: formData.phone,
+          email: formData.email,
+          plateNumber: formData.plateNumber,
+          chassisNumber: formData.chassisNumber,
+          engineNumber: formData.engineNumber,
+          vehicleBrand: formData.vehicleBrand,
+          vehicleModel: formData.vehicleModel,
+          vehicleType: formData.vehicleType,
+          kilometer: formData.kilometer,
+          fuel: formData.fuel,
+          assemblyType: formData.assemblyType,
+          vehicleYear: formData.vehicleYear,
+          serviceType: formData.serviceType,
+          serviceBundleId: matchedBundle?.id || formData.serviceBundle || '',
+          serviceBundleName: matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
+          customerComplaint: formData.customerComplaint,
+          date: new Date().toLocaleDateString('id-ID'),
+          estimatedCost: '0',
+          estimatedDays: '1',
+          branch: currentUser.branch,
+          status: result.service_order_status || 'Inspection',
+          inspectionStatus: 'waiting'
+        };
+
+        addRegistration(newRegistration);
+        setFormData({ ...defaultFormState });
+
+        let successMessage = `✅ Registration Successful!\n\n`;
+        successMessage += `Customer: ${displayCustomerName}\n`;
+        successMessage += `Vehicle: ${formData.plateNumber}\n`;
+
+        if (createdData.service_order) {
+          successMessage += `Service Order: ${createdData.service_order}\n`;
+        }
+        if (createdData.customer) {
+          successMessage += `Customer ID: ${createdData.customer}\n`;
+        }
+        if (createdData.vehicle) {
+          successMessage += `Vehicle ID: ${createdData.vehicle}\n`;
+        }
+
+        successMessage += `\nData has been saved to Frappe backend.`;
+
+        if (result.estimate_pdf || result.estimate_pdf_file) {
+          successMessage += `\n\n📄 Service estimate PDF has been generated.`;
+        }
+
+        alert(successMessage);
+
+        setTimeout(() => {
+          const firstInput = document.querySelector('[name="plateNumber"]');
+          if (firstInput) {
+            firstInput.focus();
+          }
+        }, 100);
+
+        return;
+      }
+
+      throw new Error('Registration failed: Invalid response from server');
+    } catch (error) {
+      console.error('Registration error:', error);
+
+      const fallbackBranchCode = getBranchCode(currentUser.branch);
+      const fallbackOrderId = getNextOrderNumber(currentUser.branch);
+      const fallbackRegistration = {
+        id: `${fallbackBranchCode}-REG-${Date.now().toString().slice(-5)}`,
+        time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+        orderId: fallbackOrderId,
+        customerName: formData.customerName,  // ✅ DIRECTLY USE USER INPUT
         phone: formData.phone,
         email: formData.email,
         plateNumber: formData.plateNumber,
@@ -273,96 +345,26 @@ export function Registration({ currentUser }) {
         assemblyType: formData.assemblyType,
         vehicleYear: formData.vehicleYear,
         serviceType: formData.serviceType,
-        serviceBundleId: selectedBundle?.id || formData.serviceBundle || '',
-        serviceBundleName: selectedBundle?.bundle_name || selectedBundle?.name || '',
+        serviceBundleId: formData.serviceBundle,
+        serviceBundleName: matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
         customerComplaint: formData.customerComplaint,
         date: new Date().toLocaleDateString('id-ID'),
         estimatedCost: '0',
         estimatedDays: '1',
         branch: currentUser.branch,
-        status: result.service_order_status || 'Inspection',
+        status: 'Inspection',
         inspectionStatus: 'waiting'
       };
 
-      addRegistration(newRegistration);
+      addRegistration(fallbackRegistration);
       setFormData({ ...defaultFormState });
 
-      let successMessage = `✅ Registration Successful!\n\n`;
-      successMessage += `Customer: ${displayCustomerName}\n`;
-      successMessage += `Vehicle: ${formData.plateNumber}\n`;
-
-      if (createdData.service_order) {
-        successMessage += `Service Order: ${createdData.service_order}\n`;
-      }
-      if (createdData.customer) {
-        successMessage += `Customer ID: ${createdData.customer}\n`;
-      }
-      if (createdData.vehicle) {
-        successMessage += `Vehicle ID: ${createdData.vehicle}\n`;
-      }
-
-      successMessage += `\nData has been saved to Frappe backend.`;
-
-      if (result.estimate_pdf || result.estimate_pdf_file) {
-        successMessage += `\n\n📄 Service estimate PDF has been generated.`;
-      }
-
-      alert(successMessage);
-
-      setTimeout(() => {
-        const firstInput = document.querySelector('[name="plateNumber"]');
-        if (firstInput) {
-          firstInput.focus();
-        }
-      }, 100);
-
-      return;
+      alert(
+        'Backend unavailable, but registration was saved locally.\n' +
+        'It will appear in Today\'s Registrations and Inspection queue.'
+      );
     }
-
-    throw new Error('Registration failed: Invalid response from server');
-  } catch (error) {
-    console.error('Registration error:', error);
-
-    const fallbackBranchCode = getBranchCode(currentUser.branch);
-    const fallbackOrderId = getNextOrderNumber(currentUser.branch);
-    const fallbackRegistration = {
-      id: `${fallbackBranchCode}-REG-${Date.now().toString().slice(-5)}`,
-      time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-      orderId: fallbackOrderId,
-      customerName: formData.customerName,  // ✅ DIRECTLY USE USER INPUT
-      phone: formData.phone,
-      email: formData.email,
-      plateNumber: formData.plateNumber,
-      chassisNumber: formData.chassisNumber,
-      engineNumber: formData.engineNumber,
-      vehicleBrand: formData.vehicleBrand,
-      vehicleModel: formData.vehicleModel,
-      vehicleType: formData.vehicleType,
-      kilometer: formData.kilometer,
-      fuel: formData.fuel,
-      assemblyType: formData.assemblyType,
-      vehicleYear: formData.vehicleYear,
-      serviceType: formData.serviceType,
-      serviceBundleId: formData.serviceBundle,
-      serviceBundleName: selectedBundle?.bundle_name || selectedBundle?.name || '',
-      customerComplaint: formData.customerComplaint,
-      date: new Date().toLocaleDateString('id-ID'),
-      estimatedCost: '0',
-      estimatedDays: '1',
-      branch: currentUser.branch,
-      status: 'Inspection',
-      inspectionStatus: 'waiting'
-    };
-
-    addRegistration(fallbackRegistration);
-    setFormData({ ...defaultFormState });
-
-    alert(
-      'Backend unavailable, but registration was saved locally.\n' +
-      'It will appear in Today\'s Registrations and Inspection queue.'
-    );
-  }
-};
+  };
 
   // Load registrations from Frappe backend on mount
 // useEffect(() => {
@@ -429,8 +431,10 @@ export function Registration({ currentUser }) {
     const newId = `${branchCode}-REG-${String(nextNumber).padStart(3, '0')}`;
     const newOrderId = getNextOrderNumber(currentUser.branch);
 
-    const matchedBundle = serviceBundles.find(
-      (bundle) => (bundle.bundle_name || bundle.name) === formData.serviceType
+    const matchedBundle = serviceBundles.find((bundle) =>
+      bundle.id === formData.serviceBundle ||
+      bundle.name === formData.serviceBundle ||
+      (bundle.bundle_name && bundle.bundle_name === formData.serviceBundle)
     );
 
     const newRegistration = {
@@ -452,7 +456,7 @@ export function Registration({ currentUser }) {
       vehicleYear: formData.vehicleYear,
       serviceType: formData.serviceType,
       serviceBundleId: matchedBundle?.id || formData.serviceBundle || '',
-      serviceBundleName: matchedBundle?.bundle_name || matchedBundle?.name || '',
+      serviceBundleName: matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
       customerComplaint: formData.customerComplaint,
       customerSignature: customerSig,
       advisorSignature: advisorSig,
@@ -473,14 +477,23 @@ export function Registration({ currentUser }) {
   };
 
   const handleServiceTypeChange = (value) => {
-    const matchedBundle = serviceBundles.find(
-      (bundle) => (bundle.bundle_name || bundle.name) === value
+    setFormData({
+      ...formData,
+      serviceType: value
+    });
+  };
+
+  const handleServiceBundleChange = (value) => {
+    const matchedBundle = serviceBundles.find((bundle) =>
+      bundle.id === value ||
+      bundle.name === value ||
+      (bundle.bundle_name && bundle.bundle_name === value)
     );
 
     setFormData({
       ...formData,
-      serviceType: value,
-      serviceBundle: matchedBundle?.id || ''
+      serviceBundle: matchedBundle?.id || value,
+      serviceBundleName: matchedBundle?.bundle_name || matchedBundle?.name || ''
     });
   };
 
@@ -807,7 +820,7 @@ export function Registration({ currentUser }) {
               {/* Service Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Service Type *</label>
-                <select 
+                <select
                   name="serviceType"
                   className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
                     focusedField === 'serviceType' ? 'bg-blue-50 border-blue-400' : 'bg-white'
@@ -824,6 +837,37 @@ export function Registration({ currentUser }) {
                   {serviceTypeOptions.map(service => (
                     <option key={service} value={service}>{service}</option>
                   ))}
+                </select>
+              </div>
+
+              {/* Service Bundle */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Paket Service</label>
+                <select
+                  name="serviceBundle"
+                  className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
+                    focusedField === 'serviceBundle' ? 'bg-blue-50 border-blue-400' : 'bg-white'
+                  }`}
+                  value={formData.serviceBundle}
+                  onChange={(e) => {
+                    handleServiceBundleChange(e.target.value);
+                    handleInputComplete('serviceBundle', e.target.value);
+                  }}
+                  onFocus={() => setFocusedField('serviceBundle')}
+                  onBlur={() => setFocusedField('')}
+                  disabled={serviceBundles.length === 0}
+                >
+                  <option value="">{serviceBundles.length > 0 ? 'Select service package' : 'No service packages available'}</option>
+                  {serviceBundles.map((bundle) => {
+                    const displayName = bundle.bundle_name || bundle.name || bundle.id;
+                    const optionValue = bundle.id || bundle.name || bundle.bundle_name;
+
+                    if (!displayName || !optionValue) return null;
+
+                    return (
+                      <option key={optionValue} value={optionValue}>{displayName}</option>
+                    );
+                  })}
                 </select>
               </div>
 
