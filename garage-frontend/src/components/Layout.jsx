@@ -56,6 +56,8 @@ export function Layout({
               closeSidebar();
             }
           }}
+          isMobileMenuOpen={isSidebarOpen}
+          onMobileMenuClose={closeSidebar}
         />
       </div>
 

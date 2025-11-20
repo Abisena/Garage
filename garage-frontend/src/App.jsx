@@ -4,8 +4,7 @@ import { determinePrimaryRole, buildRoleSet, hasRoleInGroup, ROLE_GROUPS } from 
 import { Login } from './components/Login'
 import { Registration } from './components/Registration'
 import { Inspection } from './components/Inspection'
-import { Sidebar } from './components/Sidebar'
-import { TopBar } from './components/TopBar'
+import { PaymentList } from './components/PaymentList'
 import { Dashboard } from './components/Dashboard'
 import { ServiceOrders } from './components/ServiceOrders'
 import { SpareParts } from './components/SpareParts'
@@ -30,7 +29,8 @@ const PAGE_ROLES = {
   buyingsparepart: ['admin', 'sparepart'], 
   directsales: ['admin', 'sparepart', 'cashier', 'receptionist'], 
   workshop: ['admin', 'foreman', 'mechanic'], 
-  payment: ['admin', 'cashier', 'receptionist', 'serviceAdvisor'], 
+  paymentprocess: ['admin', 'cashier', 'receptionist', 'serviceAdvisor'], 
+  paymentlist: ['admin', 'cashier', 'receptionist', 'serviceAdvisor'], 
   handover: ['admin', 'serviceAdvisor', 'receptionist'], 
   followup: ['admin', 'serviceAdvisor', 'receptionist'], 
   reports: ['admin'], 
@@ -369,8 +369,10 @@ function App() {
         return <DirectSalesSparePart currentUser={currentUser} />;
       case 'workshop':
         return <Workshop currentUser={currentUser} />;
-      case 'payment':
+      case 'paymentprocess':
         return <Payment currentUser={currentUser} />;
+      case 'paymentlist':
+        return <PaymentList currentUser={currentUser} />;
       case 'handover':
         return <Handover />;
       case 'followup':
