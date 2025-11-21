@@ -1874,16 +1874,21 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Receipt, Check, Printer, Download, Search, DollarSign, Building2, User, Car, Wrench, Package, FileText, CheckCircle, X, Clock, TrendingUp, Wallet, Banknote, Smartphone, ChevronRight, Calendar, Phone, Mail, MapPin, ShoppingCart, ArrowRight, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
+import { toast } from 'sonner';
 import { PaymentNotaModal } from './PaymentNotaModal';
 import { ProcessPaymentModal } from './ProcessPaymentModal';
 import { ReceiptModal } from './ReceiptModal';
+import { DirectSalesNotaModal } from './DirectSalesNotaModal';
+import { DirectSalesInvoiceModal } from './DirectSalesInvoiceModal';
 
 export function Payment({ currentUser }) {
   const [activeTab, setActiveTab] = useState('service');
   const [workOrders, setWorkOrders] = useState([]);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [directSales, setDirectSales] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedPO, setSelectedPO] = useState(null);
+  const [selectedDirectSale, setSelectedDirectSale] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showNotaModal, setShowNotaModal] = useState(false);
@@ -1891,6 +1896,9 @@ export function Payment({ currentUser }) {
   const [showPreviewNotaModal, setShowPreviewNotaModal] = useState(false);
   const [showPreviewInvoiceModal, setShowPreviewInvoiceModal] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [showDirectSalesNotaModal, setShowDirectSalesNotaModal] = useState(false);
+  const [showDirectSalesInvoiceModal, setShowDirectSalesInvoiceModal] = useState(false);
+  const [showDirectSalesPaymentModal, setShowDirectSalesPaymentModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelNotes, setCancelNotes] = useState('');
   
@@ -1953,7 +1961,43 @@ export function Payment({ currentUser }) {
   useEffect(() => {
     loadWorkOrders();
     loadPurchaseOrders();
+    loadDirectSales();
   }, []);
+
+  // Handle auto-close invoice modal after print
+  useEffect(() => {
+    const handleAfterPrint = () => {
+      if (showPreviewInvoiceModal) {
+        setTimeout(() => {
+          setShowPreviewInvoiceModal(false);
+          toast.success('Invoice berhasil dicetak!');
+        }, 500);
+      }
+    };
+
+    window.addEventListener('afterprint', handleAfterPrint);
+    return () => {
+      window.removeEventListener('afterprint', handleAfterPrint);
+    };
+  }, [showPreviewInvoiceModal]);
+
+  const loadDirectSales = () => {
+    const savedDirectSales = localStorage.getItem('directSales');
+    if (savedDirectSales) {
+      const sales = JSON.parse(savedDirectSales);
+      let paymentSales = sales.filter(sale => 
+        sale.paymentStatus === 'pending' || 
+        sale.paymentStatus === 'paid' || 
+        sale.paymentStatus === 'nota-printed'
+      );
+      
+      if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
+        paymentSales = paymentSales.filter(sale => sale.branch === currentUser.branch);
+      }
+      
+      setDirectSales(paymentSales);
+    }
+  };
 
   const loadWorkOrders = () => {
     const savedWorkOrders = localStorage.getItem('workOrders');
@@ -2098,16 +2142,18 @@ export function Payment({ currentUser }) {
     // Generate invoice number if not exists
     let invoiceNumber = orderToUpdate.invoiceNumber;
     if (!invoiceNumber) {
-      const branchCode = orderToUpdate.branch === 'Jakarta' ? 'JAK' : 
+      const branchCode = orderToUpdate.branch === 'Jakarta' ? 'JKT' : 
                          orderToUpdate.branch === 'Bandung' ? 'BDG' : 'SBY';
       
-      // Count existing invoices for this branch to get next number
-      const branchInvoices = allOrders.filter(o => 
-        o.branch === orderToUpdate.branch && o.invoiceNumber
-      );
-      const nextNumber = branchInvoices.length + 1;
+      // Count ALL existing invoices across ALL transactions (global counter)
+      const allDirectSales = JSON.parse(localStorage.getItem('directSales') || '[]');
+      const serviceInvoices = allOrders.filter(o => o.invoiceNumber).length;
+      const directSalesInvoices = allDirectSales.filter(s => s.invoiceNumber).length;
+      const totalInvoices = serviceInvoices + directSalesInvoices;
+      
+      const nextNumber = totalInvoices + 1;
       invoiceNumber = `INV-${branchCode}-${String(nextNumber).padStart(3, '0')}`;
-      console.log('🆕 Generated new invoice number:', invoiceNumber);
+      console.log('🆕 Generated new invoice number (global):', invoiceNumber, '- Total existing invoices:', totalInvoices);
     }
     
     const updatedAllOrders = allOrders.map(order => {
@@ -2116,7 +2162,8 @@ export function Payment({ currentUser }) {
         return {
           ...order,
           invoiceNumber: invoiceNumber,
-          invoicePrintCount: (order.invoicePrintCount || 0) + 1
+          invoicePrintCount: (order.invoicePrintCount || 0) + 1,
+          paymentStatus: 'invoice-printed' // Change status from nota-printed to invoice-printed
         };
       }
       return order;
@@ -2130,7 +2177,8 @@ export function Payment({ currentUser }) {
         return {
           ...order,
           invoiceNumber: invoiceNumber,
-          invoicePrintCount: (order.invoicePrintCount || 0) + 1
+          invoicePrintCount: (order.invoicePrintCount || 0) + 1,
+          paymentStatus: 'invoice-printed' // Change status from nota-printed to invoice-printed
         };
       }
       return order;
@@ -2143,7 +2191,8 @@ export function Payment({ currentUser }) {
       const updatedSelected = {
         ...selectedOrder,
         invoiceNumber: invoiceNumber,
-        invoicePrintCount: (selectedOrder.invoicePrintCount || 0) + 1
+        invoicePrintCount: (selectedOrder.invoicePrintCount || 0) + 1,
+        paymentStatus: 'invoice-printed' // Change status from nota-printed to invoice-printed
       };
       setSelectedOrder(updatedSelected);
       console.log('🎯 Updated selectedOrder state with invoice:', invoiceNumber);
@@ -2242,6 +2291,79 @@ export function Payment({ currentUser }) {
     setShowNotaModal(true);
   };
 
+  const handleOpenDirectSalesNota = (sale) => {
+    setSelectedDirectSale(sale);
+    setShowDirectSalesNotaModal(true);
+  };
+
+  const handleGenerateDirectSalesNotaNumber = (saleId) => {
+    const sale = directSales.find(s => s.id === saleId);
+    if (!sale) return;
+
+    // Generate nota faktur number
+    const notaNumber = `${sale.branch.substring(0, 3).toUpperCase()}-NF-${sale.salesNumber.split('_')[1]}`;
+    
+    // Update sale with nota number, increment print count, and change status
+    const updatedSale = {
+      ...sale,
+      notaFakturNumber: notaNumber,
+      paymentStatus: 'nota-printed',
+      notaPrintCount: (sale.notaPrintCount || 0) + 1
+    };
+
+    // Update in context
+    const updatedSales = directSales.map(s => s.id === saleId ? updatedSale : s);
+    
+    // Save to localStorage
+    localStorage.setItem('directSales', JSON.stringify(updatedSales));
+    
+    // Update state - THIS IS CRITICAL for list to reflect changes immediately
+    setDirectSales(updatedSales);
+    setSelectedDirectSale(updatedSale);
+    
+    // Show success message
+    toast.success(`Nota Faktur ${notaNumber} berhasil dicetak!`);
+  };
+
+  const handleGenerateDirectSalesInvoiceNumber = (saleId) => {
+    const sale = directSales.find(s => s.id === saleId);
+    if (!sale) return;
+
+    // Generate invoice number - Format: INV-CAB-XXXX (Global Counter)
+    const branchCode = sale.branch.substring(0, 3).toUpperCase();
+    
+    // Count ALL existing invoices across ALL transactions (global counter)
+    const allWorkOrders = JSON.parse(localStorage.getItem('workOrders') || '[]');
+    const allDirectSales = JSON.parse(localStorage.getItem('directSales') || '[]');
+    const serviceInvoices = allWorkOrders.filter(o => o.invoiceNumber).length;
+    const directSalesInvoices = allDirectSales.filter(s => s.invoiceNumber).length;
+    const totalInvoices = serviceInvoices + directSalesInvoices;
+    
+    const nextNumber = totalInvoices + 1;
+    const invoiceNumber = `INV-${branchCode}-${String(nextNumber).padStart(3, '0')}`;
+    
+    // Update sale with invoice number, increment print count, and change status to invoice-printed
+    const updatedSale = {
+      ...sale,
+      invoiceNumber: invoiceNumber,
+      invoicePrintCount: (sale.invoicePrintCount || 0) + 1,
+      paymentStatus: 'invoice-printed' // Change status from nota-printed to invoice-printed
+    };
+
+    // Update in context
+    const updatedSales = directSales.map(s => s.id === saleId ? updatedSale : s);
+    
+    // Save to localStorage
+    localStorage.setItem('directSales', JSON.stringify(updatedSales));
+    
+    // Update state
+    setDirectSales(updatedSales);
+    setSelectedDirectSale(updatedSale);
+    
+    // Show success message
+    toast.success(`Invoice ${invoiceNumber} berhasil dicetak!`);
+  };
+
   const filteredOrders = workOrders.filter(order => {
     const matchesSearch = 
       order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -2288,6 +2410,30 @@ export function Payment({ currentUser }) {
     totalAmount: purchaseOrders
       .filter(po => po.paymentStatus === 'paid')
       .reduce((sum, po) => sum + po.totalAmount, 0)
+  };
+
+  const filteredDirectSales = directSales.filter(sale => {
+    const matchesSearch = 
+      sale.salesNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sale.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sale.customerPhone.includes(searchTerm);
+    
+    const matchesFilter = 
+      filterStatus === 'all' ||
+      (filterStatus === 'pending' && (sale.paymentStatus === 'pending' || sale.paymentStatus === 'nota-printed')) ||
+      (filterStatus === 'paid' && sale.paymentStatus === 'paid') ||
+      (filterStatus === 'cancelled' && sale.paymentStatus === 'cancelled');
+    
+    return matchesSearch && matchesFilter;
+  });
+
+  const directSalesStats = {
+    pending: directSales.filter(s => s.paymentStatus === 'pending' || s.paymentStatus === 'nota-printed').length,
+    paid: directSales.filter(s => s.paymentStatus === 'paid').length,
+    cancelled: 0,
+    totalRevenue: directSales
+      .filter(s => s.paymentStatus === 'paid')
+      .reduce((sum, s) => sum + s.grandTotal, 0)
   };
 
   return (
@@ -2381,6 +2527,22 @@ export function Payment({ currentUser }) {
                 {purchaseOrders.length}
               </span>
             </button>
+            <button
+              onClick={() => setActiveTab('direct-sales')}
+              className={`flex-1 px-6 py-4 text-sm flex items-center justify-center gap-2 transition-all ${
+                activeTab === 'direct-sales'
+                  ? 'bg-purple-600 text-white border-b-2 border-purple-700'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <DollarSign className="w-4 h-4" />
+              Direct Sales Payment
+              <span className={`px-2 py-0.5 rounded-full text-xs ${
+                activeTab === 'direct-sales' ? 'bg-white/20' : 'bg-slate-200 text-slate-700'
+              }`}>
+                {directSales.filter(s => s.paymentStatus === 'pending').length}
+              </span>
+            </button>
           </div>
         </div>
 
@@ -2391,7 +2553,13 @@ export function Payment({ currentUser }) {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
-                  placeholder={activeTab === 'service' ? "Search by Order ID, Customer Name, or Plate Number..." : "Search by PO Number, Vendor, or Requester..."}
+                  placeholder={
+                    activeTab === 'service' 
+                      ? "Search by Order ID, Customer Name, or Plate Number..." 
+                      : activeTab === 'spare-parts'
+                      ? "Search by PO Number, Vendor, or Requester..."
+                      : "Search by Sales Number, Customer Name, or Phone..."
+                  }
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-3 py-2.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-sm text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-white/30"
@@ -2406,7 +2574,7 @@ export function Payment({ currentUser }) {
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
-                  All ({activeTab === 'service' ? workOrders.length : purchaseOrders.length})
+                  All ({activeTab === 'service' ? workOrders.length : activeTab === 'spare-parts' ? purchaseOrders.length : directSales.length})
                 </button>
                 <button
                   onClick={() => setFilterStatus('pending')}
@@ -2416,7 +2584,7 @@ export function Payment({ currentUser }) {
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
-                  Pending ({activeTab === 'service' ? stats.pending : poStats.pending})
+                  Pending ({activeTab === 'service' ? stats.pending : activeTab === 'spare-parts' ? poStats.pending : directSalesStats.pending})
                 </button>
                 <button
                   onClick={() => setFilterStatus('paid')}
@@ -2426,7 +2594,7 @@ export function Payment({ currentUser }) {
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
-                  Paid ({activeTab === 'service' ? stats.paid : poStats.paid})
+                  Paid ({activeTab === 'service' ? stats.paid : activeTab === 'spare-parts' ? poStats.paid : directSalesStats.paid})
                 </button>
                 <button
                   onClick={() => setFilterStatus('cancelled')}
@@ -2436,7 +2604,7 @@ export function Payment({ currentUser }) {
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
-                  Cancelled ({activeTab === 'service' ? stats.cancelled : poStats.cancelled})
+                  Cancelled ({activeTab === 'service' ? stats.cancelled : activeTab === 'spare-parts' ? poStats.cancelled : directSalesStats.cancelled})
                 </button>
               </div>
             </div>
@@ -2527,7 +2695,7 @@ export function Payment({ currentUser }) {
                   ))}
                 </tbody>
               </table>
-            ) : (
+            ) : activeTab === 'spare-parts' && filteredPOs.length === 0 ? (
               <div className="text-center py-16 text-slate-500">
                 <div className="bg-slate-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
                   <ShoppingCart className="w-10 h-10 text-slate-400" />
@@ -2535,7 +2703,134 @@ export function Payment({ currentUser }) {
                 <p className="text-slate-600 text-lg mb-2">No purchase orders found</p>
                 <p className="text-sm">POs will appear here when ready for payment</p>
               </div>
-            )}
+            ) : activeTab === 'spare-parts' ? (
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs text-slate-600">PO Number</th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-600">Vendor</th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-600">Requester</th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-600">Branch</th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-600">Date</th>
+                    <th className="px-4 py-3 text-right text-xs text-slate-600">Amount</th>
+                    <th className="px-4 py-3 text-center text-xs text-slate-600">Status</th>
+                    <th className="px-4 py-3 text-center text-xs text-slate-600">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredPOs.map((po) => (
+                    <tr
+                      key={po.id}
+                      className="hover:bg-green-50 cursor-pointer transition-colors"
+                    >
+                      <td className="px-4 py-3 font-mono text-sm text-slate-900">{po.poNumber}</td>
+                      <td className="px-4 py-3 text-sm text-slate-700">{po.vendor}</td>
+                      <td className="px-4 py-3 text-sm text-slate-700">{po.requestedBy}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{po.branch}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{po.orderDate}</td>
+                      <td className="px-4 py-3 text-sm text-green-600 font-semibold text-right">{formatCurrency(po.totalAmount)}</td>
+                      <td className="px-4 py-3 text-center">
+                        {po.paymentStatus === 'paid' ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-emerald-100 text-emerald-700">
+                            <CheckCircle className="w-3 h-3" />
+                            Paid
+                          </span>
+                        ) : po.paymentStatus === 'cancelled' ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-red-100 text-red-700">
+                            <X className="w-3 h-3" />
+                            Cancelled
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-amber-100 text-amber-700">
+                            <Clock className="w-3 h-3" />
+                            Pending
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-green-600 hover:bg-green-100"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : activeTab === 'direct-sales' && filteredDirectSales.length === 0 ? (
+              <div className="text-center py-16 text-slate-500">
+                <div className="bg-slate-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                  <DollarSign className="w-10 h-10 text-slate-400" />
+                </div>
+                <p className="text-slate-600 text-lg mb-2">No direct sales found</p>
+                <p className="text-sm">Direct sales will appear here when pending payment</p>
+              </div>
+            ) : activeTab === 'direct-sales' ? (
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs text-slate-600">Sales Number</th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-600">Customer</th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-600">Phone</th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-600">Branch</th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-600">Date</th>
+                    <th className="px-4 py-3 text-right text-xs text-slate-600">Amount</th>
+                    <th className="px-4 py-3 text-center text-xs text-slate-600">Status</th>
+                    <th className="px-4 py-3 text-center text-xs text-slate-600">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredDirectSales.map((sale) => (
+                    <tr
+                      key={sale.id}
+                      className="hover:bg-purple-50 cursor-pointer transition-colors"
+                      onClick={() => handleOpenDirectSalesNota(sale)}
+                    >
+                      <td className="px-4 py-3 font-mono text-sm text-slate-900">{sale.salesNumber}</td>
+                      <td className="px-4 py-3 text-sm text-slate-700">{sale.customerName}</td>
+                      <td className="px-4 py-3 text-sm text-slate-700">{sale.customerPhone}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{sale.branch}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{sale.date}</td>
+                      <td className="px-4 py-3 text-sm text-purple-600 font-semibold text-right">{formatCurrency(sale.grandTotal)}</td>
+                      <td className="px-4 py-3 text-center">
+                        {sale.paymentStatus === 'paid' ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-emerald-100 text-emerald-700">
+                            <CheckCircle className="w-3 h-3" />
+                            Paid
+                          </span>
+                        ) : sale.paymentStatus === 'nota-printed' ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
+                            <Printer className="w-3 h-3" />
+                            Nota Printed
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-amber-100 text-amber-700">
+                            <Clock className="w-3 h-3" />
+                            Pending
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-purple-600 hover:bg-purple-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenDirectSalesNota(sale);
+                          }}
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : null}
           </div>
         </div>
 
@@ -2551,6 +2846,30 @@ export function Payment({ currentUser }) {
           calculatePartsCost={calculatePartsCost}
           getOrderLaborCost={getOrderLaborCost}
           calculateGrandTotal={calculateGrandTotal}
+        />
+
+        <DirectSalesNotaModal
+          isOpen={showDirectSalesNotaModal}
+          selectedSale={selectedDirectSale}
+          onClose={() => setShowDirectSalesNotaModal(false)}
+          onProceedToPayment={() => {
+            setShowDirectSalesNotaModal(false);
+            setShowDirectSalesPaymentModal(true);
+          }}
+          formatCurrency={formatCurrency}
+          onGenerateNotaNumber={handleGenerateDirectSalesNotaNumber}
+          onOpenInvoice={() => {
+            setShowDirectSalesNotaModal(false);
+            setShowDirectSalesInvoiceModal(true);
+          }}
+        />
+
+        <DirectSalesInvoiceModal
+          isOpen={showDirectSalesInvoiceModal}
+          selectedSale={selectedDirectSale}
+          onClose={() => setShowDirectSalesInvoiceModal(false)}
+          formatCurrency={formatCurrency}
+          onGenerateInvoiceNumber={handleGenerateDirectSalesInvoiceNumber}
         />
 
         {false && showNotaModal && selectedOrder && (
@@ -3160,9 +3479,8 @@ export function Payment({ currentUser }) {
                 <Button 
                   onClick={() => {
                     // Save invoice number first
-                    let generatedInvoiceNumber = '';
                     if (selectedOrder) {
-                      generatedInvoiceNumber = handleInvoicePrinted(selectedOrder.orderId);
+                      handleInvoicePrinted(selectedOrder.orderId);
                       
                       // Reload work orders to update UI
                       setTimeout(() => {
@@ -3174,12 +3492,7 @@ export function Payment({ currentUser }) {
                     setTimeout(() => {
                       window.print();
                     }, 300);
-                    
-                    // Show success notification and close modal
-                    setTimeout(() => {
-                      alert('✅ Invoice berhasil dicetak!\n\n📄 Invoice Number: ' + generatedInvoiceNumber + '\n✨ Status berubah menjadi "Inv Printed"');
-                      setShowPreviewInvoiceModal(false);
-                    }, 800);
+                    // Modal will auto-close after print via afterprint event listener
                   }} 
                   className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6"
                 >
