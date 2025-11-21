@@ -27,21 +27,26 @@
   "fields": [
     {
       "fieldname": "item_code",
-      "fieldtype": "Data",
+      "fieldtype": "Link",
       "label": "Item Code",
       "reqd": 1,
-      "in_list_view": 1
+      "in_list_view": 1,
+      "options": "Garage Spare Part"
     },
     {
+      "fetch_from": "item_code.part_name",
       "fieldname": "item_name",
       "fieldtype": "Data",
       "label": "Item Name",
-      "in_list_view": 1
+      "in_list_view": 1,
+      "read_only": 1
     },
     {
+      "fetch_from": "item_code.description",
       "fieldname": "description",
       "fieldtype": "Small Text",
-      "label": "Description"
+      "label": "Description",
+      "read_only": 1
     },
     {
       "fieldname": "qty",
@@ -50,14 +55,18 @@
       "in_list_view": 1
     },
     {
+      "fetch_from": "item_code.uom",
       "fieldname": "uom",
       "fieldtype": "Data",
-      "label": "UOM"
+      "label": "UOM",
+      "read_only": 1
     },
     {
+      "fetch_from": "item_code.unit_price",
       "fieldname": "rate",
       "fieldtype": "Currency",
-      "label": "Rate"
+      "label": "Rate",
+      "read_only": 1
     },
     {
       "fieldname": "amount",

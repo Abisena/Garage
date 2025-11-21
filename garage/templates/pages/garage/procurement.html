@@ -1020,6 +1020,7 @@ button:disabled {
                 <h2>Buat Procurement Order</h2>
                 <p class="lead">Isi data supplier, referensi dokumen, dan detail item yang perlu dipesan.</p>
                 <form id="procurement-form" class="form-grid">
+                    <datalist id="spare_part_options"></datalist>
                     <div class="form-grid two-column">
                         <div class="form-field">
                             <label for="reference_type">Referensi</label>
@@ -1063,7 +1064,7 @@ button:disabled {
                             <div class="repeat-row columns-4">
                                 <div class="form-field">
                                     <label>Kode</label>
-                                    <input data-field="item_code" />
+                                    <input data-field="item_code" list="spare_part_options" />
                                 </div>
                                 <div class="form-field">
                                     <label>Nama</label>
@@ -1153,7 +1154,7 @@ button:disabled {
                             <div class="repeat-row columns-4">
                                 <div class="form-field">
                                     <label>Kode</label>
-                                    <input data-field="item_code" />
+                                    <input data-field="item_code" list="spare_part_options" />
                                 </div>
                                 <div class="form-field">
                                     <label>Nama</label>

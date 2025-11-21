@@ -1054,6 +1054,7 @@ function cloneBrandModelMap(map) {
             this.datalists = {
                 existingCustomer: document.getElementById('existing_customer_options'),
                 licensePlates: document.getElementById('license_plate_options'),
+                sparePartOptions: document.getElementById('spare_part_options'),
             };
 
             this.selects = {
@@ -1658,6 +1659,12 @@ function cloneBrandModelMap(map) {
                         'remarks',
                     ]);
                     this.submitForm(this.forms.procurement, 'garage.api.portal.create_procurement_order', { order: payload }, 'Procurement order disimpan.');
+                });
+                this.forms.procurement.addEventListener('change', (event) => {
+                    this.handleProcurementItemSelection(event);
+                });
+                this.forms.procurement.addEventListener('input', (event) => {
+                    this.handleProcurementItemSelection(event);
                 });
             }
 
@@ -3142,6 +3149,8 @@ function cloneBrandModelMap(map) {
                 }
             });
 
+            this.refreshSparePartOptions();
+
             const serviceOrders = this.asArray(this.state.service_orders);
             this.renderSpareRequestsTable(serviceOrders);
             this.renderSpareApprovals();
@@ -4332,6 +4341,8 @@ function cloneBrandModelMap(map) {
                 }
             });
 
+            this.refreshSparePartOptions();
+
             const query = this.inputs.spareSearch ? this.inputs.spareSearch.value || '' : '';
             this.applySpareSearch(query, true);
             this.renderSpareRequestsTable(this.asArray(this.state.service_orders));
@@ -4421,6 +4432,80 @@ function cloneBrandModelMap(map) {
                 return false;
             }
             return stock <= reorder;
+        }
+
+        refreshSparePartOptions() {
+            const datalist = this.datalists?.sparePartOptions;
+            if (!datalist) {
+                return;
+            }
+
+            datalist.innerHTML = '';
+            const parts = this.sparePartCatalog || [];
+            parts.forEach((part) => {
+                const codeOrName = part.part_code || part.part_name || part.name;
+                if (!codeOrName) {
+                    return;
+                }
+                const option = document.createElement('option');
+                option.value = codeOrName;
+                option.label = part.part_name || part.part_code || codeOrName;
+                datalist.appendChild(option);
+            });
+        }
+
+        findSparePart(identifier) {
+            if (!identifier) {
+                return null;
+            }
+            const normalized = identifier.toString().trim();
+            if (!normalized) {
+                return null;
+            }
+            const fromIndex = this.sparePartIndex?.get(normalized);
+            if (fromIndex) {
+                return fromIndex;
+            }
+            const lowered = normalized.toLowerCase();
+            return (
+                (this.sparePartCatalog || []).find(
+                    (part) =>
+                        (part.part_name && part.part_name.toLowerCase() === lowered) ||
+                        (part.part_code && part.part_code.toLowerCase() === lowered)
+                ) || null
+            );
+        }
+
+        handleProcurementItemSelection(event) {
+            const target = event.target;
+            if (!target || !target.matches('[data-field="item_code"]')) {
+                return;
+            }
+
+            const part = this.findSparePart(target.value);
+            if (!part) {
+                return;
+            }
+
+            const row = target.closest('.repeat-row');
+            if (!row) {
+                return;
+            }
+
+            const nameInput = row.querySelector('[data-field="item_name"]');
+            if (nameInput && !nameInput.value) {
+                nameInput.value = part.part_name || part.part_code || '';
+            }
+
+            const uomInput = row.querySelector('[data-field="uom"]');
+            if (uomInput && !uomInput.value && part.uom) {
+                uomInput.value = part.uom;
+            }
+
+            const rateInput = row.querySelector('[data-field="rate"]');
+            if (rateInput && !rateInput.value && part.unit_price) {
+                rateInput.value = part.unit_price;
+            }
         }
 
         renderProcurement() {
