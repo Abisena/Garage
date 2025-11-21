@@ -1,46 +1,61 @@
+const update_line_amount = (frm, cdt, cdn) => {
+    const row = locals[cdt]?.[cdn];
+
+    if (!row) {
+        return;
+    }
+
+    const qty = frappe.utils.flt(row.qty);
+    const rate = frappe.utils.flt(row.rate);
+
+    frappe.model.set_value(cdt, cdn, "amount", qty * rate);
+};
+
+const update_totals = (frm) => {
+    const { qty, amount } = (frm.doc.items || []).reduce(
+        (acc, item) => {
+            acc.qty += frappe.utils.flt(item.qty);
+            acc.amount += frappe.utils.flt(item.amount);
+            return acc;
+        },
+        { qty: 0, amount: 0 },
+    );
+
+    frm.set_value("total_qty", qty);
+    frm.set_value("total_amount", amount);
+};
+
 frappe.ui.form.on("Garage Procurement Order", {
     refresh(frm) {
-        frm.trigger("update_totals");
+        update_totals(frm);
     },
 
     validate(frm) {
-        frm.trigger("update_totals");
-    },
-
-    update_totals(frm) {
-        let total_qty = 0;
-        let total_amount = 0;
-
-        (frm.doc.items || []).forEach((item) => {
-            const qty = frappe.utils.flt(item.qty);
-            const rate = frappe.utils.flt(item.rate);
-            const amount = qty * rate;
-
-            frappe.model.set_value(item.doctype, item.name, "amount", amount);
-
-            total_qty += qty;
-            total_amount += amount;
-        });
-
-        frm.set_value("total_qty", total_qty);
-        frm.set_value("total_amount", total_amount);
+        update_totals(frm);
     },
 });
 
 frappe.ui.form.on("Garage Procurement Item", {
-    qty(frm) {
-        frm.trigger("update_totals");
+    qty(frm, cdt, cdn) {
+        update_line_amount(frm, cdt, cdn);
+        update_totals(frm);
     },
 
-    rate(frm) {
-        frm.trigger("update_totals");
+    rate(frm, cdt, cdn) {
+        update_line_amount(frm, cdt, cdn);
+        update_totals(frm);
     },
 
-    items_add(frm) {
-        frm.trigger("update_totals");
+    amount(frm) {
+        update_totals(frm);
+    },
+
+    items_add(frm, cdt, cdn) {
+        update_line_amount(frm, cdt, cdn);
+        update_totals(frm);
     },
 
     items_remove(frm) {
-        frm.trigger("update_totals");
+        update_totals(frm);
     },
 });
