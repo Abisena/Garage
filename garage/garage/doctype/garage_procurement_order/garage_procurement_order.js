@@ -1,3 +1,12 @@
+const parse_flt = (value) => {
+    if (typeof frappe?.utils?.flt === "function") {
+        return frappe.utils.flt(value);
+    }
+
+    const number = Number(value);
+    return Number.isFinite(number) ? number : 0;
+};
+
 const update_line_amount = (frm, cdt, cdn) => {
     const row = locals[cdt]?.[cdn];
 
@@ -5,8 +14,8 @@ const update_line_amount = (frm, cdt, cdn) => {
         return;
     }
 
-    const qty = frappe.utils.flt(row.qty);
-    const rate = frappe.utils.flt(row.rate);
+    const qty = parse_flt(row.qty);
+    const rate = parse_flt(row.rate);
 
     frappe.model.set_value(cdt, cdn, "amount", qty * rate);
 };
@@ -14,8 +23,8 @@ const update_line_amount = (frm, cdt, cdn) => {
 const update_totals = (frm) => {
     const { qty, amount } = (frm.doc.items || []).reduce(
         (acc, item) => {
-            acc.qty += frappe.utils.flt(item.qty);
-            acc.amount += frappe.utils.flt(item.amount);
+            acc.qty += parse_flt(item.qty);
+            acc.amount += parse_flt(item.amount);
             return acc;
         },
         { qty: 0, amount: 0 },
