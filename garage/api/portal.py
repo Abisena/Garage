@@ -1565,6 +1565,26 @@ def _apply_defaults(doctype: str, doc: frappe.Document) -> None:
         doc.receipt_date = nowdate()
 
 
+def _resolve_garage_customer(identifier: Any, *, branch: Optional[str] = None) -> Optional[str]:
+    customer_value = cstr(identifier).strip()
+    if not customer_value:
+        return None
+
+    with _ignoring_permissions():
+        if frappe.db.exists("Garage Customer", customer_value):
+            return customer_value
+
+        filters: Dict[str, Any] = {"customer_name": customer_value}
+        if branch:
+            filters["branch"] = branch
+
+        matched = frappe.db.get_value("Garage Customer", filters, "name")
+        if matched:
+            return matched
+
+    return None
+
+
 def _new_document(doctype: str, data: Mapping[str, Any]) -> frappe.Document:
     config = ALLOWED_DOCS[doctype]
     doc = frappe.new_doc(doctype)
@@ -6043,6 +6063,15 @@ def update_sales_invoice(name: str, updates: Optional[Any] = None) -> Dict[str, 
 def create_payment_entry(entry: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
     data = _ensure_dict(entry or {})
+
+    if data.get("customer"):
+        branch_value = cstr(data.get("branch") or _default_branch(frappe.session.user) or "").strip()
+        resolved_customer = _resolve_garage_customer(data.get("customer"), branch=branch_value)
+        if resolved_customer:
+            data["customer"] = resolved_customer
+        else:
+            frappe.throw(_("Customer tidak ditemukan: {0}").format(data.get("customer")))
+
     doc = _insert_document("Garage Payment Entry", data)
     return {"name": doc.name, "status": doc.status}
 
