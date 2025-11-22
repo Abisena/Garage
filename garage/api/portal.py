@@ -1582,6 +1582,13 @@ def _resolve_garage_customer(identifier: Any, *, branch: Optional[str] = None) -
         if matched:
             return matched
 
+        # Fallback to searching without the branch constraint to handle
+        # customers that are shared across branches.
+        if branch:
+            matched = frappe.db.get_value("Garage Customer", {"customer_name": customer_value}, "name")
+            if matched:
+                return matched
+
     return None
 
 
