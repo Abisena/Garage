@@ -542,6 +542,37 @@ export function BuyingSparePartIntegrated({ currentUser }) {
     alert(`✅ Barang telah diterima!\n\n📦 Stok telah diupdate di Master Spare Parts.`);
   };
 
+  const handleCreatePaymentDraft = async (po) => {
+    if (!po) return;
+
+    try {
+      const draft = await frappeClient.createPaymentEntry({
+        branch: po.branch,
+        customer: po.vendor,
+        payment_date: new Date().toISOString().split('T')[0],
+        mode_of_payment: 'Bank Transfer',
+        paid_amount: po.totalAmount,
+        received_amount: po.totalAmount,
+        status: 'Draft',
+        reference_no: po.poNumber,
+        notes: `Draft payment untuk PO ${po.poNumber}`
+      });
+
+      if (draft?.name) {
+        const updatedPOs = purchaseOrders.map((item) =>
+          item.id === po.id ? { ...item, paymentEntryName: draft.name } : item
+        );
+        savePurchaseOrders(updatedPOs);
+        setSelectedPOForDetail({ ...po, paymentEntryName: draft.name });
+      }
+
+      alert('✅ Draft payment untuk PO berhasil dibuat!');
+    } catch (error) {
+      console.error('Failed to create payment draft for PO', error);
+      alert('❌ Gagal membuat draft payment untuk PO. Coba lagi.');
+    }
+  };
+
   const getStatusBadge = (status, payoutNumber) => {
     const badges = {
       DRAFT: { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200', icon: Clock, label: 'Draft' },
@@ -1829,6 +1860,13 @@ export function BuyingSparePartIntegrated({ currentUser }) {
             </div>
 
             <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => handleCreatePaymentDraft(selectedPOForDetail)}
+                disabled={!!selectedPOForDetail.paymentEntryName}
+              >
+                {selectedPOForDetail.paymentEntryName ? 'Draft Payment Created' : 'Create Draft Payment'}
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => {
