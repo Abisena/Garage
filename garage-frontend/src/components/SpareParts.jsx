@@ -64,7 +64,7 @@ export function SpareParts() {
     } catch (err) {
       console.error('Failed to load spare parts from ERPNext Item master', err);
       if (!cancelledRef?.current) {
-        setError('Gagal memuat data spare part dari Stock Item. Pastikan sesi login masih aktif.');
+        setError('Gagal memuat data spare part dari Garage Spare Part List. Pastikan sesi login masih aktif.');
         setSpareParts([]);
         setStats({ totalParts: 0, lowStock: 0, categories: 0, totalValue: 0 });
       }
@@ -116,7 +116,7 @@ export function SpareParts() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-slate-800 mb-1">Master Spare Parts</h1>
-            <p className="text-slate-600">Data diambil langsung dari doctype Stock Item</p>
+            <p className="text-slate-600">Data diambil langsung dari Garage Spare Part List</p>
           </div>
           <Button onClick={() => loadSpareParts()} className="bg-blue-500 hover:bg-blue-600 text-white" disabled={isLoading}>
             <RefreshCcw className="w-4 h-4 mr-2" />

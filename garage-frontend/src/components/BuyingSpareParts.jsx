@@ -144,8 +144,8 @@ export function BuyingSparePartIntegrated({ currentUser }) {
 
       saveMasterSpareParts(mergedParts);
     } catch (error) {
-      console.error('Failed to load master spare parts from Stock Item', error);
-      setPartsError('Gagal memuat master spare parts dari Stock Item. Menampilkan data lokal sebagai cadangan.');
+      console.error('Failed to load master spare parts from Garage Spare Part List', error);
+      setPartsError('Gagal memuat master spare parts dari Garage Spare Part List. Menampilkan data lokal sebagai cadangan.');
 
       const savedParts = localStorage.getItem('masterSpareParts');
       if (savedParts) {
@@ -268,7 +268,7 @@ export function BuyingSparePartIntegrated({ currentUser }) {
     const partToDelete = masterSpareParts.find((part) => part.id === id);
 
     if (!partToDelete?.isCustom) {
-      alert('⚠️ Part ini berasal dari Stock Item sehingga tidak bisa dihapus di sini.');
+      alert('⚠️ Part ini berasal dari Garage Spare Part List sehingga tidak bisa dihapus di sini.');
       return;
     }
 

@@ -1230,33 +1230,47 @@ def _item_price_map(
 
 def _item_to_spare_part_record(
     item: Mapping[str, Any],
-    stock_map: Mapping[str, Mapping[str, float]],
+    stock_map: Optional[Mapping[str, Mapping[str, float]]] = None,
     price_map: Optional[Mapping[str, float]] = None,
 ) -> Dict[str, Any]:
-    part_code = cstr(item.get("item_code") or item.get("name") or "").strip()
-    stock_info = stock_map.get(part_code) or {}
+    part_code = cstr(
+        item.get("part_code") or item.get("item_code") or item.get("name") or ""
+    ).strip()
+    stock_info = (stock_map or {}).get(part_code) or {}
 
     price = 0
     if price_map:
         price = flt(price_map.get(part_code) or 0)
     if not price:
-        price = flt(item.get("standard_rate") or item.get("last_purchase_rate") or 0)
+        price = flt(
+            item.get("unit_price")
+            or item.get("standard_rate")
+            or item.get("last_purchase_rate")
+            or 0
+        )
 
     return {
         "name": item.get("name"),
         "part_code": part_code,
-        "part_name": item.get("item_name") or part_code,
+        "part_name": item.get("part_name")
+        or item.get("item_name")
+        or item.get("item_code")
+        or part_code,
         "description": item.get("description"),
-        "category": item.get("item_group"),
+        "category": item.get("category") or item.get("item_group"),
         "brand": item.get("brand"),
-        "uom": item.get("stock_uom"),
+        "uom": item.get("uom") or item.get("stock_uom"),
         "unit_price": price,
-        "stock_qty": flt(stock_info.get("stock_qty", 0)),
-        "reserved_qty": flt(stock_info.get("reserved_qty", 0)),
-        "reorder_level": flt(item.get("safety_stock") or 0),
-        "warehouse_location": None,
-        "managed_by": item.get("owner"),
-        "status": "Inactive" if cint(item.get("disabled")) else "Active",
+        "stock_qty": flt(stock_info.get("stock_qty", item.get("stock_qty") or 0)),
+        "reserved_qty": flt(
+            stock_info.get("reserved_qty", item.get("reserved_qty") or 0)
+        ),
+        "reorder_level": flt(item.get("reorder_level") or item.get("safety_stock") or 0),
+        "warehouse_location": item.get("warehouse_location"),
+        "managed_by": item.get("managed_by") or item.get("owner"),
+        "status": (item.get("status") or "Active")
+        if item.get("status")
+        else ("Inactive" if cint(item.get("disabled")) else "Active"),
         "image": item.get("image"),
         "modified": item.get("modified"),
         "owner": item.get("owner"),
@@ -1266,48 +1280,55 @@ def _item_to_spare_part_record(
 def _fetch_item_spare_parts(
     data: Mapping[str, Any], *, limit: int = DEFAULT_LIMIT
 ) -> List[Dict[str, Any]]:
-    item_fields = [
+    part_fields = [
         "name",
-        "item_code",
-        "item_name",
+        "part_code",
+        "part_name",
         "description",
-        "item_group",
+        "category",
         "brand",
-        "stock_uom",
-        "disabled",
+        "uom",
+        "unit_price",
+        "stock_qty",
+        "reserved_qty",
+        "reorder_level",
+        "warehouse_location",
+        "managed_by",
+        "status",
         "image",
         "modified",
         "owner",
     ]
 
-    optional_fields = []
-    for field in ["standard_rate", "last_purchase_rate", "safety_stock"]:
-        if _doctype_has_field("Item", field):
-            optional_fields.append(field)
-    item_fields.extend(optional_fields)
-
-    filters: List[List[Any]] = [["is_stock_item", "=", 1]]
+    filters: List[List[Any]] = []
 
     if data.get("category"):
-        filters.append(["item_group", "=", data["category"]])
+        filters.append(["category", "=", data["category"]])
 
     status = data.get("status")
     if status and status != "Low Stock":
-        filters.append(["disabled", "=", 1 if status == "Inactive" else 0])
+        filters.append(["status", "=", status])
 
+    identifier = data.get("item_code") or data.get("part_code")
     if data.get("name"):
         filters.append(["name", "=", data.get("name")])
-    if data.get("item_code"):
-        filters.append(["item_code", "=", data.get("item_code")])
+    if identifier:
+        filters.append(["part_code", "=", identifier])
 
-    items = _list_dicts("Item", item_fields, filters=filters, limit=limit)
-    item_codes = [item.get("item_code") for item in items]
-    stock_map = _item_stock_map(item_codes)
-    price_map = _item_price_map(item_codes)
+    search_term = cstr(data.get("search") or "").strip()
+    if search_term:
+        filters.append(
+            [
+                "or",
+                ["part_code", "like", f"%{search_term}%"],
+                ["part_name", "like", f"%{search_term}%"],
+                ["brand", "like", f"%{search_term}%"],
+            ]
+        )
 
-    return [
-        _item_to_spare_part_record(item, stock_map, price_map=price_map) for item in items
-    ]
+    parts = _list_dicts("Garage Spare Part", part_fields, filters=filters, limit=limit)
+
+    return [_item_to_spare_part_record(part) for part in parts]
 
     source = "On Hand"
     if usage == "material" and not warehouse:
@@ -4180,7 +4201,7 @@ def get_spare_part_stats() -> Dict[str, Any]:
     """
     _require_login()
 
-    # Get all spare parts from ERPNext Item master
+    # Get all spare parts from Garage Spare Part master
     spare_parts = _fetch_item_spare_parts({}, limit=1000)
     
     # Calculate statistics
