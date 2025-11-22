@@ -5436,7 +5436,10 @@ def update_spare_part_request_status(name: str, action: str) -> Dict[str, Any]:
                 )
             )
 
-        part_doc.stock_qty = available - qty
+        movement_doc = _issue_spare_part_via_stock_movement(request)
+        if movement_doc:
+            part_doc.reload()
+
         if flt(part_doc.reserved_qty):
             part_doc.reserved_qty = max(flt(part_doc.reserved_qty) - qty, 0)
 
@@ -5461,6 +5464,8 @@ def update_spare_part_request_status(name: str, action: str) -> Dict[str, Any]:
                 },
             }
         )
+        if movement_doc:
+            response["stock_movement"] = movement_doc.name
     else:
         frappe.db.set_value("Garage Service Order Part", name, {"stock_status": new_status})
         response["message"] = (
@@ -5485,6 +5490,49 @@ def update_spare_part_request_status(name: str, action: str) -> Dict[str, Any]:
                     response["message"] = group_message
 
     return response
+
+
+def _issue_spare_part_via_stock_movement(request: Mapping[str, Any]) -> Optional[frappe.Document]:
+    """Create and submit a stock issue tied to a service order spare-part row."""
+
+    parent_order = cstr(request.get("parent") or "").strip()
+    if not parent_order:
+        return None
+
+    part_code = cstr(request.get("item_code") or "").strip()
+    if not part_code:
+        return None
+
+    qty = flt(request.get("qty") or 0)
+    if qty <= 0:
+        return None
+
+    movement_doc = frappe.new_doc("Garage Stock Movement")
+    movement_doc.movement_type = "Issue"
+    movement_doc.reference_type = "Garage Service Order"
+    movement_doc.reference_name = parent_order
+    movement_doc.warehouse = cstr(request.get("warehouse") or "")
+    movement_doc.remarks = (
+        cstr(request.get("description") or "")
+        or _("Issue spare part for service order {0}").format(parent_order)
+    )
+
+    movement_doc.append(
+        "items",
+        {
+            "item_code": part_code,
+            "item_name": request.get("item_name") or part_code,
+            "description": request.get("description") or request.get("item_name"),
+            "qty": qty,
+            "uom": request.get("uom") or "Unit",
+            "source_warehouse": cstr(request.get("warehouse") or ""),
+            "remarks": request.get("description") or request.get("item_name"),
+        },
+    )
+
+    movement_doc = _insert_doc(movement_doc)
+    movement_doc.submit()
+    return movement_doc
 
 
 @frappe.whitelist()
