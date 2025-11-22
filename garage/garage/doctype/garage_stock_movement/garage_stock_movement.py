@@ -63,6 +63,22 @@ class GarageStockMovement(Document):
 
         spare_part.save(ignore_permissions=True)
 
+        warehouse = row.target_warehouse or row.source_warehouse or self.warehouse
+        if warehouse:
+            bin_name = frappe.db.get_value(
+                "Bin", {"item_code": row.item_code, "warehouse": warehouse}, "name"
+            )
+
+            if bin_name:
+                bin_doc = frappe.get_doc("Bin", bin_name)
+            else:
+                bin_doc = frappe.get_doc(
+                    {"doctype": "Bin", "item_code": row.item_code, "warehouse": warehouse}
+                )
+
+            bin_doc.actual_qty = (bin_doc.actual_qty or 0) + delta_qty
+            bin_doc.save(ignore_permissions=True)
+
         ledger_doc = frappe.get_doc(
             {
                 "doctype": "Garage Stock Ledger Entry",
