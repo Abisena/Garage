@@ -1880,6 +1880,7 @@ import { ProcessPaymentModal } from './ProcessPaymentModal';
 import { ReceiptModal } from './ReceiptModal';
 import { DirectSalesNotaModal } from './DirectSalesNotaModal';
 import { DirectSalesInvoiceModal } from './DirectSalesInvoiceModal';
+import { frappeClient } from '../lib/frappeClient';
 
 export function Payment({ currentUser }) {
   const [activeTab, setActiveTab] = useState('service');
@@ -1898,7 +1899,6 @@ export function Payment({ currentUser }) {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [showDirectSalesNotaModal, setShowDirectSalesNotaModal] = useState(false);
   const [showDirectSalesInvoiceModal, setShowDirectSalesInvoiceModal] = useState(false);
-  const [showDirectSalesPaymentModal, setShowDirectSalesPaymentModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelNotes, setCancelNotes] = useState('');
   
@@ -2275,12 +2275,104 @@ export function Payment({ currentUser }) {
     loadWorkOrders();
     setShowPaymentModal(false);
     setShowNotaModal(false);
-    
+
     // Update selectedOrder untuk modal receipt
     setSelectedOrder(updatedOrder);
-    
+
     // Show receipt modal
     setShowReceiptModal(true);
+
+    const resolvedMethod = finalPaymentMethod === 'transfer' ? 'Bank Transfer' : 'Cash';
+    createPaymentDraft({
+      branch: selectedOrder.branch,
+      customer: selectedOrder.customerName,
+      amount: grandTotal,
+      receivedAmount: paidAmount,
+      method: resolvedMethod,
+      reference: invoiceNumber,
+      notes: `Service order ${selectedOrder.orderId} paid via ${resolvedMethod}`
+    }).then((result) => {
+      if (result?.name) {
+        const updatedOrdersWithDraft = updatedOrders.map((order) =>
+          order.id === selectedOrder.id ? { ...updatedOrder, paymentEntryName: result.name } : order
+        );
+        saveWorkOrders(updatedOrdersWithDraft);
+      }
+    }).catch((error) => {
+      console.error('Failed to create payment draft', error);
+      toast.error('Draft payment gagal dibuat. Coba lagi nanti.');
+    });
+  };
+
+  const handleProcessDirectSalesPayment = async () => {
+    if (!selectedDirectSale) return;
+
+    const paymentDate = new Date();
+    const paymentDateLabel = paymentDate.toLocaleString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const updatedSale = {
+      ...selectedDirectSale,
+      paymentStatus: 'paid',
+      paymentMethod: 'cash',
+      paymentDate: paymentDateLabel
+    };
+
+    const updatedSales = directSales.map((sale) =>
+      sale.id === selectedDirectSale.id ? updatedSale : sale
+    );
+
+    localStorage.setItem('directSales', JSON.stringify(updatedSales));
+    setDirectSales(updatedSales);
+    setSelectedDirectSale(updatedSale);
+
+    try {
+      const draft = await createPaymentDraft({
+        branch: selectedDirectSale.branch,
+        customer: selectedDirectSale.customerName,
+        amount: selectedDirectSale.grandTotal,
+        receivedAmount: selectedDirectSale.grandTotal,
+        method: 'Cash',
+        reference: selectedDirectSale.salesNumber,
+        notes: `Direct sales ${selectedDirectSale.salesNumber} paid in cash`
+      });
+
+      if (draft?.name) {
+        const salesWithDraft = updatedSales.map((sale) =>
+          sale.id === selectedDirectSale.id ? { ...updatedSale, paymentEntryName: draft.name } : sale
+        );
+        localStorage.setItem('directSales', JSON.stringify(salesWithDraft));
+        setDirectSales(salesWithDraft);
+        setSelectedDirectSale({ ...updatedSale, paymentEntryName: draft.name });
+      }
+
+      toast.success('Draft payment direct sales dibuat.');
+    } catch (error) {
+      console.error('Failed to create direct sales payment draft', error);
+      toast.error('Gagal membuat draft payment direct sales');
+    }
+  };
+
+  const createPaymentDraft = async ({ branch, customer, amount, receivedAmount, method, reference, notes }) => {
+    const paymentDate = new Date().toISOString().split('T')[0];
+    const payload = {
+      branch,
+      customer,
+      payment_date: paymentDate,
+      mode_of_payment: method || 'Cash',
+      paid_amount: amount,
+      received_amount: receivedAmount,
+      status: 'Draft',
+      reference_no: reference,
+      notes,
+    };
+
+    return frappeClient.createPaymentEntry(payload);
   };
 
   const handleOpenNota = (order) => {
@@ -2854,7 +2946,7 @@ export function Payment({ currentUser }) {
           onClose={() => setShowDirectSalesNotaModal(false)}
           onProceedToPayment={() => {
             setShowDirectSalesNotaModal(false);
-            setShowDirectSalesPaymentModal(true);
+            handleProcessDirectSalesPayment();
           }}
           formatCurrency={formatCurrency}
           onGenerateNotaNumber={handleGenerateDirectSalesNotaNumber}

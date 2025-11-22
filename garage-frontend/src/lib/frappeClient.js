@@ -264,6 +264,23 @@ class FrappeClient {
       throw error;
     }
   }
+
+  async createPaymentEntry(entry) {
+    try {
+      const response = await this.request(
+        '/api/method/garage.api.portal.create_payment_entry',
+        {
+          method: 'POST',
+          body: JSON.stringify({ entry }),
+        },
+      );
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to create payment entry:', error);
+      throw error;
+    }
+  }
 }
 
 export const frappeClient = new FrappeClient();
