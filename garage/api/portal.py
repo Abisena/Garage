@@ -1429,6 +1429,25 @@ def answer_erpnext_integration_status() -> Dict[str, Any]:
 
 
 @frappe.whitelist()
+def answer_erpnext_integration_text() -> str:
+    """Return a short string: "sudah bisa" or "belum: ..." with gaps listed."""
+
+    _require_login()
+
+    gaps = _collect_erpnext_integration_gaps()
+    ready = not any(gaps.values())
+
+    if ready:
+        return _("sudah bisa")
+
+    missing = _summarize_erpnext_integration_gaps(gaps)
+    if not missing:
+        return _("belum")
+
+    return _("belum") + ": " + "; ".join(missing)
+
+
+@frappe.whitelist()
 def get_erpnext_integration_actions() -> Dict[str, Any]:
     """Describe concrete steps to clear the remaining ERPNext integration gaps."""
 
