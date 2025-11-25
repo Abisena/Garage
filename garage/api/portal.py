@@ -1328,12 +1328,15 @@ def _fetch_item_spare_parts(
         order_by="modified desc",
     )
 
-    stock_map = _aggregate_item_stock([item.get("item_code") for item in items])
+    item_codes = [item.get("item_code") for item in items]
+
+    stock_map = _aggregate_item_stock(item_codes)
+    price_map = _item_price_map(item_codes)
 
     processed: List[Dict[str, Any]] = []
     for item in items:
         part_code = cstr(item.get("item_code") or "")
-        record = _item_to_spare_part_record(item, stock_map, {})
+        record = _item_to_spare_part_record(item, stock_map, price_map)
         if not record.get("reorder_level"):
             record["reorder_level"] = flt(item.get("safety_stock") or 0)
         record["default_warehouse"] = item.get("default_warehouse")
