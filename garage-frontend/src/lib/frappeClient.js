@@ -238,8 +238,11 @@ class FrappeClient {
         item_name: part.item_name || part.part_name,
         item_group: part.item_group || part.category,
         standard_rate: part.standard_rate ?? part.unit_price,
-        stock_qty: part.stock_qty ?? part.actual_qty ?? 0,
-        total_reserved_qty: part.total_reserved_qty ?? part.reserved_qty,
+        // Prefer the explicitly provided available quantity, but fall back to other
+        // stock fields returned by the API to keep the UI resilient to schema tweaks.
+        stock_qty: part.available_qty ?? part.stock_qty ?? part.actual_qty ?? 0,
+        total_reserved_qty:
+          part.total_reserved_qty ?? part.ordered_qty ?? part.reserved_qty ?? 0,
         safety_stock: part.safety_stock ?? part.reorder_level,
       }));
 
