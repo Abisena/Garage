@@ -1268,6 +1268,55 @@ def _collect_erpnext_integration_gaps() -> Dict[str, Any]:
     }
 
 
+def _summarize_erpnext_integration_gaps(gaps: Mapping[str, Any]) -> List[str]:
+    """Return human-friendly sentences explaining each detected gap."""
+
+    missing: List[str] = []
+
+    for doctype in sorted(gaps.get("missing_doctypes") or []):
+        missing.append(_(f"DocType belum ada: {doctype}"))
+
+    for doctype, fields in sorted((gaps.get("missing_fields") or {}).items()):
+        if fields:
+            missing.append(
+                _(f"DocType '{doctype}' belum memiliki field: {', '.join(sorted(fields))}")
+            )
+
+    for doctype, child_map in sorted((gaps.get("missing_child_fields") or {}).items()):
+        for child_field, details in sorted(child_map.items()):
+            if details.get("missing_table_field"):
+                missing.append(
+                    _(f"Tambahkan Table field '{child_field}' pada DocType '{doctype}'.")
+                )
+
+            if details.get("missing_child_doctype"):
+                target = details.get("missing_child_doctype")
+                target_label = target if target is not True else _("(belum diisi)")
+                missing.append(
+                    _(
+                        f"Field table '{child_field}' di DocType '{doctype}' harus mengarah ke child DocType valid (saat ini: {target_label})."
+                    )
+                )
+
+            if details.get("missing_fields"):
+                missing.append(
+                    _(
+                        f"Lengkapi field wajib [{', '.join(sorted(details.get('missing_fields') or []))}] pada child '{child_field}' di '{doctype}'."
+                    )
+                )
+
+    for doctype, operations in sorted((gaps.get("missing_operations") or {}).items()):
+        if operations:
+            missing.append(
+                _(f"Endpoint API belum ada untuk '{doctype}' operasi: {', '.join(sorted(operations))}.")
+            )
+
+    if not missing and any(gaps.values()):
+        missing.append(_("Masih ada gap integrasi ERPNext yang belum terpetakan."))
+
+    return missing
+
+
 @frappe.whitelist()
 def get_erpnext_integration_gaps() -> Dict[str, Any]:
     """Return any schema or endpoint gaps blocking full ERPNext integration."""
@@ -1335,24 +1384,7 @@ def get_erpnext_integration_readiness() -> Dict[str, Any]:
 
     reasons: List[str] = []
     if not ready:
-        if gaps.get("missing_doctypes"):
-            reasons.append(
-                _(f"DocType hilang: {', '.join(gaps['missing_doctypes'])}")
-            )
-        if gaps.get("missing_fields"):
-            reasons.append(
-                _(f"Field belum lengkap di: {', '.join(sorted(gaps['missing_fields']))}")
-            )
-        if gaps.get("missing_child_fields"):
-            reasons.append(
-                _(
-                    f"Field child belum lengkap di: {', '.join(sorted(gaps['missing_child_fields']))}"
-                )
-            )
-        if gaps.get("missing_operations"):
-            reasons.append(
-                _(f"Operasi API belum ada untuk: {', '.join(sorted(gaps['missing_operations']))}")
-            )
+        reasons = _summarize_erpnext_integration_gaps(gaps)
 
     headline = (
         _("Semua siap—portal dapat membuat transaksi ERPNext secara penuh.")
@@ -1384,24 +1416,7 @@ def answer_erpnext_integration_status() -> Dict[str, Any]:
 
     missing: List[str] = []
     if not ready:
-        if gaps.get("missing_doctypes"):
-            missing.append(
-                _(f"DocType belum ada: {', '.join(gaps['missing_doctypes'])}")
-            )
-        if gaps.get("missing_fields"):
-            missing.append(
-                _(f"Field belum lengkap di: {', '.join(sorted(gaps['missing_fields']))}")
-            )
-        if gaps.get("missing_child_fields"):
-            missing.append(
-                _(
-                    f"Field child belum lengkap di: {', '.join(sorted(gaps['missing_child_fields']))}"
-                )
-            )
-        if gaps.get("missing_operations"):
-            missing.append(
-                _(f"Operasi API belum ada untuk: {', '.join(sorted(gaps['missing_operations']))}")
-            )
+        missing = _summarize_erpnext_integration_gaps(gaps)
 
     return {
         "answer": answer,
