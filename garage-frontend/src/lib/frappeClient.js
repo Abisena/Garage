@@ -213,25 +213,42 @@ class FrappeClient {
 
   async listSpareParts(filters = {}, branch) {
     try {
-      const payload = {};
+      const params = new URLSearchParams();
+      const itemFilters = [["is_stock_item", "=", 1]];
 
-      if (filters && Object.keys(filters).length > 0) {
-        payload.filters = filters;
+      if (filters?.search) {
+        params.append('or_filters', JSON.stringify([
+          ["item_code", "like", `%${filters.search}%`],
+          ["item_name", "like", `%${filters.search}%`],
+          ["brand", "like", `%${filters.search}%`],
+        ]));
       }
 
-      if (branch) {
-        payload.branch = branch;
+      if (filters?.category) {
+        itemFilters.push(["item_group", "=", filters.category]);
       }
 
-      const response = await this.request(
-        '/api/method/garage.api.portal.list_spare_parts',
-        {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        }
-      );
+      params.append('filters', JSON.stringify(itemFilters));
+      params.append('fields', JSON.stringify([
+        "name",
+        "item_code",
+        "item_name",
+        "item_group",
+        "brand",
+        "stock_uom",
+        "standard_rate",
+        "valuation_rate",
+        "total_actual_qty",
+        "total_reserved_qty",
+        "safety_stock",
+        "disabled",
+        "image"
+      ]));
+      params.append('limit_page_length', '500');
 
-      return response.message || response;
+      const response = await this.request(`/api/resource/Item?${params.toString()}`);
+      const data = response.data || [];
+      return { spare_parts: data, total_count: data.length };
     } catch (error) {
       console.error('Failed to list spare parts:', error);
       throw error;
