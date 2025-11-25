@@ -1448,6 +1448,30 @@ def answer_erpnext_integration_text() -> str:
 
 
 @frappe.whitelist()
+def answer_erpnext_integration_brief() -> Dict[str, Any]:
+    """Jawaban ringkas: ""sudah bisa"" atau ""belum"" plus kekurangan jika ada."""
+
+    _require_login()
+
+    gaps = _collect_erpnext_integration_gaps()
+    ready = not any(gaps.values())
+    jawaban = _("sudah bisa") if ready else _("belum")
+
+    kurang: List[str] = []
+    if not ready:
+        kurang = _summarize_erpnext_integration_gaps(gaps)
+
+    return {
+        "jawaban": jawaban,
+        "siap": ready,
+        "kurang": kurang,
+        "status_method": "garage.api.portal.is_erpnext_integration_ready",
+        "gaps_method": "garage.api.portal.get_erpnext_integration_gaps",
+        "howto_method": "garage.api.portal.get_erpnext_integration_howto",
+    }
+
+
+@frappe.whitelist()
 def get_erpnext_integration_actions() -> Dict[str, Any]:
     """Describe concrete steps to clear the remaining ERPNext integration gaps."""
 
