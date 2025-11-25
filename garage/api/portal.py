@@ -1320,8 +1320,22 @@ def get_erpnext_integration_actions() -> Dict[str, Any]:
     _require_login()
 
     gaps = _collect_erpnext_integration_gaps()
-    ready = not any(gaps.values())
+    ready, actions = _erpnext_integration_actions_from_gaps(gaps)
 
+    return {
+        "ready": ready,
+        "actions": actions,
+        "gaps": gaps if not ready else {},
+        "status_method": "garage.api.portal.is_erpnext_integration_ready",
+    }
+
+
+def _erpnext_integration_actions_from_gaps(
+    gaps: Mapping[str, Any]
+) -> Tuple[bool, List[str]]:
+    """Convert detected gaps into a ready flag and ordered action items."""
+
+    ready = not any(gaps.values())
     actions: List[str] = []
 
     for doctype in gaps.get("missing_doctypes") or []:
@@ -1367,11 +1381,31 @@ def get_erpnext_integration_actions() -> Dict[str, Any]:
     if not actions and not ready:
         actions.append(_("Periksa ulang konfigurasi ERPNext dan endpoint portal."))
 
+    return ready, actions
+
+
+@frappe.whitelist()
+def get_erpnext_integration_howto() -> Dict[str, Any]:
+    """Return concise instructions to make the ERPNext integration fully ready."""
+
+    _require_login()
+
+    gaps = _collect_erpnext_integration_gaps()
+    ready, actions = _erpnext_integration_actions_from_gaps(gaps)
+
+    headline = (
+        _("Semua sudah terhubung—portal dapat membuat PO, Invoice, Payment, dan Journal di ERPNext.")
+        if ready
+        else _("Selesaikan langkah-langkah berikut supaya portal bisa membuat transaksi ERPNext penuh:")
+    )
+
     return {
         "ready": ready,
+        "headline": headline,
         "actions": actions,
         "gaps": gaps if not ready else {},
         "status_method": "garage.api.portal.is_erpnext_integration_ready",
+        "actions_method": "garage.api.portal.get_erpnext_integration_actions",
     }
 
 
