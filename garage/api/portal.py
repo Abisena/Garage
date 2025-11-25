@@ -6031,34 +6031,47 @@ def update_spare_part_request_status(name: str, action: str) -> Dict[str, Any]:
             frappe.throw(_("Kode sparepart belum diisi pada permintaan."))
 
         try:
-            part_doc = _get_doc("Garage Spare Part", part_code)
+            item_doc = _get_doc("Item", part_code)
         except Exception:
-            part_name = frappe.db.get_value("Garage Spare Part", {"part_code": part_code}, "name")
-            if not part_name:
-                frappe.throw(_("Sparepart {0} tidak ditemukan di master.").format(part_code))
-            part_doc = _get_doc("Garage Spare Part", part_name)
+            item_name = frappe.db.get_value("Item", {"item_code": part_code}, "name")
+            if not item_name:
+                frappe.throw(_("Sparepart {0} tidak ditemukan di master Item.").format(part_code))
+            item_doc = _get_doc("Item", item_name)
 
-        available = flt(part_doc.stock_qty or 0)
+        if not getattr(item_doc, "is_stock_item", 0):
+            frappe.throw(_("Item {0} bukan stok.").format(item_doc.item_name or part_code))
+
+        warehouse = cstr(request.get("warehouse") or "").strip()
+        if not warehouse:
+            warehouse = cstr(getattr(item_doc, "default_warehouse", "") or "").strip()
+
+        if not warehouse:
+            frappe.throw(_("Gudang asal belum ditentukan untuk pengeluaran stok."))
+
+        bin_row = _get_bin_balance(part_code, warehouse)
+        available = flt(bin_row.get("actual_qty") if bin_row else 0)
+        reserved_qty = flt(bin_row.get("reserved_qty") if bin_row else 0)
+
         if qty > available:
             frappe.throw(
                 _(
-                    "Stok {0} tidak mencukupi. Permintaan {1} {2}, stok tersedia {3}."
+                    "Stok {0} di gudang {1} tidak mencukupi. Permintaan {2} {3}, stok tersedia {4}."
                 ).format(
-                    part_doc.part_name or part_code,
+                    item_doc.item_name or part_code,
+                    warehouse,
                     "{:g}".format(flt(qty)),
-                    request.get("uom") or "",
+                    request.get("uom") or (item_doc.stock_uom or ""),
                     "{:g}".format(flt(available)),
                 )
             )
 
-        movement_doc = _issue_spare_part_via_stock_movement(request)
-        if movement_doc:
-            part_doc.reload()
+        stock_entry = _issue_spare_part_via_stock_entry(request, warehouse=warehouse, item_doc=item_doc)
 
-        if flt(part_doc.reserved_qty):
-            part_doc.reserved_qty = max(flt(part_doc.reserved_qty) - qty, 0)
-
-        _save_doc(part_doc)
+        if stock_entry:
+            response["stock_entry"] = stock_entry.name
+            bin_row = _get_bin_balance(part_code, warehouse)
+            available = flt(bin_row.get("actual_qty") if bin_row else 0)
+            reserved_qty = flt(bin_row.get("reserved_qty") if bin_row else 0)
 
         updated_fields = {"stock_status": new_status}
         if not request.get("source"):
@@ -6069,18 +6082,17 @@ def update_spare_part_request_status(name: str, action: str) -> Dict[str, Any]:
         response.update(
             {
                 "message": _("Permintaan sparepart disetujui. Stok tersisa {0}.").format(
-                    "{:g}".format(flt(part_doc.stock_qty or 0))
+                    "{:g}".format(flt(available))
                 ),
                 "part": {
-                    "name": part_doc.name,
-                    "part_code": part_doc.part_code,
-                    "stock_qty": part_doc.stock_qty,
-                    "reserved_qty": part_doc.reserved_qty,
+                    "item_code": part_code,
+                    "item_name": item_doc.item_name or part_code,
+                    "warehouse": warehouse,
+                    "stock_qty": available,
+                    "reserved_qty": reserved_qty,
                 },
             }
         )
-        if movement_doc:
-            response["stock_movement"] = movement_doc.name
     else:
         frappe.db.set_value("Garage Service Order Part", name, {"stock_status": new_status})
         response["message"] = (
@@ -6107,8 +6119,10 @@ def update_spare_part_request_status(name: str, action: str) -> Dict[str, Any]:
     return response
 
 
-def _issue_spare_part_via_stock_movement(request: Mapping[str, Any]) -> Optional[frappe.Document]:
-    """Create and submit a stock issue tied to a service order spare-part row."""
+def _issue_spare_part_via_stock_entry(
+    request: Mapping[str, Any], *, warehouse: Optional[str] = None, item_doc: Optional[frappe.Document] = None
+) -> Optional[frappe.Document]:
+    """Create and submit an ERPNext Stock Entry for a service order part issue."""
 
     parent_order = cstr(request.get("parent") or "").strip()
     if not parent_order:
@@ -6122,32 +6136,84 @@ def _issue_spare_part_via_stock_movement(request: Mapping[str, Any]) -> Optional
     if qty <= 0:
         return None
 
-    movement_doc = frappe.new_doc("Garage Stock Movement")
-    movement_doc.movement_type = "Issue"
-    movement_doc.reference_type = "Garage Service Order"
-    movement_doc.reference_name = parent_order
-    movement_doc.warehouse = cstr(request.get("warehouse") or "")
-    movement_doc.remarks = (
+    warehouse = cstr(warehouse or request.get("warehouse") or "").strip()
+    if not warehouse:
+        return None
+
+    if not item_doc:
+        try:
+            item_doc = _get_doc("Item", part_code)
+        except Exception:
+            return None
+
+    company = _default_company()
+    if not company:
+        frappe.throw(_("Default company belum diatur. Tidak dapat membuat Stock Entry."))
+
+    stock_entry = frappe.new_doc("Stock Entry")
+    stock_entry.stock_entry_type = "Material Issue"
+    stock_entry.company = company
+    stock_entry.posting_date = nowdate()
+    if _doctype_has_field("Stock Entry", "set_posting_time"):
+        stock_entry.set_posting_time = 1
+    if _doctype_has_field("Stock Entry", "service_order"):
+        stock_entry.service_order = parent_order
+    if _doctype_has_field("Stock Entry", "from_warehouse"):
+        stock_entry.from_warehouse = warehouse
+    stock_entry.remarks = (
         cstr(request.get("description") or "")
         or _("Issue spare part for service order {0}").format(parent_order)
     )
 
-    movement_doc.append(
+    uom = request.get("uom") or getattr(item_doc, "stock_uom", None) or "Unit"
+
+    stock_entry.append(
         "items",
         {
             "item_code": part_code,
-            "item_name": request.get("item_name") or part_code,
+            "item_name": request.get("item_name") or getattr(item_doc, "item_name", None) or part_code,
             "description": request.get("description") or request.get("item_name"),
+            "s_warehouse": warehouse,
             "qty": qty,
-            "uom": request.get("uom") or "Unit",
-            "source_warehouse": cstr(request.get("warehouse") or ""),
-            "remarks": request.get("description") or request.get("item_name"),
+            "uom": uom,
+            "stock_uom": getattr(item_doc, "stock_uom", None) or uom,
+            "conversion_factor": 1,
         },
     )
 
-    movement_doc = _insert_doc(movement_doc)
-    movement_doc.submit()
-    return movement_doc
+    stock_entry = _insert_doc(stock_entry)
+    stock_entry.submit()
+    return stock_entry
+
+
+def _default_company() -> str:
+    company = ""
+    try:
+        company = cstr(
+            get_user_default("company")
+            or get_user_default("Company")
+            or frappe.db.get_single_value("Global Defaults", "default_company")
+            or ""
+        ).strip()
+    except Exception:
+        company = ""
+    return company
+
+
+def _get_bin_balance(item_code: str, warehouse: str) -> Optional[Dict[str, Any]]:
+    if not item_code or not warehouse:
+        return None
+
+    try:
+        with _ignoring_permissions():
+            return frappe.db.get_value(
+                "Bin",
+                {"item_code": item_code, "warehouse": warehouse},
+                ["actual_qty", "reserved_qty"],
+                as_dict=True,
+            )
+    except Exception:
+        return None
 
 
 @frappe.whitelist()
