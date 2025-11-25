@@ -2235,9 +2235,11 @@ export function Payment({ currentUser }) {
     });
 
     // Generate invoice number with format: INV-{kode cabang}-{nomor urut}
-    const branchCode = selectedOrder.branch.substring(0, 3).toUpperCase();
-    const orderNumber = selectedOrder.orderId.split('-')[1];
-    const invoiceNumber = `INV-${branchCode}-${orderNumber}`;
+    const branchCode = (selectedOrder.branch || 'GAR').substring(0, 3).toUpperCase();
+    const orderNumber = selectedOrder.orderId?.split('-')[1] || String(selectedOrder.id).padStart(3, '0');
+    const invoiceNumber = selectedOrder.invoiceNumber || `INV-${branchCode}-${orderNumber}`;
+    const journalEntryNumber = selectedOrder.journalEntryNumber || `JE-${branchCode}-${orderNumber}`;
+    const paymentEntryNumber = selectedOrder.paymentEntryNumber || `PAY-${branchCode}-${orderNumber}`;
     
     // Generate nota faktur number with format: NOTA-{kode cabang}-{nomor urut}
     const notaFakturNumber = `NOTA-${branchCode}-${orderNumber}`;
@@ -2261,9 +2263,14 @@ export function Payment({ currentUser }) {
       paidAmount,
       paymentDate,
       invoiceNumber,
+      journalEntryNumber,
+      paymentEntryNumber,
       notaFakturNumber,
       receiptNumber,
       notaNumber: notaFakturNumber,
+      invoiceStatus: 'submitted',
+      journalEntryStatus: 'posted',
+      paymentEntryStatus: 'submitted',
       status: 'paid'
     };
 
@@ -2651,32 +2658,64 @@ export function Payment({ currentUser }) {
                       <td className="px-4 py-3 text-sm text-slate-600">{order.date}</td>
                       <td className="px-4 py-3 text-sm text-blue-600 font-semibold text-right">{formatCurrency(calculateGrandTotal(order))}</td>
                       <td className="px-4 py-3 text-center">
-                        {order.paymentStatus === 'paid' ? (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-emerald-100 text-emerald-700">
-                            <CheckCircle className="w-3 h-3" />
-                            Paid
-                          </span>
-                        ) : order.invoiceNumber ? (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-purple-100 text-purple-700">
-                            <Receipt className="w-3 h-3" />
-                            Inv Printed
-                          </span>
-                        ) : order.paymentStatus === 'nota-printed' ? (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
-                            <Printer className="w-3 h-3" />
-                            Nota Printed
-                          </span>
-                        ) : order.paymentStatus === 'cancelled' ? (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-red-100 text-red-700">
-                            <X className="w-3 h-3" />
-                            Cancelled
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-amber-100 text-amber-700">
-                            <Clock className="w-3 h-3" />
-                            Pending
-                          </span>
-                        )}
+                        {(() => {
+                          const hasDraftEntries =
+                            order.invoiceStatus === 'draft' ||
+                            order.journalEntryStatus === 'draft' ||
+                            order.paymentEntryStatus === 'draft';
+
+                          if (order.paymentStatus === 'paid') {
+                            return (
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-emerald-100 text-emerald-700">
+                                <CheckCircle className="w-3 h-3" />
+                                Paid
+                              </span>
+                            );
+                          }
+
+                          if (order.paymentStatus === 'cancelled') {
+                            return (
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-red-100 text-red-700">
+                                <X className="w-3 h-3" />
+                                Cancelled
+                              </span>
+                            );
+                          }
+
+                          if (hasDraftEntries) {
+                            return (
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
+                                <FileText className="w-3 h-3" />
+                                Draft Billing
+                              </span>
+                            );
+                          }
+
+                          if (order.invoiceNumber) {
+                            return (
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-purple-100 text-purple-700">
+                                <Receipt className="w-3 h-3" />
+                                Inv Printed
+                              </span>
+                            );
+                          }
+
+                          if (order.paymentStatus === 'nota-printed') {
+                            return (
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
+                                <Printer className="w-3 h-3" />
+                                Nota Printed
+                              </span>
+                            );
+                          }
+
+                          return (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-amber-100 text-amber-700">
+                              <Clock className="w-3 h-3" />
+                              Pending
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Button
