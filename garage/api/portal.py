@@ -3243,6 +3243,18 @@ def _map_repair_status(status: str) -> Dict[str, Optional[str]]:
             "job_card_status": "Completed",
             "qc_status": "Passed",
         },
+        "ready-for-payment": {
+            "status": "Completed",
+            "work_order_status": "Completed",
+            "job_card_status": "Completed",
+            "qc_status": "Passed",
+        },
+        "payment": {
+            "status": "Completed",
+            "work_order_status": "Completed",
+            "job_card_status": "Completed",
+            "qc_status": "Passed",
+        },
         "completed": {
             "status": "Completed",
             "work_order_status": "Completed",
@@ -3312,6 +3324,134 @@ def _append_progress_logs(doc: frappe.Document, history: Sequence[Mapping[str, A
         added += 1
 
     return added
+
+
+def _extract_repair_progress(
+    order: Mapping[str, Any], doc: frappe.Document
+) -> int:
+    """Return the highest progress percentage from payload or stored logs."""
+
+    percent = cint(order.get("repairProgress") or order.get("progress") or 0)
+
+    for entry in order.get("progressHistory") or []:
+        percent = max(
+            percent,
+            cint(
+                entry.get("progress")
+                or entry.get("repairProgress")
+                or entry.get("percent")
+                or entry.get("percent_complete")
+                or 0
+            ),
+        )
+
+    stored_logs = getattr(doc, "progress_logs", None) or []
+    for row in stored_logs:
+        percent = max(percent, cint(getattr(row, "percent_complete", 0)))
+
+    return percent
+
+
+def _ensure_billing_placeholders(
+    doc: frappe.Document, order: Mapping[str, Any]
+) -> Optional[Dict[str, Any]]:
+    """Auto-create draft invoice & payment entry once a repair is ~done."""
+
+    status_hint = cstr(order.get("status") or order.get("repairStatus") or "").lower()
+    progress = _extract_repair_progress(order, doc)
+
+    ready_states = {"ready-for-payment", "final-inspection", "qc-finished", "completed"}
+    if progress < 99 and status_hint not in ready_states:
+        return None
+
+    if not getattr(doc, "branch", None) or not getattr(doc, "customer", None):
+        return None
+
+    billing: Dict[str, Any] = {}
+
+    total_amount = flt(getattr(doc, "total_approved_amount", 0)) or flt(
+        getattr(doc, "total_estimated_amount", 0)
+    )
+
+    existing_invoice = None
+    try:
+        existing_invoice = frappe.db.get_value(
+            "Garage Sales Invoice",
+            {
+                "source_type": "Garage Service Order",
+                "source_name": doc.name,
+                "docstatus": ["<", 2],
+            },
+            "name",
+        )
+    except Exception:
+        existing_invoice = None
+
+    invoice_doc = None
+    if not existing_invoice:
+        invoice_doc = frappe.new_doc("Garage Sales Invoice")
+        invoice_doc.branch = doc.branch
+        invoice_doc.invoice_date = nowdate()
+        invoice_doc.customer = doc.customer
+        invoice_doc.source_type = "Garage Service Order"
+        invoice_doc.source_name = doc.name
+        invoice_doc.status = "Draft"
+        invoice_doc.total_amount = total_amount
+        invoice_doc.outstanding_amount = total_amount
+        _insert_doc(invoice_doc)
+        billing["sales_invoice"] = invoice_doc.name
+
+        if hasattr(doc, "invoice_status"):
+            doc.invoice_status = "Pending"
+    else:
+        invoice_doc = _get_doc("Garage Sales Invoice", existing_invoice)
+
+    payment_exists = False
+    if invoice_doc:
+        try:
+            allocations = frappe.db.get_all(
+                "Garage Payment Allocation",
+                filters={"invoice": invoice_doc.name},
+                fields=["parent"],
+                distinct=True,
+            )
+            parents = [row.get("parent") for row in allocations if row.get("parent")]
+            if parents:
+                active_entries = frappe.db.get_all(
+                    "Garage Payment Entry",
+                    filters={"name": ["in", parents], "docstatus": ["<", 2]},
+                    limit=len(parents),
+                    pluck="name",
+                )
+                payment_exists = bool(active_entries)
+        except Exception:
+            payment_exists = False
+
+        if not payment_exists:
+            payment_doc = frappe.new_doc("Garage Payment Entry")
+            payment_doc.branch = doc.branch
+            payment_doc.payment_date = nowdate()
+            payment_doc.customer = doc.customer
+            payment_doc.mode_of_payment = "Cash"
+            payment_doc.paid_amount = flt(invoice_doc.outstanding_amount)
+            payment_doc.received_amount = flt(invoice_doc.outstanding_amount)
+            payment_doc.status = "Draft"
+            payment_doc.append(
+                "allocations",
+                {
+                    "invoice": invoice_doc.name,
+                    "allocated_amount": flt(invoice_doc.outstanding_amount),
+                    "outstanding_before": flt(invoice_doc.outstanding_amount),
+                    "outstanding_after": 0,
+                },
+            )
+            _insert_doc(payment_doc)
+            billing["payment_entry"] = payment_doc.name
+
+    if billing:
+        _save_doc(doc)
+
+    return billing or None
 
 
 @frappe.whitelist()
@@ -3384,6 +3524,10 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
                 applied.setdefault("required_parts", []).append({"item_code": part_code, "stock_status": mapped_status})
 
         _save_doc(doc)
+
+        billing_refs = _ensure_billing_placeholders(doc, order)
+        if billing_refs:
+            applied["billing"] = billing_refs
         updated += 1
         results.append({"status": "updated", "order_id": doc.name, "applied": applied})
 
