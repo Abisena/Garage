@@ -63,24 +63,62 @@ export function SparePartsRequest({ currentUser }) {
     // Get the part being prepared to reduce stock
     const request = requests.find(r => r.orderId === orderId);
     if (!request) return;
-    
+
     const partToPrepare = request.parts[index]; // Use index to get exact part
     if (!partToPrepare || partToPrepare.stockAvailable <= 0) return;
-    
+
+    // Track latest stock after deduction so it can be reflected on the UI
+    let updatedStockAvailable = null;
+
+    // Reduce stock in master spare parts first so we can display the new balance
+    const savedMasterParts = localStorage.getItem('masterSpareParts');
+    if (savedMasterParts) {
+      const masterParts = JSON.parse(savedMasterParts);
+      const updatedMasterParts = masterParts.map((masterPart) => {
+        if (masterPart.partNumber === partCode) {
+          const newStock = Math.max(0, (masterPart.stock || 0) - partToPrepare.requestedQty);
+          updatedStockAvailable = newStock;
+          return {
+            ...masterPart,
+            stock: newStock // Ensure stock doesn't go negative
+          };
+        }
+        return masterPart;
+      });
+
+      // Persist new stock levels so other screens reflect the change
+      localStorage.setItem('masterSpareParts', JSON.stringify(updatedMasterParts));
+
+      console.log(
+        `✅ Stock reduced: ${partCode} - Qty: ${partToPrepare.requestedQty} - New stock: ${Math.max(
+          0,
+          (masterParts.find((p) => p.partNumber === partCode)?.stock || 0) - partToPrepare.requestedQty
+        )}`
+      );
+    }
+
     console.log('🎯 PREPARE DEBUG START');
     console.log('OrderId:', orderId);
     console.log('PartCode to match:', partCode);
     console.log('PartName to match:', partToPrepare.partName);
     console.log('Index:', index);
     
-    // Update requests - update only the part at specific index
+    // Update requests - update only the part at specific index and refresh stockAvailable
     const updatedRequests = requests.map(req => {
       if (req.orderId === orderId) {
         const updatedParts = req.parts.map((part, i) => {
+          let updatedPart = part;
+
           if (i === index && part.stockAvailable > 0) {
-            return { ...part, status: 'PREPARED' };
+            updatedPart = { ...updatedPart, status: 'PREPARED' };
           }
-          return part;
+
+          // Keep displayed stock in sync with the master stock after deduction
+          if (updatedStockAvailable !== null && part.partCode === partCode) {
+            updatedPart = { ...updatedPart, stockAvailable: updatedStockAvailable };
+          }
+
+          return updatedPart;
         });
 
         const allPrepared = updatedParts.every(p => p.status === 'PREPARED');
@@ -96,25 +134,6 @@ export function SparePartsRequest({ currentUser }) {
     });
 
     saveRequests(updatedRequests);
-
-    // Reduce stock in master spare parts
-    const savedMasterParts = localStorage.getItem('masterSpareParts');
-    if (savedMasterParts) {
-      const masterParts = JSON.parse(savedMasterParts);
-      const updatedMasterParts = masterParts.map((masterPart) => {
-        if (masterPart.partNumber === partCode) {
-          const newStock = masterPart.stock - partToPrepare.requestedQty;
-          return {
-            ...masterPart,
-            stock: Math.max(0, newStock) // Ensure stock doesn't go negative
-          };
-        }
-        return masterPart;
-      });
-      localStorage.setItem('masterSpareParts', JSON.stringify(updatedMasterParts));
-      
-      console.log(`✅ Stock reduced: ${partCode} - Qty: ${partToPrepare.requestedQty} - New stock: ${Math.max(0, masterParts.find((p) => p.partNumber === partCode)?.stock - partToPrepare.requestedQty)}`);
-    }
 
     // Update workOrders to mark part as PREPARED
     const workOrders = getStoredWorkOrders();
