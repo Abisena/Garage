@@ -1313,6 +1313,68 @@ def is_erpnext_integration_ready() -> str:
     return "iya" if ready else "belum"
 
 
+@frappe.whitelist()
+def get_erpnext_integration_actions() -> Dict[str, Any]:
+    """Describe concrete steps to clear the remaining ERPNext integration gaps."""
+
+    _require_login()
+
+    gaps = _collect_erpnext_integration_gaps()
+    ready = not any(gaps.values())
+
+    actions: List[str] = []
+
+    for doctype in gaps.get("missing_doctypes") or []:
+        actions.append(
+            _(f"Buat DocType ERPNext '{doctype}' terlebih dahulu atau instal module yang menyediakannya.")
+        )
+
+    for doctype, fields in sorted((gaps.get("missing_fields") or {}).items()):
+        field_list = ", ".join(fields)
+        actions.append(
+            _(f"Tambahkan field [{field_list}] pada DocType '{doctype}' agar payload portal diterima.")
+        )
+
+    for doctype, child_map in sorted((gaps.get("missing_child_fields") or {}).items()):
+        for child_field, details in sorted(child_map.items()):
+            if details.get("missing_table_field"):
+                actions.append(
+                    _(
+                        f"Tambahkan Table field '{child_field}' pada '{doctype}' yang menunjuk ke child table sesuai skema."
+                    )
+                )
+            elif details.get("missing_child_doctype"):
+                target = details.get("missing_child_doctype") or "(nama kosong)"
+                actions.append(
+                    _(
+                        f"Pastikan field table '{child_field}' di '{doctype}' mengarah ke child DocType yang valid (saat ini: {target})."
+                    )
+                )
+            elif details.get("missing_fields"):
+                field_list = ", ".join(details.get("missing_fields") or [])
+                actions.append(
+                    _(
+                        f"Lengkapi field wajib [{field_list}] pada child '{child_field}' di '{doctype}' sesuai skema portal."
+                    )
+                )
+
+    for doctype, operations in sorted((gaps.get("missing_operations") or {}).items()):
+        op_list = ", ".join(sorted(operations))
+        actions.append(
+            _(f"Implementasikan fungsi API untuk operasi [{op_list}] pada '{doctype}' sesuai peta ERP_INTEGRATION_ENDPOINTS.")
+        )
+
+    if not actions and not ready:
+        actions.append(_("Periksa ulang konfigurasi ERPNext dan endpoint portal."))
+
+    return {
+        "ready": ready,
+        "actions": actions,
+        "gaps": gaps if not ready else {},
+        "status_method": "garage.api.portal.is_erpnext_integration_ready",
+    }
+
+
 # ---------------------------------------------------------------------------
 # Utility helpers
 # ---------------------------------------------------------------------------
