@@ -63,7 +63,12 @@ class GarageStockMovement(Document):
 
         spare_part.save(ignore_permissions=True)
 
-        warehouse = row.target_warehouse or row.source_warehouse or self.warehouse
+        warehouse = (
+            row.target_warehouse
+            or row.source_warehouse
+            or self.warehouse
+            or spare_part.warehouse_location
+        )
         if warehouse:
             bin_name = frappe.db.get_value(
                 "Bin", {"item_code": row.item_code, "warehouse": warehouse}, "name"
@@ -84,9 +89,7 @@ class GarageStockMovement(Document):
                 "doctype": "Garage Stock Ledger Entry",
                 "posting_date": self.posting_date,
                 "posting_time": self.posting_time,
-                "warehouse": row.target_warehouse
-                or row.source_warehouse
-                or self.warehouse,
+                "warehouse": warehouse,
                 "movement_type": self.movement_type,
                 "spare_part": row.item_code,
                 "qty": delta_qty,
