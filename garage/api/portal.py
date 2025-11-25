@@ -1292,7 +1292,6 @@ def _fetch_item_spare_parts(
         "standard_rate",
         "valuation_rate",
         "total_actual_qty",
-        "total_reserved_qty",
         "safety_stock",
         "disabled",
         "image",
