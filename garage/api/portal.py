@@ -984,10 +984,6 @@ ERP_INTEGRATION_DOCS: Mapping[str, Dict[str, Any]] = {
             "set_warehouse",
             "buying_price_list",
             "price_list_currency",
-            "bill_date",
-            "bill_no",
-            "due_date",
-            "remarks",
         },
         "children": {
             "items": {
