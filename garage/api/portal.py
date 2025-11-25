@@ -1373,6 +1373,47 @@ def get_erpnext_integration_readiness() -> Dict[str, Any]:
 
 
 @frappe.whitelist()
+def answer_erpnext_integration_status() -> Dict[str, Any]:
+    """Answer "sudah bisa" or "belum" and list what is still missing."""
+
+    _require_login()
+
+    gaps = _collect_erpnext_integration_gaps()
+    ready = not any(gaps.values())
+    answer = _("sudah bisa") if ready else _("belum")
+
+    missing: List[str] = []
+    if not ready:
+        if gaps.get("missing_doctypes"):
+            missing.append(
+                _(f"DocType belum ada: {', '.join(gaps['missing_doctypes'])}")
+            )
+        if gaps.get("missing_fields"):
+            missing.append(
+                _(f"Field belum lengkap di: {', '.join(sorted(gaps['missing_fields']))}")
+            )
+        if gaps.get("missing_child_fields"):
+            missing.append(
+                _(
+                    f"Field child belum lengkap di: {', '.join(sorted(gaps['missing_child_fields']))}"
+                )
+            )
+        if gaps.get("missing_operations"):
+            missing.append(
+                _(f"Operasi API belum ada untuk: {', '.join(sorted(gaps['missing_operations']))}")
+            )
+
+    return {
+        "answer": answer,
+        "ready": ready,
+        "missing": missing,
+        "status_method": "garage.api.portal.is_erpnext_integration_ready",
+        "answer_method": "garage.api.portal.is_erpnext_integration_all_set",
+        "gaps_method": "garage.api.portal.get_erpnext_integration_gaps",
+    }
+
+
+@frappe.whitelist()
 def get_erpnext_integration_actions() -> Dict[str, Any]:
     """Describe concrete steps to clear the remaining ERPNext integration gaps."""
 
