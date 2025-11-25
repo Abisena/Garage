@@ -1210,17 +1210,95 @@ def get_erpnext_integration_schema() -> Dict[str, Any]:
     return schema
 
 
+def _collect_erpnext_integration_gaps() -> Dict[str, Any]:
+    missing_doctypes: Set[str] = set()
+    missing_fields: Dict[str, List[str]] = {}
+    missing_child_fields: Dict[str, Dict[str, Any]] = {}
+    missing_operations: Dict[str, List[str]] = {}
+
+    for doctype, config in ERP_INTEGRATION_DOCS.items():
+        if not frappe.db.table_exists(doctype):
+            missing_doctypes.add(doctype)
+            continue
+
+        meta = frappe.get_meta(doctype)
+
+        parent_fields = sorted(config.get("fields", []))
+        missing_parent = [field for field in parent_fields if not meta.has_field(field)]
+        if missing_parent:
+            missing_fields[doctype] = missing_parent
+
+        for child_field, child_config in (config.get("children") or {}).items():
+            field_meta = meta.get_field(child_field)
+            missing_child_data: Dict[str, Any] = {}
+
+            if not field_meta or field_meta.fieldtype != "Table":
+                missing_child_data["missing_table_field"] = True
+                missing_child_fields.setdefault(doctype, {})[child_field] = missing_child_data
+                continue
+
+            child_doctype = cstr(field_meta.options)
+            if not child_doctype or not frappe.db.table_exists(child_doctype):
+                missing_child_data["missing_child_doctype"] = child_doctype or True
+                missing_child_fields.setdefault(doctype, {})[child_field] = missing_child_data
+                continue
+
+            child_meta = frappe.get_meta(child_doctype)
+            required_fields = sorted(child_config.get("required_fields", []))
+            missing_required = [field for field in required_fields if not child_meta.has_field(field)]
+            if missing_required:
+                missing_child_data["missing_fields"] = missing_required
+                missing_child_fields.setdefault(doctype, {})[child_field] = missing_child_data
+
+    for doctype, operations in ERP_INTEGRATION_ENDPOINTS.items():
+        for operation, dotted_path in operations.items():
+            try:
+                func = frappe.get_attr(dotted_path)
+            except Exception:
+                func = None
+
+            if not callable(func):
+                missing_operations.setdefault(doctype, []).append(operation)
+
+    return {
+        "missing_doctypes": sorted(missing_doctypes),
+        "missing_fields": missing_fields,
+        "missing_child_fields": missing_child_fields,
+        "missing_operations": missing_operations,
+    }
+
+
+@frappe.whitelist()
+def get_erpnext_integration_gaps() -> Dict[str, Any]:
+    """Return any schema or endpoint gaps blocking full ERPNext integration."""
+
+    _require_login()
+
+    gaps = _collect_erpnext_integration_gaps()
+    ready = not any(gaps.values())
+
+    return {
+        **gaps,
+        "ready": ready,
+    }
+
+
 @frappe.whitelist()
 def get_erpnext_integration_status() -> Dict[str, Any]:
     """Report whether Garage portal can perform full ERPNext transactions."""
 
     _require_login()
 
+    gaps = _collect_erpnext_integration_gaps()
+    ready = not any(gaps.values())
+
     return {
-        "ready": True,
+        "ready": ready,
         "doctypes": list(ERP_INTEGRATION_DOCTYPES),
         "operations": ERP_INTEGRATION_ENDPOINTS,
         "schema_method": "garage.api.portal.get_erpnext_integration_schema",
+        "gap_method": "garage.api.portal.get_erpnext_integration_gaps",
+        "gaps": gaps if not ready else {},
     }
 
 
