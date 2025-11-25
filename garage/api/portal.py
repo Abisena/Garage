@@ -1160,6 +1160,33 @@ DOC_TYPES = tuple(ALLOWED_DOCS.keys())
 DEFAULT_LIMIT = 20
 
 
+@frappe.whitelist()
+def get_erpnext_integration_schema() -> Dict[str, Any]:
+    """Expose the allowed ERPNext doctypes and fields to portal callers."""
+
+    _require_login()
+
+    def describe_child(child_config: Mapping[str, Any]) -> Dict[str, List[str]]:
+        return {
+            "fields": sorted(child_config.get("fields", [])),
+            "required_fields": sorted(child_config.get("required_fields", [])),
+        }
+
+    schema: Dict[str, Any] = {}
+    for doctype, config in ERP_INTEGRATION_DOCS.items():
+        children = {
+            table: describe_child(child_config)
+            for table, child_config in (config.get("children") or {}).items()
+        }
+
+        schema[doctype] = {
+            "fields": sorted(config.get("fields", [])),
+            "children": children,
+        }
+
+    return schema
+
+
 # ---------------------------------------------------------------------------
 # Utility helpers
 # ---------------------------------------------------------------------------
