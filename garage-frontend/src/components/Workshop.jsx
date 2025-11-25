@@ -419,7 +419,7 @@ export function Workshop({ currentUser }) {
     if (!selectedOrder) return;
 
     const confirmed = confirm(`🎯 Complete Final Inspection?\n\nThis will mark the work order as FINAL INSPECTION and ready for handover.\n\nOrder ID: ${selectedOrder.orderId}\nCustomer: ${selectedOrder.customerName}\nVehicle: ${selectedOrder.vehicleBrand} ${selectedOrder.vehicleModel}`);
-    
+
     if (!confirmed) return;
 
     const currentTime = new Date();
@@ -430,6 +430,12 @@ export function Workshop({ currentUser }) {
       hour: '2-digit',
       minute: '2-digit'
     });
+
+    const branchCode = (selectedOrder.branch || 'GAR').substring(0, 3).toUpperCase();
+    const orderNumber = selectedOrder.orderId?.split('-')[1] || String(selectedOrder.id).padStart(3, '0');
+    const draftInvoiceNumber = selectedOrder.invoiceNumber || `INV-${branchCode}-${orderNumber}`;
+    const draftJournalEntryNumber = selectedOrder.journalEntryNumber || `JE-${branchCode}-${orderNumber}`;
+    const draftPaymentEntryNumber = selectedOrder.paymentEntryNumber || `PAY-${branchCode}-${orderNumber}`;
 
     const historyItem = {
       timestamp,
@@ -444,6 +450,14 @@ export function Workshop({ currentUser }) {
       ...selectedOrder,
       repairStatus: 'final-inspection',
       status: 'ready-for-payment', // Update main status for Payment UI
+      paymentStatus: 'pending',
+      invoiceStatus: 'draft',
+      journalEntryStatus: 'draft',
+      paymentEntryStatus: 'draft',
+      invoiceNumber: draftInvoiceNumber,
+      journalEntryNumber: draftJournalEntryNumber,
+      paymentEntryNumber: draftPaymentEntryNumber,
+      invoiceCancelled: false,
       repairProgress: 99,
       finalInspectionCompleted: true,
       progressHistory: updatedHistory
@@ -504,7 +518,7 @@ export function Workshop({ currentUser }) {
 
   const handleReOpenOrder = (order) => {
     // Check if order has active invoice
-    if (order.invoiceNumber && !order.invoiceCancelled) {
+    if (order.invoiceNumber && order.invoiceStatus !== 'draft' && !order.invoiceCancelled) {
       alert(`❌ Tidak bisa Re-Open Order!\n\n📋 Order: ${order.orderId}\n📄 Invoice: ${order.invoiceNumber}\n\n⚠️ Order ini sudah memiliki invoice yang aktif.\n\n💡 Silakan batalkan invoice terlebih dahulu di menu Payment, kemudian Re-Open order ini.`);
       return;
     }
@@ -525,6 +539,12 @@ export function Workshop({ currentUser }) {
       status: 'in-progress',
       repairProgress: lastProgressBeforeQC,
       paymentStatus: undefined,
+      invoiceStatus: undefined,
+      journalEntryStatus: undefined,
+      paymentEntryStatus: undefined,
+      invoiceNumber: undefined,
+      journalEntryNumber: undefined,
+      paymentEntryNumber: undefined,
       // Reset QC data - must be re-checked
       qcApproved: false,
       qcInspector: undefined,
@@ -786,7 +806,10 @@ export function Workshop({ currentUser }) {
                                   Complete
                                 </Button>
                                 {(() => {
-                                  const hasActiveInvoice = order.invoiceNumber && !order.invoiceCancelled;
+                                  const hasActiveInvoice =
+                                    order.invoiceNumber &&
+                                    order.invoiceStatus !== 'draft' &&
+                                    !order.invoiceCancelled;
                                   return (
                                     <Button 
                                       size="sm"
