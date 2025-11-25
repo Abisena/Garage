@@ -5749,9 +5749,26 @@ def adjust_spare_part_stock(
     default_company = frappe.defaults.get_user_default("company") or frappe.defaults.get_global_default(
         "company"
     )
+    stock_settings = frappe.get_cached_doc("Stock Settings")
+
     warehouse = cstr(item_doc.get("default_warehouse") or "").strip()
-    if normalized_action in {"issue", "consume"} and not warehouse:
-        frappe.throw(_("Warehouse untuk pengeluaran {0} belum diatur.").format(code))
+    if not warehouse:
+        if normalized_action in {"issue", "consume"}:
+            warehouse = cstr(getattr(stock_settings, "default_source_warehouse", "") or "").strip()
+        else:
+            warehouse = cstr(getattr(stock_settings, "default_target_warehouse", "") or "").strip()
+
+    if not warehouse:
+        fallback_bin = frappe.db.get_value(
+            "Bin",
+            {"item_code": item_doc.name, "actual_qty": (">", 0)},
+            "warehouse",
+        )
+        warehouse = cstr(fallback_bin or getattr(stock_settings, "default_warehouse", "") or "").strip()
+
+    if not warehouse:
+        missing_context = _("pengeluaran") if normalized_action in {"issue", "consume"} else _("penerimaan")
+        frappe.throw(_("Warehouse untuk {0} {1} belum diatur.").format(missing_context, code))
     purpose = "Material Issue" if normalized_action in {"issue", "consume"} else "Material Receipt"
 
     stock_entry = frappe.new_doc("Stock Entry")
