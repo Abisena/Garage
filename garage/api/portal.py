@@ -967,6 +967,204 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
     },
 }
 
+# Core ERPNext DocTypes that the portal can create/update so payment and stock
+# transactions stay inside the accounting source of truth instead of the
+# Garage-specific wrappers. Only common fields that are safe to expose over the
+# portal API are whitelisted. Mandatory validation remains handled by Frappe so
+# callers must still provide any required fields configured in the ERPNext
+# instance (e.g. company defaults, cost centers, or taxes).
+ERP_INTEGRATION_DOCS: Mapping[str, Dict[str, Any]] = {
+    "Purchase Order": {
+        "fields": {
+            "company",
+            "supplier",
+            "supplier_name",
+            "transaction_date",
+            "schedule_date",
+            "set_warehouse",
+            "buying_price_list",
+            "price_list_currency",
+            "bill_date",
+            "bill_no",
+            "due_date",
+            "remarks",
+        },
+        "children": {
+            "items": {
+                "fields": {
+                    "item_code",
+                    "item_name",
+                    "description",
+                    "qty",
+                    "uom",
+                    "conversion_factor",
+                    "warehouse",
+                    "schedule_date",
+                    "rate",
+                    "amount",
+                },
+                "required_fields": {"item_code", "qty", "schedule_date"},
+            }
+        },
+    },
+    "Purchase Receipt": {
+        "fields": {
+            "company",
+            "supplier",
+            "supplier_name",
+            "posting_date",
+            "posting_time",
+            "set_posting_time",
+            "set_warehouse",
+            "remarks",
+        },
+        "children": {
+            "items": {
+                "fields": {
+                    "item_code",
+                    "item_name",
+                    "description",
+                    "qty",
+                    "received_qty",
+                    "rejected_qty",
+                    "uom",
+                    "conversion_factor",
+                    "warehouse",
+                    "rate",
+                    "amount",
+                    "purchase_order",
+                    "purchase_order_item",
+                },
+                "required_fields": {"item_code", "qty"},
+            }
+        },
+    },
+    "Sales Invoice": {
+        "fields": {
+            "company",
+            "customer",
+            "customer_name",
+            "posting_date",
+            "posting_time",
+            "due_date",
+            "set_posting_time",
+            "update_stock",
+            "is_pos",
+            "debit_to",
+            "remarks",
+        },
+        "children": {
+            "items": {
+                "fields": {
+                    "item_code",
+                    "item_name",
+                    "description",
+                    "qty",
+                    "uom",
+                    "conversion_factor",
+                    "warehouse",
+                    "rate",
+                    "amount",
+                },
+                "required_fields": {"item_code", "qty"},
+            },
+            "payments": {
+                "fields": {
+                    "mode_of_payment",
+                    "type",
+                    "amount",
+                    "base_amount",
+                    "account",
+                }
+            },
+        },
+    },
+    "Payment Entry": {
+        "fields": {
+            "company",
+            "payment_type",
+            "party_type",
+            "party",
+            "party_name",
+            "posting_date",
+            "mode_of_payment",
+            "paid_from",
+            "paid_from_account_currency",
+            "paid_to",
+            "paid_to_account_currency",
+            "paid_amount",
+            "received_amount",
+            "reference_no",
+            "reference_date",
+            "remarks",
+        },
+        "children": {
+            "references": {
+                "fields": {
+                    "reference_doctype",
+                    "reference_name",
+                    "due_date",
+                    "total_amount",
+                    "outstanding_amount",
+                    "allocated_amount",
+                },
+                "required_fields": {"reference_doctype", "reference_name"},
+            }
+        },
+    },
+    "Journal Entry": {
+        "fields": {
+            "company",
+            "voucher_type",
+            "posting_date",
+            "cheque_no",
+            "cheque_date",
+            "user_remark",
+        },
+        "children": {
+            "accounts": {
+                "fields": {
+                    "account",
+                    "party_type",
+                    "party",
+                    "reference_type",
+                    "reference_name",
+                    "debit_in_account_currency",
+                    "credit_in_account_currency",
+                    "cost_center",
+                    "is_advance",
+                    "user_remark",
+                },
+                "required_fields": {"account"},
+            }
+        },
+    },
+}
+ERP_INTEGRATION_DOCTYPES = tuple(ERP_INTEGRATION_DOCS.keys())
+
+ERP_INTEGRATION_ENDPOINTS: Mapping[str, Dict[str, str]] = {
+    "Purchase Order": {
+        "create": "garage.api.portal.create_purchase_order",
+        "update": "garage.api.portal.update_purchase_order",
+    },
+    "Purchase Receipt": {
+        "create": "garage.api.portal.create_purchase_receipt",
+        "update": "garage.api.portal.update_purchase_receipt",
+    },
+    "Sales Invoice": {
+        "create": "garage.api.portal.create_core_sales_invoice",
+        "update": "garage.api.portal.update_core_sales_invoice",
+    },
+    "Payment Entry": {
+        "create": "garage.api.portal.create_core_payment_entry",
+        "update": "garage.api.portal.update_core_payment_entry",
+    },
+    "Journal Entry": {
+        "create": "garage.api.portal.create_journal_entry",
+        "update": "garage.api.portal.update_journal_entry",
+    },
+}
+
 SPARE_REQUEST_CLOSED_STATUSES = ["Received", "Issued", "Rejected", "Cancelled"]
 SPARE_REQUEST_ACTIVE_STATUSES = [
     "Pending Check",
@@ -983,6 +1181,390 @@ SPARE_REQUEST_ACTIVE_STATUSES = [
 
 DOC_TYPES = tuple(ALLOWED_DOCS.keys())
 DEFAULT_LIMIT = 20
+
+
+@frappe.whitelist()
+def get_erpnext_integration_schema() -> Dict[str, Any]:
+    """Expose the allowed ERPNext doctypes and fields to portal callers."""
+
+    _require_login()
+
+    def describe_child(child_config: Mapping[str, Any]) -> Dict[str, List[str]]:
+        return {
+            "fields": sorted(child_config.get("fields", [])),
+            "required_fields": sorted(child_config.get("required_fields", [])),
+        }
+
+    schema: Dict[str, Any] = {}
+    for doctype, config in ERP_INTEGRATION_DOCS.items():
+        children = {
+            table: describe_child(child_config)
+            for table, child_config in (config.get("children") or {}).items()
+        }
+
+        schema[doctype] = {
+            "fields": sorted(config.get("fields", [])),
+            "children": children,
+        }
+
+    return schema
+
+
+def _collect_erpnext_integration_gaps() -> Dict[str, Any]:
+    missing_doctypes: Set[str] = set()
+    missing_fields: Dict[str, List[str]] = {}
+    missing_child_fields: Dict[str, Dict[str, Any]] = {}
+    missing_operations: Dict[str, List[str]] = {}
+
+    for doctype, config in ERP_INTEGRATION_DOCS.items():
+        if not frappe.db.table_exists(doctype):
+            missing_doctypes.add(doctype)
+            continue
+
+        meta = frappe.get_meta(doctype)
+
+        parent_fields = sorted(config.get("fields", []))
+        missing_parent = [field for field in parent_fields if not meta.has_field(field)]
+        if missing_parent:
+            missing_fields[doctype] = missing_parent
+
+        for child_field, child_config in (config.get("children") or {}).items():
+            field_meta = meta.get_field(child_field)
+            missing_child_data: Dict[str, Any] = {}
+
+            if not field_meta or field_meta.fieldtype != "Table":
+                missing_child_data["missing_table_field"] = True
+                missing_child_fields.setdefault(doctype, {})[child_field] = missing_child_data
+                continue
+
+            child_doctype = cstr(field_meta.options)
+            if not child_doctype or not frappe.db.table_exists(child_doctype):
+                missing_child_data["missing_child_doctype"] = child_doctype or True
+                missing_child_fields.setdefault(doctype, {})[child_field] = missing_child_data
+                continue
+
+            child_meta = frappe.get_meta(child_doctype)
+            required_fields = sorted(child_config.get("required_fields", []))
+            missing_required = [field for field in required_fields if not child_meta.has_field(field)]
+            if missing_required:
+                missing_child_data["missing_fields"] = missing_required
+                missing_child_fields.setdefault(doctype, {})[child_field] = missing_child_data
+
+    for doctype, operations in ERP_INTEGRATION_ENDPOINTS.items():
+        for operation, dotted_path in operations.items():
+            try:
+                func = frappe.get_attr(dotted_path)
+            except Exception:
+                func = None
+
+            if not callable(func):
+                missing_operations.setdefault(doctype, []).append(operation)
+
+    return {
+        "missing_doctypes": sorted(missing_doctypes),
+        "missing_fields": missing_fields,
+        "missing_child_fields": missing_child_fields,
+        "missing_operations": missing_operations,
+    }
+
+
+def _summarize_erpnext_integration_gaps(gaps: Mapping[str, Any]) -> List[str]:
+    """Return human-friendly sentences explaining each detected gap."""
+
+    missing: List[str] = []
+
+    for doctype in sorted(gaps.get("missing_doctypes") or []):
+        missing.append(_(f"DocType belum ada: {doctype}"))
+
+    for doctype, fields in sorted((gaps.get("missing_fields") or {}).items()):
+        if fields:
+            missing.append(
+                _(f"DocType '{doctype}' belum memiliki field: {', '.join(sorted(fields))}")
+            )
+
+    for doctype, child_map in sorted((gaps.get("missing_child_fields") or {}).items()):
+        for child_field, details in sorted(child_map.items()):
+            if details.get("missing_table_field"):
+                missing.append(
+                    _(f"Tambahkan Table field '{child_field}' pada DocType '{doctype}'.")
+                )
+
+            if details.get("missing_child_doctype"):
+                target = details.get("missing_child_doctype")
+                target_label = target if target is not True else _("(belum diisi)")
+                missing.append(
+                    _(
+                        f"Field table '{child_field}' di DocType '{doctype}' harus mengarah ke child DocType valid (saat ini: {target_label})."
+                    )
+                )
+
+            if details.get("missing_fields"):
+                missing.append(
+                    _(
+                        f"Lengkapi field wajib [{', '.join(sorted(details.get('missing_fields') or []))}] pada child '{child_field}' di '{doctype}'."
+                    )
+                )
+
+    for doctype, operations in sorted((gaps.get("missing_operations") or {}).items()):
+        if operations:
+            missing.append(
+                _(f"Endpoint API belum ada untuk '{doctype}' operasi: {', '.join(sorted(operations))}.")
+            )
+
+    if not missing and any(gaps.values()):
+        missing.append(_("Masih ada gap integrasi ERPNext yang belum terpetakan."))
+
+    return missing
+
+
+@frappe.whitelist()
+def get_erpnext_integration_gaps() -> Dict[str, Any]:
+    """Return any schema or endpoint gaps blocking full ERPNext integration."""
+
+    _require_login()
+
+    gaps = _collect_erpnext_integration_gaps()
+    ready = not any(gaps.values())
+
+    return {
+        **gaps,
+        "ready": ready,
+    }
+
+
+@frappe.whitelist()
+def get_erpnext_integration_status() -> Dict[str, Any]:
+    """Report whether Garage portal can perform full ERPNext transactions."""
+
+    _require_login()
+
+    gaps = _collect_erpnext_integration_gaps()
+    ready = not any(gaps.values())
+
+    return {
+        "ready": ready,
+        "doctypes": list(ERP_INTEGRATION_DOCTYPES),
+        "operations": ERP_INTEGRATION_ENDPOINTS,
+        "schema_method": "garage.api.portal.get_erpnext_integration_schema",
+        "gap_method": "garage.api.portal.get_erpnext_integration_gaps",
+        "gaps": gaps if not ready else {},
+    }
+
+
+@frappe.whitelist()
+def is_erpnext_integration_ready() -> str:
+    """Return "iya" if integration gaps are clear, otherwise "belum"."""
+
+    _require_login()
+
+    gaps = get_erpnext_integration_gaps()
+    ready = bool(gaps.get("ready"))
+    return "iya" if ready else "belum"
+
+
+@frappe.whitelist()
+def is_erpnext_integration_all_set() -> str:
+    """Return "sudah bisa" if integration gaps are clear, otherwise "belum"."""
+
+    _require_login()
+
+    ready = bool(get_erpnext_integration_gaps().get("ready"))
+    return _("sudah bisa") if ready else _("belum")
+
+
+@frappe.whitelist()
+def get_erpnext_integration_readiness() -> Dict[str, Any]:
+    """Return a concise yes/no answer plus the first blockers if not ready."""
+
+    _require_login()
+
+    gaps = _collect_erpnext_integration_gaps()
+    ready = not any(gaps.values())
+    answer = _("sudah bisa") if ready else _("belum")
+
+    reasons: List[str] = []
+    if not ready:
+        reasons = _summarize_erpnext_integration_gaps(gaps)
+
+    headline = (
+        _("Semua siap—portal dapat membuat transaksi ERPNext secara penuh.")
+        if ready
+        else _("Masih ada kekurangan sebelum integrasi ERPNext bisa penuh.")
+    )
+
+    return {
+        "answer": answer,
+        "ready": ready,
+        "headline": headline,
+        "reasons": reasons,
+        "status_method": "garage.api.portal.is_erpnext_integration_ready",
+        "answer_method": "garage.api.portal.is_erpnext_integration_all_set",
+        "gaps_method": "garage.api.portal.get_erpnext_integration_gaps",
+        "howto_method": "garage.api.portal.get_erpnext_integration_howto",
+    }
+
+
+@frappe.whitelist()
+def answer_erpnext_integration_status() -> Dict[str, Any]:
+    """Answer "sudah bisa" or "belum" and list what is still missing."""
+
+    _require_login()
+
+    gaps = _collect_erpnext_integration_gaps()
+    ready = not any(gaps.values())
+    answer = _("sudah bisa") if ready else _("belum")
+
+    missing: List[str] = []
+    if not ready:
+        missing = _summarize_erpnext_integration_gaps(gaps)
+
+    return {
+        "answer": answer,
+        "ready": ready,
+        "missing": missing,
+        "status_method": "garage.api.portal.is_erpnext_integration_ready",
+        "answer_method": "garage.api.portal.is_erpnext_integration_all_set",
+        "gaps_method": "garage.api.portal.get_erpnext_integration_gaps",
+    }
+
+
+@frappe.whitelist()
+def answer_erpnext_integration_text() -> str:
+    """Return a short string: "sudah bisa" or "belum: ..." with gaps listed."""
+
+    _require_login()
+
+    gaps = _collect_erpnext_integration_gaps()
+    ready = not any(gaps.values())
+
+    if ready:
+        return _("sudah bisa")
+
+    missing = _summarize_erpnext_integration_gaps(gaps)
+    if not missing:
+        return _("belum")
+
+    return _("belum") + ": " + "; ".join(missing)
+
+
+@frappe.whitelist()
+def answer_erpnext_integration_brief() -> Dict[str, Any]:
+    """Jawaban ringkas: ""sudah bisa"" atau ""belum"" plus kekurangan jika ada."""
+
+    _require_login()
+
+    gaps = _collect_erpnext_integration_gaps()
+    ready = not any(gaps.values())
+    jawaban = _("sudah bisa") if ready else _("belum")
+
+    kurang: List[str] = []
+    if not ready:
+        kurang = _summarize_erpnext_integration_gaps(gaps)
+
+    return {
+        "jawaban": jawaban,
+        "siap": ready,
+        "kurang": kurang,
+        "status_method": "garage.api.portal.is_erpnext_integration_ready",
+        "gaps_method": "garage.api.portal.get_erpnext_integration_gaps",
+        "howto_method": "garage.api.portal.get_erpnext_integration_howto",
+    }
+
+
+@frappe.whitelist()
+def get_erpnext_integration_actions() -> Dict[str, Any]:
+    """Describe concrete steps to clear the remaining ERPNext integration gaps."""
+
+    _require_login()
+
+    gaps = _collect_erpnext_integration_gaps()
+    ready, actions = _erpnext_integration_actions_from_gaps(gaps)
+
+    return {
+        "ready": ready,
+        "actions": actions,
+        "gaps": gaps if not ready else {},
+        "status_method": "garage.api.portal.is_erpnext_integration_ready",
+    }
+
+
+def _erpnext_integration_actions_from_gaps(
+    gaps: Mapping[str, Any]
+) -> Tuple[bool, List[str]]:
+    """Convert detected gaps into a ready flag and ordered action items."""
+
+    ready = not any(gaps.values())
+    actions: List[str] = []
+
+    for doctype in gaps.get("missing_doctypes") or []:
+        actions.append(
+            _(f"Buat DocType ERPNext '{doctype}' terlebih dahulu atau instal module yang menyediakannya.")
+        )
+
+    for doctype, fields in sorted((gaps.get("missing_fields") or {}).items()):
+        field_list = ", ".join(fields)
+        actions.append(
+            _(f"Tambahkan field [{field_list}] pada DocType '{doctype}' agar payload portal diterima.")
+        )
+
+    for doctype, child_map in sorted((gaps.get("missing_child_fields") or {}).items()):
+        for child_field, details in sorted(child_map.items()):
+            if details.get("missing_table_field"):
+                actions.append(
+                    _(
+                        f"Tambahkan Table field '{child_field}' pada '{doctype}' yang menunjuk ke child table sesuai skema."
+                    )
+                )
+            elif details.get("missing_child_doctype"):
+                target = details.get("missing_child_doctype") or "(nama kosong)"
+                actions.append(
+                    _(
+                        f"Pastikan field table '{child_field}' di '{doctype}' mengarah ke child DocType yang valid (saat ini: {target})."
+                    )
+                )
+            elif details.get("missing_fields"):
+                field_list = ", ".join(details.get("missing_fields") or [])
+                actions.append(
+                    _(
+                        f"Lengkapi field wajib [{field_list}] pada child '{child_field}' di '{doctype}' sesuai skema portal."
+                    )
+                )
+
+    for doctype, operations in sorted((gaps.get("missing_operations") or {}).items()):
+        op_list = ", ".join(sorted(operations))
+        actions.append(
+            _(f"Implementasikan fungsi API untuk operasi [{op_list}] pada '{doctype}' sesuai peta ERP_INTEGRATION_ENDPOINTS.")
+        )
+
+    if not actions and not ready:
+        actions.append(_("Periksa ulang konfigurasi ERPNext dan endpoint portal."))
+
+    return ready, actions
+
+
+@frappe.whitelist()
+def get_erpnext_integration_howto() -> Dict[str, Any]:
+    """Return concise instructions to make the ERPNext integration fully ready."""
+
+    _require_login()
+
+    gaps = _collect_erpnext_integration_gaps()
+    ready, actions = _erpnext_integration_actions_from_gaps(gaps)
+
+    headline = (
+        _("Semua sudah terhubung—portal dapat membuat PO, Invoice, Payment, dan Journal di ERPNext.")
+        if ready
+        else _("Selesaikan langkah-langkah berikut supaya portal bisa membuat transaksi ERPNext penuh:")
+    )
+
+    return {
+        "ready": ready,
+        "headline": headline,
+        "actions": actions,
+        "gaps": gaps if not ready else {},
+        "status_method": "garage.api.portal.is_erpnext_integration_ready",
+        "actions_method": "garage.api.portal.get_erpnext_integration_actions",
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1607,6 +2189,43 @@ def _update_document(doctype: str, name: str, data: Mapping[str, Any]) -> frappe
     _ensure_branch_allowed(doc)
     _save_doc(doc)
     return doc
+
+
+def _new_erpnext_document(doctype: str, data: Mapping[str, Any]) -> frappe.Document:
+    config = ERP_INTEGRATION_DOCS[doctype]
+    doc = frappe.new_doc(doctype)
+    doc.update(_filter_fields(data, config.get("fields", [])))
+
+    for table_field, child_config in config.get("children", {}).items():
+        child_rows = _sanitize_child_rows(table_field, data.get(table_field), child_config)
+        for row in child_rows:
+            doc.append(table_field, row)
+
+    return doc
+
+
+def _insert_erpnext_document(doctype: str, data: Mapping[str, Any]) -> frappe.Document:
+    doc = _new_erpnext_document(doctype, data)
+    return _insert_doc(doc)
+
+
+def _update_erpnext_document(doctype: str, name: str, data: Mapping[str, Any]) -> frappe.Document:
+    config = ERP_INTEGRATION_DOCS[doctype]
+    allowed_fields = config.get("update_fields", config.get("fields", []))
+    doc = _get_doc(doctype, name)
+
+    updates = _filter_fields(data, allowed_fields)
+    for field, value in updates.items():
+        doc.set(field, value)
+
+    for table_field, child_config in config.get("children", {}).items():
+        if table_field in data:
+            doc.set(table_field, [])
+            child_rows = _sanitize_child_rows(table_field, data.get(table_field), child_config)
+            for row in child_rows:
+                doc.append(table_field, row)
+
+    return _save_doc(doc)
 
 
 def _list_dicts(
@@ -6117,3 +6736,135 @@ def update_receipt_document(name: str, updates: Optional[Any] = None) -> Dict[st
     data = _ensure_dict(updates or {})
     doc = _update_document("Garage Receipt Document", name, data)
     return {"name": doc.name}
+
+
+@frappe.whitelist()
+def create_purchase_order(order: Optional[Any] = None) -> Dict[str, Any]:
+    """Create an ERPNext Purchase Order from the portal."""
+
+    _require_login()
+    data = _ensure_dict(order or {})
+    doc = _insert_erpnext_document("Purchase Order", data)
+    return {"name": doc.name, "status": getattr(doc, "status", None)}
+
+
+@frappe.whitelist()
+def update_purchase_order(name: str, updates: Optional[Any] = None) -> Dict[str, Any]:
+    _require_login()
+    data = _ensure_dict(updates or {})
+    doc = _update_erpnext_document("Purchase Order", name, data)
+    return {"name": doc.name, "status": getattr(doc, "status", None)}
+
+
+@frappe.whitelist()
+def create_purchase_receipt(receipt: Optional[Any] = None) -> Dict[str, Any]:
+    """Create an ERPNext Purchase Receipt so incoming parts reduce stock."""
+
+    _require_login()
+    data = _ensure_dict(receipt or {})
+    doc = _insert_erpnext_document("Purchase Receipt", data)
+    return {"name": doc.name, "status": getattr(doc, "status", None)}
+
+
+@frappe.whitelist()
+def update_purchase_receipt(name: str, updates: Optional[Any] = None) -> Dict[str, Any]:
+    _require_login()
+    data = _ensure_dict(updates or {})
+    doc = _update_erpnext_document("Purchase Receipt", name, data)
+    return {"name": doc.name, "status": getattr(doc, "status", None)}
+
+
+@frappe.whitelist()
+def create_core_sales_invoice(invoice: Optional[Any] = None) -> Dict[str, Any]:
+    """Create a Sales Invoice that posts directly to ERPNext accounting."""
+
+    _require_login()
+    data = _ensure_dict(invoice or {})
+    doc = _insert_erpnext_document("Sales Invoice", data)
+    return {
+        "name": doc.name,
+        "status": getattr(doc, "status", None),
+        "outstanding": getattr(doc, "outstanding_amount", None),
+    }
+
+
+@frappe.whitelist()
+def update_core_sales_invoice(name: str, updates: Optional[Any] = None) -> Dict[str, Any]:
+    _require_login()
+    data = _ensure_dict(updates or {})
+    doc = _update_erpnext_document("Sales Invoice", name, data)
+    return {
+        "name": doc.name,
+        "status": getattr(doc, "status", None),
+        "outstanding": getattr(doc, "outstanding_amount", None),
+    }
+
+
+@frappe.whitelist()
+def create_core_payment_entry(entry: Optional[Any] = None) -> Dict[str, Any]:
+    """Create a Payment Entry tied to ERPNext ledgers (for draft/pay/paid states)."""
+
+    _require_login()
+    data = _ensure_dict(entry or {})
+    doc = _insert_erpnext_document("Payment Entry", data)
+    return {"name": doc.name, "status": getattr(doc, "status", None)}
+
+
+@frappe.whitelist()
+def update_core_payment_entry(name: str, updates: Optional[Any] = None) -> Dict[str, Any]:
+    _require_login()
+    data = _ensure_dict(updates or {})
+    doc = _update_erpnext_document("Payment Entry", name, data)
+    return {"name": doc.name, "status": getattr(doc, "status", None)}
+
+
+@frappe.whitelist()
+def create_journal_entry(entry: Optional[Any] = None) -> Dict[str, Any]:
+    """Create a Journal Entry for manual adjustments from the portal."""
+
+    _require_login()
+    data = _ensure_dict(entry or {})
+    doc = _insert_erpnext_document("Journal Entry", data)
+    return {"name": doc.name, "status": getattr(doc, "status", None)}
+
+
+@frappe.whitelist()
+def update_journal_entry(name: str, updates: Optional[Any] = None) -> Dict[str, Any]:
+    _require_login()
+    data = _ensure_dict(updates or {})
+    doc = _update_erpnext_document("Journal Entry", name, data)
+    return {"name": doc.name, "status": getattr(doc, "status", None)}
+
+
+@frappe.whitelist()
+def get_stock_ledger_entries(
+    item_code: str, warehouse: Optional[str] = None, limit: int = 50
+) -> List[Dict[str, Any]]:
+    """Expose stock ledger rows so the portal can show real-time inventory impact."""
+
+    _require_login()
+    filters: Dict[str, Any] = {"item_code": item_code}
+    if warehouse:
+        filters["warehouse"] = warehouse
+
+    try:
+        with _ignoring_permissions():
+            return frappe.get_all(
+                "Stock Ledger Entry",
+                fields=[
+                    "name",
+                    "posting_date",
+                    "posting_time",
+                    "warehouse",
+                    "item_code",
+                    "actual_qty",
+                    "qty_after_transaction",
+                    "voucher_type",
+                    "voucher_no",
+                ],
+                filters=filters,
+                order_by="posting_date desc, posting_time desc, creation desc",
+                limit=limit,
+            )
+    except Exception:
+        return []

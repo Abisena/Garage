@@ -17,6 +17,7 @@ import {
 import { Card } from './ui/card';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { frappeClient } from '../lib/frappeClient';
+import { IntegrationStatusCard } from './IntegrationStatusCard';
 
 export function Dashboard() {
   const [orders, setOrders] = useState([]);
@@ -209,6 +210,8 @@ export function Dashboard() {
             </div>
           </div>
         </div>
+
+        <IntegrationStatusCard />
 
         {/* ==== SECTION 1: COMPANY OVERVIEW ==== */}
         <div>
