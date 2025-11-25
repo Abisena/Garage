@@ -213,40 +213,41 @@ class FrappeClient {
 
   async listSpareParts(filters = {}, branch) {
     try {
-      const params = new URLSearchParams();
-      const itemFilters = [["is_stock_item", "=", 1]];
+      const payload = {};
 
-      if (filters?.search) {
-        params.append('or_filters', JSON.stringify([
-          ["item_code", "like", `%${filters.search}%`],
-          ["item_name", "like", `%${filters.search}%`],
-          ["brand", "like", `%${filters.search}%`],
-        ]));
+      if (filters && Object.keys(filters).length > 0) {
+        payload.filters = filters;
       }
 
-      if (filters?.category) {
-        itemFilters.push(["item_group", "=", filters.category]);
+      if (branch) {
+        payload.branch = branch;
       }
 
-      params.append('filters', JSON.stringify(itemFilters));
-      params.append('fields', JSON.stringify([
-        "name",
-        "item_code",
-        "item_name",
-        "item_group",
-        "brand",
-        "stock_uom",
-        "standard_rate",
-        "valuation_rate",
-        "safety_stock",
-        "disabled",
-        "image"
-      ]));
-      params.append('limit_page_length', '500');
+      const response = await this.request('/api/method/garage.api.portal.list_spare_parts', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
 
-      const response = await this.request(`/api/resource/Item?${params.toString()}`);
-      const data = response.data || [];
-      return { spare_parts: data, total_count: data.length };
+      const data = response.message || response || {};
+      const parts = Array.isArray(data?.spare_parts) ? data.spare_parts : [];
+
+      // Normalize response so the UI keeps working even if backend field names change
+      const normalizedParts = parts.map((part) => ({
+        ...part,
+        item_code: part.item_code || part.part_code,
+        item_name: part.item_name || part.part_name,
+        item_group: part.item_group || part.category,
+        standard_rate: part.standard_rate ?? part.unit_price,
+        stock_qty: part.stock_qty ?? part.actual_qty ?? 0,
+        total_reserved_qty: part.total_reserved_qty ?? part.reserved_qty,
+        safety_stock: part.safety_stock ?? part.reorder_level,
+      }));
+
+      return {
+        spare_parts: normalizedParts,
+        total_count: data.total_count ?? normalizedParts.length,
+        low_stock_count: data.low_stock_count,
+      };
     } catch (error) {
       console.error('Failed to list spare parts:', error);
       throw error;
