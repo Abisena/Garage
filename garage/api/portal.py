@@ -1291,7 +1291,6 @@ def _fetch_item_spare_parts(
         "stock_uom",
         "standard_rate",
         "valuation_rate",
-        "total_actual_qty",
         "safety_stock",
         "disabled",
         "image",
@@ -1337,10 +1336,6 @@ def _fetch_item_spare_parts(
         record = _item_to_spare_part_record(item, stock_map, {})
         if not record.get("reorder_level"):
             record["reorder_level"] = flt(item.get("safety_stock") or 0)
-        if not record.get("stock_qty"):
-            record["stock_qty"] = flt(item.get("total_actual_qty") or 0)
-        if not record.get("reserved_qty"):
-            record["reserved_qty"] = flt(item.get("total_reserved_qty") or 0)
         record["default_warehouse"] = item.get("default_warehouse")
         processed.append(record)
 

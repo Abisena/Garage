@@ -238,8 +238,6 @@ class FrappeClient {
         "stock_uom",
         "standard_rate",
         "valuation_rate",
-        "total_actual_qty",
-        "total_reserved_qty",
         "safety_stock",
         "disabled",
         "image"

@@ -133,7 +133,7 @@ export function BuyingSparePartIntegrated({ currentUser }) {
             : [],
         category: part.item_group || part.category || 'General',
         unitPrice: Number(part.standard_rate) || Number(part.valuation_rate) || 0,
-        stock: Number(part.total_actual_qty ?? part.stock_qty ?? part.actual_qty) || 0,
+        stock: Number(part.stock_qty ?? part.actual_qty) || 0,
         minStock: Number(part.safety_stock ?? part.reorder_level ?? part.minStock) || 0,
         isCustom: false
       }));

@@ -16,7 +16,7 @@ export function SpareParts() {
   });
 
   const isLowStock = useCallback((part) => {
-    const stockQty = Number(part?.total_actual_qty ?? part?.stock_qty) || 0;
+    const stockQty = Number(part?.stock_qty ?? part?.actual_qty) || 0;
     const reorderLevel = Number(part?.safety_stock ?? part?.reorder_level);
 
     if (Number.isFinite(reorderLevel) && reorderLevel > 0) {
@@ -51,7 +51,7 @@ export function SpareParts() {
       const lowStockCount = Number(response?.low_stock_count) || parts.filter(isLowStock).length;
       const categories = new Set(parts.map((p) => p.item_group).filter(Boolean)).size;
       const totalValue = parts.reduce(
-        (sum, part) => sum + (Number(part?.total_actual_qty || part?.stock_qty || 0) * (Number(part?.valuation_rate || part?.standard_rate || 0))),
+        (sum, part) => sum + (Number(part?.stock_qty || part?.actual_qty || 0) * (Number(part?.valuation_rate || part?.standard_rate || 0))),
         0,
       );
 
@@ -237,7 +237,7 @@ export function SpareParts() {
                           isLowStock(part) ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
                         }`}
                       >
-                        {Number(part.total_actual_qty ?? part.stock_qty) || 0}
+                        {Number(part.stock_qty ?? part.actual_qty) || 0}
                       </span>
                       {Number(part.total_reserved_qty ?? part.reserved_qty) ? (
                         <p className="text-xs text-slate-500 mt-1">Reserved: {Number(part.total_reserved_qty ?? part.reserved_qty) || 0}</p>
