@@ -3434,6 +3434,15 @@ def _ensure_billing_placeholders(
         billing["sales_invoice"] = existing_invoice
         return billing
 
+    if not frappe.db.exists("Customer", doc.customer):
+        frappe.log_error(
+            title=_("Missing Customer for billing placeholder"),
+            message=_("Cannot create Sales Invoice for {0} because customer {1} was not found.").format(
+                doc.doctype, doc.customer
+            ),
+        )
+        return None
+
     company = frappe.defaults.get_user_default("company") or frappe.defaults.get_global_default("company")
     invoice_doc = frappe.new_doc("Sales Invoice")
     invoice_doc.company = company
