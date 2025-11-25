@@ -1314,6 +1314,16 @@ def is_erpnext_integration_ready() -> str:
 
 
 @frappe.whitelist()
+def is_erpnext_integration_all_set() -> str:
+    """Return "sudah bisa" if integration gaps are clear, otherwise "belum"."""
+
+    _require_login()
+
+    ready = bool(get_erpnext_integration_gaps().get("ready"))
+    return _("sudah bisa") if ready else _("belum")
+
+
+@frappe.whitelist()
 def get_erpnext_integration_readiness() -> Dict[str, Any]:
     """Return a concise yes/no answer plus the first blockers if not ready."""
 
@@ -1321,7 +1331,7 @@ def get_erpnext_integration_readiness() -> Dict[str, Any]:
 
     gaps = _collect_erpnext_integration_gaps()
     ready = not any(gaps.values())
-    answer = "iya" if ready else "belum"
+    answer = _("sudah bisa") if ready else _("belum")
 
     reasons: List[str] = []
     if not ready:
@@ -1356,6 +1366,7 @@ def get_erpnext_integration_readiness() -> Dict[str, Any]:
         "headline": headline,
         "reasons": reasons,
         "status_method": "garage.api.portal.is_erpnext_integration_ready",
+        "answer_method": "garage.api.portal.is_erpnext_integration_all_set",
         "gaps_method": "garage.api.portal.get_erpnext_integration_gaps",
         "howto_method": "garage.api.portal.get_erpnext_integration_howto",
     }
