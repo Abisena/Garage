@@ -967,6 +967,181 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
     },
 }
 
+# Core ERPNext DocTypes that the portal can create/update so payment and stock
+# transactions stay inside the accounting source of truth instead of the
+# Garage-specific wrappers. Only common fields that are safe to expose over the
+# portal API are whitelisted. Mandatory validation remains handled by Frappe so
+# callers must still provide any required fields configured in the ERPNext
+# instance (e.g. company defaults, cost centers, or taxes).
+ERP_INTEGRATION_DOCS: Mapping[str, Dict[str, Any]] = {
+    "Purchase Order": {
+        "fields": {
+            "company",
+            "supplier",
+            "supplier_name",
+            "transaction_date",
+            "schedule_date",
+            "set_warehouse",
+            "buying_price_list",
+            "price_list_currency",
+            "bill_date",
+            "bill_no",
+            "due_date",
+            "remarks",
+        },
+        "children": {
+            "items": {
+                "fields": {
+                    "item_code",
+                    "item_name",
+                    "description",
+                    "qty",
+                    "uom",
+                    "conversion_factor",
+                    "warehouse",
+                    "schedule_date",
+                    "rate",
+                    "amount",
+                },
+                "required_fields": {"item_code", "qty", "schedule_date"},
+            }
+        },
+    },
+    "Purchase Receipt": {
+        "fields": {
+            "company",
+            "supplier",
+            "supplier_name",
+            "posting_date",
+            "posting_time",
+            "set_posting_time",
+            "set_warehouse",
+            "remarks",
+        },
+        "children": {
+            "items": {
+                "fields": {
+                    "item_code",
+                    "item_name",
+                    "description",
+                    "qty",
+                    "received_qty",
+                    "rejected_qty",
+                    "uom",
+                    "conversion_factor",
+                    "warehouse",
+                    "rate",
+                    "amount",
+                    "purchase_order",
+                    "purchase_order_item",
+                },
+                "required_fields": {"item_code", "qty"},
+            }
+        },
+    },
+    "Sales Invoice": {
+        "fields": {
+            "company",
+            "customer",
+            "customer_name",
+            "posting_date",
+            "posting_time",
+            "due_date",
+            "set_posting_time",
+            "update_stock",
+            "is_pos",
+            "debit_to",
+            "remarks",
+        },
+        "children": {
+            "items": {
+                "fields": {
+                    "item_code",
+                    "item_name",
+                    "description",
+                    "qty",
+                    "uom",
+                    "conversion_factor",
+                    "warehouse",
+                    "rate",
+                    "amount",
+                },
+                "required_fields": {"item_code", "qty"},
+            },
+            "payments": {
+                "fields": {
+                    "mode_of_payment",
+                    "type",
+                    "amount",
+                    "base_amount",
+                    "account",
+                }
+            },
+        },
+    },
+    "Payment Entry": {
+        "fields": {
+            "company",
+            "payment_type",
+            "party_type",
+            "party",
+            "party_name",
+            "posting_date",
+            "mode_of_payment",
+            "paid_from",
+            "paid_from_account_currency",
+            "paid_to",
+            "paid_to_account_currency",
+            "paid_amount",
+            "received_amount",
+            "reference_no",
+            "reference_date",
+            "remarks",
+        },
+        "children": {
+            "references": {
+                "fields": {
+                    "reference_doctype",
+                    "reference_name",
+                    "due_date",
+                    "total_amount",
+                    "outstanding_amount",
+                    "allocated_amount",
+                },
+                "required_fields": {"reference_doctype", "reference_name"},
+            }
+        },
+    },
+    "Journal Entry": {
+        "fields": {
+            "company",
+            "voucher_type",
+            "posting_date",
+            "cheque_no",
+            "cheque_date",
+            "user_remark",
+        },
+        "children": {
+            "accounts": {
+                "fields": {
+                    "account",
+                    "party_type",
+                    "party",
+                    "reference_type",
+                    "reference_name",
+                    "debit_in_account_currency",
+                    "credit_in_account_currency",
+                    "cost_center",
+                    "is_advance",
+                    "user_remark",
+                },
+                "required_fields": {"account"},
+            }
+        },
+    },
+}
+ERP_INTEGRATION_DOCTYPES = tuple(ERP_INTEGRATION_DOCS.keys())
+
 SPARE_REQUEST_CLOSED_STATUSES = ["Received", "Issued", "Rejected", "Cancelled"]
 SPARE_REQUEST_ACTIVE_STATUSES = [
     "Pending Check",
@@ -1607,6 +1782,43 @@ def _update_document(doctype: str, name: str, data: Mapping[str, Any]) -> frappe
     _ensure_branch_allowed(doc)
     _save_doc(doc)
     return doc
+
+
+def _new_erpnext_document(doctype: str, data: Mapping[str, Any]) -> frappe.Document:
+    config = ERP_INTEGRATION_DOCS[doctype]
+    doc = frappe.new_doc(doctype)
+    doc.update(_filter_fields(data, config.get("fields", [])))
+
+    for table_field, child_config in config.get("children", {}).items():
+        child_rows = _sanitize_child_rows(table_field, data.get(table_field), child_config)
+        for row in child_rows:
+            doc.append(table_field, row)
+
+    return doc
+
+
+def _insert_erpnext_document(doctype: str, data: Mapping[str, Any]) -> frappe.Document:
+    doc = _new_erpnext_document(doctype, data)
+    return _insert_doc(doc)
+
+
+def _update_erpnext_document(doctype: str, name: str, data: Mapping[str, Any]) -> frappe.Document:
+    config = ERP_INTEGRATION_DOCS[doctype]
+    allowed_fields = config.get("update_fields", config.get("fields", []))
+    doc = _get_doc(doctype, name)
+
+    updates = _filter_fields(data, allowed_fields)
+    for field, value in updates.items():
+        doc.set(field, value)
+
+    for table_field, child_config in config.get("children", {}).items():
+        if table_field in data:
+            doc.set(table_field, [])
+            child_rows = _sanitize_child_rows(table_field, data.get(table_field), child_config)
+            for row in child_rows:
+                doc.append(table_field, row)
+
+    return _save_doc(doc)
 
 
 def _list_dicts(
@@ -6117,3 +6329,135 @@ def update_receipt_document(name: str, updates: Optional[Any] = None) -> Dict[st
     data = _ensure_dict(updates or {})
     doc = _update_document("Garage Receipt Document", name, data)
     return {"name": doc.name}
+
+
+@frappe.whitelist()
+def create_purchase_order(order: Optional[Any] = None) -> Dict[str, Any]:
+    """Create an ERPNext Purchase Order from the portal."""
+
+    _require_login()
+    data = _ensure_dict(order or {})
+    doc = _insert_erpnext_document("Purchase Order", data)
+    return {"name": doc.name, "status": getattr(doc, "status", None)}
+
+
+@frappe.whitelist()
+def update_purchase_order(name: str, updates: Optional[Any] = None) -> Dict[str, Any]:
+    _require_login()
+    data = _ensure_dict(updates or {})
+    doc = _update_erpnext_document("Purchase Order", name, data)
+    return {"name": doc.name, "status": getattr(doc, "status", None)}
+
+
+@frappe.whitelist()
+def create_purchase_receipt(receipt: Optional[Any] = None) -> Dict[str, Any]:
+    """Create an ERPNext Purchase Receipt so incoming parts reduce stock."""
+
+    _require_login()
+    data = _ensure_dict(receipt or {})
+    doc = _insert_erpnext_document("Purchase Receipt", data)
+    return {"name": doc.name, "status": getattr(doc, "status", None)}
+
+
+@frappe.whitelist()
+def update_purchase_receipt(name: str, updates: Optional[Any] = None) -> Dict[str, Any]:
+    _require_login()
+    data = _ensure_dict(updates or {})
+    doc = _update_erpnext_document("Purchase Receipt", name, data)
+    return {"name": doc.name, "status": getattr(doc, "status", None)}
+
+
+@frappe.whitelist()
+def create_core_sales_invoice(invoice: Optional[Any] = None) -> Dict[str, Any]:
+    """Create a Sales Invoice that posts directly to ERPNext accounting."""
+
+    _require_login()
+    data = _ensure_dict(invoice or {})
+    doc = _insert_erpnext_document("Sales Invoice", data)
+    return {
+        "name": doc.name,
+        "status": getattr(doc, "status", None),
+        "outstanding": getattr(doc, "outstanding_amount", None),
+    }
+
+
+@frappe.whitelist()
+def update_core_sales_invoice(name: str, updates: Optional[Any] = None) -> Dict[str, Any]:
+    _require_login()
+    data = _ensure_dict(updates or {})
+    doc = _update_erpnext_document("Sales Invoice", name, data)
+    return {
+        "name": doc.name,
+        "status": getattr(doc, "status", None),
+        "outstanding": getattr(doc, "outstanding_amount", None),
+    }
+
+
+@frappe.whitelist()
+def create_core_payment_entry(entry: Optional[Any] = None) -> Dict[str, Any]:
+    """Create a Payment Entry tied to ERPNext ledgers (for draft/pay/paid states)."""
+
+    _require_login()
+    data = _ensure_dict(entry or {})
+    doc = _insert_erpnext_document("Payment Entry", data)
+    return {"name": doc.name, "status": getattr(doc, "status", None)}
+
+
+@frappe.whitelist()
+def update_core_payment_entry(name: str, updates: Optional[Any] = None) -> Dict[str, Any]:
+    _require_login()
+    data = _ensure_dict(updates or {})
+    doc = _update_erpnext_document("Payment Entry", name, data)
+    return {"name": doc.name, "status": getattr(doc, "status", None)}
+
+
+@frappe.whitelist()
+def create_journal_entry(entry: Optional[Any] = None) -> Dict[str, Any]:
+    """Create a Journal Entry for manual adjustments from the portal."""
+
+    _require_login()
+    data = _ensure_dict(entry or {})
+    doc = _insert_erpnext_document("Journal Entry", data)
+    return {"name": doc.name, "status": getattr(doc, "status", None)}
+
+
+@frappe.whitelist()
+def update_journal_entry(name: str, updates: Optional[Any] = None) -> Dict[str, Any]:
+    _require_login()
+    data = _ensure_dict(updates or {})
+    doc = _update_erpnext_document("Journal Entry", name, data)
+    return {"name": doc.name, "status": getattr(doc, "status", None)}
+
+
+@frappe.whitelist()
+def get_stock_ledger_entries(
+    item_code: str, warehouse: Optional[str] = None, limit: int = 50
+) -> List[Dict[str, Any]]:
+    """Expose stock ledger rows so the portal can show real-time inventory impact."""
+
+    _require_login()
+    filters: Dict[str, Any] = {"item_code": item_code}
+    if warehouse:
+        filters["warehouse"] = warehouse
+
+    try:
+        with _ignoring_permissions():
+            return frappe.get_all(
+                "Stock Ledger Entry",
+                fields=[
+                    "name",
+                    "posting_date",
+                    "posting_time",
+                    "warehouse",
+                    "item_code",
+                    "actual_qty",
+                    "qty_after_transaction",
+                    "voucher_type",
+                    "voucher_no",
+                ],
+                filters=filters,
+                order_by="posting_date desc, posting_time desc, creation desc",
+                limit=limit,
+            )
+    except Exception:
+        return []
