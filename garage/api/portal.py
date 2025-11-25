@@ -1302,6 +1302,16 @@ def get_erpnext_integration_status() -> Dict[str, Any]:
     }
 
 
+@frappe.whitelist()
+def is_erpnext_integration_ready() -> str:
+    """Return "iya" if integration gaps are clear, otherwise "belum"."""
+
+    _require_login()
+
+    ready = not any(_collect_erpnext_integration_gaps().values())
+    return "iya" if ready else "belum"
+
+
 # ---------------------------------------------------------------------------
 # Utility helpers
 # ---------------------------------------------------------------------------
