@@ -1142,6 +1142,29 @@ ERP_INTEGRATION_DOCS: Mapping[str, Dict[str, Any]] = {
 }
 ERP_INTEGRATION_DOCTYPES = tuple(ERP_INTEGRATION_DOCS.keys())
 
+ERP_INTEGRATION_ENDPOINTS: Mapping[str, Dict[str, str]] = {
+    "Purchase Order": {
+        "create": "garage.api.portal.create_purchase_order",
+        "update": "garage.api.portal.update_purchase_order",
+    },
+    "Purchase Receipt": {
+        "create": "garage.api.portal.create_purchase_receipt",
+        "update": "garage.api.portal.update_purchase_receipt",
+    },
+    "Sales Invoice": {
+        "create": "garage.api.portal.create_core_sales_invoice",
+        "update": "garage.api.portal.update_core_sales_invoice",
+    },
+    "Payment Entry": {
+        "create": "garage.api.portal.create_core_payment_entry",
+        "update": "garage.api.portal.update_core_payment_entry",
+    },
+    "Journal Entry": {
+        "create": "garage.api.portal.create_journal_entry",
+        "update": "garage.api.portal.update_journal_entry",
+    },
+}
+
 SPARE_REQUEST_CLOSED_STATUSES = ["Received", "Issued", "Rejected", "Cancelled"]
 SPARE_REQUEST_ACTIVE_STATUSES = [
     "Pending Check",
@@ -1185,6 +1208,20 @@ def get_erpnext_integration_schema() -> Dict[str, Any]:
         }
 
     return schema
+
+
+@frappe.whitelist()
+def get_erpnext_integration_status() -> Dict[str, Any]:
+    """Report whether Garage portal can perform full ERPNext transactions."""
+
+    _require_login()
+
+    return {
+        "ready": True,
+        "doctypes": list(ERP_INTEGRATION_DOCTYPES),
+        "operations": ERP_INTEGRATION_ENDPOINTS,
+        "schema_method": "garage.api.portal.get_erpnext_integration_schema",
+    }
 
 
 # ---------------------------------------------------------------------------
