@@ -7,6 +7,7 @@
 garage.patches.post_model_sync.add_default_roles
 garage.patches.post_model_sync.add_default_branches
 garage.patches.post_model_sync.fix_service_order_name_column
+garage.patches.post_model_sync.fix_sales_invoice_name_column
 garage.patches.post_model_sync.fix_payment_entry_name_column
 garage.patches.post_model_sync.assign_branch_to_master_data
 garage.patches.post_model_sync.add_branch_portal_users
