@@ -1308,7 +1308,8 @@ def is_erpnext_integration_ready() -> str:
 
     _require_login()
 
-    ready = not any(_collect_erpnext_integration_gaps().values())
+    gaps = get_erpnext_integration_gaps()
+    ready = bool(gaps.get("ready"))
     return "iya" if ready else "belum"
 
 
