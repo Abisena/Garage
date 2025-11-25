@@ -3204,8 +3204,15 @@ def _log_integration_snapshot(service: str, payload: Dict[str, Any], result: Dic
         return None
 
 
+def _normalize_status(status: Any) -> str:
+    """Convert status strings to a consistent, hyphenated slug."""
+
+    normalized = re.sub(r"[^a-z0-9]+", "-", cstr(status or "").strip().lower())
+    return normalized.strip("-")
+
+
 def _map_repair_status(status: str) -> Dict[str, Optional[str]]:
-    normalized = cstr(status or "").strip().lower()
+    normalized = _normalize_status(status)
     mapping: Dict[str, Dict[str, Optional[str]]] = {
         "waiting-parts": {
             "status": "Work In Progress",
@@ -3357,7 +3364,7 @@ def _ensure_billing_placeholders(
 ) -> Optional[Dict[str, Any]]:
     """Auto-create draft invoice & payment entry once a repair is ~done."""
 
-    status_hint = cstr(order.get("status") or order.get("repairStatus") or "").lower()
+    status_hint = _normalize_status(order.get("status") or order.get("repairStatus"))
     progress = _extract_repair_progress(order, doc)
 
     ready_states = {"ready-for-payment", "final-inspection", "qc-finished", "completed"}
