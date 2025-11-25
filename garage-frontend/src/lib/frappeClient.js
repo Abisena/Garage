@@ -264,6 +264,25 @@ class FrappeClient {
       throw error;
     }
   }
+
+  async adjustSparePartStock(partCode, qty, action = 'issue') {
+    if (!partCode) {
+      throw new Error('Part code is required to adjust stock');
+    }
+
+    const payload = {
+      part_code: partCode,
+      qty,
+      action,
+    };
+
+    const response = await this.request('/api/method/garage.api.portal.adjust_spare_part_stock', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    return response.message || response;
+  }
 }
 
 export const frappeClient = new FrappeClient();

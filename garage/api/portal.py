@@ -5513,6 +5513,62 @@ def update_spare_part_request_status(name: str, action: str) -> Dict[str, Any]:
     return response
 
 
+@frappe.whitelist()
+def adjust_spare_part_stock(
+    part_code: str, qty: float, action: str = "issue"
+) -> Dict[str, Any]:
+    """Directly adjust stock for a spare part from the portal.
+
+    This endpoint lets the portal decrement (issue) or increment (receive)
+    stock quantities for a Garage Spare Part so the Desk/Pravenya inventory
+    stays in sync with actions taken on the web app.
+    """
+
+    _require_login()
+
+    code = cstr(part_code or "").strip()
+    qty_value = flt(qty or 0)
+    normalized_action = (action or "").strip().lower()
+
+    if not code:
+        frappe.throw(_("Kode sparepart wajib diisi."))
+    if qty_value <= 0:
+        frappe.throw(_("Qty harus lebih besar dari 0."))
+
+    try:
+        part_doc = _get_doc("Garage Spare Part", code)
+    except Exception:
+        part_name = frappe.db.get_value("Garage Spare Part", {"part_code": code}, "name")
+        if not part_name:
+            frappe.throw(_("Sparepart {0} tidak ditemukan.").format(code))
+        part_doc = _get_doc("Garage Spare Part", part_name)
+
+    if normalized_action in {"issue", "consume"}:
+        available = flt(part_doc.stock_qty or 0)
+        if qty_value > available:
+            frappe.throw(
+                _("Stok {0} tidak mencukupi. Permintaan {1}, stok tersedia {2}.").format(
+                    part_doc.part_name or code,
+                    "{:g}".format(qty_value),
+                    "{:g}".format(available),
+                )
+            )
+        part_doc.stock_qty = max(available - qty_value, 0)
+    elif normalized_action in {"receive", "restock"}:
+        part_doc.stock_qty = flt(part_doc.stock_qty or 0) + qty_value
+    else:
+        frappe.throw(_("Aksi stok {0} tidak dikenali.").format(action))
+
+    _save_doc(part_doc)
+
+    return {
+        "name": part_doc.name,
+        "part_code": part_doc.part_code,
+        "stock_qty": part_doc.stock_qty,
+        "reserved_qty": part_doc.reserved_qty,
+    }
+
+
 def _issue_spare_part_via_stock_movement(request: Mapping[str, Any]) -> Optional[frappe.Document]:
     """Create and submit a stock issue tied to a service order spare-part row."""
 
