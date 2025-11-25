@@ -248,6 +248,19 @@ class FrappeClient {
     }
   }
 
+  async getErpnextIntegrationBrief() {
+    try {
+      const response = await this.request(
+        '/api/method/garage.api.portal.answer_erpnext_integration_brief'
+      );
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to fetch ERPNext integration readiness:', error);
+      throw error;
+    }
+  }
+
   async syncWorkOrders(workOrders) {
     try {
       const response = await this.request(
