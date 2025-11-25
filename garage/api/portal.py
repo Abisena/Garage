@@ -1261,6 +1261,7 @@ def _item_to_spare_part_record(
         "brand": item.get("brand"),
         "uom": item.get("uom") or item.get("stock_uom"),
         "unit_price": price,
+        "valuation_rate": flt(stock_info.get("valuation_rate") or item.get("valuation_rate") or 0),
         "stock_qty": flt(stock_info.get("stock_qty", item.get("stock_qty") or 0)),
         "reserved_qty": flt(
             stock_info.get("reserved_qty", item.get("reserved_qty") or 0)
@@ -1280,55 +1281,99 @@ def _item_to_spare_part_record(
 def _fetch_item_spare_parts(
     data: Mapping[str, Any], *, limit: int = DEFAULT_LIMIT
 ) -> List[Dict[str, Any]]:
-    part_fields = [
+    item_fields = [
         "name",
-        "part_code",
-        "part_name",
+        "item_code",
+        "item_name",
         "description",
-        "category",
+        "item_group",
         "brand",
-        "uom",
-        "unit_price",
-        "stock_qty",
-        "reserved_qty",
-        "reorder_level",
-        "warehouse_location",
-        "managed_by",
-        "status",
+        "stock_uom",
+        "standard_rate",
+        "valuation_rate",
+        "total_actual_qty",
+        "total_reserved_qty",
+        "safety_stock",
+        "disabled",
         "image",
         "modified",
         "owner",
+        "default_warehouse",
     ]
 
-    filters: List[List[Any]] = []
+    filters: List[List[Any]] = [["is_stock_item", "=", 1]]
+    or_filters: List[List[Any]] = []
 
     if data.get("category"):
-        filters.append(["category", "=", data["category"]])
-
-    status = data.get("status")
-    if status and status != "Low Stock":
-        filters.append(["status", "=", status])
+        filters.append(["item_group", "=", data["category"]])
 
     identifier = data.get("item_code") or data.get("part_code")
     if data.get("name"):
         filters.append(["name", "=", data.get("name")])
     if identifier:
-        filters.append(["part_code", "=", identifier])
+        filters.append(["item_code", "=", identifier])
 
     search_term = cstr(data.get("search") or "").strip()
     if search_term:
-        filters.append(
-            [
-                "or",
-                ["part_code", "like", f"%{search_term}%"],
-                ["part_name", "like", f"%{search_term}%"],
-                ["brand", "like", f"%{search_term}%"],
-            ]
+        or_filters = [
+            ["item_code", "like", f"%{search_term}%"],
+            ["item_name", "like", f"%{search_term}%"],
+            ["brand", "like", f"%{search_term}%"],
+        ]
+
+    items = frappe.get_list(
+        "Item",
+        fields=item_fields,
+        filters=filters,
+        or_filters=or_filters,
+        limit_page_length=limit,
+        order_by="modified desc",
+    )
+
+    stock_map = _aggregate_item_stock([item.get("item_code") for item in items])
+
+    processed: List[Dict[str, Any]] = []
+    for item in items:
+        part_code = cstr(item.get("item_code") or "")
+        record = _item_to_spare_part_record(item, stock_map, {})
+        if not record.get("reorder_level"):
+            record["reorder_level"] = flt(item.get("safety_stock") or 0)
+        if not record.get("stock_qty"):
+            record["stock_qty"] = flt(item.get("total_actual_qty") or 0)
+        if not record.get("reserved_qty"):
+            record["reserved_qty"] = flt(item.get("total_reserved_qty") or 0)
+        record["default_warehouse"] = item.get("default_warehouse")
+        processed.append(record)
+
+    return processed
+
+
+def _aggregate_item_stock(item_codes: Iterable[str]) -> Dict[str, Dict[str, Any]]:
+    codes = [code for code in item_codes if code]
+    if not codes:
+        return {}
+
+    stock_rows = frappe.get_all(
+        "Bin",
+        fields=["item_code", "warehouse", "actual_qty", "reserved_qty", "valuation_rate"],
+        filters=[["item_code", "in", codes]],
+        limit=5000,
+    )
+
+    stock_map: Dict[str, Dict[str, Any]] = {}
+    for row in stock_rows:
+        code = cstr(row.get("item_code") or "")
+        if not code:
+            continue
+        entry = stock_map.setdefault(
+            code, {"stock_qty": 0, "reserved_qty": 0, "valuation_rate": 0}
         )
+        entry["stock_qty"] += flt(row.get("actual_qty") or 0)
+        entry["reserved_qty"] += flt(row.get("reserved_qty") or 0)
+        if not entry.get("valuation_rate"):
+            entry["valuation_rate"] = flt(row.get("valuation_rate") or 0)
 
-    parts = _list_dicts("Garage Spare Part", part_fields, filters=filters, limit=limit)
-
-    return [_item_to_spare_part_record(part) for part in parts]
+    return stock_map
 
     source = "On Hand"
     if usage == "material" and not warehouse:
@@ -3383,79 +3428,73 @@ def _ensure_billing_placeholders(
     existing_invoice = None
     try:
         existing_invoice = frappe.db.get_value(
-            "Garage Sales Invoice",
-            {
-                "source_type": "Garage Service Order",
-                "source_name": doc.name,
-                "docstatus": ["<", 2],
-            },
-            "name",
+            "Sales Invoice", {"po_no": doc.name, "docstatus": ["<", 2]}, "name"
         )
     except Exception:
         existing_invoice = None
 
-    invoice_doc = None
-    if not existing_invoice:
-        invoice_doc = frappe.new_doc("Garage Sales Invoice")
-        invoice_doc.branch = doc.branch
-        invoice_doc.invoice_date = nowdate()
-        invoice_doc.customer = doc.customer
-        invoice_doc.source_type = "Garage Service Order"
-        invoice_doc.source_name = doc.name
-        invoice_doc.status = "Draft"
-        invoice_doc.total_amount = total_amount
-        invoice_doc.outstanding_amount = total_amount
-        _insert_doc(invoice_doc)
-        billing["sales_invoice"] = invoice_doc.name
+    if existing_invoice:
+        billing["sales_invoice"] = existing_invoice
+        return billing
 
-        if hasattr(doc, "invoice_status"):
-            doc.invoice_status = "Pending"
-    else:
-        invoice_doc = _get_doc("Garage Sales Invoice", existing_invoice)
+    company = frappe.defaults.get_user_default("company") or frappe.defaults.get_global_default("company")
+    invoice_doc = frappe.new_doc("Sales Invoice")
+    invoice_doc.company = company
+    invoice_doc.customer = doc.customer
+    invoice_doc.posting_date = nowdate()
+    invoice_doc.due_date = nowdate()
+    invoice_doc.po_no = doc.name
+    invoice_doc.set_posting_time = 1
+    invoice_doc.update({"remarks": _("Generated from Garage Service Order {0}").format(doc.name)})
 
-    payment_exists = False
-    if invoice_doc:
-        try:
-            allocations = frappe.db.get_all(
-                "Garage Payment Allocation",
-                filters={"invoice": invoice_doc.name},
-                fields=["parent"],
-                distinct=True,
+    parts_total = 0
+    for row in getattr(doc, "required_parts", []) or []:
+        if not getattr(row, "item_code", None) or not getattr(row, "qty", None):
+            continue
+
+        rate = flt(getattr(row, "rate", 0))
+        if not rate:
+            rate = flt(
+                frappe.db.get_value("Item", {"item_code": row.item_code}, "standard_rate")
+                or 0
             )
-            parents = [row.get("parent") for row in allocations if row.get("parent")]
-            if parents:
-                active_entries = frappe.db.get_all(
-                    "Garage Payment Entry",
-                    filters={"name": ["in", parents], "docstatus": ["<", 2]},
-                    limit=len(parents),
-                    pluck="name",
-                )
-                payment_exists = bool(active_entries)
-        except Exception:
-            payment_exists = False
+        amount = rate * flt(row.qty)
+        parts_total += amount
 
-        if not payment_exists:
-            payment_doc = frappe.new_doc("Garage Payment Entry")
-            payment_doc.branch = doc.branch
-            payment_doc.payment_date = nowdate()
-            payment_doc.customer = doc.customer
-            payment_doc.mode_of_payment = "Cash"
-            payment_doc.paid_amount = flt(invoice_doc.outstanding_amount)
-            payment_doc.received_amount = flt(invoice_doc.outstanding_amount)
-            payment_doc.status = "Draft"
-            payment_doc.append(
-                "allocations",
+        invoice_doc.append(
+            "items",
+            {
+                "item_code": row.item_code,
+                "item_name": getattr(row, "item_name", None) or row.item_code,
+                "description": getattr(row, "description", None) or row.item_code,
+                "qty": row.qty,
+                "uom": getattr(row, "uom", None) or "Unit",
+                "rate": rate,
+            },
+        )
+
+    labor_amount = max(total_amount - parts_total, 0)
+    if labor_amount > 0:
+        labor_item = frappe.db.get_value(
+            "Item", {"is_stock_item": 0}, "name"
+        )
+        if labor_item:
+            invoice_doc.append(
+                "items",
                 {
-                    "invoice": invoice_doc.name,
-                    "allocated_amount": flt(invoice_doc.outstanding_amount),
-                    "outstanding_before": flt(invoice_doc.outstanding_amount),
-                    "outstanding_after": 0,
+                    "item_code": labor_item,
+                    "description": _("Labor service for {0}").format(doc.name),
+                    "qty": 1,
+                    "uom": "Unit",
+                    "rate": labor_amount,
                 },
             )
-            _insert_doc(payment_doc)
-            billing["payment_entry"] = payment_doc.name
 
-    if billing:
+    _insert_doc(invoice_doc)
+    billing["sales_invoice"] = invoice_doc.name
+
+    if hasattr(doc, "invoice_status"):
+        doc.invoice_status = "Pending"
         _save_doc(doc)
 
     return billing or None
@@ -5587,21 +5626,24 @@ def update_spare_part_request_status(name: str, action: str) -> Dict[str, Any]:
         if not part_code:
             frappe.throw(_("Kode sparepart belum diisi pada permintaan."))
 
-        try:
-            part_doc = _get_doc("Garage Spare Part", part_code)
-        except Exception:
-            part_name = frappe.db.get_value("Garage Spare Part", {"part_code": part_code}, "name")
-            if not part_name:
-                frappe.throw(_("Sparepart {0} tidak ditemukan di master.").format(part_code))
-            part_doc = _get_doc("Garage Spare Part", part_name)
+        stock_filters = {"item_code": part_code}
+        requested_wh = cstr(request.get("warehouse") or "").strip()
+        if requested_wh:
+            stock_filters["warehouse"] = requested_wh
 
-        available = flt(part_doc.stock_qty or 0)
+        stock_rows = frappe.get_all(
+            "Bin",
+            fields=["actual_qty", "reserved_qty", "warehouse"],
+            filters=stock_filters,
+            limit=10,
+        )
+        available = sum(flt(row.get("actual_qty") or 0) for row in stock_rows)
         if qty > available:
             frappe.throw(
                 _(
                     "Stok {0} tidak mencukupi. Permintaan {1} {2}, stok tersedia {3}."
                 ).format(
-                    part_doc.part_name or part_code,
+                    part_code,
                     "{:g}".format(flt(qty)),
                     request.get("uom") or "",
                     "{:g}".format(flt(available)),
@@ -5609,13 +5651,6 @@ def update_spare_part_request_status(name: str, action: str) -> Dict[str, Any]:
             )
 
         movement_doc = _issue_spare_part_via_stock_movement(request)
-        if movement_doc:
-            part_doc.reload()
-
-        if flt(part_doc.reserved_qty):
-            part_doc.reserved_qty = max(flt(part_doc.reserved_qty) - qty, 0)
-
-        _save_doc(part_doc)
 
         updated_fields = {"stock_status": new_status}
         if not request.get("source"):
@@ -5623,16 +5658,26 @@ def update_spare_part_request_status(name: str, action: str) -> Dict[str, Any]:
 
         frappe.db.set_value("Garage Service Order Part", name, updated_fields)
 
+        updated_bins = frappe.get_all(
+            "Bin",
+            fields=["actual_qty", "reserved_qty"],
+            filters=stock_filters,
+            limit=10,
+        )
+        remaining = sum(flt(row.get("actual_qty") or 0) for row in updated_bins)
+
         response.update(
             {
                 "message": _("Permintaan sparepart disetujui. Stok tersisa {0}.").format(
-                    "{:g}".format(flt(part_doc.stock_qty or 0))
+                    "{:g}".format(flt(remaining))
                 ),
                 "part": {
-                    "name": part_doc.name,
-                    "part_code": part_doc.part_code,
-                    "stock_qty": part_doc.stock_qty,
-                    "reserved_qty": part_doc.reserved_qty,
+                    "name": part_code,
+                    "part_code": part_code,
+                    "stock_qty": remaining,
+                    "reserved_qty": sum(
+                        flt(row.get("reserved_qty") or 0) for row in updated_bins
+                    ),
                 },
             }
         )
@@ -5686,42 +5731,71 @@ def adjust_spare_part_stock(
     if qty_value <= 0:
         frappe.throw(_("Qty harus lebih besar dari 0."))
 
+    item_code = None
     try:
-        part_doc = _get_doc("Garage Spare Part", code)
+        item_code = frappe.db.get_value(
+            "Item", {"item_code": code, "is_stock_item": 1}, "name"
+        )
     except Exception:
-        part_name = frappe.db.get_value("Garage Spare Part", {"part_code": code}, "name")
-        if not part_name:
-            frappe.throw(_("Sparepart {0} tidak ditemukan.").format(code))
-        part_doc = _get_doc("Garage Spare Part", part_name)
+        item_code = None
 
-    if normalized_action in {"issue", "consume"}:
-        available = flt(part_doc.stock_qty or 0)
-        if qty_value > available:
-            frappe.throw(
-                _("Stok {0} tidak mencukupi. Permintaan {1}, stok tersedia {2}.").format(
-                    part_doc.part_name or code,
-                    "{:g}".format(qty_value),
-                    "{:g}".format(available),
-                )
-            )
-        part_doc.stock_qty = max(available - qty_value, 0)
-    elif normalized_action in {"receive", "restock"}:
-        part_doc.stock_qty = flt(part_doc.stock_qty or 0) + qty_value
-    else:
+    if not item_code:
+        frappe.throw(_("Sparepart {0} tidak ditemukan pada master Item.").format(code))
+
+    item_doc = frappe.get_doc("Item", item_code)
+    if not cint(getattr(item_doc, "is_stock_item", 0)):
+        frappe.throw(_("Item {0} bukan stok.").format(code))
+
+    if normalized_action not in {"issue", "consume", "receive", "restock"}:
         frappe.throw(_("Aksi stok {0} tidak dikenali.").format(action))
 
-    _save_doc(part_doc)
+    default_company = frappe.defaults.get_user_default("company") or frappe.defaults.get_global_default(
+        "company"
+    )
+    warehouse = cstr(item_doc.get("default_warehouse") or "").strip()
+    if normalized_action in {"issue", "consume"} and not warehouse:
+        frappe.throw(_("Warehouse untuk pengeluaran {0} belum diatur.").format(code))
+    purpose = "Material Issue" if normalized_action in {"issue", "consume"} else "Material Receipt"
+
+    stock_entry = frappe.new_doc("Stock Entry")
+    stock_entry.company = default_company
+    stock_entry.stock_entry_type = purpose
+    stock_entry.purpose = purpose
+    stock_entry.set_posting_time = 1
+    stock_entry.posting_date = nowdate()
+    stock_entry.posting_time = now_datetime().time()
+    stock_entry.remarks = _(f"{purpose} for sparepart {code}")
+
+    item_row: Dict[str, Any] = {
+        "item_code": item_doc.name,
+        "qty": qty_value,
+        "uom": item_doc.get("stock_uom") or "Nos",
+        "conversion_factor": 1,
+    }
+
+    if normalized_action in {"issue", "consume"}:
+        item_row["s_warehouse"] = warehouse
+    else:
+        item_row["t_warehouse"] = warehouse
+
+    stock_entry.append("items", item_row)
+
+    stock_entry = _insert_doc(stock_entry)
+    stock_entry.submit()
+
+    stock_map = _aggregate_item_stock([item_doc.item_code])
+    updated_stock = stock_map.get(item_doc.item_code or code, {}).get("stock_qty", qty_value)
 
     return {
-        "name": part_doc.name,
-        "part_code": part_doc.part_code,
-        "stock_qty": part_doc.stock_qty,
-        "reserved_qty": part_doc.reserved_qty,
+        "stock_entry": stock_entry.name,
+        "part_code": code,
+        "stock_qty": updated_stock,
+        "warehouse": warehouse,
     }
 
 
 def _issue_spare_part_via_stock_movement(request: Mapping[str, Any]) -> Optional[frappe.Document]:
-    """Create and submit a stock issue tied to a service order spare-part row."""
+    """Create and submit a native Stock Entry for spare-part consumption."""
 
     parent_order = cstr(request.get("parent") or "").strip()
     if not parent_order:
@@ -5735,32 +5809,52 @@ def _issue_spare_part_via_stock_movement(request: Mapping[str, Any]) -> Optional
     if qty <= 0:
         return None
 
-    movement_doc = frappe.new_doc("Garage Stock Movement")
-    movement_doc.movement_type = "Issue"
-    movement_doc.reference_type = "Garage Service Order"
-    movement_doc.reference_name = parent_order
-    movement_doc.warehouse = cstr(request.get("warehouse") or "")
-    movement_doc.remarks = (
-        cstr(request.get("description") or "")
-        or _("Issue spare part for service order {0}").format(parent_order)
-    )
+    item_code = frappe.db.get_value("Item", {"item_code": part_code, "is_stock_item": 1}, "name")
+    if not item_code:
+        frappe.throw(_("Item {0} tidak ditemukan di master Item.").format(part_code))
 
-    movement_doc.append(
+    company = frappe.defaults.get_user_default("company") or frappe.defaults.get_global_default("company")
+    warehouse = cstr(request.get("warehouse") or "").strip()
+    if not warehouse:
+        warehouse = cstr(
+            frappe.db.get_value("Item", item_code, "default_warehouse") or ""
+        ).strip()
+    if not warehouse:
+        frappe.throw(
+            _("Warehouse pengeluaran belum diatur untuk {0}.").format(part_code)
+        )
+
+    stock_entry = frappe.new_doc("Stock Entry")
+    stock_entry.company = company
+    stock_entry.stock_entry_type = "Material Issue"
+    stock_entry.purpose = "Material Issue"
+    stock_entry.set_posting_time = 1
+    stock_entry.posting_date = nowdate()
+    stock_entry.posting_time = now_datetime().time()
+    stock_entry.remarks = request.get("description") or _(
+        "Issue spare part for service order {0}"
+    ).format(parent_order)
+    stock_entry.po_no = parent_order
+
+    stock_entry.append(
         "items",
         {
-            "item_code": part_code,
+            "item_code": item_code,
             "item_name": request.get("item_name") or part_code,
             "description": request.get("description") or request.get("item_name"),
             "qty": qty,
             "uom": request.get("uom") or "Unit",
-            "source_warehouse": cstr(request.get("warehouse") or ""),
-            "remarks": request.get("description") or request.get("item_name"),
+            "conversion_factor": 1,
+            "s_warehouse": warehouse,
         },
     )
 
-    movement_doc = _insert_doc(movement_doc)
-    movement_doc.submit()
-    return movement_doc
+    stock_entry = _insert_doc(stock_entry)
+    stock_entry.submit()
+    stock_entry.add_comment(
+        "Comment", _("Linked to Garage Service Order {0}").format(parent_order)
+    )
+    return stock_entry
 
 
 @frappe.whitelist()

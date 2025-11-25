@@ -123,18 +123,18 @@ export function BuyingSparePartIntegrated({ currentUser }) {
       const parts = Array.isArray(response?.spare_parts) ? response.spare_parts : [];
 
       const mappedParts = parts.map((part, index) => ({
-        id: part.part_code || part.name || `part-${index}`,
-        partName: part.part_name || part.item_name || part.partName || 'Unknown Part',
-        partNumber: part.part_code || part.part_number || part.name || `PART-${index}`,
+        id: part.item_code || part.name || `part-${index}`,
+        partName: part.item_name || part.partName || 'Unknown Part',
+        partNumber: part.item_code || part.part_number || part.name || `PART-${index}`,
         compatibleModels: Array.isArray(part.compatible_models)
           ? part.compatible_models
           : Array.isArray(part.compatibleModels)
             ? part.compatibleModels
             : [],
-        category: part.category || part.item_group || 'General',
-        unitPrice: Number(part.unit_price) || Number(part.standard_rate) || 0,
-        stock: Number(part.stock_qty) || Number(part.actual_qty) || 0,
-        minStock: Number(part.reorder_level) || Number(part.minStock) || 0,
+        category: part.item_group || part.category || 'General',
+        unitPrice: Number(part.standard_rate) || Number(part.valuation_rate) || 0,
+        stock: Number(part.total_actual_qty ?? part.stock_qty ?? part.actual_qty) || 0,
+        minStock: Number(part.safety_stock ?? part.reorder_level ?? part.minStock) || 0,
         isCustom: false
       }));
 
@@ -144,8 +144,8 @@ export function BuyingSparePartIntegrated({ currentUser }) {
 
       saveMasterSpareParts(mergedParts);
     } catch (error) {
-      console.error('Failed to load master spare parts from Garage Spare Part List', error);
-      setPartsError('Gagal memuat master spare parts dari Garage Spare Part List. Menampilkan data lokal sebagai cadangan.');
+      console.error('Failed to load master spare parts from ERPNext Item', error);
+      setPartsError('Gagal memuat master spare parts dari master Item ERPNext. Menampilkan data lokal sebagai cadangan.');
 
       const savedParts = localStorage.getItem('masterSpareParts');
       if (savedParts) {
@@ -268,7 +268,7 @@ export function BuyingSparePartIntegrated({ currentUser }) {
     const partToDelete = masterSpareParts.find((part) => part.id === id);
 
     if (!partToDelete?.isCustom) {
-      alert('⚠️ Part ini berasal dari Garage Spare Part List sehingga tidak bisa dihapus di sini.');
+      alert('⚠️ Part ini berasal dari master Item ERPNext sehingga tidak bisa dihapus di sini.');
       return;
     }
 
@@ -858,7 +858,7 @@ export function BuyingSparePartIntegrated({ currentUser }) {
 
               <div className="flex-1 overflow-y-auto p-6">
                 {partsLoading ? (
-                  <div className="text-center py-10 text-slate-600">Memuat data stok dari Garage Spare Part...</div>
+                  <div className="text-center py-10 text-slate-600">Memuat data stok dari master Item ERPNext...</div>
                 ) : masterSpareParts.length === 0 ? (
                   <div className="text-center py-8">
                     <Database className="w-12 h-12 text-slate-300 mx-auto mb-3" />
@@ -1498,7 +1498,7 @@ export function BuyingSparePartIntegrated({ currentUser }) {
           <div>
             {partsLoading && (
               <div className="bg-white border border-slate-200 rounded-lg p-4 mb-4 text-slate-700">
-                Sedang memuat master spare parts dari Garage Spare Part...
+                Sedang memuat master spare parts dari ERPNext Item...
               </div>
             )}
             {partsError && (

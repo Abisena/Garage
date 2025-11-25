@@ -16,8 +16,8 @@ export function SpareParts() {
   });
 
   const isLowStock = useCallback((part) => {
-    const stockQty = Number(part?.stock_qty) || 0;
-    const reorderLevel = Number(part?.reorder_level);
+    const stockQty = Number(part?.total_actual_qty ?? part?.stock_qty) || 0;
+    const reorderLevel = Number(part?.safety_stock ?? part?.reorder_level);
 
     if (Number.isFinite(reorderLevel) && reorderLevel > 0) {
       return stockQty <= reorderLevel;
@@ -49,11 +49,11 @@ export function SpareParts() {
 
       const totalParts = Number(response?.total_count) || parts.length;
       const lowStockCount = Number(response?.low_stock_count) || parts.filter(isLowStock).length;
-      const categories = new Set(parts.map((p) => p.category).filter(Boolean)).size;
-      const totalValue =
-        typeof response?.total_stock_value === 'number'
-          ? response.total_stock_value
-          : parts.reduce((sum, part) => sum + (Number(part?.stock_qty) || 0) * (Number(part?.unit_price) || 0), 0);
+      const categories = new Set(parts.map((p) => p.item_group).filter(Boolean)).size;
+      const totalValue = parts.reduce(
+        (sum, part) => sum + (Number(part?.total_actual_qty || part?.stock_qty || 0) * (Number(part?.valuation_rate || part?.standard_rate || 0))),
+        0,
+      );
 
       setStats({
         totalParts,
@@ -64,7 +64,7 @@ export function SpareParts() {
     } catch (err) {
       console.error('Failed to load spare parts from ERPNext Item master', err);
       if (!cancelledRef?.current) {
-        setError('Gagal memuat data spare part dari Garage Spare Part List. Pastikan sesi login masih aktif.');
+        setError('Gagal memuat data spare part dari master Item ERPNext. Pastikan sesi login masih aktif.');
         setSpareParts([]);
         setStats({ totalParts: 0, lowStock: 0, categories: 0, totalValue: 0 });
       }
@@ -89,14 +89,14 @@ export function SpareParts() {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return true;
 
-    return [part.part_name, part.part_code, part.category, part.brand]
+    return [part.item_name, part.item_code, part.item_group, part.brand]
       .map((value) => (value || '').toString().toLowerCase())
       .some((value) => value.includes(query));
   });
 
   const getStatusBadge = (part) => {
     const lowStock = isLowStock(part);
-    const status = (part?.status || 'Active').toLowerCase();
+    const status = (part?.disabled ? 'Inactive' : part?.status || 'Active').toLowerCase();
 
     if (lowStock) {
       return <span className="inline-block px-3 py-1 rounded-full text-xs bg-amber-100 text-amber-800">Low Stock</span>;
@@ -116,7 +116,7 @@ export function SpareParts() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-slate-800 mb-1">Master Spare Parts</h1>
-            <p className="text-slate-600">Data diambil langsung dari Garage Spare Part List</p>
+            <p className="text-slate-600">Data diambil langsung dari ERPNext Item</p>
           </div>
           <Button onClick={() => loadSpareParts()} className="bg-blue-500 hover:bg-blue-600 text-white" disabled={isLoading}>
             <RefreshCcw className="w-4 h-4 mr-2" />
@@ -221,29 +221,29 @@ export function SpareParts() {
                 )}
 
                 {!isLoading && filteredParts.map((part) => (
-                  <tr key={part.name || part.part_code} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="px-6 py-4 text-slate-900">{part.part_name || part.part_code}</td>
-                    <td className="px-6 py-4 text-slate-700">{part.part_code || '-'}</td>
+                  <tr key={part.name || part.item_code} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="px-6 py-4 text-slate-900">{part.item_name || part.item_code}</td>
+                    <td className="px-6 py-4 text-slate-700">{part.item_code || '-'}</td>
                     <td className="px-6 py-4">
                       <span className="inline-block px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-700">
-                        {part.category || 'Uncategorized'}
+                        {part.item_group || 'Uncategorized'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-slate-700">{part.brand || '-'}</td>
-                    <td className="px-6 py-4 text-right text-slate-900">{formatCurrency(part.unit_price)}</td>
+                    <td className="px-6 py-4 text-right text-slate-900">{formatCurrency(part.standard_rate || part.valuation_rate)}</td>
                     <td className="px-6 py-4 text-center">
                       <span
                         className={`inline-block px-3 py-1 rounded ${
                           isLowStock(part) ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
                         }`}
                       >
-                        {Number(part.stock_qty) || 0}
+                        {Number(part.total_actual_qty ?? part.stock_qty) || 0}
                       </span>
-                      {Number(part.reserved_qty) ? (
-                        <p className="text-xs text-slate-500 mt-1">Reserved: {Number(part.reserved_qty) || 0}</p>
+                      {Number(part.total_reserved_qty ?? part.reserved_qty) ? (
+                        <p className="text-xs text-slate-500 mt-1">Reserved: {Number(part.total_reserved_qty ?? part.reserved_qty) || 0}</p>
                       ) : null}
                     </td>
-                    <td className="px-6 py-4 text-center text-slate-700">{Number(part.reorder_level) || 0}</td>
+                    <td className="px-6 py-4 text-center text-slate-700">{Number(part.safety_stock ?? part.reorder_level) || 0}</td>
                     <td className="px-6 py-4 text-center">{getStatusBadge(part)}</td>
                   </tr>
                 ))}
