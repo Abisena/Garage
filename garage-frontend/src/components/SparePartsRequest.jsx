@@ -3,6 +3,7 @@ import { Package, Search, CheckCircle, Clock, AlertCircle, Truck, Eye, FileText,
 import { Button } from './ui/button';
 import { PartsDeliveryModal } from './PartsDeliveryModal';
 import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
+import { frappeClient } from '../lib/frappeClient';
 
 export function SparePartsRequest({ currentUser }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,11 +60,11 @@ export function SparePartsRequest({ currentUser }) {
     return true;
   });
 
-  const handlePrepare = (orderId, partCode, index) => {
+  const handlePrepare = async (orderId, partCode, index) => {
     // Get the part being prepared to reduce stock
     const request = requests.find(r => r.orderId === orderId);
     if (!request) return;
-    
+
     const partToPrepare = request.parts[index]; // Use index to get exact part
     if (!partToPrepare || partToPrepare.stockAvailable <= 0) return;
 
@@ -74,7 +75,23 @@ export function SparePartsRequest({ currentUser }) {
     const currentStock = typeof masterPart?.stock === 'number'
       ? masterPart.stock
       : partToPrepare.stockAvailable;
-    const newStock = Math.max(0, currentStock - partToPrepare.requestedQty);
+    let newStock = Math.max(0, currentStock - partToPrepare.requestedQty);
+
+    try {
+      const apiResponse = await frappeClient.adjustSparePartStock(
+        partCode,
+        partToPrepare.requestedQty,
+        'issue'
+      );
+
+      if (apiResponse && typeof apiResponse.stock_qty === 'number') {
+        newStock = Math.max(0, Number(apiResponse.stock_qty));
+      }
+    } catch (error) {
+      console.error('❌ Failed to sync stock to Pravenya:', error);
+      alert('Gagal mengurangi stok di Pravenya. Silakan coba lagi.');
+      return;
+    }
     
     console.log('🎯 PREPARE DEBUG START');
     console.log('OrderId:', orderId);
