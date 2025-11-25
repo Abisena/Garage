@@ -66,6 +66,15 @@ export function SparePartsRequest({ currentUser }) {
     
     const partToPrepare = request.parts[index]; // Use index to get exact part
     if (!partToPrepare || partToPrepare.stockAvailable <= 0) return;
+
+    // Get current stock from master spare parts (Garage Spare Part List)
+    const savedMasterParts = localStorage.getItem('masterSpareParts');
+    const masterParts = savedMasterParts ? JSON.parse(savedMasterParts) : [];
+    const masterPart = masterParts.find((p) => p.partNumber === partCode);
+    const currentStock = typeof masterPart?.stock === 'number'
+      ? masterPart.stock
+      : partToPrepare.stockAvailable;
+    const newStock = Math.max(0, currentStock - partToPrepare.requestedQty);
     
     console.log('🎯 PREPARE DEBUG START');
     console.log('OrderId:', orderId);
@@ -78,7 +87,7 @@ export function SparePartsRequest({ currentUser }) {
       if (req.orderId === orderId) {
         const updatedParts = req.parts.map((part, i) => {
           if (i === index && part.stockAvailable > 0) {
-            return { ...part, status: 'PREPARED' };
+            return { ...part, status: 'PREPARED', stockAvailable: newStock };
           }
           return part;
         });
@@ -98,22 +107,15 @@ export function SparePartsRequest({ currentUser }) {
     saveRequests(updatedRequests);
 
     // Reduce stock in master spare parts
-    const savedMasterParts = localStorage.getItem('masterSpareParts');
-    if (savedMasterParts) {
-      const masterParts = JSON.parse(savedMasterParts);
-      const updatedMasterParts = masterParts.map((masterPart) => {
-        if (masterPart.partNumber === partCode) {
-          const newStock = masterPart.stock - partToPrepare.requestedQty;
-          return {
-            ...masterPart,
-            stock: Math.max(0, newStock) // Ensure stock doesn't go negative
-          };
-        }
-        return masterPart;
-      });
+    if (masterParts.length > 0) {
+      const updatedMasterParts = masterParts.map((part) => (
+        part.partNumber === partCode
+          ? { ...part, stock: newStock }
+          : part
+      ));
+
       localStorage.setItem('masterSpareParts', JSON.stringify(updatedMasterParts));
-      
-      console.log(`✅ Stock reduced: ${partCode} - Qty: ${partToPrepare.requestedQty} - New stock: ${Math.max(0, masterParts.find((p) => p.partNumber === partCode)?.stock - partToPrepare.requestedQty)}`);
+      console.log(`✅ Stock reduced from Garage Spare Part List: ${partCode} - Qty: ${partToPrepare.requestedQty} - New stock: ${newStock}`);
     }
 
     // Update workOrders to mark part as PREPARED
