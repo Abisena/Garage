@@ -2544,8 +2544,12 @@ def _get_doc(doctype: str, name: str) -> frappe.Document:
 
 def _insert_doc(doc: frappe.Document) -> frappe.Document:
     _ensure_branch_allowed(doc)
-    with _ignoring_permissions():
-        doc.insert(ignore_permissions=True)
+    try:
+        with _ignoring_permissions():
+            doc.insert(ignore_permissions=True)
+    except frappe.DuplicateEntryError:
+        # If another request created the same record concurrently, reuse it
+        doc = _get_doc(doc.doctype, doc.name)
     return doc
 
 
