@@ -1742,6 +1742,35 @@ def _extract_payment_allocations(payload: Mapping[str, Any]) -> List[Dict[str, A
 
         allocations.append({"invoice": invoice, "allocated_amount": allocated_amount})
 
+    if not allocations:
+        invoice = (
+            payload.get("invoice")
+            or payload.get("sales_invoice")
+            or payload.get("reference_name")
+        )
+        if invoice:
+            allocated_amount = flt(
+                payload.get("allocated_amount")
+                or payload.get("paid_amount")
+                or payload.get("received_amount")
+                or payload.get("amount")
+                or 0
+            )
+
+            if allocated_amount <= 0:
+                try:
+                    invoice_doc = _get_doc("Sales Invoice", invoice)
+                except Exception:
+                    invoice_doc = None
+
+                allocated_amount = flt(
+                    getattr(invoice_doc, "outstanding_amount", 0)
+                    or getattr(invoice_doc, "grand_total", 0)
+                )
+
+            if allocated_amount > 0:
+                allocations.append({"invoice": invoice, "allocated_amount": allocated_amount})
+
     return allocations
 
 
