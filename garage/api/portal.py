@@ -3486,6 +3486,58 @@ def _ensure_billing_placeholders(
     if not getattr(doc, "branch", None) or not getattr(doc, "customer", None):
         return None
 
+    def _ensure_customer_party(customer_link: str, branch: Optional[str] = None) -> Optional[str]:
+        """Create an ERPNext Customer from a Garage Customer link if missing."""
+
+        name = cstr(customer_link or "").strip()
+        if not name:
+            return None
+
+        try:
+            if frappe.db.exists("Customer", name):
+                return name
+        except Exception:
+            pass
+
+        try:
+            garage_customer = _get_doc("Garage Customer", name)
+        except Exception:
+            return None
+
+        customer_name = getattr(garage_customer, "customer_name", None) or name
+        customer_type = getattr(garage_customer, "customer_type", None) or "Individual"
+        phone = getattr(garage_customer, "phone", None)
+        email = getattr(garage_customer, "email", None)
+
+        try:
+            customer_doc = frappe.new_doc("Customer")
+            customer_doc.customer_name = customer_name
+            customer_doc.customer_type = customer_type
+            customer_doc.mobile_no = phone or getattr(garage_customer, "mobile_no", None)
+            customer_doc.phone = phone
+            customer_doc.email_id = email
+            customer_doc.customer_group = (
+                frappe.defaults.get_user_default("customer_group")
+                or frappe.defaults.get_global_default("customer_group")
+                or "All Customer Groups"
+            )
+            customer_doc.territory = (
+                frappe.defaults.get_user_default("territory")
+                or frappe.defaults.get_global_default("territory")
+                or "All Territories"
+            )
+            if branch and _doctype_has_field("Customer", "branch"):
+                customer_doc.branch = branch
+
+            _insert_doc(customer_doc)
+            return customer_doc.name
+        except Exception:
+            frappe.log_error(
+                title=_("Failed to create Customer from Garage Customer"),
+                message=frappe.get_traceback(),
+            )
+            return None
+
     billing: Dict[str, Any] = {}
 
     total_amount = flt(getattr(doc, "total_approved_amount", 0)) or flt(
@@ -3508,19 +3560,20 @@ def _ensure_billing_placeholders(
         except Exception:
             invoice_doc = None
     else:
-        if not frappe.db.exists("Customer", doc.customer):
+        invoice_customer = _ensure_customer_party(doc.customer, getattr(doc, "branch", None))
+        if not invoice_customer:
             frappe.log_error(
                 title=_("Missing Customer for billing placeholder"),
-                message=_("Cannot create Sales Invoice for {0} because customer {1} was not found.").format(
-                    doc.doctype, doc.customer
-                ),
+                message=_(
+                    "Cannot create Sales Invoice for {0} because customer {1} was not found."
+                ).format(doc.doctype, doc.customer),
             )
             return None
 
         company = frappe.defaults.get_user_default("company") or frappe.defaults.get_global_default("company")
         invoice_doc = frappe.new_doc("Sales Invoice")
         invoice_doc.company = company
-        invoice_doc.customer = doc.customer
+        invoice_doc.customer = invoice_customer
         invoice_doc.posting_date = nowdate()
         invoice_doc.due_date = getattr(doc, "estimated_delivery_date", None) or nowdate()
         invoice_doc.po_no = doc.name
