@@ -39,7 +39,7 @@ export function InvoicePaymentModal({ isOpen, invoice, onClose, onPaymentSuccess
 
     setIsSubmitting(true);
     try {
-      await frappeClient.request('/api/method/garage.api.portal.create_payment_entry', {
+      const response = await frappeClient.request('/api/method/garage.api.portal.create_payment_entry', {
         method: 'POST',
         body: JSON.stringify({
           entry: {  // ✅ TAMBAHKAN INI
@@ -59,7 +59,14 @@ export function InvoicePaymentModal({ isOpen, invoice, onClose, onPaymentSuccess
       });
 
       toast.success('Payment Entry berhasil dibuat dan invoice ditandai sebagai Paid.');
-      onPaymentSuccess?.();
+      const paymentEntryName = response?.message?.payment_entry || response?.message?.name || response?.name || referenceNo;
+      onPaymentSuccess?.({
+        paymentEntry: paymentEntryName,
+        paymentMethod,
+        paymentDate,
+        amount: totalAmount,
+        invoice,
+      });
       onClose();
     } catch (error) {
       console.error('Failed to create payment entry', error);

@@ -18,6 +18,7 @@ import { Button } from './ui/button';
 import { frappeClient } from '../lib/frappeClient';
 import { toast } from 'sonner';
 import { InvoicePaymentModal } from './InvoicePaymentModal';
+import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('id-ID', {
@@ -47,6 +48,49 @@ export function PaymentList({ currentUser }) {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
+
+  const createHandoverRecord = async (invoice, paymentInfo) => {
+    if (!invoice || !paymentInfo?.paymentEntry) return;
+
+    const existingOrders = getStoredWorkOrders();
+    const orderId = invoice.name || `INV-${Date.now()}`;
+    const branchCode = (invoice.branch || 'GAR').substring(0, 3).toUpperCase();
+
+    const vehicleBrand = invoice.vehicle_brand || invoice.brand || 'N/A';
+    const vehicleModel = invoice.vehicle_model || invoice.model || 'N/A';
+    const plateNumber = invoice.license_plate || invoice.plate_number || invoice.vehicle_plate || 'N/A';
+
+    const updatedOrder = {
+      id: orderId,
+      orderId,
+      branch: invoice.branch || 'GAR',
+      customerName: invoice.customer_name || invoice.customer || 'Customer',
+      phone: invoice.customer_phone || invoice.phone || '-',
+      email: invoice.customer_email || invoice.email || '',
+      address: invoice.customer_address || invoice.address_display || '',
+      vehicleBrand,
+      vehicleModel,
+      plateNumber,
+      paymentStatus: 'paid',
+      paymentMethod: paymentInfo.paymentMethod,
+      receiptNumber: paymentInfo.paymentEntry,
+      paymentDate: paymentInfo.paymentDate,
+      paidAmount: paymentInfo.amount || invoice.grand_total || invoice.outstanding_amount || 0,
+      invoiceNumber: invoice.name,
+      notaNumber: invoice.name,
+      invoiceStatus: 'submitted',
+      paymentEntryStatus: 'submitted',
+      status: 'paid',
+      sikkNumber: invoice.sikk_number || `SIKK-${branchCode}-${orderId.split('-')[1] || '001'}`,
+    };
+
+    const mergedOrders = existingOrders.some((order) => order.orderId === orderId)
+      ? existingOrders.map((order) => (order.orderId === orderId ? { ...order, ...updatedOrder } : order))
+      : [...existingOrders, updatedOrder];
+
+    await persistWorkOrders(mergedOrders);
+    toast.success('Dokumen SIKK siap di menu Handover.');
+  };
 
   useEffect(() => {
     loadPortalPayments();
@@ -115,6 +159,13 @@ export function PaymentList({ currentUser }) {
   const handleProcessPayment = (invoice) => {
     setSelectedInvoice(invoice);
     setShowInvoiceModal(true);
+  };
+
+  const handlePaymentSuccess = async (paymentInfo) => {
+    await loadPortalPayments();
+    if (paymentInfo?.invoice) {
+      await createHandoverRecord(paymentInfo.invoice, paymentInfo);
+    }
   };
 
   return (
@@ -393,7 +444,7 @@ export function PaymentList({ currentUser }) {
         isOpen={showInvoiceModal}
         invoice={selectedInvoice}
         onClose={() => setShowInvoiceModal(false)}
-        onPaymentSuccess={loadPortalPayments}
+        onPaymentSuccess={handlePaymentSuccess}
       />
     </div>
   );
