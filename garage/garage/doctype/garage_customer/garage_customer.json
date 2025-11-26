@@ -166,6 +166,7 @@
   "sort_order": "DESC",
   "states": [],
   "subject": "",
+  "title_field": "customer_name",
   "track_changes": 1,
   "track_seen": 0,
   "translated_doctype": 0,
