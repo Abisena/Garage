@@ -11,7 +11,7 @@ import re
 from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Set, Tuple
 import frappe
 from frappe import _
-from frappe.exceptions import DoesNotExistError, PermissionError
+from frappe.exceptions import DoesNotExistError, PermissionError, ValidationError
 from frappe.utils import cint, cstr, flt, get_datetime, get_url, getdate, now_datetime, nowdate
 from frappe.defaults import get_user_default
 
@@ -7047,6 +7047,8 @@ def create_payment_entry(entry: Optional[Any] = None) -> Dict[str, Any]:
             },
         )
         return {"name": doc.name, "status": getattr(doc, "status", None) or doc.docstatus}
+    except ValidationError:
+        raise
     except Exception:
         frappe.log_error(
             message=f"Payload: {json.dumps(data, default=str)}\n{frappe.get_traceback()}",
