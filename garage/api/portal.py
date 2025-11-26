@@ -3986,29 +3986,67 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
         part_rows = {getattr(r, "item_code", ""): r for r in getattr(doc, "required_parts", []) or []}
         spare_parts = order.get("spareParts") or []
 
+        created_parts = False
         for part in spare_parts:
             part_code = cstr(
-                part.get("partNumber") or
-                part.get("part_code") or
-                part.get("item_code") or ""
+                part.get("partNumber")
+                or part.get("part_code")
+                or part.get("item_code")
+                or ""
             ).strip()
 
-            if not part_code or part_code not in part_rows:
+            if not part_code or not part.get("requested"):
                 continue
 
             requested_qty = flt(
                 part.get("requestedQty")
                 or part.get("qty")
                 or part.get("quantity")
-                or getattr(part_rows[part_code], "qty", None)
+                or getattr(part_rows.get(part_code), "qty", None)
             )
 
             mapped_status = _map_part_status(part.get("status"))
             availability_status = _infer_stock_status(part_code, requested_qty)
 
-            chosen_status = mapped_status or availability_status
+            chosen_status = mapped_status or availability_status or "Pending Check"
             if availability_status and mapped_status in {None, "Pending Check", "Request", "Pending"}:
                 chosen_status = availability_status
+
+            if part_code not in part_rows:
+                rate = flt(
+                    part.get("unitPrice")
+                    or part.get("unit_price")
+                    or part.get("rate")
+                    or 0
+                )
+                qty_value = requested_qty or 1.0
+                amount = flt(part.get("totalPrice") or part.get("amount") or (qty_value * rate))
+                new_row = doc.append(
+                    "required_parts",
+                    {
+                        "item_code": part_code,
+                        "item_name": part.get("name") or part.get("part_name") or part_code,
+                        "description": part.get("description") or "",
+                        "qty": qty_value,
+                        "uom": part.get("uom") or part.get("unit") or "Unit",
+                        "source": part.get("source") or None,
+                        "stock_status": chosen_status,
+                        "rate": rate,
+                        "amount": amount,
+                    },
+                )
+                part_rows[part_code] = new_row
+                created_parts = True
+
+                applied.setdefault("required_parts", []).append(
+                    {
+                        "item_code": part_code,
+                        "qty": qty_value,
+                        "stock_status": chosen_status,
+                        "created": True,
+                    }
+                )
+                continue
 
             if requested_qty:
                 part_rows[part_code].qty = requested_qty
@@ -4043,6 +4081,9 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
                 applied.setdefault("required_parts", []).append(
                     {"item_code": part_code, "stock_status": chosen_status}
                 )
+
+        if created_parts:
+            _save_doc(doc)
 
         # ✅ SAFEST & FASTEST — NO doc.save()
         if applied:
