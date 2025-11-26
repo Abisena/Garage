@@ -11,7 +11,7 @@ import re
 from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Set, Tuple
 import frappe
 from frappe import _
-from frappe.exceptions import PermissionError
+from frappe.exceptions import DoesNotExistError, PermissionError
 from frappe.utils import cint, cstr, flt, get_datetime, get_url, getdate, now_datetime, nowdate
 from frappe.defaults import get_user_default
 
@@ -6304,7 +6304,13 @@ def adjust_spare_part_stock(
     if not item_code:
         frappe.throw(_("Sparepart {0} tidak ditemukan pada master Item.").format(code))
 
-    item_doc = frappe.get_doc("Item", item_code)
+    try:
+        item_doc = frappe.get_doc("Item", item_code)
+    except DoesNotExistError as exc:
+        frappe.throw(
+            _("Sparepart {0} tidak ditemukan pada master Item.").format(code),
+            exc=exc,
+        )
     if not cint(getattr(item_doc, "is_stock_item", 0)):
         frappe.throw(_("Item {0} bukan stok.").format(code))
 
