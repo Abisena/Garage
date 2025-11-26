@@ -2683,6 +2683,13 @@ def _insert_doc(doc: frappe.Document) -> frappe.Document:
     return doc
 
 
+def _submit_doc(doc: frappe.Document) -> frappe.Document:
+    _ensure_branch_allowed(doc)
+    with _ignoring_permissions():
+        doc.submit()
+    return doc
+
+
 def _save_doc(doc: frappe.Document) -> frappe.Document:
     _ensure_branch_allowed(doc)
     with _ignoring_permissions():
@@ -3875,24 +3882,37 @@ def _ensure_billing_placeholders(
         invoice_doc.base_write_off_amount = flt(invoice_doc.base_write_off_amount)
         invoice_doc.write_off_amount = flt(invoice_doc.write_off_amount)
 
-        _insert_doc(invoice_doc)
+        invoice_doc = _insert_doc(invoice_doc)
         billing["sales_invoice"] = invoice_doc.name
 
         # Mark status on GSO
         if hasattr(doc, "invoice_status"):
             doc.db_set("invoice_status", "Pending", update_modified=False)
 
+    if invoice_doc and invoice_doc.docstatus < 1:
+        try:
+            invoice_doc = _submit_doc(invoice_doc)
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                "Failed to submit auto-generated Sales Invoice",
+            )
+
     # -------------------------
     # ✅ AUTO PAYMENT ENTRY
     # -------------------------
     try:
-        from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
-        pe = get_payment_entry("Sales Invoice", billing["sales_invoice"])
-        if _doctype_has_field("Payment Entry", "branch"):
-            pe.branch = getattr(doc, "branch", None)
+        if invoice_doc and invoice_doc.docstatus == 1:
+            from erpnext.accounts.doctype.payment_entry.payment_entry import (
+                get_payment_entry,
+            )
 
-        _insert_doc(pe)
-        billing["payment_entry"] = pe.name
+            pe = get_payment_entry("Sales Invoice", billing["sales_invoice"])
+            if _doctype_has_field("Payment Entry", "branch"):
+                pe.branch = getattr(doc, "branch", None)
+
+            _insert_doc(pe)
+            billing["payment_entry"] = pe.name
     except Exception:
         pass
 
@@ -3995,7 +4015,13 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
                 or ""
             ).strip()
 
-            if not part_code or not part.get("requested"):
+            part_status = cstr(part.get("status") or "").strip().lower()
+            is_prepared = part_status in {"prepared", "installed"}
+
+            if not part_code or not is_prepared:
+                continue
+
+            if not part.get("requested"):
                 continue
 
             requested_qty = flt(
