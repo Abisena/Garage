@@ -3668,28 +3668,27 @@ def _ensure_billing_placeholders(
     status_hint = _normalize_status(order.get("status") or order.get("repairStatus"))
     progress = _extract_repair_progress(order, doc)
 
-    # Allowed states that MUST trigger invoice generation
+    # Explicitly block incomplete states (e.g. waiting for parts)
+    waiting_states = {"waiting-parts", "waiting-part", "awaiting-parts"}
+    if status_hint in waiting_states:
+        return None
+
+    # Allowed states that MUST trigger invoice generation even if progress
+    # is not explicitly captured
     trigger_states = {
-        "repair-qc",
-        "repair-nqc",
-        "qc",
         "ready-for-payment",
         "final-inspection",
         "qc-finished",
         "completed",
+        "payment",
     }
 
-    # Some repair flows (e.g. "repair NQC") need billing even if progress
-    # tracking has not yet crossed the usual threshold.  Treat these as
-    # always-on triggers while still enforcing the usual validations below.
-    early_trigger_states = {"repair-nqc"}
-
     # Business rule — invoice only allowed once repair is basically done
-    if progress < 95 and status_hint not in early_trigger_states:
-        return None
+    # (99%+ progress) OR the status is a final inspection / payment-ready state
+    progress_ready = progress >= 99
+    status_ready = status_hint in trigger_states
 
-    # Final trigger — auto generate billing
-    if progress < 99 and status_hint not in trigger_states:
+    if not (progress_ready or status_ready):
         return None
 
     if not getattr(doc, "customer", None) or not getattr(doc, "branch", None):
