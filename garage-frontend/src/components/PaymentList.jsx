@@ -24,10 +24,10 @@ export function PaymentList({ currentUser }) {
   }, [currentUser.branch]);
 
   const loadPayments = () => {
-    // Load Work Orders - ONLY PAID with invoice number
+    // Load Work Orders - include paid and invoice-printed with invoice number
     const workOrders = JSON.parse(localStorage.getItem('workOrders') || '[]');
     const woPayments = workOrders
-      .filter((wo) => wo.paymentStatus === 'paid' && wo.invoiceNumber)
+      .filter((wo) => ['paid', 'invoice-printed'].includes(wo.paymentStatus) && wo.invoiceNumber)
       .map((wo) => ({
         id: wo.id,
         type: 'work-order',
@@ -56,10 +56,10 @@ export function PaymentList({ currentUser }) {
         paidAmount: wo.paidAmount,
       }));
 
-    // Load Purchase Orders - ONLY PAID with invoice number
+    // Load Purchase Orders - include paid and invoice-printed with invoice number
     const purchaseOrders = JSON.parse(localStorage.getItem('purchaseOrders') || '[]');
     const poPayments = purchaseOrders
-      .filter((po) => po.paymentStatus === 'paid' && po.invoiceNumber)
+      .filter((po) => ['paid', 'invoice-printed'].includes(po.paymentStatus) && po.invoiceNumber)
       .map((po) => ({
         id: po.id,
         type: 'purchase-order',
