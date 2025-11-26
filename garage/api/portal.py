@@ -3471,22 +3471,38 @@ def _extract_repair_progress(
 def _ensure_billing_placeholders(
     doc: frappe.Document, order: Mapping[str, Any]
 ) -> Optional[Dict[str, Any]]:
-    """Auto-create draft Sales Invoice, Payment Entry, and Journal Entry once repair is ~done."""
+    """Auto-create draft Sales Invoice, Payment Entry & Journal Entry
+    when repair reaches QC / payment-ready stage.
+    """
 
-    # ---------- Eligibility Check ----------
+    # Normalize status & progress from frontend
     status_hint = _normalize_status(order.get("status") or order.get("repairStatus"))
     progress = _extract_repair_progress(order, doc)
 
-    ready_states = {"ready-for-payment", "final-inspection", "qc-finished", "completed"}
+    # Allowed states that MUST trigger invoice generation
+    trigger_states = {
+        "repair-qc",
+        "qc",
+        "ready-for-payment",
+        "final-inspection",
+        "qc-finished",
+        "completed",
+    }
 
+    # Business rule — invoice only allowed once repair is basically done
     if progress < 95:
         return None
-    if progress < 99 and status_hint not in ready_states:
-        return None
-    if not getattr(doc, "branch", None) or not getattr(doc, "customer", None):
+
+    # Final trigger — auto generate billing
+    if progress < 99 and status_hint not in trigger_states:
         return None
 
-    # ---------- Customer Ensurer ----------
+    if not getattr(doc, "customer", None) or not getattr(doc, "branch", None):
+        return None
+
+    # -------------------------
+    # ✅ Ensure valid ERPNext Customer
+    # -------------------------
     def _ensure_customer_party(customer_link: str, branch: Optional[str] = None) -> Optional[str]:
         name = cstr(customer_link or "").strip()
         if not name:
@@ -3495,286 +3511,209 @@ def _ensure_billing_placeholders(
         if frappe.db.exists("Customer", name):
             return name
 
+        # Create Customer from Garage Customer record
         try:
-            garage_customer = _get_doc("Garage Customer", name)
+            g = _get_doc("Garage Customer", name)
         except Exception:
             return None
 
-        customer_doc = frappe.new_doc("Customer")
-        customer_doc.customer_name = getattr(garage_customer, "customer_name", None) or name
-        customer_doc.customer_type = getattr(garage_customer, "customer_type", None) or "Individual"
-        customer_doc.mobile_no = getattr(garage_customer, "phone", None)
-        customer_doc.phone = getattr(garage_customer, "phone", None)
-        customer_doc.email_id = getattr(garage_customer, "email", None)
-        customer_doc.customer_group = (
+        cust = frappe.new_doc("Customer")
+        cust.customer_name = getattr(g, "customer_name", None) or name
+        cust.customer_type = getattr(g, "customer_type", None) or "Individual"
+        cust.mobile_no = getattr(g, "phone", None)
+        cust.email_id = getattr(g, "email", None)
+        cust.customer_group = (
             frappe.defaults.get_user_default("customer_group")
             or frappe.defaults.get_global_default("customer_group")
             or "All Customer Groups"
         )
-        customer_doc.territory = (
-            frappe.defaults.get_user_default("territory")
-            or frappe.defaults.get_global_default("territory")
-            or "All Territories"
-        )
+        cust.territory = frappe.get_value("Territory", {"is_group": 0}) or "All Territories"
 
         if branch and _doctype_has_field("Customer", "branch"):
-            customer_doc.branch = branch
+            cust.branch = branch
 
-        _insert_doc(customer_doc)
-        return customer_doc.name
+        _insert_doc(cust)
+        return cust.name
 
     billing: Dict[str, Any] = {}
 
-    # ---------- Determine Billing Amount ----------
-    total_amount = flt(getattr(doc, "total_approved_amount", 0)) or flt(
-        getattr(doc, "total_estimated_amount", 0)
+    total_amount = flt(
+        getattr(doc, "total_approved_amount", None)
+        or getattr(doc, "total_estimated_amount", None)
+        or 0
     )
 
-    # ---------- Reuse Invoice if Exists ----------
-    existing_invoice = frappe.db.get_value(
+    # -------------------------
+    # ✅ Prevent duplicate invoices
+    # -------------------------
+    invoice_name = frappe.db.get_value(
         "Sales Invoice", {"po_no": doc.name, "docstatus": ["<", 2]}, "name"
     )
 
     invoice_doc = None
-    if existing_invoice:
-        billing["sales_invoice"] = existing_invoice
-        invoice_doc = _get_doc("Sales Invoice", existing_invoice)
+
+    if invoice_name:
+        billing["sales_invoice"] = invoice_name
+        try:
+            invoice_doc = _get_doc("Sales Invoice", invoice_name)
+        except Exception:
+            invoice_doc = None
+
     else:
-        # ---------- Customer Ensure ----------
+        # -------------------------
+        # ✅ Build new Sales Invoice
+        # -------------------------
         invoice_customer = _ensure_customer_party(doc.customer, getattr(doc, "branch", None))
         if not invoice_customer:
-            frappe.log_error(
-                title=_("Missing Customer for billing placeholder"),
-                message=f"Cannot create Sales Invoice for {doc.name} because customer not found.",
-            )
             return None
 
-        # ---------- Build Draft Sales Invoice ----------
-        company = (
-            frappe.defaults.get_user_default("company")
-            or frappe.defaults.get_global_default("company")
-        )
+        company = frappe.defaults.get_user_default("company") or frappe.defaults.get_global_default("company")
 
         invoice_doc = frappe.new_doc("Sales Invoice")
         invoice_doc.company = company
         invoice_doc.customer = invoice_customer
         invoice_doc.posting_date = nowdate()
-        invoice_doc.po_no = doc.name
         invoice_doc.set_posting_time = 1
-        invoice_doc.remarks = _("Generated from Garage Service Order {0}").format(doc.name)
+        invoice_doc.po_no = doc.name
+        invoice_doc.remarks = _("Auto-generated from Garage Service Order {0}").format(doc.name)
 
-        # Safe due date — avoid invalid date string issues
-        invoice_doc.due_date = nowdate()
+        # Safe due date handling
+        due = _sanitize_iso_date(getattr(doc, "estimated_delivery_date", None)) or nowdate()
+        invoice_doc.due_date = getdate(due)
 
         if _doctype_has_field("Sales Invoice", "branch"):
             invoice_doc.branch = doc.branch
-        if _doctype_has_field("Sales Invoice", "garage_service_order"):
-            invoice_doc.garage_service_order = doc.name
 
-        # ---------- Build Items ----------
+        # -------------------------
+        # ✅ Append invoice items
+        # -------------------------
         parts_total = 0
-        for row in getattr(doc, "required_parts", []) or []:
+        for row in (getattr(doc, "required_parts", None) or []):
             if not row.item_code or not row.qty:
                 continue
 
-            rate = flt(row.rate) or flt(
-                frappe.db.get_value("Item", {"item_code": row.item_code}, "standard_rate")
+            rate = flt(getattr(row, "rate", None)) or flt(
+                frappe.db.get_value("Item", row.item_code, "standard_rate") or 0
             )
+
             amount = rate * flt(row.qty)
             parts_total += amount
 
             invoice_doc.append(
                 "items",
-                dict(
-                    item_code=row.item_code,
-                    item_name=row.item_name or row.item_code,
-                    description=row.description or row.item_code,
-                    qty=row.qty,
-                    uom=row.uom or "Unit",
-                    rate=rate,
-                ),
+                {
+                    "item_code": row.item_code,
+                    "qty": row.qty,
+                    "rate": rate,
+                    "uom": getattr(row, "uom", None) or "Unit",
+                    "description": getattr(row, "description", None) or row.item_code,
+                },
             )
 
-        # Labor line
+        # ✅ auto-labor charge if needed
         labor_amount = max(total_amount - parts_total, 0)
         if labor_amount > 0:
             labor_item = frappe.db.get_value("Item", {"is_stock_item": 0}, "name")
             if labor_item:
                 invoice_doc.append(
                     "items",
-                    dict(
-                        item_code=labor_item,
-                        description=_("Labor service for {0}").format(doc.name),
-                        qty=1,
-                        uom="Unit",
-                        rate=labor_amount,
-                    ),
+                    {
+                        "item_code": labor_item,
+                        "qty": 1,
+                        "rate": labor_amount,
+                        "uom": "Unit",
+                        "description": _("Labor Charges for {0}").format(doc.name),
+                    },
                 )
 
         if not invoice_doc.items:
-            frappe.log_error(
-                title=_("Cannot create Sales Invoice — no billing items"),
-                message=f"Service Order {doc.name} has zero invoiceable items.",
-            )
             return None
-
-        # Prevent ERPNext auto-payment-schedule creation
-        invoice_doc.payment_terms_template = None
-        invoice_doc.payment_schedule = []
 
         invoice_doc.run_method("set_missing_values")
         invoice_doc.calculate_taxes_and_totals()
 
-        # Normalize None numeric values → remove TypeError
-        for f in [
-            "grand_total",
-            "base_grand_total",
-            "total",
-            "base_total",
-            "net_total",
-            "base_net_total",
-            "rounded_total",
-            "base_rounded_total",
-            "write_off_amount",
-            "base_write_off_amount",
-        ]:
-            setattr(invoice_doc, f, flt(getattr(invoice_doc, f) or 0))
-
-        invoice_doc.outstanding_amount = flt(invoice_doc.grand_total)
+        # ✅ avoid NoneType write-off crash
+        invoice_doc.base_write_off_amount = flt(invoice_doc.base_write_off_amount)
+        invoice_doc.write_off_amount = flt(invoice_doc.write_off_amount)
 
         _insert_doc(invoice_doc)
         billing["sales_invoice"] = invoice_doc.name
 
-        # Update work order status without triggering timestamp conflict
+        # Mark status on GSO
         if hasattr(doc, "invoice_status"):
-            frappe.db.set_value(doc.doctype, doc.name, "invoice_status", "Pending")
+            doc.db_set("invoice_status", "Pending", update_modified=False)
 
-    # ---------- Payment Entry ----------
-    invoice_name = billing.get("sales_invoice")
-    if invoice_name:
-        payment_entry = frappe.db.get_value(
-            "Payment Entry Reference",
-            {
-                "reference_doctype": "Sales Invoice",
-                "reference_name": invoice_name,
-                "docstatus": ["<", 2],
-            },
-            "parent",
-        )
+    # -------------------------
+    # ✅ AUTO PAYMENT ENTRY
+    # -------------------------
+    try:
+        from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
+        pe = get_payment_entry("Sales Invoice", billing["sales_invoice"])
+        if _doctype_has_field("Payment Entry", "branch"):
+            pe.branch = getattr(doc, "branch", None)
 
-        if not payment_entry:
-            from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
+        _insert_doc(pe)
+        billing["payment_entry"] = pe.name
+    except Exception:
+        pass
 
-            try:
-                payment_doc = get_payment_entry("Sales Invoice", invoice_name)
-                if _doctype_has_field("Payment Entry", "branch"):
-                    payment_doc.branch = getattr(doc, "branch", None)
-                if _doctype_has_field("Payment Entry", "garage_service_order"):
-                    payment_doc.garage_service_order = doc.name
-
-                _insert_doc(payment_doc)
-                payment_entry = payment_doc.name
-            except Exception:
-                frappe.log_error(
-                    title=_("Failed to create Payment Entry placeholder"),
-                    message=frappe.get_traceback(),
-                )
-
-        if payment_entry:
-            billing["payment_entry"] = payment_entry
-
-    # ---------- Journal Entry ----------
+    # -------------------------
+    # ✅ AUTO JOURNAL ENTRY (Optional)
+    # -------------------------
     if billing.get("payment_entry"):
-        journal_entry = frappe.db.get_value(
-            "Journal Entry Account",
-            {
-                "reference_type": "Payment Entry",
-                "reference_name": billing["payment_entry"],
-                "docstatus": ["<", 2],
-            },
-            "parent",
-        )
+        try:
+            pe = _get_doc("Payment Entry", billing["payment_entry"])
+            amount = flt(pe.paid_amount or pe.received_amount)
+            if amount:
+                je = frappe.new_doc("Journal Entry")
+                je.posting_date = nowdate()
+                je.voucher_type = "Bank Entry"
+                if _doctype_has_field("Journal Entry", "branch"):
+                    je.branch = getattr(doc, "branch", None)
+                je.company = pe.company
 
-        if not journal_entry:
-            try:
-                payment_doc = _get_doc("Payment Entry", billing["payment_entry"])
-                amount = flt(payment_doc.paid_amount or payment_doc.received_amount)
-                debit = payment_doc.paid_to
-                credit = payment_doc.paid_from
-
-                if amount and debit and credit:
-                    je_doc = frappe.new_doc("Journal Entry")
-                    je_doc.posting_date = payment_doc.posting_date
-                    je_doc.voucher_type = "Bank Entry"
-
-                    if _doctype_has_field("Journal Entry", "branch"):
-                        je_doc.branch = getattr(doc, "branch", None)
-
-                    je_doc.company = payment_doc.company
-
-                    je_doc.append(
-                        "accounts",
-                        dict(
-                            account=debit,
-                            debit_in_account_currency=amount,
-                            reference_type="Payment Entry",
-                            reference_name=payment_doc.name,
-                        ),
-                    )
-                    je_doc.append(
-                        "accounts",
-                        dict(
-                            account=credit,
-                            credit_in_account_currency=amount,
-                            party_type=payment_doc.party_type,
-                            party=payment_doc.party,
-                            reference_type="Payment Entry",
-                            reference_name=payment_doc.name,
-                        ),
-                    )
-
-                    _insert_doc(je_doc)
-                    journal_entry = je_doc.name
-
-            except Exception:
-                frappe.log_error(
-                    title=_("Failed to create Journal Entry placeholder"),
-                    message=frappe.get_traceback(),
+                je.append(
+                    "accounts",
+                    {"account": pe.paid_to, "debit_in_account_currency": amount},
+                )
+                je.append(
+                    "accounts",
+                    {"account": pe.paid_from, "credit_in_account_currency": amount},
                 )
 
-        if journal_entry:
-            billing["journal_entry"] = journal_entry
+                _insert_doc(je)
+                billing["journal_entry"] = je.name
+        except Exception:
+            pass
 
     return billing or None
 
+
 @frappe.whitelist()
 def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, Any]:
-    """Persist portal/localStorage work order state into real Garage Service Orders.
-
-    Frontend flows still rely on localStorage for responsiveness. This endpoint
-    ingests the current snapshot and applies best-effort updates to the
-    corresponding ``Garage Service Order`` documents so the backend remains the
-    source of truth for reporting and audits.
+    """Persist portal/localStorage work order state into Garage Service Orders
+    without triggering timestamp conflicts, workflow validation, or heavy save().
     """
 
     _require_login()
 
-    orders = work_orders or []
-    if isinstance(orders, str):
+    # Normalize input
+    if isinstance(work_orders, str):
         try:
-            orders = frappe.parse_json(orders)
+            work_orders = frappe.parse_json(work_orders)
         except Exception:
-            orders = []
+            work_orders = []
 
-    if not isinstance(orders, (list, tuple)):
-        orders = []
+    if not isinstance(work_orders, (list, tuple)):
+        work_orders = []
 
-    results: List[Dict[str, Any]] = []
+    results = []
     updated = 0
 
-    for payload in orders:
+    for payload in work_orders:
         order = _ensure_dict(payload)
         identifier = order.get("orderId") or order.get("id")
+
         if not identifier:
             results.append({"status": "skipped", "reason": "missing id", "payload": order})
             continue
@@ -3785,51 +3724,71 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
             results.append({"status": "missing", "order_id": identifier})
             continue
 
-        applied: Dict[str, Any] = {}
+        applied = {}
 
+        # -------- Repair Status Sync --------
         status_updates = _map_repair_status(order.get("repairStatus") or order.get("status"))
-        for field, value in status_updates.items():
+        for field, value in (status_updates or {}).items():
             if value is None or not hasattr(doc, field):
                 continue
-            setattr(doc, field, value)
             applied[field] = value
 
+        # -------- Cancellation Reason --------
         if order.get("cancelReason") and hasattr(doc, "rejection_reason"):
-            doc.rejection_reason = cstr(order.get("cancelReason"))
-            applied["rejection_reason"] = doc.rejection_reason
+            applied["rejection_reason"] = cstr(order.get("cancelReason"))
 
-        # Progress logs
+        # -------- Progress Logs --------
         history = order.get("progressHistory") or []
         added_logs = _append_progress_logs(doc, history)
         if added_logs:
             applied["progress_logs_added"] = added_logs
 
-        # Spare part statuses
-        part_rows = {getattr(row, "item_code", ""): row for row in getattr(doc, "required_parts", []) or []}
-        for part in order.get("spareParts") or []:
-            part_code = cstr(part.get("partNumber") or part.get("part_code") or part.get("item_code") or "").strip()
+        # -------- Spare Part Status Updates --------
+        part_rows = {getattr(r, "item_code", ""): r for r in getattr(doc, "required_parts", []) or []}
+        spare_parts = order.get("spareParts") or []
+
+        for part in spare_parts:
+            part_code = cstr(
+                part.get("partNumber") or
+                part.get("part_code") or
+                part.get("item_code") or ""
+            ).strip()
+
             if not part_code or part_code not in part_rows:
                 continue
+
             mapped_status = _map_part_status(part.get("status"))
             if mapped_status:
-                part_row = part_rows[part_code]
-                part_row.stock_status = mapped_status
-                applied.setdefault("required_parts", []).append({"item_code": part_code, "stock_status": mapped_status})
+                part_rows[part_code].stock_status = mapped_status
+                applied.setdefault("required_parts", []).append(
+                    {"item_code": part_code, "stock_status": mapped_status}
+                )
 
-        _save_doc(doc)
+        # ✅ SAFEST & FASTEST — NO doc.save()
+        if applied:
+            frappe.db.set_value(doc.doctype, doc.name, applied)
 
+        # -------- Billing Automation --------
         billing_refs = _ensure_billing_placeholders(doc, order)
         if billing_refs:
             applied["billing"] = billing_refs
+
+            # ✅ update invoice status WITHOUT triggering timestamp mismatch
+            if hasattr(doc, "invoice_status"):
+                frappe.db.set_value(doc.doctype, doc.name, "invoice_status", "Pending")
+
         updated += 1
         results.append({"status": "updated", "order_id": doc.name, "applied": applied})
 
-    summary = {"processed": len(orders), "updated": updated, "results": results}
-    log_name = _log_integration_snapshot("Garage Frontend Sync", {"work_orders": orders}, summary)
+    # -------- Logging Summary --------
+    summary = {"processed": len(work_orders), "updated": updated, "results": results}
+    log_name = _log_integration_snapshot("Garage Frontend Sync", {"work_orders": work_orders}, summary)
+
     if log_name:
         summary["integration_request"] = log_name
 
     return summary
+
 
 # ============================================================================
 # SERVICE MANAGEMENT API ENDPOINTS - FIXED VERSION
