@@ -1,5 +1,18 @@
 const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || 'http://localhost:8005';
 
+const CSRF_HEADER = 'X-Frappe-CSRF-Token';
+const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
+
+function getCookie(name) {
+  if (typeof document === 'undefined') return null;
+
+  return document.cookie
+    ?.split(';')
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`))
+    ?.split('=')[1];
+}
+
 class FrappeClient {
   constructor() {
     this.baseURL = FRAPPE_URL;
@@ -11,7 +24,14 @@ class FrappeClient {
     }
 
     const url = `${this.baseURL}${endpoint}`;
-    
+    const method = (options.method || 'GET').toUpperCase();
+
+    const csrfToken = getCookie('csrf_token');
+    const csrfHeaders =
+      !SAFE_METHODS.includes(method) && csrfToken
+        ? { [CSRF_HEADER]: decodeURIComponent(csrfToken) }
+        : {};
+
     try {
       const response = await fetch(url, {
         ...options,
@@ -19,6 +39,7 @@ class FrappeClient {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          ...csrfHeaders,
           ...options.headers,
         },
       });
