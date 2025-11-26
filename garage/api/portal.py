@@ -3613,6 +3613,57 @@ def _ensure_billing_placeholders(
                     message=frappe.get_traceback(),
                 )
 
+        if not payment_entry and invoice_name:
+            try:
+                invoice_doc = invoice_doc or _get_doc("Sales Invoice", invoice_name)
+                amount = flt(getattr(invoice_doc, "outstanding_amount", 0)) or flt(
+                    getattr(invoice_doc, "grand_total", 0)
+                )
+                receivable_account = getattr(invoice_doc, "debit_to", None)
+                company = getattr(invoice_doc, "company", None)
+
+                default_bank = None
+                if company:
+                    default_bank = frappe.db.get_value(
+                        "Company", company, "default_bank_account"
+                    ) or frappe.db.get_value("Company", company, "default_cash_account")
+
+                if amount and receivable_account and default_bank:
+                    payment_doc = frappe.new_doc("Payment Entry")
+                    payment_doc.payment_type = "Receive"
+                    payment_doc.company = company
+                    payment_doc.party_type = "Customer"
+                    payment_doc.party = getattr(invoice_doc, "customer", None)
+                    payment_doc.posting_date = nowdate()
+                    payment_doc.set_posting_time = 1
+                    payment_doc.paid_from = receivable_account
+                    payment_doc.paid_to = default_bank
+                    payment_doc.received_amount = amount
+                    payment_doc.paid_amount = amount
+
+                    if _doctype_has_field("Payment Entry", "branch"):
+                        payment_doc.branch = getattr(doc, "branch", None)
+                    if _doctype_has_field("Payment Entry", "garage_service_order"):
+                        payment_doc.garage_service_order = doc.name
+
+                    payment_doc.append(
+                        "references",
+                        {
+                            "reference_doctype": "Sales Invoice",
+                            "reference_name": invoice_name,
+                            "total_amount": amount,
+                            "outstanding_amount": amount,
+                        },
+                    )
+
+                    _insert_doc(payment_doc)
+                    payment_entry = payment_doc.name
+            except Exception:
+                frappe.log_error(
+                    title=_("Failed to build payment entry fallback"),
+                    message=frappe.get_traceback(),
+                )
+
     if payment_entry:
         billing["payment_entry"] = payment_entry
 
