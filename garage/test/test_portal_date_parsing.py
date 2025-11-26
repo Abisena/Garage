@@ -141,6 +141,7 @@ if "garage.api.auth" not in sys.modules:
 
 # Import after stubs are prepared
 import importlib
+import frappe
 
 portal = importlib.import_module("garage.api.portal")
 
@@ -157,3 +158,21 @@ def test_coerce_date_value_normalizes_to_iso_with_time():
     result = portal._coerce_date_value("18 Nov 2025, 18.19")
 
     assert result == "2025-11-18 18:19:00"
+
+
+def test_coerce_date_value_fallback_when_frappe_rejects():
+    """Manual parsing should handle portal-formatted timestamps if Frappe fails."""
+
+    original_get_datetime = frappe.utils.get_datetime
+
+    def _raise(_value):
+        raise ValueError("unhandled format")
+
+    frappe.utils.get_datetime = _raise
+
+    try:
+        result = portal._coerce_date_value("18 Nov 2025, 16.50")
+    finally:
+        frappe.utils.get_datetime = original_get_datetime
+
+    assert result == "2025-11-18 16:50:00"

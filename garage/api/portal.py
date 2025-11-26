@@ -1517,6 +1517,16 @@ def _get_meta(doctype: str):
 
 
 TIME_DOT_PATTERN = re.compile(r"^(?P<prefix>.+?)(?:,)?\s*(?P<hour>\d{1,2})\.(?P<minute>\d{2})(?P<rest>.*)$")
+DATE_TIME_PARSE_PATTERNS: Tuple[str, ...] = (
+    "%Y-%m-%d",
+    "%Y-%m-%d %H:%M:%S",
+    "%d %b %Y",
+    "%d %b %Y %H:%M",
+    "%d %b %Y, %H.%M",
+    "%d %b %Y, %H:%M",
+    "%d %b %Y %H.%M",
+    "%d %b %Y %H:%M",
+)
 
 
 def _normalize_time_separator(value: str) -> str:
@@ -1554,7 +1564,14 @@ def _coerce_date_value(value: Any, *, date_only: bool = False) -> Optional[str]:
             parsed_dt = get_datetime(candidate)
             return parsed_dt.strftime("%Y-%m-%d %H:%M:%S")
         except Exception:
-            continue
+            for pattern in DATE_TIME_PARSE_PATTERNS:
+                try:
+                    parsed_dt = datetime.strptime(candidate, pattern)
+                    if date_only:
+                        return parsed_dt.date().isoformat()
+                    return parsed_dt.strftime("%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    continue
 
     return None
 
