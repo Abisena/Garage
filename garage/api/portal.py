@@ -1737,7 +1737,21 @@ def _extract_payment_allocations(payload: Mapping[str, Any]) -> List[Dict[str, A
             or 0
         )
 
-        if not invoice or allocated_amount <= 0:
+        if not invoice:
+            continue
+
+        if allocated_amount <= 0:
+            try:
+                invoice_doc = _get_doc("Sales Invoice", invoice)
+            except Exception:
+                invoice_doc = None
+
+            allocated_amount = flt(
+                getattr(invoice_doc, "outstanding_amount", 0)
+                or getattr(invoice_doc, "grand_total", 0)
+            )
+
+        if allocated_amount <= 0:
             continue
 
         allocations.append({"invoice": invoice, "allocated_amount": allocated_amount})
