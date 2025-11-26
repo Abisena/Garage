@@ -4,12 +4,11 @@ from __future__ import annotations
 import calendar
 from collections import defaultdict
 from contextlib import contextmanager
-from datetime import date
+from datetime import date, datetime
 from functools import lru_cache
 from urllib.parse import quote
 import re
 from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Set, Tuple
-from frappe.utils import getdate
 import frappe
 from frappe import _
 from frappe.exceptions import PermissionError
@@ -1507,6 +1506,74 @@ def _filter_fields(data: Mapping[str, Any], allowed: Iterable[str]) -> Dict[str,
     return result
 
 
+@lru_cache(maxsize=None)
+def _get_meta(doctype: str):
+    try:
+        return frappe.get_meta(doctype)
+    except Exception:
+        return None
+
+
+TIME_DOT_PATTERN = re.compile(r"^(?P<prefix>.+?)(?:,)?\s*(?P<hour>\d{1,2})\.(?P<minute>\d{2})(?P<rest>.*)$")
+
+
+def _normalize_time_separator(value: str) -> str:
+    match = TIME_DOT_PATTERN.match(value.strip())
+    if not match:
+        return value
+    return f"{match.group('prefix')} {match.group('hour')}:{match.group('minute')}{match.group('rest')}".strip()
+
+
+def _coerce_date_value(value: Any, *, date_only: bool = False) -> Optional[str]:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        if date_only:
+            return value.date().isoformat()
+        return value.strftime("%Y-%m-%d %H:%M:%S")
+    if isinstance(value, date):
+        return value.isoformat()
+
+    raw = cstr(value).strip()
+    if not raw:
+        return None
+
+    candidates = [raw]
+    if "." in raw:
+        fixed = _normalize_time_separator(raw)
+        if fixed != raw:
+            candidates.append(fixed)
+
+    for candidate in candidates:
+        try:
+            if date_only:
+                parsed = getdate(candidate)
+                return parsed.isoformat()
+            parsed_dt = get_datetime(candidate)
+            return parsed_dt.strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            continue
+
+    return None
+
+
+def _normalize_doc_fields(doctype: str, values: Mapping[str, Any]) -> Dict[str, Any]:
+    meta = _get_meta(doctype)
+    normalized: Dict[str, Any] = {}
+
+    for fieldname, value in values.items():
+        df = meta.get_field(fieldname) if meta else None
+        if df and df.fieldtype in {"Date", "Datetime"}:
+            coerced = _coerce_date_value(value, date_only=df.fieldtype == "Date")
+            if coerced not in (None, ""):
+                normalized[fieldname] = coerced
+            continue
+
+        normalized[fieldname] = value
+
+    return normalized
+
+
 def _normalize_license_plate(value: str) -> str:
     return re.sub(r"[^0-9A-Za-z]", "", (value or "").upper())
 
@@ -1637,7 +1704,8 @@ def _apply_defaults(doctype: str, doc: frappe.Document) -> None:
 def _new_document(doctype: str, data: Mapping[str, Any]) -> frappe.Document:
     config = ALLOWED_DOCS[doctype]
     doc = frappe.new_doc(doctype)
-    doc.update(_filter_fields(data, config.get("fields", [])))
+    filtered_fields = _filter_fields(data, config.get("fields", []))
+    doc.update(_normalize_doc_fields(doctype, filtered_fields))
 
     for table_field, child_config in config.get("children", {}).items():
         child_rows = _sanitize_child_rows(table_field, data.get(table_field), child_config)
@@ -1659,7 +1727,7 @@ def _update_document(doctype: str, name: str, data: Mapping[str, Any]) -> frappe
     allowed_fields = config.get("update_fields", config.get("fields", []))
     doc = _get_doc(doctype, name)
 
-    updates = _filter_fields(data, allowed_fields)
+    updates = _normalize_doc_fields(doctype, _filter_fields(data, allowed_fields))
     for field, value in updates.items():
         if field == "customer_confirmation":
             doc.set(field, cint(value))
