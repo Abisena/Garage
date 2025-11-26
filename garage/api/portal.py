@@ -50,6 +50,9 @@ BRANCH_FILTER_FIELDS: Mapping[str, str] = {
     "Garage Vehicle": "branch",
     "Garage Technician": "branch",
     "Garage Branch": "name",
+    "Sales Invoice": "branch",
+    "Payment Entry": "branch",
+    "GL Entry": "branch",
 }
 
 BRANCH_ADMIN_ROLES = {"System Manager", "Head Manager Bengkel"}
@@ -63,6 +66,9 @@ DATE_FILTER_FIELDS: Mapping[str, str] = {
     "Garage Payment Entry": "payment_date",
     "Garage Receipt Document": "receipt_date",
     "Garage Spare Part Approval": "approved_on",
+    "Sales Invoice": "posting_date",
+    "Payment Entry": "posting_date",
+    "GL Entry": "posting_date",
 }
 
 DATE_FILTER_MODES = {"all", "date", "month", "year"}
@@ -2805,56 +2811,106 @@ def portal_bootstrap(
         date_range=date_range,
         date_field="posting_date",
     )
-    invoices = _list_dicts(
-        "Garage Sales Invoice",
-        [
-            "name",
-            "status",
-            "customer",
-            "branch",
-            "branch_code",
-            "invoice_date",
-            "due_date",
-            "total_amount",
-            "outstanding_amount",
-        ],
+    invoice_fields = [
+        "name",
+        "status",
+        "customer",
+        "posting_date",
+        "due_date",
+        "grand_total",
+        "rounded_total",
+        "outstanding_amount",
+        "po_no",
+    ]
+    if _doctype_has_field("Sales Invoice", "branch"):
+        invoice_fields.append("branch")
+    if _doctype_has_field("Sales Invoice", "branch_code"):
+        invoice_fields.append("branch_code")
+    if _doctype_has_field("Sales Invoice", "garage_service_order"):
+        invoice_fields.append("garage_service_order")
+
+    raw_invoices = _list_dicts(
+        "Sales Invoice",
+        invoice_fields,
         branch=branch_filter,
         date_range=date_range,
-        date_field="invoice_date",
+        date_field=_resolve_date_field("Sales Invoice", "posting_date"),
     )
-    open_invoices = _list_dicts(
-        "Garage Sales Invoice",
-        [
-            "name",
-            "customer",
-            "branch",
-            "branch_code",
-            "invoice_date",
-            "due_date",
-            "total_amount",
-            "outstanding_amount",
-            "status",
-        ],
-        filters=[["status", "not in", ["Paid", "Cancelled"]]],
+    invoices = []
+    for row in raw_invoices:
+        invoice_date = row.pop("posting_date", None)
+        total_amount = flt(row.get("grand_total") or row.get("rounded_total") or 0)
+        invoices.append(
+            {
+                **row,
+                "invoice_date": invoice_date,
+                "total_amount": total_amount,
+            }
+        )
+
+    open_invoices = [
+        invoice
+        for invoice in invoices
+        if invoice.get("status") not in {"Paid", "Cancelled"}
+    ]
+
+    payment_fields = [
+        "name",
+        "status",
+        "party",
+        "payment_type",
+        "posting_date",
+        "mode_of_payment",
+        "paid_amount",
+        "received_amount",
+    ]
+    if _doctype_has_field("Payment Entry", "branch"):
+        payment_fields.append("branch")
+    if _doctype_has_field("Payment Entry", "branch_code"):
+        payment_fields.append("branch_code")
+    if _doctype_has_field("Payment Entry", "garage_service_order"):
+        payment_fields.append("garage_service_order")
+
+    raw_payments = _list_dicts(
+        "Payment Entry",
+        payment_fields,
         branch=branch_filter,
         date_range=date_range,
-        date_field="invoice_date",
+        date_field=_resolve_date_field("Payment Entry", "posting_date"),
     )
-    payments = _list_dicts(
-        "Garage Payment Entry",
-        [
-            "name",
-            "status",
-            "customer",
-            "branch",
-            "branch_code",
-            "payment_date",
-            "mode_of_payment",
-            "paid_amount",
-        ],
+    payments = []
+    for row in raw_payments:
+        payment_date = row.pop("posting_date", None)
+        amount = flt(row.get("received_amount") or row.get("paid_amount") or 0)
+        payments.append(
+            {
+                **row,
+                "customer": row.get("party"),
+                "payment_date": payment_date,
+                "amount": amount,
+            }
+        )
+
+    gl_fields = [
+        "name",
+        "posting_date",
+        "account",
+        "debit",
+        "credit",
+        "party_type",
+        "party",
+        "reference_type",
+        "reference_name",
+    ]
+    if _doctype_has_field("GL Entry", "branch"):
+        gl_fields.append("branch")
+
+    gl_entries = _list_dicts(
+        "GL Entry",
+        gl_fields,
         branch=branch_filter,
         date_range=date_range,
-        date_field="payment_date",
+        date_field=_resolve_date_field("GL Entry", "posting_date"),
     )
     receipts = _list_dicts(
         "Garage Receipt Document",
@@ -2900,41 +2956,50 @@ def portal_bootstrap(
             date_field="posting_date",
         ),
         "sales_invoices": _group_status(
-            "Garage Sales Invoice",
+            "Sales Invoice",
             branch=branch_filter,
             date_range=date_range,
-            date_field="invoice_date",
+            date_field=_resolve_date_field("Sales Invoice", "posting_date"),
         ),
         "payment_entries": _group_status(
-            "Garage Payment Entry",
+            "Payment Entry",
             branch=branch_filter,
             date_range=date_range,
-            date_field="payment_date",
+            date_field=_resolve_date_field("Payment Entry", "posting_date"),
         ),
     }
 
+    invoice_total = sum(flt(inv.get("total_amount") or 0) for inv in invoices)
+    outstanding_total = sum(flt(inv.get("outstanding_amount") or 0) for inv in invoices)
+
+    incoming_payments_total = sum(
+        flt(row.get("amount") or 0)
+        for row in payments
+        if cstr(row.get("payment_type")) in {"Receive", "Receive Payment"}
+    )
+    outgoing_payments_total = sum(
+        flt(row.get("amount") or 0)
+        for row in payments
+        if cstr(row.get("payment_type")) in {"Pay", "Pay Payment"}
+    )
+
+    gl_references = [
+        entry
+        for entry in gl_entries
+        if cstr(entry.get("reference_type")) in {"Payment Entry", "Sales Invoice"}
+    ]
+    gl_incoming_total = sum(flt(entry.get("credit") or 0) for entry in gl_references)
+    gl_outgoing_total = sum(flt(entry.get("debit") or 0) for entry in gl_references)
+
     totals = {
-        "invoice_total": _sum_field(
-            "Garage Sales Invoice",
-            "total_amount",
-            branch=branch_filter,
-            date_range=date_range,
-            date_field="invoice_date",
-        ),
-        "outstanding_total": _sum_field(
-            "Garage Sales Invoice",
-            "outstanding_amount",
-            branch=branch_filter,
-            date_range=date_range,
-            date_field="invoice_date",
-        ),
-        "payments_total": _sum_field(
-            "Garage Payment Entry",
-            "paid_amount",
-            branch=branch_filter,
-            date_range=date_range,
-            date_field="payment_date",
-        ),
+        "invoice_total": invoice_total,
+        "outstanding_total": outstanding_total,
+        "payments_total": incoming_payments_total + outgoing_payments_total,
+        "incoming_bills_total": invoice_total,
+        "incoming_payments_total": incoming_payments_total,
+        "outgoing_payments_total": outgoing_payments_total,
+        "gl_incoming_total": gl_incoming_total,
+        "gl_outgoing_total": gl_outgoing_total,
     }
 
     desk_routes = {doctype: _desk_route(doctype) for doctype in DOC_TYPES}
@@ -2956,6 +3021,7 @@ def portal_bootstrap(
         "sales_invoices": invoices,
         "open_invoices": open_invoices,
         "payment_entries": payments,
+        "gl_entries": gl_entries,
         "receipt_documents": receipts,
         "branches": branches,
         "active_branch": active_branch,
@@ -3411,6 +3477,9 @@ def _ensure_billing_placeholders(
     progress = _extract_repair_progress(order, doc)
 
     ready_states = {"ready-for-payment", "final-inspection", "qc-finished", "completed"}
+    if progress < 95:
+        return None
+
     if progress < 99 and status_hint not in ready_states:
         return None
 
