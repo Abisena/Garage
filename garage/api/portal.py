@@ -3981,7 +3981,12 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
 
         # ✅ SAFEST & FASTEST — NO doc.save()
         if applied:
-            frappe.db.set_value(doc.doctype, doc.name, applied)
+            # Only persist fields that exist on the DocType to avoid SQL errors
+            db_fields = {df.fieldname for df in doc.meta.fields}
+            db_applied = {key: value for key, value in applied.items() if key in db_fields}
+
+            if db_applied:
+                frappe.db.set_value(doc.doctype, doc.name, db_applied)
 
         # -------- Billing Automation --------
         billing_refs = _ensure_billing_placeholders(doc, order)
