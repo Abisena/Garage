@@ -1871,7 +1871,8 @@ def _create_payment_entry(payload: Mapping[str, Any]) -> frappe.Document:
     pe.set_missing_values()
     _ensure_branch_allowed(pe)
 
-    return _insert_doc(pe)
+    inserted_doc = _insert_doc(pe)
+    return _submit_doc(inserted_doc)
 
 
 def _new_document(doctype: str, data: Mapping[str, Any]) -> frappe.Document:
@@ -7041,11 +7042,51 @@ def create_payment_entry(entry: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
     data = _ensure_dict(entry or {})
 
+    # ===== TAMBAHKAN LOGGING INI DI AWAL =====
+    frappe.logger().info(
+        "[Portal] RAW Payment Entry Data",
+        extra={
+            "user": frappe.session.user,
+            "entry_parameter": entry,  # parameter asli yang diterima
+            "entry_type": type(entry).__name__,
+            "data_after_ensure_dict": data,
+            "data_keys": list(data.keys()) if isinstance(data, dict) else "NOT A DICT",
+            "form_dict": frappe.form_dict,  # semua parameter yang dikirim
+        },
+    )
+    # ==========================================
+
+    # VALIDASI AWAL
+    has_allocations = data.get("allocations") or data.get("references")
+    has_single_invoice = data.get("invoice") or data.get("sales_invoice") or data.get("reference_name")
+    
+    if not has_allocations and not has_single_invoice:
+        # Tampilkan info debug di error message
+        frappe.throw(
+            _(f"""Payload tidak lengkap. 
+            
+            Data yang diterima: {json.dumps(data, indent=2, default=str)}
+            Keys: {list(data.keys()) if isinstance(data, dict) else 'bukan dictionary'}
+            
+            Kirim salah satu dari:
+            1. Array 'allocations' atau 'references' dengan invoice
+            2. Single 'invoice' atau 'sales_invoice' atau 'reference_name'
+            
+            Contoh:
+            {{"allocations": [{{"invoice": "SI-001", "allocated_amount": 1000000}}]}}
+            atau
+            {{"invoice": "SI-001", "allocated_amount": 1000000}}
+            """),
+            title=_("Data Invoice Tidak Ada")
+        )
+
     frappe.logger().info(
         "[Portal] Incoming payment entry request",
         extra={
             "user": frappe.session.user,
             "payload": data,
+            "has_allocations_array": bool(has_allocations),
+            "has_single_invoice": bool(has_single_invoice),
         },
     )
 
@@ -7069,7 +7110,6 @@ def create_payment_entry(entry: Optional[Any] = None) -> Dict[str, Any]:
             title="Portal Payment Entry Failed",
         )
         frappe.throw(_("Gagal membuat Payment Entry. Mohon cek cabang, tanggal pembayaran, dan invoice terkait."))
-
 
 @frappe.whitelist()
 def update_payment_entry(name: str, updates: Optional[Any] = None) -> Dict[str, Any]:

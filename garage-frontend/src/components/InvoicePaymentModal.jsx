@@ -42,17 +42,19 @@ export function InvoicePaymentModal({ isOpen, invoice, onClose, onPaymentSuccess
       await frappeClient.request('/api/method/garage.api.portal.create_payment_entry', {
         method: 'POST',
         body: JSON.stringify({
-          payment_date: paymentDate,
-          mode_of_payment: paymentMethod,
-          reference_no: referenceNo || undefined,
-          party: invoice.customer,
-          party_type: 'Customer',
-          allocations: [
-            {
-              invoice: invoice.name,
-              allocated_amount: totalAmount,
-            },
-          ],
+          entry: {  // ✅ TAMBAHKAN INI
+            payment_date: paymentDate,
+            mode_of_payment: paymentMethod,
+            reference_no: referenceNo || undefined,
+            party: invoice.customer,
+            party_type: 'Customer',
+            allocations: [
+              {
+                invoice: invoice.name,
+                allocated_amount: totalAmount,
+              },
+            ],
+          }
         }),
       });
 
