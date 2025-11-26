@@ -1557,6 +1557,15 @@ def _coerce_date_value(value: Any, *, date_only: bool = False) -> Optional[str]:
             candidates.append(fixed)
 
     for candidate in candidates:
+        for pattern in DATE_TIME_PARSE_PATTERNS:
+            try:
+                parsed_dt = datetime.strptime(candidate, pattern)
+                if date_only:
+                    return parsed_dt.date().isoformat()
+                return parsed_dt.strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                continue
+
         try:
             if date_only:
                 parsed = getdate(candidate)
@@ -1564,14 +1573,7 @@ def _coerce_date_value(value: Any, *, date_only: bool = False) -> Optional[str]:
             parsed_dt = get_datetime(candidate)
             return parsed_dt.strftime("%Y-%m-%d %H:%M:%S")
         except Exception:
-            for pattern in DATE_TIME_PARSE_PATTERNS:
-                try:
-                    parsed_dt = datetime.strptime(candidate, pattern)
-                    if date_only:
-                        return parsed_dt.date().isoformat()
-                    return parsed_dt.strftime("%Y-%m-%d %H:%M:%S")
-                except ValueError:
-                    continue
+            continue
 
     return None
 
@@ -3623,10 +3625,12 @@ def _append_progress_logs(doc: frappe.Document, history: Sequence[Mapping[str, A
         percent = cint(entry.get("progress") or entry.get("repairProgress") or 0)
         ts = entry.get("timestamp") or entry.get("date") or entry.get("time")
 
+        log_date_value = _coerce_date_value(ts, date_only=True) if ts else None
         try:
-            log_date = getdate(ts) if ts else nowdate()
+            log_date = getdate(log_date_value or nowdate())
         except Exception:
-            log_date = nowdate()
+            fallback = _normalize_time_separator(cstr(ts)) if ts else nowdate()
+            log_date = getdate(fallback) if fallback else getdate(nowdate())
 
         fingerprint = (cstr(log_date), percent, note)
         if fingerprint in existing:
