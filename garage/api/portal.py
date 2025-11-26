@@ -1737,6 +1737,13 @@ def _extract_payment_allocations(payload: Mapping[str, Any]) -> List[Dict[str, A
             or 0
         )
 
+        if allocated_amount <= 0:
+            outstanding_before = flt(row.get("outstanding_before") or 0)
+            outstanding_after = flt(row.get("outstanding_after") or 0)
+
+            if outstanding_before > outstanding_after >= 0:
+                allocated_amount = outstanding_before - outstanding_after
+
         if not invoice:
             continue
 
