@@ -3529,6 +3529,12 @@ def _map_repair_status(status: str) -> Dict[str, Optional[str]]:
             "job_card_status": "Completed",
             "qc_status": "Pending",
         },
+        "repair-nqc": {
+            "status": "Awaiting QC",
+            "work_order_status": "Completed",
+            "job_card_status": "Completed",
+            "qc_status": "Pending",
+        },
         "final-inspection": {
             "status": "Awaiting QC",
             "work_order_status": "Completed",
@@ -3665,6 +3671,7 @@ def _ensure_billing_placeholders(
     # Allowed states that MUST trigger invoice generation
     trigger_states = {
         "repair-qc",
+        "repair-nqc",
         "qc",
         "ready-for-payment",
         "final-inspection",
@@ -3672,8 +3679,13 @@ def _ensure_billing_placeholders(
         "completed",
     }
 
+    # Some repair flows (e.g. "repair NQC") need billing even if progress
+    # tracking has not yet crossed the usual threshold.  Treat these as
+    # always-on triggers while still enforcing the usual validations below.
+    early_trigger_states = {"repair-nqc"}
+
     # Business rule — invoice only allowed once repair is basically done
-    if progress < 95:
+    if progress < 95 and status_hint not in early_trigger_states:
         return None
 
     # Final trigger — auto generate billing
