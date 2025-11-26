@@ -54,7 +54,7 @@ export function SpareParts() {
       const totalValue = parts.reduce(
         (sum, part) =>
           sum +
-          (Number(part?.available_qty ?? part?.stock_qty ?? part?.actual_qty || 0) *
+          (Number(part?.available_qty || part?.stock_qty || part?.actual_qty || 0) *
             (Number(part?.valuation_rate || part?.standard_rate || 0))),
         0,
       );
