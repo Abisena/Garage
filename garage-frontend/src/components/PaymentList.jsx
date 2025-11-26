@@ -102,10 +102,13 @@ export function PaymentList({ currentUser }) {
       const branchParam = currentUser?.branch === 'all' ? undefined : currentUser?.branch;
       const portalData = await frappeClient.getPortalBootstrap({ branch: branchParam, mode: 'finance' });
 
-      const paymentEntries = (portalData.payment_entries || []).map((entry) => ({
-        ...entry,
-        amount: Number(entry.amount || entry.received_amount || entry.paid_amount || 0),
-      }));
+      const paymentEntries = (portalData.payment_entries || [])
+        .map((entry) => ({
+          ...entry,
+          amount: Number(entry.amount || entry.received_amount || entry.paid_amount || 0),
+        }))
+        .filter((entry) => (entry.docstatus ?? (entry.status === 'Draft' ? 0 : 1)) === 1);
+
       paymentEntries.sort(
         (a, b) => new Date(b.payment_date || b.posting_date || b.modified || 0) - new Date(a.payment_date || a.posting_date || a.modified || 0),
       );
