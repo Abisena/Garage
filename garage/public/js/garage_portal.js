@@ -1715,6 +1715,11 @@ function cloneBrandModelMap(map) {
                         'received_amount',
                         'notes',
                     ]);
+                    payload.party_type = 'Customer';
+                    payload.party = payload.customer || '';
+                    if (!payload.references && payload.allocations) {
+                        payload.references = payload.allocations;
+                    }
                     this.submitForm(this.forms.payment, 'garage.api.portal.create_payment_entry', { entry: payload }, 'Payment entry tersimpan.');
                 });
             }

@@ -1701,6 +1701,115 @@ def _apply_defaults(doctype: str, doc: frappe.Document) -> None:
         doc.receipt_date = nowdate()
 
 
+def _extract_payment_allocations(payload: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    """Normalise invoice allocations into a consistent structure."""
+
+    allocations: List[Dict[str, Any]] = []
+    for entry in payload.get("allocations") or payload.get("references") or []:
+        row = _ensure_dict(entry)
+        invoice = row.get("invoice") or row.get("reference_name") or row.get("sales_invoice")
+        allocated_amount = flt(
+            row.get("allocated_amount")
+            or row.get("amount")
+            or row.get("paid_amount")
+            or row.get("received_amount")
+            or 0
+        )
+
+        if not invoice or allocated_amount <= 0:
+            continue
+
+        allocations.append({"invoice": invoice, "allocated_amount": allocated_amount})
+
+    return allocations
+
+
+def _create_payment_entry(payload: Mapping[str, Any]) -> frappe.Document:
+    """Create an ERPNext Payment Entry tied to Sales Invoice allocations."""
+
+    from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
+
+    allocations = _extract_payment_allocations(payload)
+    if not allocations:
+        frappe.throw(
+            _("Lampirkan minimal satu invoice pada allocations/references dengan allocated_amount."),
+            title=_("Payment Entry tidak lengkap"),
+        )
+
+    seed_invoice = allocations[0]["invoice"]
+    base_invoice = _get_doc("Sales Invoice", seed_invoice)
+
+    pe = get_payment_entry("Sales Invoice", seed_invoice)
+
+    party_type = payload.get("party_type") or pe.party_type or "Customer"
+    party = payload.get("party") or payload.get("customer") or pe.party or getattr(base_invoice, "customer", None)
+
+    payment_date = _coerce_date_value(payload.get("payment_date"), date_only=True) or nowdate()
+    reference_date = _coerce_date_value(payload.get("reference_date"), date_only=True)
+    mode_of_payment = payload.get("mode_of_payment") or pe.mode_of_payment
+
+    pe.party_type = party_type
+    pe.party = party
+    pe.posting_date = payment_date
+    if reference_date:
+        pe.reference_date = reference_date
+    if payload.get("reference_no"):
+        pe.reference_no = payload.get("reference_no")
+    if mode_of_payment:
+        pe.mode_of_payment = mode_of_payment
+
+    if _doctype_has_field("Payment Entry", "branch"):
+        branch_value = payload.get("branch") or getattr(base_invoice, "branch", None)
+        if branch_value:
+            pe.branch = branch_value
+    if _doctype_has_field("Payment Entry", "branch_code") and getattr(pe, "branch", None) and not getattr(pe, "branch_code", None):
+        pe.branch_code = frappe.db.get_value("Garage Branch", pe.branch, "branch_code")
+
+    pe.set("references", [])
+    total_allocated = 0.0
+    for row in allocations:
+        invoice_name = row.get("invoice")
+        try:
+            invoice_doc = _get_doc("Sales Invoice", invoice_name)
+        except Exception:
+            invoice_doc = None
+
+        allocated_amount = flt(row.get("allocated_amount") or 0)
+        total_amount = flt(getattr(invoice_doc, "grand_total", 0) or getattr(invoice_doc, "rounded_total", 0))
+        outstanding_amount = flt(getattr(invoice_doc, "outstanding_amount", 0))
+
+        pe.append(
+            "references",
+            {
+                "reference_doctype": "Sales Invoice",
+                "reference_name": invoice_name,
+                "total_amount": total_amount,
+                "outstanding_amount": outstanding_amount,
+                "allocated_amount": allocated_amount,
+            },
+        )
+
+        total_allocated += allocated_amount
+
+        if not party and invoice_doc:
+            pe.party = getattr(invoice_doc, "customer", None)
+
+        if _doctype_has_field("Payment Entry", "branch") and not getattr(pe, "branch", None) and invoice_doc:
+            branch_value = getattr(invoice_doc, "branch", None)
+            if branch_value:
+                pe.branch = branch_value
+
+    if pe.payment_type == "Receive":
+        pe.received_amount = total_allocated
+    else:
+        pe.paid_amount = total_allocated
+
+    pe.set_missing_values()
+    _ensure_branch_allowed(pe)
+
+    return _insert_doc(pe)
+
+
 def _new_document(doctype: str, data: Mapping[str, Any]) -> frappe.Document:
     config = ALLOWED_DOCS[doctype]
     doc = frappe.new_doc(doctype)
@@ -6704,8 +6813,33 @@ def update_sales_invoice(name: str, updates: Optional[Any] = None) -> Dict[str, 
 def create_payment_entry(entry: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
     data = _ensure_dict(entry or {})
-    doc = _insert_document("Garage Payment Entry", data)
-    return {"name": doc.name, "status": doc.status}
+
+    frappe.logger().info(
+        "[Portal] Incoming payment entry request",
+        extra={
+            "user": frappe.session.user,
+            "payload": data,
+        },
+    )
+
+    try:
+        doc = _create_payment_entry(data)
+        frappe.logger().info(
+            "[Portal] Payment Entry created",
+            extra={
+                "user": frappe.session.user,
+                "payment_entry": doc.name,
+                "party": getattr(doc, "party", None),
+                "mode_of_payment": getattr(doc, "mode_of_payment", None),
+            },
+        )
+        return {"name": doc.name, "status": getattr(doc, "status", None) or doc.docstatus}
+    except Exception:
+        frappe.log_error(
+            message=f"Payload: {json.dumps(data, default=str)}\n{frappe.get_traceback()}",
+            title="Portal Payment Entry Failed",
+        )
+        frappe.throw(_("Gagal membuat Payment Entry. Mohon cek cabang, tanggal pembayaran, dan invoice terkait."))
 
 
 @frappe.whitelist()
