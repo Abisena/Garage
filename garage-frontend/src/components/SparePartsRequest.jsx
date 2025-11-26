@@ -121,6 +121,8 @@ export function SparePartsRequest({ currentUser }) {
       return req;
     });
 
+    const updatedRequest = updatedRequests.find(r => r.orderId === orderId);
+
     saveRequests(updatedRequests);
 
     // Reduce stock in master spare parts
@@ -228,18 +230,69 @@ export function SparePartsRequest({ currentUser }) {
             }
           }
           
-          // Check if all requested parts are now prepared
-          const requestedParts = updatedSpareParts.filter((p) => p.requested);
+          const syncPreparedPartsToSpareParts = (currentParts, preparedParts) => {
+            if (!updatedRequest || updatedRequest.status !== 'READY') {
+              return currentParts;
+            }
+
+            const normalizedParts = Array.isArray(currentParts) ? [...currentParts] : [];
+
+            preparedParts.forEach((preparedPart, preparedIndex) => {
+              if (!preparedPart || preparedPart.status !== 'PREPARED') return;
+
+              const normalizedCode = String(preparedPart.partCode || '').trim().toLowerCase();
+              const normalizedName = String(preparedPart.partName || '').trim().toLowerCase();
+
+              const existingIndex = normalizedParts.findIndex((part) => {
+                const partCode = String(part.partNumber || '').trim().toLowerCase();
+                const partName = String(part.name || '').trim().toLowerCase();
+                return (normalizedCode && partCode === normalizedCode) || (normalizedName && partName === normalizedName);
+              });
+
+              const matchedMasterPart = masterParts.find((mp) => String(mp.partNumber || '').trim().toLowerCase() === normalizedCode);
+              const basePart = existingIndex !== -1 ? normalizedParts[existingIndex] : null;
+              const unitPrice = matchedMasterPart?.unitPrice ?? basePart?.unitPrice ?? 0;
+              const quantity = preparedPart.requestedQty || basePart?.quantity || 0;
+
+              const updatedPart = {
+                id: basePart?.id || `PART-${Date.now()}-${preparedIndex}`,
+                name: preparedPart.partName || basePart?.name || preparedPart.partCode,
+                partNumber: preparedPart.partCode,
+                quantity,
+                unitPrice,
+                discount: basePart?.discount || 0,
+                discountType: basePart?.discountType || 'percent',
+                totalPrice: Math.max(0, quantity * unitPrice),
+                requested: true,
+                status: 'prepared'
+              };
+
+              if (existingIndex !== -1) {
+                normalizedParts[existingIndex] = { ...basePart, ...updatedPart };
+              } else {
+                normalizedParts.push(updatedPart);
+              }
+            });
+
+            return normalizedParts;
+          };
+
+          const syncedSpareParts = syncPreparedPartsToSpareParts(
+            updatedSpareParts,
+            Array.isArray(updatedRequest?.parts) ? updatedRequest.parts : []
+          );
+
+          const requestedParts = syncedSpareParts.filter((p) => p.requested);
           const allPartsPrepared = requestedParts.length > 0 && requestedParts.every((p) => p.status === 'prepared');
-          
+
           // Auto-update repair status to 'parts-prepared' if all parts are ready
           let newRepairStatus = wo.repairStatus;
           if (allPartsPrepared && wo.repairStatus === 'waiting-parts') {
             newRepairStatus = 'parts-prepared';
             console.log('✅ All parts prepared! Auto-updating work order status to: parts-prepared');
           }
-          
-          return { ...wo, spareParts: updatedSpareParts, repairStatus: newRepairStatus };
+
+          return { ...wo, spareParts: syncedSpareParts, repairStatus: newRepairStatus };
         }
         return wo;
       });
