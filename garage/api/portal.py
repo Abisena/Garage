@@ -6306,11 +6306,10 @@ def adjust_spare_part_stock(
 
     try:
         item_doc = frappe.get_doc("Item", item_code)
-    except DoesNotExistError as exc:
-        frappe.throw(
-            _("Sparepart {0} tidak ditemukan pada master Item.").format(code),
-            exc=exc,
-        )
+    except DoesNotExistError:
+        # Return a user-friendly error instead of bubbling up the raw DoesNotExistError message
+        # (e.g. "Item <code> not found").
+        frappe.throw(_("Sparepart {0} tidak ditemukan pada master Item.").format(code))
     if not cint(getattr(item_doc, "is_stock_item", 0)):
         frappe.throw(_("Item {0} bukan stok.").format(code))
 
