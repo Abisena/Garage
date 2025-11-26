@@ -3605,6 +3605,30 @@ def _map_part_status(status: str) -> Optional[str]:
     return mapping.get(normalized)
 
 
+def _infer_stock_status(item_code: str, requested_qty: float) -> Optional[str]:
+    """Return an availability status based on on-hand stock levels."""
+
+    code = cstr(item_code or "").strip()
+    if not code:
+        return None
+
+    stock_rows = frappe.get_all(
+        "Bin",
+        filters={"item_code": code},
+        fields=["sum(actual_qty) as actual_qty"],
+        limit=1,
+    )
+
+    available = flt(stock_rows[0].get("actual_qty") if stock_rows else 0)
+    if available <= 0:
+        return "To Order"
+
+    if requested_qty and available < flt(requested_qty):
+        return "To Order"
+
+    return "Available"
+
+
 def _append_progress_logs(doc: frappe.Document, history: Sequence[Mapping[str, Any]]) -> int:
     if not history:
         return 0
@@ -3972,9 +3996,38 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
             if not part_code or part_code not in part_rows:
                 continue
 
+            requested_qty = flt(
+                part.get("requestedQty")
+                or part.get("qty")
+                or part.get("quantity")
+                or getattr(part_rows[part_code], "qty", None)
+            )
+
             mapped_status = _map_part_status(part.get("status"))
-            if mapped_status:
-                part_rows[part_code].stock_status = mapped_status
+            availability_status = _infer_stock_status(part_code, requested_qty)
+
+            chosen_status = mapped_status or availability_status
+            if availability_status and mapped_status in {None, "Pending Check", "Request", "Pending"}:
+                chosen_status = availability_status
+
+            if requested_qty:
+                part_rows[part_code].qty = requested_qty
+                try:
+                    frappe.db.set_value(
+                        part_rows[part_code].doctype,
+                        part_rows[part_code].name,
+                        "qty",
+                        requested_qty,
+                    )
+                except Exception:
+                    pass
+
+                applied.setdefault("required_parts", []).append(
+                    {"item_code": part_code, "qty": requested_qty}
+                )
+
+            if chosen_status:
+                part_rows[part_code].stock_status = chosen_status
 
                 # Persist status on the child row directly (Table fields can't be set via parent set_value)
                 try:
@@ -3982,13 +4035,13 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
                         part_rows[part_code].doctype,
                         part_rows[part_code].name,
                         "stock_status",
-                        mapped_status,
+                        chosen_status,
                     )
                 except Exception:
                     pass
 
                 applied.setdefault("required_parts", []).append(
-                    {"item_code": part_code, "stock_status": mapped_status}
+                    {"item_code": part_code, "stock_status": chosen_status}
                 )
 
         # ✅ SAFEST & FASTEST — NO doc.save()
