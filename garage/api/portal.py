@@ -4203,6 +4203,18 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
             mapped_status = _map_part_status(part.get("status"))
             if mapped_status:
                 part_rows[part_code].stock_status = mapped_status
+
+                # Persist status on the child row directly (Table fields can't be set via parent set_value)
+                try:
+                    frappe.db.set_value(
+                        part_rows[part_code].doctype,
+                        part_rows[part_code].name,
+                        "stock_status",
+                        mapped_status,
+                    )
+                except Exception:
+                    pass
+
                 applied.setdefault("required_parts", []).append(
                     {"item_code": part_code, "stock_status": mapped_status}
                 )
@@ -4210,7 +4222,11 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
         # ✅ SAFEST & FASTEST — NO doc.save()
         if applied:
             # Only persist fields that exist on the DocType to avoid SQL errors
-            db_fields = {df.fieldname for df in doc.meta.fields}
+            db_fields = {
+                df.fieldname
+                for df in doc.meta.fields
+                if df.fieldtype != "Table"  # Table fields must be updated on child doctypes
+            }
             db_applied = {key: value for key, value in applied.items() if key in db_fields}
 
             if db_applied:
