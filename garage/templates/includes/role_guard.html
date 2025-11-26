@@ -164,11 +164,18 @@
                     redirectToHome();
                 }
 
+                var csrfToken = readCsrfToken();
+                var accessRequestHeaders = {
+                    'Content-Type': 'application/json'
+                };
+
+                if (csrfToken) {
+                    accessRequestHeaders['X-Frappe-CSRF-Token'] = csrfToken;
+                }
+
                 fetch('/api/method/garage.api.auth.check_portal_access', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: accessRequestHeaders,
                     body: JSON.stringify(requestBody)
                 })
                     .then(function (response) { return response.json(); })
