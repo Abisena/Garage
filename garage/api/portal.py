@@ -3575,7 +3575,7 @@ def _ensure_billing_placeholders(
         invoice_doc.company = company
         invoice_doc.customer = invoice_customer
         invoice_doc.posting_date = nowdate()
-        invoice_doc.due_date = getattr(doc, "estimated_delivery_date", None) or nowdate()
+        invoice_doc.due_date = _sanitize_iso_date(getattr(doc, "estimated_delivery_date", None)) or nowdate()
         invoice_doc.po_no = doc.name
         invoice_doc.set_posting_time = 1
         invoice_doc.update({"remarks": _("Generated from Garage Service Order {0}").format(doc.name)})
@@ -3629,6 +3629,14 @@ def _ensure_billing_placeholders(
                         "rate": labor_amount,
                     },
                 )
+
+        invoice_doc.run_method("set_missing_values")
+        invoice_doc.calculate_taxes_and_totals()
+
+        if invoice_doc.base_write_off_amount is None:
+            invoice_doc.base_write_off_amount = 0
+        if invoice_doc.write_off_amount is None:
+            invoice_doc.write_off_amount = 0
 
         _insert_doc(invoice_doc)
         billing["sales_invoice"] = invoice_doc.name
