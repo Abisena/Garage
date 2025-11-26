@@ -277,10 +277,12 @@ def _resolve_date_field(doctype: str, explicit: Optional[str] = None) -> Optiona
 def _sanitize_iso_date(value: Optional[str]) -> Optional[str]:
     if not value:
         return None
-    try:
-        return getdate(value).isoformat()
-    except Exception:
+
+    coerced = _coerce_date_value(value, date_only=True)
+    if coerced in (None, ""):
         return None
+
+    return coerced
 
 
 def _normalize_date_filter_inputs(
