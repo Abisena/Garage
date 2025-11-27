@@ -200,6 +200,10 @@ jinja = {
 # 	],
 # }
 
+scheduler_events = {
+    "daily": ["garage.cache.cleanup_expired_cache"],
+}
+
 # Testing
 # -------
 
