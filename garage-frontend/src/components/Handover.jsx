@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Car, CheckCircle, FileText, Key, User, Phone, Mail, MapPin, Wrench, Package, Receipt, Calendar, Clock, DollarSign, CreditCard, Printer, AlertCircle, ChevronDown, ChevronUp, Search, Filter } from 'lucide-react';
 import { Button } from './ui/button';
 import { SIKKPrint } from './SIKKPrint';
-import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
+import { getStoredWorkOrders, persistWorkOrders, refreshWorkOrdersFromBackend } from '../lib/workOrdersStorage';
 
 export function Handover() {
   const [workOrders, setWorkOrders] = useState([]);
@@ -17,28 +17,38 @@ export function Handover() {
 
   useEffect(() => {
     loadWorkOrders();
-    
+
     // Listen for localStorage changes
     const handleStorageChange = () => {
       loadWorkOrders();
     };
-    
+
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('focus', handleStorageChange);
-    
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('focus', handleStorageChange);
     };
   }, []);
 
-  const loadWorkOrders = () => {
+  const loadWorkOrders = async () => {
     const orders = getStoredWorkOrders();
     // Filter orders with receipt number (sudah ada di Payment)
     const readyOrders = orders.filter(order =>
       order.paymentStatus === 'paid' && order.receiptNumber
     );
     setWorkOrders(readyOrders);
+
+    try {
+      const backendOrders = await refreshWorkOrdersFromBackend();
+      const backendReady = backendOrders.filter(order =>
+        order.paymentStatus === 'paid' && order.receiptNumber
+      );
+      setWorkOrders(backendReady);
+    } catch (error) {
+      console.error('Failed to refresh handover orders from backend:', error);
+    }
   };
 
   const checklistItems = [

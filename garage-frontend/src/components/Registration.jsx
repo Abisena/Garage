@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { WorkOrderModal } from './WorkOrderModall';
 import frappeClient from '../lib/frappeClient';
 import { loadFromStorage, saveToStorage } from '../lib/storage';
+import { refreshWorkOrdersFromBackend } from '../lib/workOrdersStorage';
 
 export function Registration({ currentUser }) {
   const defaultFormState = {
@@ -95,6 +96,56 @@ export function Registration({ currentUser }) {
     saveToStorage('registrations', updatedAllRegistrations);
     setRecentRegistrations(registrationsUpdate());
   };
+
+  useEffect(() => {
+    const hydrateFromBackend = async () => {
+      try {
+        const today = new Date();
+        const fromDate = today.toISOString().split('T')[0];
+        const backendOrders = await refreshWorkOrdersFromBackend({
+          branch: currentUser?.branch,
+          from_date: fromDate,
+          to_date: fromDate,
+        });
+
+        const mappedRegistrations = backendOrders.map((order) => ({
+          id: order.orderId,
+          time: order.date ? new Date(order.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '',
+          orderId: order.orderId,
+          customerName: order.customerName,
+          phone: order.phone,
+          email: order.email,
+          plateNumber: order.plateNumber,
+          chassisNumber: order.chassisNumber,
+          engineNumber: order.engineNumber,
+          vehicleBrand: order.vehicleBrand,
+          vehicleModel: order.vehicleModel,
+          vehicleType: order.vehicleType,
+          kilometer: order.kilometer,
+          fuel: order.fuel,
+          assemblyType: order.assemblyType,
+          vehicleYear: order.vehicleYear,
+          serviceType: order.serviceType,
+          serviceBundleId: order.serviceBundleId,
+          serviceBundleName: order.serviceBundleName,
+          customerComplaint: order.customerComplaint,
+          date: today.toLocaleDateString('id-ID'),
+          estimatedCost: order.estimatedCost,
+          estimatedDays: order.estimatedDays,
+          branch: order.branch,
+          status: order.status,
+          inspectionStatus: order.inspectionStatus,
+        }));
+
+        saveToStorage('registrations', mappedRegistrations);
+        setRecentRegistrations(registrationsUpdate());
+      } catch (error) {
+        console.error('Unable to hydrate registrations from backend:', error);
+      }
+    };
+
+    hydrateFromBackend();
+  }, [currentUser?.branch, todayDate]);
 
   const vehicleTypes = [
     'Sedan',

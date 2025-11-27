@@ -3,7 +3,7 @@ import { Plus, Filter, Download, Eye, Wrench, ChevronRight, X, Save, Trash2, Pac
 import { Button } from './ui/button';
 import { SPKDocument } from './SPKDocument';
 import { frappeClient } from '../lib/frappeClient';
-import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
+import { getStoredWorkOrders, persistWorkOrders, refreshWorkOrdersFromBackend } from '../lib/workOrdersStorage';
 import { loadMasterParts, saveMasterParts } from '../lib/masterPartsCache';
 import { loadSparePartRequests, saveSparePartRequests } from '../lib/sparePartRequestsCache';
 import { loadFromStorage, saveToStorage } from '../lib/storage';
@@ -102,7 +102,7 @@ export function ServiceOrders({ currentUser }) {
   useEffect(() => {
     loadWorkOrders();
     loadMasterSpareParts();
-  }, []);
+  }, [currentUser?.branch]);
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -126,9 +126,16 @@ export function ServiceOrders({ currentUser }) {
     };
   }, [selectedWorkOrder?.id]);
 
-  const loadWorkOrders = () => {
+  const loadWorkOrders = async () => {
     const storedOrders = getStoredWorkOrders();
     setWorkOrders(storedOrders);
+
+    try {
+      const backendOrders = await refreshWorkOrdersFromBackend({ branch: currentUser?.branch });
+      setWorkOrders(backendOrders);
+    } catch (error) {
+      console.error('Failed to refresh work orders from backend:', error);
+    }
   };
 
   const mapProfilePart = (part) => ({

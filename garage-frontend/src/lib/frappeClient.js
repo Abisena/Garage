@@ -278,6 +278,19 @@ class FrappeClient {
     }
   }
 
+  async listServiceOrders(filters = {}) {
+    const payload = {
+      filters,
+    };
+
+    const response = await this.request('/api/method/garage.api.portal.list_service_orders', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    return response.message || response;
+  }
+
   async getSparePartStats() {
     try {
       const response = await this.request('/api/method/garage.api.portal.get_spare_part_stats');
