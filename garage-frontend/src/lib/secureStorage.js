@@ -15,6 +15,7 @@
  * - HMAC signature prevents tampering
  */
 
+// Session-scoped key so user data never persists in localStorage
 const STORAGE_KEY = 'currentUser';
 const SESSION_SECRET_KEY = 'garage-session-secret';
 const SALT_KEY = 'garage-salt';
@@ -186,8 +187,8 @@ export const persistCurrentUser = async (user) => {
       timestamp: Date.now()
     });
     
-    // Store in localStorage
-    localStorage.setItem(STORAGE_KEY, wrapped);
+    // Store in sessionStorage to avoid lingering auth/session data in localStorage
+    sessionStorage.setItem(STORAGE_KEY, wrapped);
     
     console.log('✅ User data encrypted and stored securely');
   } catch (err) {
@@ -200,7 +201,7 @@ export const persistCurrentUser = async (user) => {
  * Restore user data with decryption and verification
  */
 export const restoreCurrentUser = async () => {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = sessionStorage.getItem(STORAGE_KEY);
   if (!raw) {
     console.log('ℹ️ No stored user data found');
     return null;
@@ -213,7 +214,7 @@ export const restoreCurrentUser = async () => {
     const parsed = JSON.parse(raw);
     if (!parsed?.data || !parsed?.signature) {
       console.warn('⚠️ Invalid stored data format, clearing...');
-      localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(STORAGE_KEY);
       return null;
     }
 
@@ -221,10 +222,10 @@ export const restoreCurrentUser = async () => {
     const expectedSignature = await signPayload(parsed.data);
     if (expectedSignature !== parsed.signature) {
       console.warn('🚨 SECURITY ALERT: Detected tampered session data, clearing storage');
-      localStorage.removeItem(STORAGE_KEY);
-      sessionStorage.clear(); // Clear session too for safety
-      return null;
-    }
+        sessionStorage.removeItem(STORAGE_KEY);
+        sessionStorage.clear(); // Clear session too for safety
+        return null;
+      }
 
     // Decrypt the data
     const decrypted = await decryptData(parsed.data);
@@ -234,7 +235,7 @@ export const restoreCurrentUser = async () => {
     return user;
   } catch (err) {
     console.error('❌ Failed to restore secure session:', err);
-    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
     
     // If decryption fails, it might be from different session
     if (err.message.includes('decrypt')) {
@@ -251,7 +252,7 @@ export const restoreCurrentUser = async () => {
  */
 export const clearStoredUser = () => {
   console.log('🗑️ Clearing stored user data...');
-  localStorage.removeItem(STORAGE_KEY);
+  sessionStorage.removeItem(STORAGE_KEY);
   sessionStorage.removeItem(SESSION_SECRET_KEY);
   sessionStorage.removeItem(SALT_KEY);
   console.log('✅ Storage cleared');

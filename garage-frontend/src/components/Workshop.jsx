@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Wrench, CheckCircle, Clock, AlertCircle, X, Eye, FileText, ClipboardCheck, Play, Check, PackageCheck, ListChecks, RotateCcw } from 'lucide-react';
 import { Button } from './ui/button';
 import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
+import { loadFromStorage, saveToStorage } from '../lib/storage';
 
 export function Workshop({ currentUser }) {
   const [workOrders, setWorkOrders] = useState([]);
@@ -574,11 +575,10 @@ export function Workshop({ currentUser }) {
     }
 
     // 3. Remove from Payment (if exists)
-    const savedPayments = localStorage.getItem('payments');
-    if (savedPayments) {
-      const payments = JSON.parse(savedPayments);
+    const payments = loadFromStorage('payments', []);
+    if (payments && Array.isArray(payments)) {
       const filteredPayments = payments.filter((p) => p.orderId !== order.orderId);
-      localStorage.setItem('payments', JSON.stringify(filteredPayments));
+      saveToStorage('payments', filteredPayments, { ttl: 1000 * 60 * 60 * 6 });
     }
 
     // 4. Reset all QC checklists (uncheck all)
