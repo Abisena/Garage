@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, User, Car } from 'lucide-react';
 import { Button } from './ui/button';
 import { WorkOrderModal } from './WorkOrderModall';
 import frappeClient from '../lib/frappeClient';
-import { loadFromStorage, saveToStorage } from '../lib/storage';
 import { refreshWorkOrdersFromBackend } from '../lib/workOrdersStorage';
+import useServerCache, { ensurePointer } from '../lib/serverCache';
 
 export function Registration({ currentUser }) {
+  const cache = useServerCache();
   const defaultFormState = {
     vehicleBrand: '',
     vehicleModel: '',
@@ -28,11 +29,23 @@ export function Registration({ currentUser }) {
     advisorNotes: ''
   };
 
-  // Load saved form data from localStorage on mount
-  const [formData, setFormData] = useState(() => ({
-    ...defaultFormState,
-    ...loadFromStorage('registrationFormDraft', defaultFormState)
-  }));
+  const draftKey = useMemo(
+    () =>
+      ensurePointer('registrationDraftKey', () =>
+        `draft:registration:${currentUser?.username || currentUser?.name || 'guest'}`
+      ),
+    [currentUser?.name, currentUser?.username]
+  );
+
+  const registrationsKey = useMemo(
+    () =>
+      ensurePointer('registrationsKey', () =>
+        `draft:registrations:${currentUser?.username || currentUser?.name || 'guest'}`
+      ),
+    [currentUser?.name, currentUser?.username]
+  );
+
+  const [formData, setFormData] = useState({ ...defaultFormState });
 
   const DEFAULT_SERVICE_TYPES = [
     'Service/Repair',
@@ -41,13 +54,36 @@ export function Registration({ currentUser }) {
     'Insurance Claim'
   ];
 
+  useEffect(() => {
+    let active = true;
+    const hydrateDraft = async () => {
+      try {
+        const cached = await cache.load(draftKey);
+        if (!active) return;
+        if (cached && typeof cached === 'object') {
+          setFormData({ ...defaultFormState, ...cached });
+        } else {
+          setFormData({ ...defaultFormState });
+        }
+      } catch (error) {
+        console.error('Unable to load registration draft from server cache:', error);
+        setFormData({ ...defaultFormState });
+      }
+    };
+
+    hydrateDraft();
+    return () => {
+      active = false;
+    };
+  }, [cache, draftKey]);
+
   const [serviceTypeOptions, setServiceTypeOptions] = useState(DEFAULT_SERVICE_TYPES);
   const [serviceBundles, setServiceBundles] = useState([]);
 
-  // Save form data to localStorage whenever it changes
+  // Persist draft to backend cache whenever it changes
   useEffect(() => {
-    saveToStorage('registrationFormDraft', formData);
-  }, [formData]);
+    cache.save(draftKey, formData);
+  }, [cache, draftKey, formData]);
 
   const [focusedField, setFocusedField] = useState('');
   const [showWorkOrder, setShowWorkOrder] = useState(false);
@@ -83,18 +119,19 @@ export function Registration({ currentUser }) {
     loadServiceBundles();
   }, [currentUser?.branch]);
 
-  const registrationsUpdate = () => {
-    const storedRegistrations = loadFromStorage('registrations', []);
-    return storedRegistrations.filter(reg => reg.date === todayDate);
-  };
+  const [recentRegistrations, setRecentRegistrations] = useState([]);
 
-  const [recentRegistrations, setRecentRegistrations] = useState(registrationsUpdate);
+  const refreshRegistrations = useCallback(async () => {
+    const storedRegistrations = await cache.load(registrationsKey);
+    const normalized = Array.isArray(storedRegistrations) ? storedRegistrations : [];
+    setRecentRegistrations(normalized.filter((reg) => reg.date === todayDate));
+  }, [cache, registrationsKey, todayDate]);
 
-  const addRegistration = (registration) => {
-    const existingRegistrations = loadFromStorage('registrations', []);
-    const updatedAllRegistrations = [registration, ...existingRegistrations];
-    saveToStorage('registrations', updatedAllRegistrations);
-    setRecentRegistrations(registrationsUpdate());
+  const addRegistration = async (registration) => {
+    const existingRegistrations = (await cache.load(registrationsKey)) || [];
+    const updatedAllRegistrations = [registration, ...(Array.isArray(existingRegistrations) ? existingRegistrations : [])];
+    await cache.save(registrationsKey, updatedAllRegistrations);
+    setRecentRegistrations(updatedAllRegistrations.filter((reg) => reg.date === todayDate));
   };
 
   useEffect(() => {
@@ -137,15 +174,16 @@ export function Registration({ currentUser }) {
           inspectionStatus: order.inspectionStatus,
         }));
 
-        saveToStorage('registrations', mappedRegistrations);
-        setRecentRegistrations(registrationsUpdate());
+        await cache.save(registrationsKey, mappedRegistrations);
+        setRecentRegistrations(mappedRegistrations.filter((reg) => reg.date === todayDate));
       } catch (error) {
         console.error('Unable to hydrate registrations from backend:', error);
       }
     };
 
     hydrateFromBackend();
-  }, [currentUser?.branch, todayDate]);
+    refreshRegistrations();
+  }, [cache, currentUser?.branch, refreshRegistrations, registrationsKey, todayDate]);
 
   const vehicleTypes = [
     'Sedan',
@@ -185,23 +223,22 @@ export function Registration({ currentUser }) {
   // Get available models based on selected brand
   const availableModels = formData.vehicleBrand ? vehicleModelsByBrand[formData.vehicleBrand] || [] : [];
 
-  // Keep registration list in sync when storage is updated (refresh/HMR)
+  // Keep registration list in sync when focus returns
   useEffect(() => {
-    const refreshRegistrations = () => {
-      setRecentRegistrations(registrationsUpdate());
-    };
-
-    // Ensure we rehydrate from localStorage when the page is revisited/refreshed
     refreshRegistrations();
 
-    window.addEventListener('storage', refreshRegistrations);
-    window.addEventListener('focus', refreshRegistrations);
+    const onFocus = () => refreshRegistrations();
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', onFocus);
+    }
 
     return () => {
-      window.removeEventListener('storage', refreshRegistrations);
-      window.removeEventListener('focus', refreshRegistrations);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', onFocus);
+      }
     };
-  }, []);
+  }, [refreshRegistrations]);
 
   // Helper function to get branch code
   const getBranchCode = (branch) => {
@@ -362,7 +399,7 @@ export function Registration({ currentUser }) {
           inspectionStatus: 'waiting'
         };
 
-        addRegistration(newRegistration);
+        await addRegistration(newRegistration);
         setFormData({ ...defaultFormState });
 
         let successMessage = `✅ Registration Successful!\n\n`;
@@ -432,7 +469,7 @@ export function Registration({ currentUser }) {
         inspectionStatus: 'waiting'
       };
 
-      addRegistration(fallbackRegistration);
+      await addRegistration(fallbackRegistration);
       setFormData({ ...defaultFormState });
 
       alert(
@@ -498,7 +535,7 @@ export function Registration({ currentUser }) {
 //   loadRegistrationsFromFrappe();
 // }, [currentUser.branch]);
 
-  const handleWorkOrderConfirm = (customerSig, advisorSig) => {
+  const handleWorkOrderConfirm = async (customerSig, advisorSig) => {
     // Generate new registration
     const newTime = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     const branchCode = getBranchCode(currentUser.branch);
@@ -544,7 +581,7 @@ export function Registration({ currentUser }) {
     };
 
     // Add to list (at the beginning)
-    addRegistration(newRegistration);
+    await addRegistration(newRegistration);
 
     // Reset form
     setFormData({ ...defaultFormState });

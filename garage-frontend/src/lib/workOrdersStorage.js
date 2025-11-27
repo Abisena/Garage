@@ -1,10 +1,16 @@
 import { frappeClient } from './frappeClient';
-import { readCache, writeCache, migrateLocalCache } from './secureCache';
+import { ensurePointer, loadCache, saveCache } from './serverCache';
 
-const WORK_ORDERS_KEY = 'workOrders';
-const WORK_ORDER_TTL_MS = 1000 * 60 * 60 * 6; // 6 hours
+const WORK_ORDERS_POINTER = 'workOrdersCacheKey';
 
-const hasStorage = () => typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
+let memoryOrders = [];
+let hydrationPromise = null;
+
+const getCacheKey = () =>
+  ensurePointer(
+    WORK_ORDERS_POINTER,
+    () => `workorders:${(typeof window !== 'undefined' && window.frappe?.session?.user) || 'current'}`,
+  );
 
 const mapBackendOrder = (order) => ({
   id: order.name,
@@ -54,42 +60,40 @@ export const sanitizeWorkOrders = (orders) => {
   return orders.filter(order => !isDemoOrder(order));
 };
 
-const readWorkOrders = () => {
-  if (!hasStorage()) return [];
-
-  // migrate legacy localStorage data once
-  const migrated = migrateLocalCache(WORK_ORDERS_KEY, { sanitize: sanitizeWorkOrders });
-  if (migrated) {
-    writeCache(WORK_ORDERS_KEY, migrated, { ttl: WORK_ORDER_TTL_MS, sanitize: sanitizeWorkOrders });
-    notifyWorkOrdersChange();
-    return migrated;
+const ensureHydrated = () => {
+  if (!hydrationPromise) {
+    hydrationPromise = (async () => {
+      try {
+        const cached = await loadCache(getCacheKey());
+        memoryOrders = Array.isArray(cached) ? sanitizeWorkOrders(cached) : [];
+        notifyWorkOrdersChange();
+      } catch (error) {
+        console.warn('Unable to hydrate work orders from server cache', error);
+      }
+      return memoryOrders;
+    })();
   }
 
-  return readCache(WORK_ORDERS_KEY, []);
+  return hydrationPromise;
 };
 
 export const getStoredWorkOrders = () => {
-  const orders = readWorkOrders();
-  if (orders.length === 0) return [];
-  const sanitized = sanitizeWorkOrders(orders);
-  if (hasStorage()) {
-    writeCache(WORK_ORDERS_KEY, sanitized, { ttl: WORK_ORDER_TTL_MS, sanitize: sanitizeWorkOrders });
-  }
+  ensureHydrated();
+  const sanitized = sanitizeWorkOrders(memoryOrders);
   return sanitized;
 };
 
 export const purgeDemoWorkOrders = () => {
-  if (!hasStorage()) return [];
+  ensureHydrated();
   return getStoredWorkOrders();
 };
 
 export const persistWorkOrders = async (orders, { skipSync = false } = {}) => {
   const sanitized = sanitizeWorkOrders(orders);
 
-  if (hasStorage()) {
-    writeCache(WORK_ORDERS_KEY, sanitized, { ttl: WORK_ORDER_TTL_MS, sanitize: sanitizeWorkOrders });
-    notifyWorkOrdersChange();
-  }
+  memoryOrders = sanitized;
+  await saveCache(getCacheKey(), sanitized);
+  notifyWorkOrdersChange();
 
   if (!skipSync && sanitized.length > 0) {
     try {
@@ -114,10 +118,9 @@ const fetchFromBackend = async (options = {}) => {
     const backendOrders = Array.isArray(response?.orders) ? response.orders : [];
     const mapped = sanitizeWorkOrders(backendOrders.map(mapBackendOrder));
 
-    if (hasStorage()) {
-      writeCache(WORK_ORDERS_KEY, mapped, { ttl: WORK_ORDER_TTL_MS, sanitize: sanitizeWorkOrders });
-      notifyWorkOrdersChange();
-    }
+    memoryOrders = mapped;
+    await saveCache(getCacheKey(), mapped);
+    notifyWorkOrdersChange();
 
     return mapped;
   } catch (error) {
