@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Package, Search, CheckCircle, Clock, AlertCircle, Truck, Eye, FileText, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { PartsDeliveryModal } from './PartsDeliveryModal';
-import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
+import { getStoredWorkOrders, persistWorkOrders, refreshWorkOrdersFromBackend } from '../lib/workOrdersStorage';
 import { frappeClient } from '../lib/frappeClient';
 import { loadMasterParts, saveMasterParts } from '../lib/masterPartsCache';
 import { loadSparePartRequests, saveSparePartRequests, sanitizeSparePartRequests } from '../lib/sparePartRequestsCache';
@@ -16,7 +16,7 @@ export function SparePartsRequest({ currentUser }) {
 
   useEffect(() => {
     loadRequests();
-  }, []);
+  }, [currentUser?.branch]);
 
   // Reload data when storage changes
   useEffect(() => {
@@ -33,9 +33,15 @@ export function SparePartsRequest({ currentUser }) {
     };
   }, []);
 
-  const loadRequests = () => {
+  const loadRequests = async () => {
     const cached = loadSparePartRequests([]);
     setRequests(cached);
+
+    try {
+      await refreshWorkOrdersFromBackend({ branch: currentUser?.branch });
+    } catch (error) {
+      console.error('Failed to refresh work orders before loading requests:', error);
+    }
   };
 
   const saveRequests = (updatedRequests) => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Wrench, CheckCircle, Clock, AlertCircle, X, Eye, FileText, ClipboardCheck, Play, Check, PackageCheck, ListChecks, RotateCcw } from 'lucide-react';
 import { Button } from './ui/button';
-import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
+import { getStoredWorkOrders, persistWorkOrders, refreshWorkOrdersFromBackend } from '../lib/workOrdersStorage';
 import { loadFromStorage, saveToStorage } from '../lib/storage';
 
 export function Workshop({ currentUser }) {
@@ -53,7 +53,7 @@ export function Workshop({ currentUser }) {
 
   useEffect(() => {
     loadWorkOrders();
-  }, []);
+  }, [currentUser?.branch]);
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -75,7 +75,7 @@ export function Workshop({ currentUser }) {
     };
   }, []);
 
-  const loadWorkOrders = () => {
+  const loadWorkOrders = async () => {
     const orders = getStoredWorkOrders();
     const activeOrders = orders.filter((order) =>
       (order.mechanicName && order.mechanicName !== '') ||
@@ -85,6 +85,20 @@ export function Workshop({ currentUser }) {
       order.repairStatus === 'final-inspection'
     );
     setWorkOrders(activeOrders);
+
+    try {
+      const backendOrders = await refreshWorkOrdersFromBackend({ branch: currentUser?.branch });
+      const backendActive = backendOrders.filter((order) =>
+        (order.mechanicName && order.mechanicName !== '') ||
+        order.repairStatus === 'in-progress' ||
+        order.repairStatus === 'quality-check' ||
+        order.repairStatus === 'qc-finished' ||
+        order.repairStatus === 'final-inspection'
+      );
+      setWorkOrders(backendActive);
+    } catch (error) {
+      console.error('Failed to refresh workshop orders from backend:', error);
+    }
   };
 
   const saveWorkOrders = (updatedOrders) => {

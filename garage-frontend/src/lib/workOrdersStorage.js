@@ -6,6 +6,36 @@ const WORK_ORDER_TTL_MS = 1000 * 60 * 60 * 6; // 6 hours
 
 const hasStorage = () => typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
 
+const mapBackendOrder = (order) => ({
+  id: order.name,
+  orderId: order.name,
+  customerName: order.customer_name || order.customer || 'Customer',
+  phone: order.customer_phone || '',
+  email: order.customer_email || '',
+  plateNumber: order.vehicle_plate || '',
+  chassisNumber: order.vehicle_vin || '',
+  engineNumber: order.vehicle_engine_number || '',
+  vehicleBrand: order.vehicle_brand || '',
+  vehicleModel: order.vehicle_model || order.vehicle_type_model || '',
+  vehicleType: order.vehicle_type_model || order.vehicle_type || '',
+  vehicleYear: order.vehicle_year || '',
+  serviceType: order.service_order_type || order.order_category || '',
+  serviceBundleId: order.service_bundle,
+  serviceBundleName: order.service_bundle_name || order.service_notes || '',
+  customerComplaint: order.inspection_summary || order.service_notes || '',
+  date: order.creation,
+  branch: order.branch || '',
+  estimatedCost: order.total_estimated_amount,
+  approvedAmount: order.total_approved_amount,
+  status: order.status || 'Inspection',
+  repairStatus: order.status || 'Inspection',
+  inspectionStatus: order.status || 'Inspection',
+  progressHistory: order.progress_logs || [],
+  spareParts: [],
+});
+
+const inflightFetches = new Map();
+
 const notifyWorkOrdersChange = () => {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new Event('storage'));
@@ -70,4 +100,40 @@ export const persistWorkOrders = async (orders, { skipSync = false } = {}) => {
   }
 
   return sanitized;
+};
+
+const fetchFromBackend = async (options = {}) => {
+  const filters = { ...options };
+
+  if (options.branch) {
+    filters.branch = options.branch;
+  }
+
+  try {
+    const response = await frappeClient.listServiceOrders(filters);
+    const backendOrders = Array.isArray(response?.orders) ? response.orders : [];
+    const mapped = sanitizeWorkOrders(backendOrders.map(mapBackendOrder));
+
+    if (hasStorage()) {
+      writeCache(WORK_ORDERS_KEY, mapped, { ttl: WORK_ORDER_TTL_MS, sanitize: sanitizeWorkOrders });
+      notifyWorkOrdersChange();
+    }
+
+    return mapped;
+  } catch (error) {
+    console.error('Failed to fetch work orders from backend:', error);
+    return getStoredWorkOrders();
+  }
+};
+
+export const refreshWorkOrdersFromBackend = async (options = {}) => {
+  const key = JSON.stringify(options || {});
+  if (inflightFetches.has(key)) return inflightFetches.get(key);
+
+  const fetchPromise = fetchFromBackend(options).finally(() => {
+    inflightFetches.delete(key);
+  });
+
+  inflightFetches.set(key, fetchPromise);
+  return fetchPromise;
 };

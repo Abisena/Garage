@@ -18,7 +18,7 @@ import { Button } from './ui/button';
 import { frappeClient } from '../lib/frappeClient';
 import { toast } from 'sonner';
 import { InvoicePaymentModal } from './InvoicePaymentModal';
-import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
+import { getStoredWorkOrders, persistWorkOrders, refreshWorkOrdersFromBackend } from '../lib/workOrdersStorage';
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('id-ID', {
@@ -95,6 +95,24 @@ export function PaymentList({ currentUser }) {
   useEffect(() => {
     loadPortalPayments();
   }, [currentUser.branch]);
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      const existingOrders = getStoredWorkOrders();
+      setWorkOrders(existingOrders);
+      setFilteredWorkOrders(existingOrders);
+
+      try {
+        const backendOrders = await refreshWorkOrdersFromBackend({ branch: currentUser?.branch });
+        setWorkOrders(backendOrders);
+        setFilteredWorkOrders(backendOrders);
+      } catch (error) {
+        console.error('Failed to refresh work orders for payments:', error);
+      }
+    };
+
+    loadOrders();
+  }, [currentUser?.branch]);
 
   const loadPortalPayments = async () => {
     setIsLoading(true);
