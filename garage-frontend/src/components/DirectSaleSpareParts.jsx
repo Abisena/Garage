@@ -39,6 +39,7 @@ import {
 } from './ui/select';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
+import { loadFromStorage, saveToStorage } from '../lib/storage';
 
 export function DirectSalesSparePart({ currentUser, onNavigateToPayment }) {
   const [sales, setSales] = useState([]);
@@ -120,18 +121,18 @@ export function DirectSalesSparePart({ currentUser, onNavigateToPayment }) {
     }
   ]);
 
-  // Load sales from localStorage
+  // Load sales from session-scoped cache (with TTL via storage helper)
   useEffect(() => {
-    const savedSales = localStorage.getItem('directSales');
-    if (savedSales) {
-      setSales(JSON.parse(savedSales));
+    const savedSales = loadFromStorage('directSales', [], { ttl: 1000 * 60 * 60 * 6 });
+    if (savedSales && Array.isArray(savedSales)) {
+      setSales(savedSales);
     }
   }, []);
 
-  // Save sales to localStorage
+  // Save sales to session-scoped cache so transaction data is not persisted long-term
   const saveSales = (updatedSales) => {
     setSales(updatedSales);
-    localStorage.setItem('directSales', JSON.stringify(updatedSales));
+    saveToStorage('directSales', updatedSales, { ttl: 1000 * 60 * 60 * 6 });
   };
 
   const generateSalesNumber = () => {
@@ -1242,8 +1243,8 @@ export function DirectSalesSparePart({ currentUser, onNavigateToPayment }) {
                     createdBy: selectedSale.createdBy
                   };
                   
-                  // Store in localStorage for Payment component
-                  localStorage.setItem('pendingDirectSalesPayment', JSON.stringify(paymentData));
+                  // Store in sessionStorage for Payment component (short-lived)
+                  saveToStorage('pendingDirectSalesPayment', paymentData, { ttl: 1000 * 60 * 30 });
                   
                   toast.success(`Dokumen ${generateDocumentNumber(selectedSale)} dicetak dan dikirim ke Payment Process!`);
                   

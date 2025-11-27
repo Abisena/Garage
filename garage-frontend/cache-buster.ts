@@ -66,16 +66,16 @@ export function checkForHtml2Canvas() {
 export async function clearAllCaches() {
   console.log('🧹 Clearing all caches...');
   
-  // Clear localStorage (except user session)
-  const savedUser = localStorage.getItem('currentUser');
+  // Clear localStorage (only harmless app version info retained)
   localStorage.clear();
-  if (savedUser) {
-    localStorage.setItem('currentUser', savedUser);
-  }
   localStorage.setItem('app-version', APP_VERSION);
-  
-  // Clear sessionStorage
+
+  // Clear sessionStorage but preserve current session user snapshot
+  const savedUser = sessionStorage.getItem('currentUser');
   sessionStorage.clear();
+  if (savedUser) {
+    sessionStorage.setItem('currentUser', savedUser);
+  }
   
   // Unregister service workers
   if ('serviceWorker' in navigator) {
