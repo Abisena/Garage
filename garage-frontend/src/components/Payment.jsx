@@ -1880,6 +1880,9 @@ import { ProcessPaymentModal } from './ProcessPaymentModal';
 import { ReceiptModal } from './ReceiptModal';
 import { DirectSalesNotaModal } from './DirectSalesNotaModal';
 import { DirectSalesInvoiceModal } from './DirectSalesInvoiceModal';
+import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
+import { loadPurchaseOrdersCache, savePurchaseOrdersCache } from '../lib/purchaseOrdersCache';
+import { readCache, writeCache, migrateLocalCache, getDefaultTtl } from '../lib/secureCache';
 
 export function Payment({ currentUser }) {
   const [activeTab, setActiveTab] = useState('service');
@@ -1901,6 +1904,49 @@ export function Payment({ currentUser }) {
   const [showDirectSalesPaymentModal, setShowDirectSalesPaymentModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelNotes, setCancelNotes] = useState('');
+
+  const DIRECT_SALES_KEY = 'directSales';
+  const DIRECT_SALES_TTL = getDefaultTtl();
+
+  const sanitizeDirectSales = (sales = []) => {
+    if (!Array.isArray(sales)) return [];
+    return sales.map((sale) => ({
+      ...sale,
+      id: sale.id || sale.invoiceNumber || `direct-${Date.now()}`,
+      branch: sale.branch || '',
+      paymentStatus: sale.paymentStatus || 'pending',
+      items: Array.isArray(sale.items)
+        ? sale.items.map((item) => ({
+            ...item,
+            partNumber: item.partNumber || '',
+            partName: item.partName || '',
+            quantity: Number(item.quantity) || 0,
+            unitPrice: Number(item.unitPrice) || 0,
+            totalPrice: Number(item.totalPrice || item.unitPrice * item.quantity) || 0
+          }))
+        : []
+    }));
+  };
+
+  const getAllDirectSales = () => {
+    const migrated = migrateLocalCache(DIRECT_SALES_KEY, { sanitize: sanitizeDirectSales });
+    if (migrated) {
+      writeCache(DIRECT_SALES_KEY, migrated, { ttl: DIRECT_SALES_TTL, sanitize: sanitizeDirectSales });
+      return migrated;
+    }
+    return readCache(DIRECT_SALES_KEY, []);
+  };
+
+  const persistDirectSales = (sales) => {
+    const sanitized = sanitizeDirectSales(sales);
+    writeCache(DIRECT_SALES_KEY, sanitized, { ttl: DIRECT_SALES_TTL, sanitize: sanitizeDirectSales });
+    return sanitized;
+  };
+
+  const getAllWorkOrders = () => getStoredWorkOrders();
+  const persistAllWorkOrders = (orders) => persistWorkOrders(orders, { skipSync: true });
+
+  const getAllPurchaseOrders = () => loadPurchaseOrdersCache([]);
   
   // Payment Form State
   const [paymentMethod, setPaymentMethod] = useState('cash');
@@ -1982,66 +2028,60 @@ export function Payment({ currentUser }) {
   }, [showPreviewInvoiceModal]);
 
   const loadDirectSales = () => {
-    const savedDirectSales = localStorage.getItem('directSales');
-    if (savedDirectSales) {
-      const sales = JSON.parse(savedDirectSales);
-      let paymentSales = sales.filter(sale => 
-        sale.paymentStatus === 'pending' || 
-        sale.paymentStatus === 'paid' || 
-        sale.paymentStatus === 'nota-printed'
-      );
-      
-      if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
-        paymentSales = paymentSales.filter(sale => sale.branch === currentUser.branch);
-      }
-      
-      setDirectSales(paymentSales);
+    const sales = getAllDirectSales();
+    if (!sales) return;
+    let paymentSales = sales.filter(sale =>
+      sale.paymentStatus === 'pending' ||
+      sale.paymentStatus === 'paid' ||
+      sale.paymentStatus === 'nota-printed'
+    );
+
+    if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
+      paymentSales = paymentSales.filter(sale => sale.branch === currentUser.branch);
     }
+
+    setDirectSales(paymentSales);
   };
 
   const loadWorkOrders = () => {
-    const savedWorkOrders = localStorage.getItem('workOrders');
-    if (savedWorkOrders) {
-      const orders = JSON.parse(savedWorkOrders);
-      let paymentOrders = orders.filter(order => 
-        order.status === 'ready-for-payment' || order.paymentStatus === 'pending' || order.paymentStatus === 'paid' || order.paymentStatus === 'cancelled' || order.paymentStatus === 'nota-printed'
-      );
-      
-      if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
-        paymentOrders = paymentOrders.filter(order => order.branch === currentUser.branch);
-      }
-      
-      setWorkOrders(paymentOrders);
+    const orders = getAllWorkOrders();
+    if (!orders) return;
+    let paymentOrders = orders.filter(order =>
+      order.status === 'ready-for-payment' || order.paymentStatus === 'pending' || order.paymentStatus === 'paid' || order.paymentStatus === 'cancelled' || order.paymentStatus === 'nota-printed'
+    );
+
+    if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
+      paymentOrders = paymentOrders.filter(order => order.branch === currentUser.branch);
     }
+
+    setWorkOrders(paymentOrders);
   };
 
   const loadPurchaseOrders = () => {
-    const savedPOs = localStorage.getItem('purchaseOrders');
-    if (savedPOs) {
-      const pos = JSON.parse(savedPOs);
-      let paymentPOs = pos.filter(po => 
-        po.status === 'PRINTED' || 
-        po.status === 'RECEIVED' || 
-        po.paymentStatus === 'pending' || 
-        po.paymentStatus === 'paid' || 
-        po.paymentStatus === 'cancelled'
-      );
-      
-      if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
-        paymentPOs = paymentPOs.filter(po => po.branch === currentUser.branch);
-      }
-      
-      setPurchaseOrders(paymentPOs);
+    const pos = getAllPurchaseOrders();
+    if (!pos) return;
+    let paymentPOs = pos.filter(po =>
+      po.status === 'PRINTED' ||
+      po.status === 'RECEIVED' ||
+      po.paymentStatus === 'pending' ||
+      po.paymentStatus === 'paid' ||
+      po.paymentStatus === 'cancelled'
+    );
+
+    if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
+      paymentPOs = paymentPOs.filter(po => po.branch === currentUser.branch);
     }
+
+    setPurchaseOrders(paymentPOs);
   };
 
   const saveWorkOrders = (updatedOrders) => {
-    const allOrders = JSON.parse(localStorage.getItem('workOrders') || '[]');
+    const allOrders = getAllWorkOrders();
     const mergedOrders = allOrders.map(order => {
       const updated = updatedOrders.find(o => o.id === order.id);
       return updated || order;
     });
-    localStorage.setItem('workOrders', JSON.stringify(mergedOrders));
+    persistAllWorkOrders(mergedOrders);
     setWorkOrders(updatedOrders);
     window.dispatchEvent(new CustomEvent('workOrdersUpdated'));
   };
@@ -2071,10 +2111,10 @@ export function Payment({ currentUser }) {
 
   const handleNotaPrinted = (orderId) => {
     console.log('🖨️ handleNotaPrinted called for orderId:', orderId);
-    
-    // Update all orders in localStorage
-    const allOrders = JSON.parse(localStorage.getItem('workOrders') || '[]');
-    console.log('📋 Total orders in localStorage:', allOrders.length);
+
+    // Update all orders in cached storage
+    const allOrders = getAllWorkOrders();
+    console.log('📋 Total orders in cache:', allOrders.length);
     
     const updatedAllOrders = allOrders.map(order => {
       if (order.orderId === orderId) {
@@ -2089,8 +2129,8 @@ export function Payment({ currentUser }) {
       }
       return order;
     });
-    localStorage.setItem('workOrders', JSON.stringify(updatedAllOrders));
-    console.log('💾 Updated localStorage');
+    persistAllWorkOrders(updatedAllOrders);
+    console.log('💾 Updated cached work orders');
     
     // Update local state
     const updatedOrders = workOrders.map(order => {
@@ -2127,10 +2167,10 @@ export function Payment({ currentUser }) {
 
   const handleInvoicePrinted = (orderId) => {
     console.log('🖨️ handleInvoicePrinted called for orderId:', orderId);
-    
+
     // Generate invoice number if not exists
-    const allOrders = JSON.parse(localStorage.getItem('workOrders') || '[]');
-    console.log('📋 Total orders in localStorage:', allOrders.length);
+    const allOrders = getAllWorkOrders();
+    console.log('📋 Total orders in cache:', allOrders.length);
     
     // Find the order to get branch info
     const orderToUpdate = allOrders.find(order => order.orderId === orderId);
@@ -2146,7 +2186,7 @@ export function Payment({ currentUser }) {
                          orderToUpdate.branch === 'Bandung' ? 'BDG' : 'SBY';
       
       // Count ALL existing invoices across ALL transactions (global counter)
-      const allDirectSales = JSON.parse(localStorage.getItem('directSales') || '[]');
+      const allDirectSales = getAllDirectSales();
       const serviceInvoices = allOrders.filter(o => o.invoiceNumber).length;
       const directSalesInvoices = allDirectSales.filter(s => s.invoiceNumber).length;
       const totalInvoices = serviceInvoices + directSalesInvoices;
@@ -2168,8 +2208,8 @@ export function Payment({ currentUser }) {
       }
       return order;
     });
-    localStorage.setItem('workOrders', JSON.stringify(updatedAllOrders));
-    console.log('💾 Updated localStorage with invoice number');
+    persistAllWorkOrders(updatedAllOrders);
+    console.log('💾 Updated cached work orders with invoice number');
     
     // Update local state
     const updatedOrders = workOrders.map(order => {
@@ -2321,11 +2361,10 @@ export function Payment({ currentUser }) {
     // Update in context
     const updatedSales = directSales.map(s => s.id === saleId ? updatedSale : s);
     
-    // Save to localStorage
-    localStorage.setItem('directSales', JSON.stringify(updatedSales));
-    
+    const sanitized = persistDirectSales(updatedSales);
+
     // Update state - THIS IS CRITICAL for list to reflect changes immediately
-    setDirectSales(updatedSales);
+    setDirectSales(sanitized);
     setSelectedDirectSale(updatedSale);
     
     // Show success message
@@ -2340,8 +2379,8 @@ export function Payment({ currentUser }) {
     const branchCode = sale.branch.substring(0, 3).toUpperCase();
     
     // Count ALL existing invoices across ALL transactions (global counter)
-    const allWorkOrders = JSON.parse(localStorage.getItem('workOrders') || '[]');
-    const allDirectSales = JSON.parse(localStorage.getItem('directSales') || '[]');
+    const allWorkOrders = getAllWorkOrders();
+    const allDirectSales = getAllDirectSales();
     const serviceInvoices = allWorkOrders.filter(o => o.invoiceNumber).length;
     const directSalesInvoices = allDirectSales.filter(s => s.invoiceNumber).length;
     const totalInvoices = serviceInvoices + directSalesInvoices;
@@ -2360,11 +2399,10 @@ export function Payment({ currentUser }) {
     // Update in context
     const updatedSales = directSales.map(s => s.id === saleId ? updatedSale : s);
     
-    // Save to localStorage
-    localStorage.setItem('directSales', JSON.stringify(updatedSales));
-    
+    const sanitized = persistDirectSales(updatedSales);
+
     // Update state
-    setDirectSales(updatedSales);
+    setDirectSales(sanitized);
     setSelectedDirectSale(updatedSale);
     
     // Show success message

@@ -3,8 +3,20 @@ import { ShoppingCart, Plus, Search, Package, Trash2, FileText, CheckCircle, Clo
 import { Button } from './ui/button';
 import { ReceivePartDocument } from './ReceivePartDocument';
 import { frappeClient } from '../lib/frappeClient';
+import {
+  loadMasterParts,
+  saveMasterParts,
+  loadCustomMasterParts,
+  saveCustomMasterParts,
+  sanitizeMasterParts
+} from '../lib/masterPartsCache';
+import { writeCache, migrateLocalCache, getDefaultTtl } from '../lib/secureCache';
+import { loadPurchaseOrdersCache, savePurchaseOrdersCache, sanitizePurchaseOrders } from '../lib/purchaseOrdersCache';
 
 export function BuyingSparePartIntegrated({ currentUser }) {
+  const PURCHASE_ORDERS_KEY = 'purchaseOrders';
+  const PURCHASE_ORDER_TTL = getDefaultTtl();
+
   // Tab state
   const [activeTab, setActiveTab] = useState('po');
   
@@ -80,9 +92,24 @@ export function BuyingSparePartIntegrated({ currentUser }) {
 
   // Initialize default master parts if empty
   useEffect(() => {
-    const savedParts = localStorage.getItem('masterSpareParts');
-    if (!savedParts || JSON.parse(savedParts).length === 0) {
+    const cachedParts = loadMasterParts([]);
+    if (!cachedParts || cachedParts.length === 0) {
       initializeDefaultParts();
+      return;
+    }
+
+    setMasterSpareParts(cachedParts);
+
+    const migratedPOs = migrateLocalCache(PURCHASE_ORDERS_KEY, { sanitize: sanitizePurchaseOrders });
+    if (migratedPOs) {
+      writeCache(PURCHASE_ORDERS_KEY, migratedPOs, { ttl: PURCHASE_ORDER_TTL, sanitize: sanitizePurchaseOrders });
+      setPurchaseOrders(migratedPOs);
+      return;
+    }
+
+    const cachedPOs = loadPurchaseOrdersCache([]);
+    if (cachedPOs?.length) {
+      setPurchaseOrders(cachedPOs);
     }
   }, []);
 
@@ -101,17 +128,16 @@ export function BuyingSparePartIntegrated({ currentUser }) {
       { id: '13', partName: 'Air Filter', partNumber: 'AF-HON-JAZ-001', compatibleModels: ['Jazz'], category: 'Engine', unitPrice: 145000, stock: 32, minStock: 15 },
     ].map((part) => ({ ...part, isCustom: true }));
     
-    setMasterSpareParts(defaultParts);
-    localStorage.setItem('masterSpareParts', JSON.stringify(defaultParts));
+    const sanitized = saveMasterParts(defaultParts);
+    setMasterSpareParts(sanitized);
   };
 
   const loadCustomParts = () => {
-    const savedCustomParts = localStorage.getItem('customMasterSpareParts');
-    return savedCustomParts ? JSON.parse(savedCustomParts) : [];
+    return loadCustomMasterParts([]);
   };
 
   const saveCustomParts = (parts) => {
-    localStorage.setItem('customMasterSpareParts', JSON.stringify(parts));
+    saveCustomMasterParts(parts);
   };
 
   const loadMasterSpareParts = async () => {
@@ -147,9 +173,9 @@ export function BuyingSparePartIntegrated({ currentUser }) {
       console.error('Failed to load master spare parts from ERPNext Item', error);
       setPartsError('Gagal memuat master spare parts dari master Item ERPNext. Menampilkan data lokal sebagai cadangan.');
 
-      const savedParts = localStorage.getItem('masterSpareParts');
+      const savedParts = loadMasterParts([]);
       if (savedParts) {
-        setMasterSpareParts(JSON.parse(savedParts));
+        setMasterSpareParts(savedParts);
       }
     } finally {
       setPartsLoading(false);
@@ -157,20 +183,20 @@ export function BuyingSparePartIntegrated({ currentUser }) {
   };
 
   const saveMasterSpareParts = (parts) => {
-    setMasterSpareParts(parts);
-    localStorage.setItem('masterSpareParts', JSON.stringify(parts));
+    const sanitized = saveMasterParts(parts);
+    setMasterSpareParts(sanitized);
   };
 
   const loadPurchaseOrders = () => {
-    const savedPOs = localStorage.getItem('purchaseOrders');
+    const savedPOs = loadPurchaseOrdersCache([]);
     if (savedPOs) {
-      setPurchaseOrders(JSON.parse(savedPOs));
+      setPurchaseOrders(savedPOs);
     }
   };
 
   const savePurchaseOrders = (pos) => {
-    setPurchaseOrders(pos);
-    localStorage.setItem('purchaseOrders', JSON.stringify(pos));
+    const sanitized = savePurchaseOrdersCache(pos);
+    setPurchaseOrders(sanitized);
   };
 
   // Master Parts Functions

@@ -1,6 +1,10 @@
 import { frappeClient } from './frappeClient';
+import { readCache, writeCache, migrateLocalCache } from './secureCache';
 
-const hasStorage = () => typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+const WORK_ORDERS_KEY = 'workOrders';
+const WORK_ORDER_TTL_MS = 1000 * 60 * 60 * 6; // 6 hours
+
+const hasStorage = () => typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
 
 const notifyWorkOrdersChange = () => {
   if (typeof window === 'undefined') return;
@@ -22,40 +26,38 @@ export const sanitizeWorkOrders = (orders) => {
 
 const readWorkOrders = () => {
   if (!hasStorage()) return [];
-  const saved = window.localStorage.getItem('workOrders');
-  if (!saved) return [];
-  try {
-    return JSON.parse(saved);
-  } catch (error) {
-    console.error('Failed to parse work orders from storage', error);
-    window.localStorage.removeItem('workOrders');
+
+  // migrate legacy localStorage data once
+  const migrated = migrateLocalCache(WORK_ORDERS_KEY, { sanitize: sanitizeWorkOrders });
+  if (migrated) {
+    writeCache(WORK_ORDERS_KEY, migrated, { ttl: WORK_ORDER_TTL_MS, sanitize: sanitizeWorkOrders });
     notifyWorkOrdersChange();
-    return [];
+    return migrated;
   }
+
+  return readCache(WORK_ORDERS_KEY, []);
 };
 
 export const getStoredWorkOrders = () => {
   const orders = readWorkOrders();
   if (orders.length === 0) return [];
   const sanitized = sanitizeWorkOrders(orders);
-  if (sanitized.length !== orders.length && hasStorage()) {
-    window.localStorage.setItem('workOrders', JSON.stringify(sanitized));
-    notifyWorkOrdersChange();
+  if (hasStorage()) {
+    writeCache(WORK_ORDERS_KEY, sanitized, { ttl: WORK_ORDER_TTL_MS, sanitize: sanitizeWorkOrders });
   }
   return sanitized;
 };
 
 export const purgeDemoWorkOrders = () => {
   if (!hasStorage()) return [];
-  const sanitized = getStoredWorkOrders();
-  return sanitized;
+  return getStoredWorkOrders();
 };
 
 export const persistWorkOrders = async (orders, { skipSync = false } = {}) => {
   const sanitized = sanitizeWorkOrders(orders);
 
   if (hasStorage()) {
-    window.localStorage.setItem('workOrders', JSON.stringify(sanitized));
+    writeCache(WORK_ORDERS_KEY, sanitized, { ttl: WORK_ORDER_TTL_MS, sanitize: sanitizeWorkOrders });
     notifyWorkOrdersChange();
   }
 
