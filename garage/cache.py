@@ -50,10 +50,16 @@ def save(key: str, value: Any) -> dict[str, Any]:
     )
 
     if existing:
-        doc = frappe.get_doc("Garage Cache", existing[0])
-        doc.cache_value = serialized_value
-        doc.flags.ignore_permissions = False
-        doc.save(ignore_permissions=False)
+        name = existing[0]
+        frappe.db.set_value(
+            "Garage Cache",
+            name,
+            "cache_value",
+            serialized_value,
+            update_modified=True,
+            modified_by=user,
+        )
+        doc = frappe.get_doc("Garage Cache", name)
     else:
         doc = frappe.get_doc(
             {
