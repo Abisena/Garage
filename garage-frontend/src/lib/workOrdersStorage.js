@@ -12,33 +12,66 @@ const getCacheKey = () =>
     () => `workorders:${(typeof window !== 'undefined' && window.frappe?.session?.user) || 'current'}`,
   );
 
-const mapBackendOrder = (order) => ({
-  id: order.name,
-  orderId: order.name,
-  customerName: order.customer_name || order.customer || 'Customer',
-  phone: order.customer_phone || '',
-  email: order.customer_email || '',
-  plateNumber: order.vehicle_plate || '',
-  chassisNumber: order.vehicle_vin || '',
-  engineNumber: order.vehicle_engine_number || '',
-  vehicleBrand: order.vehicle_brand || '',
-  vehicleModel: order.vehicle_model || order.vehicle_type_model || '',
-  vehicleType: order.vehicle_type_model || order.vehicle_type || '',
-  vehicleYear: order.vehicle_year || '',
-  serviceType: order.service_order_type || order.order_category || '',
-  serviceBundleId: order.service_bundle,
-  serviceBundleName: order.service_bundle_name || order.service_notes || '',
-  customerComplaint: order.inspection_summary || order.service_notes || '',
-  date: order.creation,
-  branch: order.branch || '',
-  estimatedCost: order.total_estimated_amount,
-  approvedAmount: order.total_approved_amount,
-  status: order.status || 'Inspection',
-  repairStatus: order.status || 'Inspection',
-  inspectionStatus: order.status || 'Inspection',
-  progressHistory: order.progress_logs || [],
-  spareParts: [],
-});
+const normalizeStatus = (status) => {
+  const normalized = (status || '')
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-');
+
+  if (!normalized) return 'pending';
+
+  const aliases = {
+    'work-in-progress': 'in-progress',
+    'work-progress': 'in-progress',
+    'wip': 'in-progress',
+    'qc-finished': 'qc-finished',
+    'qc-finish': 'qc-finished',
+    'quality-check': 'quality-check',
+    'quality-control': 'quality-check',
+    'waiting-parts': 'waiting-parts',
+    'waiting-for-parts': 'waiting-parts',
+    'parts-prepared': 'parts-prepared',
+    'parts-prep': 'parts-prepared',
+    'complete': 'completed',
+  };
+
+  return aliases[normalized] || normalized;
+};
+
+const mapBackendOrder = (order) => {
+  const rawStatus =
+    order.repair_status || order.work_order_status || order.status || 'pending';
+  const normalizedStatus = normalizeStatus(rawStatus);
+
+  return {
+    id: order.name,
+    orderId: order.name,
+    customerName: order.customer_name || order.customer || 'Customer',
+    phone: order.customer_phone || '',
+    email: order.customer_email || '',
+    plateNumber: order.vehicle_plate || order.license_plate || '',
+    chassisNumber: order.vehicle_vin || '',
+    engineNumber: order.vehicle_engine_number || '',
+    vehicleBrand: order.vehicle_brand || order.brand || '',
+    vehicleModel: order.vehicle_model || order.vehicle_type_model || order.model || '',
+    vehicleType: order.vehicle_type_model || order.vehicle_type || '',
+    vehicleYear: order.vehicle_year || '',
+    serviceType: order.service_order_type || order.order_category || '',
+    serviceBundleId: order.service_bundle,
+    serviceBundleName: order.service_bundle_name || order.service_notes || '',
+    customerComplaint: order.inspection_summary || order.service_notes || '',
+    date: order.creation,
+    branch: order.branch || '',
+    estimatedCost: order.total_estimated_amount,
+    approvedAmount: order.total_approved_amount,
+    status: normalizedStatus,
+    repairStatus: normalizedStatus,
+    inspectionStatus: normalizedStatus,
+    progressHistory: order.progress_logs || [],
+    spareParts: [],
+  };
+};
 
 const inflightFetches = new Map();
 
