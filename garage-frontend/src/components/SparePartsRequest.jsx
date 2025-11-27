@@ -4,6 +4,8 @@ import { Button } from './ui/button';
 import { PartsDeliveryModal } from './PartsDeliveryModal';
 import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
 import { frappeClient } from '../lib/frappeClient';
+import { loadMasterParts, saveMasterParts } from '../lib/masterPartsCache';
+import { loadSparePartRequests, saveSparePartRequests, sanitizeSparePartRequests } from '../lib/sparePartRequestsCache';
 
 export function SparePartsRequest({ currentUser }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,15 +34,14 @@ export function SparePartsRequest({ currentUser }) {
   }, []);
 
   const loadRequests = () => {
-    const savedRequests = localStorage.getItem('sparePartsRequests');
-    if (savedRequests) {
-      setRequests(JSON.parse(savedRequests));
-    }
+    const cached = loadSparePartRequests([]);
+    setRequests(cached);
   };
 
   const saveRequests = (updatedRequests) => {
-    setRequests(updatedRequests);
-    localStorage.setItem('sparePartsRequests', JSON.stringify(updatedRequests));
+    const sanitized = sanitizeSparePartRequests(updatedRequests);
+    setRequests(sanitized);
+    saveSparePartRequests(sanitized);
   };
 
   const filteredRequests = requests.filter(req => {
@@ -69,8 +70,7 @@ export function SparePartsRequest({ currentUser }) {
     if (!partToPrepare || partToPrepare.stockAvailable <= 0) return;
 
     // Get current stock from master spare parts (Garage Spare Part List)
-    const savedMasterParts = localStorage.getItem('masterSpareParts');
-    const masterParts = savedMasterParts ? JSON.parse(savedMasterParts) : [];
+    const masterParts = loadMasterParts([]);
     const masterPart = masterParts.find((p) => p.partNumber === partCode);
     const currentStock = typeof masterPart?.stock === 'number'
       ? masterPart.stock
@@ -133,7 +133,7 @@ export function SparePartsRequest({ currentUser }) {
           : part
       ));
 
-      localStorage.setItem('masterSpareParts', JSON.stringify(updatedMasterParts));
+      saveMasterParts(updatedMasterParts);
       console.log(`✅ Stock reduced from Garage Spare Part List: ${partCode} - Qty: ${partToPrepare.requestedQty} - New stock: ${newStock}`);
     }
 
@@ -770,14 +770,14 @@ export function SparePartsRequest({ currentUser }) {
               <p className="text-slate-600">Step 4: Prepare and deliver spare parts</p>
             </div>
           </div>
-            <Button
+              <Button
               variant="outline"
               onClick={() => {
                 const wo = getStoredWorkOrders();
-                const pr = localStorage.getItem('sparePartsRequests');
+                const pr = loadSparePartRequests([]);
                 console.log('=== DEBUG DATA ===');
                 console.log('Work Orders:', wo);
-                console.log('Parts Requests:', JSON.parse(pr || '[]'));
+                console.log('Parts Requests:', pr);
                 alert('Check browser console (F12) for data dump');
               }}
             className="text-xs"

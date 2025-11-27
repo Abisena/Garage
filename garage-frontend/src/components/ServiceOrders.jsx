@@ -4,6 +4,9 @@ import { Button } from './ui/button';
 import { SPKDocument } from './SPKDocument';
 import { frappeClient } from '../lib/frappeClient';
 import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
+import { loadMasterParts, saveMasterParts } from '../lib/masterPartsCache';
+import { loadSparePartRequests, saveSparePartRequests } from '../lib/sparePartRequestsCache';
+import { loadFromStorage, saveToStorage } from '../lib/storage';
 
 export function ServiceOrders({ currentUser }) {
   const [filterStatus, setFilterStatus] = useState('all');
@@ -159,9 +162,9 @@ export function ServiceOrders({ currentUser }) {
   };
 
   const loadMasterSpareParts = async (orderId) => {
-    const savedParts = localStorage.getItem('masterSpareParts');
-    if (savedParts) {
-      setMasterSpareParts(JSON.parse(savedParts));
+    const cachedParts = loadMasterParts([]);
+    if (cachedParts && cachedParts.length > 0) {
+      setMasterSpareParts(cachedParts);
     }
 
     try {
@@ -196,8 +199,8 @@ export function ServiceOrders({ currentUser }) {
           .filter((part) => part.partName && part.partNumber);
 
         if (mappedParts.length > 0) {
-          setMasterSpareParts(mappedParts);
-          localStorage.setItem('masterSpareParts', JSON.stringify(mappedParts));
+          const sanitized = saveMasterParts(mappedParts);
+          setMasterSpareParts(sanitized);
           return;
         }
       }
@@ -553,7 +556,7 @@ export function ServiceOrders({ currentUser }) {
 
     // Update today's registrations so entries are not removed from the dashboard
     try {
-      const storedRegistrations = JSON.parse(localStorage.getItem('registrations') || '[]');
+      const storedRegistrations = loadFromStorage('registrations', []);
       const updatedRegistrations = storedRegistrations.map((reg) => {
         if (reg.orderId === orderToCancel.orderId) {
           return {
@@ -565,7 +568,7 @@ export function ServiceOrders({ currentUser }) {
         return reg;
       });
 
-      localStorage.setItem('registrations', JSON.stringify(updatedRegistrations));
+      saveToStorage('registrations', updatedRegistrations);
       window.dispatchEvent(new Event('storage'));
     } catch (error) {
       console.error('Failed to update registrations for cancellation:', error);
@@ -664,8 +667,7 @@ export function ServiceOrders({ currentUser }) {
         };
         
         // Save to localStorage for Spare Parts Request page
-        const existingRequests = localStorage.getItem('sparePartsRequests');
-        const requests = existingRequests ? JSON.parse(existingRequests) : [];
+        const requests = loadSparePartRequests([]);
         
         // Check if there's already a request for this orderId
         const existingRequestIndex = requests.findIndex((req) => req.orderId === selectedWorkOrder.orderId);
@@ -700,7 +702,7 @@ export function ServiceOrders({ currentUser }) {
           requests.push(partsRequest);
         }
         
-        localStorage.setItem('sparePartsRequests', JSON.stringify(requests));
+        saveSparePartRequests(requests);
       }
       
       // Prepare success message
