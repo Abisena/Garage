@@ -977,8 +977,12 @@ export function Registration({ currentUser }) {
                 >
                   <option value="">{serviceBundles.length > 0 ? 'Select service package' : 'No service packages available'}</option>
                   {serviceBundles.map((bundle) => {
-                    const displayName = bundle.bundle_name || bundle.name || bundle.id;
-                    const optionValue = bundle.id || bundle.name || bundle.bundle_name;
+                    const itemCode = bundle.id || bundle.name || bundle.bundle_name;
+                    const displayName =
+                      itemCode && bundle.bundle_name && itemCode !== bundle.bundle_name
+                        ? `${itemCode} - ${bundle.bundle_name}`
+                        : itemCode || bundle.bundle_name;
+                    const optionValue = itemCode;
 
                     if (!displayName || !optionValue) return null;
 
