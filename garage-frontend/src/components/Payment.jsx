@@ -1880,6 +1880,7 @@ import { ProcessPaymentModal } from './ProcessPaymentModal';
 import { ReceiptModal } from './ReceiptModal';
 import { DirectSalesNotaModal } from './DirectSalesNotaModal';
 import { DirectSalesInvoiceModal } from './DirectSalesInvoiceModal';
+import { getStoredWorkOrders, sanitizeWorkOrders } from '../lib/workOrdersStorage';
 
 export function Payment({ currentUser }) {
   const [activeTab, setActiveTab] = useState('service');
@@ -1906,6 +1907,19 @@ export function Payment({ currentUser }) {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [cashReceived, setCashReceived] = useState('');
   const [laborCost, setLaborCost] = useState('');
+
+  const dedupeByKey = (items, getKey) => {
+    if (!Array.isArray(items)) return [];
+    const seen = new Set();
+    return items.filter((item) => {
+      const key = getKey(item);
+      if (!key) return true;
+      const normalizedKey = typeof key === 'string' ? key.toLowerCase() : String(key);
+      if (seen.has(normalizedKey)) return false;
+      seen.add(normalizedKey);
+      return true;
+    });
+  };
 
   // Function to convert number to Indonesian words
   const numberToWords = (num) => {
@@ -1984,45 +1998,59 @@ export function Payment({ currentUser }) {
   const loadDirectSales = () => {
     const savedDirectSales = localStorage.getItem('directSales');
     if (savedDirectSales) {
-      const sales = JSON.parse(savedDirectSales);
-      let paymentSales = sales.filter(sale => 
-        sale.paymentStatus === 'pending' || 
-        sale.paymentStatus === 'paid' || 
+      const parsedSales = JSON.parse(savedDirectSales);
+      const sales = dedupeByKey(parsedSales, (sale) => sale.id || sale.salesNumber);
+
+      if (sales.length !== parsedSales.length) {
+        localStorage.setItem('directSales', JSON.stringify(sales));
+      }
+
+      let paymentSales = sales.filter(sale =>
+        sale.paymentStatus === 'pending' ||
+        sale.paymentStatus === 'paid' ||
         sale.paymentStatus === 'nota-printed'
       );
       
       if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
         paymentSales = paymentSales.filter(sale => sale.branch === currentUser.branch);
       }
-      
+
       setDirectSales(paymentSales);
     }
   };
 
   const loadWorkOrders = () => {
-    const savedWorkOrders = localStorage.getItem('workOrders');
-    if (savedWorkOrders) {
-      const orders = JSON.parse(savedWorkOrders);
-      let paymentOrders = orders.filter(order => 
-        order.status === 'ready-for-payment' || order.paymentStatus === 'pending' || order.paymentStatus === 'paid' || order.paymentStatus === 'cancelled' || order.paymentStatus === 'nota-printed'
-      );
-      
-      if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
-        paymentOrders = paymentOrders.filter(order => order.branch === currentUser.branch);
-      }
-      
-      setWorkOrders(paymentOrders);
+    const orders = getStoredWorkOrders();
+    if (orders.length === 0) {
+      setWorkOrders([]);
+      return;
     }
+
+    let paymentOrders = orders.filter(order =>
+      order.status === 'ready-for-payment' || order.paymentStatus === 'pending' || order.paymentStatus === 'paid' || order.paymentStatus === 'cancelled' || order.paymentStatus === 'nota-printed'
+    );
+
+    if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
+      paymentOrders = paymentOrders.filter(order => order.branch === currentUser.branch);
+    }
+
+    setWorkOrders(paymentOrders);
   };
 
   const loadPurchaseOrders = () => {
     const savedPOs = localStorage.getItem('purchaseOrders');
     if (savedPOs) {
-      const pos = JSON.parse(savedPOs);
-      let paymentPOs = pos.filter(po => 
-        po.status === 'PRINTED' || 
-        po.status === 'RECEIVED' || 
-        po.paymentStatus === 'pending' || 
+      const parsedPOs = JSON.parse(savedPOs);
+      const pos = dedupeByKey(parsedPOs, (po) => po.poNumber || po.id);
+
+      if (pos.length !== parsedPOs.length) {
+        localStorage.setItem('purchaseOrders', JSON.stringify(pos));
+      }
+
+      let paymentPOs = pos.filter(po =>
+        po.status === 'PRINTED' ||
+        po.status === 'RECEIVED' ||
+        po.paymentStatus === 'pending' ||
         po.paymentStatus === 'paid' || 
         po.paymentStatus === 'cancelled'
       );
@@ -2036,14 +2064,29 @@ export function Payment({ currentUser }) {
   };
 
   const saveWorkOrders = (updatedOrders) => {
-    const allOrders = JSON.parse(localStorage.getItem('workOrders') || '[]');
-    const mergedOrders = allOrders.map(order => {
-      const updated = updatedOrders.find(o => o.id === order.id);
-      return updated || order;
+    const existingOrders = getStoredWorkOrders();
+    const combinedOrders = [...updatedOrders];
+
+    existingOrders.forEach((order) => {
+      const key = order.orderId || order.id;
+      if (!combinedOrders.some((o) => (o.orderId || o.id) === key)) {
+        combinedOrders.push(order);
+      }
     });
-    localStorage.setItem('workOrders', JSON.stringify(mergedOrders));
-    setWorkOrders(updatedOrders);
+
+    const sanitizedOrders = sanitizeWorkOrders(combinedOrders);
+    localStorage.setItem('workOrders', JSON.stringify(sanitizedOrders));
     window.dispatchEvent(new CustomEvent('workOrdersUpdated'));
+
+    const paymentOrders = sanitizedOrders.filter(order =>
+      order.status === 'ready-for-payment' ||
+      order.paymentStatus === 'pending' ||
+      order.paymentStatus === 'paid' ||
+      order.paymentStatus === 'cancelled' ||
+      order.paymentStatus === 'nota-printed'
+    );
+
+    setWorkOrders(paymentOrders);
   };
 
   const formatCurrency = (amount) => {

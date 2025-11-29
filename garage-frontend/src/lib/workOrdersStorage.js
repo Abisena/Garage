@@ -15,9 +15,28 @@ const isDemoOrder = (order) => {
   return id.startsWith('demo') || orderId.startsWith('demo');
 };
 
+const dedupeWorkOrders = (orders) => {
+  const seen = new Set();
+  const deduped = [];
+
+  for (const order of orders) {
+    const key = (order.orderId || order.id || '').toString().toLowerCase();
+    if (key && seen.has(key)) {
+      continue;
+    }
+    if (key) {
+      seen.add(key);
+    }
+    deduped.push(order);
+  }
+
+  return deduped;
+};
+
 export const sanitizeWorkOrders = (orders) => {
   if (!Array.isArray(orders)) return [];
-  return orders.filter(order => !isDemoOrder(order));
+  const nonDemoOrders = orders.filter(order => !isDemoOrder(order));
+  return dedupeWorkOrders(nonDemoOrders);
 };
 
 const readWorkOrders = () => {
