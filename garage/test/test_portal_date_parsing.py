@@ -11,6 +11,8 @@ from pathlib import Path
 import sys
 import types
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -28,7 +30,15 @@ if "frappe" not in sys.modules:
     class PermissionError(Exception):
         pass
 
+    class DoesNotExistError(Exception):
+        pass
+
+    class ValidationError(Exception):
+        pass
+
     exceptions_stub.PermissionError = PermissionError
+    exceptions_stub.DoesNotExistError = DoesNotExistError
+    exceptions_stub.ValidationError = ValidationError
 
     def cint(value: object) -> int:
         return int(value or 0)
@@ -105,6 +115,7 @@ if "frappe" not in sys.modules:
     frappe_stub.get_doc = lambda *args, **kwargs: None  # pragma: no cover - unused
     frappe_stub.db = types.SimpleNamespace(get_value=lambda *a, **k: None)
     frappe_stub.session = types.SimpleNamespace(user="test-user")
+    frappe_stub.flags = types.SimpleNamespace()
     frappe_stub.defaults = defaults_stub
     frappe_stub.utils = utils_stub
     frappe_stub.exceptions = exceptions_stub
@@ -176,3 +187,52 @@ def test_coerce_date_value_fallback_when_frappe_rejects():
         frappe.utils.get_datetime = original_get_datetime
 
     assert result == "2025-11-18 16:50:00"
+
+
+def test_load_service_bundle_matches_label(monkeypatch):
+    """Bundles should be resolved by bundle_name when the docname differs."""
+
+    portal.frappe.flags = types.SimpleNamespace()
+    portal.frappe.db = types.SimpleNamespace(
+        get_value=lambda *_args, **_kwargs: "BND-001"
+    )
+
+    bundle_doc = types.SimpleNamespace(
+        name="BND-001",
+        bundle_name="Paket Service - Ganti Oli",
+        spare_parts=[],
+        materials=[],
+    )
+
+    calls = []
+
+    def _fake_get_doc(_doctype, name):
+        calls.append(name)
+        if name == "BND-001":
+            return bundle_doc
+        raise Exception("not found")
+
+    monkeypatch.setattr(portal, "_get_doc", _fake_get_doc)
+
+    doc, label = portal._load_service_bundle("Paket Service - Ganti Oli")
+
+    assert doc is bundle_doc
+    assert label == "Paket Service - Ganti Oli"
+    assert calls == ["Paket Service - Ganti Oli", "BND-001"]
+
+
+def test_load_service_bundle_missing_returns_label(monkeypatch):
+    """Missing bundles should not return a document but retain the label."""
+
+    portal.frappe.flags = types.SimpleNamespace()
+    portal.frappe.db = types.SimpleNamespace(get_value=lambda *_args, **_kwargs: None)
+
+    def _raise_missing(_doctype, _name):
+        raise Exception("missing")
+
+    monkeypatch.setattr(portal, "_get_doc", _raise_missing)
+
+    doc, label = portal._load_service_bundle("Unknown Bundle")
+
+    assert doc is None
+    assert label == "Unknown Bundle"
