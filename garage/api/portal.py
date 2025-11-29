@@ -1871,8 +1871,8 @@ def _create_payment_entry(payload: Mapping[str, Any]) -> frappe.Document:
     pe.set_missing_values()
     _ensure_branch_allowed(pe)
 
-    inserted_doc = _insert_doc(pe)
-    return _submit_doc(inserted_doc)
+    # Keep the new payment entry as Draft so finance can review/submit manually
+    return _insert_doc(pe)
 
 
 def _new_document(doctype: str, data: Mapping[str, Any]) -> frappe.Document:

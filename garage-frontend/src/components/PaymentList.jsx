@@ -49,8 +49,31 @@ export function PaymentList({ currentUser }) {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
 
+  const getDocstatus = (entry) => {
+    const explicit = entry?.docstatus;
+    if (explicit === 0 || explicit === 1 || explicit === 2) return explicit;
+
+    const statusValue = entry?.status;
+    if (statusValue === 0 || statusValue === 1 || statusValue === 2) return statusValue;
+    if (statusValue === 'Draft') return 0;
+    if (statusValue === 'Cancelled') return 2;
+    return 1;
+  };
+
+  const getPaymentStatusLabel = (entry) => {
+    const docstatus = getDocstatus(entry);
+    if (docstatus === 0) return 'Draft';
+    if (docstatus === 2) return 'Cancelled';
+    return entry?.status || 'Submitted';
+  };
+
   const createHandoverRecord = async (invoice, paymentInfo) => {
     if (!invoice || !paymentInfo?.paymentEntry) return;
+
+    if (getDocstatus(paymentInfo) === 0) {
+      toast.message('Payment Entry masih draft, SIKK akan dibuat setelah submit.');
+      return;
+    }
 
     const existingOrders = getStoredWorkOrders();
     const orderId = invoice.name || `INV-${Date.now()}`;
@@ -71,7 +94,7 @@ export function PaymentList({ currentUser }) {
       vehicleBrand,
       vehicleModel,
       plateNumber,
-      paymentStatus: 'paid',
+      paymentStatus: paymentInfo.status ?? 'paid',
       paymentMethod: paymentInfo.paymentMethod,
       receiptNumber: paymentInfo.paymentEntry,
       paymentDate: paymentInfo.paymentDate,
@@ -79,8 +102,8 @@ export function PaymentList({ currentUser }) {
       invoiceNumber: invoice.name,
       notaNumber: invoice.name,
       invoiceStatus: 'submitted',
-      paymentEntryStatus: 'submitted',
-      status: 'paid',
+      paymentEntryStatus: getPaymentStatusLabel(paymentInfo).toLowerCase(),
+      status: getDocstatus(paymentInfo) === 1 ? 'paid' : 'pending',
       sikkNumber: invoice.sikk_number || `SIKK-${branchCode}-${orderId.split('-')[1] || '001'}`,
     };
 
@@ -107,7 +130,7 @@ export function PaymentList({ currentUser }) {
           ...entry,
           amount: Number(entry.amount || entry.received_amount || entry.paid_amount || 0),
         }))
-        .filter((entry) => (entry.docstatus ?? (entry.status === 'Draft' ? 0 : 1)) === 1);
+        .filter((entry) => getDocstatus(entry) !== 2);
 
       paymentEntries.sort(
         (a, b) => new Date(b.payment_date || b.posting_date || b.modified || 0) - new Date(a.payment_date || a.posting_date || a.modified || 0),
@@ -150,11 +173,17 @@ export function PaymentList({ currentUser }) {
     });
   }, [payments, searchTerm, filterType]);
 
+  const completedPaymentsCount = useMemo(
+    () => filteredPayments.filter((payment) => getDocstatus(payment) === 1).length,
+    [filteredPayments],
+  );
+
   const revenue = useMemo(() => {
     if (typeof totals?.incoming_payments_total === 'number') {
       return totals.incoming_payments_total;
     }
     return filteredPayments
+      .filter((p) => getDocstatus(p) === 1)
       .filter((p) => (p.payment_type || '').toLowerCase() === 'receive')
       .reduce((sum, p) => sum + (p.amount || 0), 0);
   }, [totals, filteredPayments]);
@@ -202,7 +231,7 @@ export function PaymentList({ currentUser }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-600 mb-1">Completed Payments</p>
-                <p className="text-slate-900 font-bold">{filteredPayments.length}</p>
+                <p className="text-slate-900 font-bold">{completedPaymentsCount}</p>
               </div>
               <div className="bg-emerald-100 p-3 rounded-lg">
                 <CheckCircle className="w-8 h-8 text-emerald-600" />
@@ -374,13 +403,14 @@ export function PaymentList({ currentUser }) {
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          payment.status === 'Paid'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-slate-100 text-slate-700'
-                        }`}
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${(() => {
+                          const docstatus = getDocstatus(payment);
+                          if (docstatus === 1) return 'bg-emerald-100 text-emerald-700';
+                          if (docstatus === 2) return 'bg-rose-100 text-rose-700';
+                          return 'bg-slate-100 text-slate-700';
+                        })()}`}
                       >
-                        {payment.status || 'Draft'}
+                        {getPaymentStatusLabel(payment)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -406,7 +436,7 @@ export function PaymentList({ currentUser }) {
                     </div>
                     <div>
                       <p className="text-slate-500 text-xs">Status</p>
-                      <p className="font-semibold">{selectedPayment.status || 'Draft'}</p>
+                      <p className="font-semibold">{getPaymentStatusLabel(selectedPayment)}</p>
                     </div>
                     <div>
                       <p className="text-slate-500 text-xs">Customer</p>

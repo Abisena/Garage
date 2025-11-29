@@ -58,13 +58,22 @@ export function InvoicePaymentModal({ isOpen, invoice, onClose, onPaymentSuccess
         }),
       });
 
-      toast.success('Payment Entry berhasil dibuat dan invoice ditandai sebagai Paid.');
+      const paymentStatus = response?.message?.status ?? response?.docstatus ?? 'Draft';
+      const paymentDocstatus = typeof paymentStatus === 'number' ? paymentStatus : undefined;
       const paymentEntryName = response?.message?.payment_entry || response?.message?.name || response?.name || referenceNo;
+
+      if (paymentStatus === 0 || paymentStatus === 'Draft') {
+        toast.success('Payment Entry berhasil dibuat sebagai Draft. Silakan review dan submit di ERP jika sudah final.');
+      } else {
+        toast.success('Payment Entry berhasil dibuat dan invoice ditandai sebagai Paid.');
+      }
       onPaymentSuccess?.({
         paymentEntry: paymentEntryName,
         paymentMethod,
         paymentDate,
         amount: totalAmount,
+        status: paymentStatus,
+        docstatus: paymentDocstatus,
         invoice,
       });
       onClose();
