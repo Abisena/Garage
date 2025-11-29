@@ -146,10 +146,39 @@ export function ServiceOrders({ currentUser }) {
     minStock: Number(part.reorder_level ?? part.minStock ?? 0)
   });
 
+  const isMechanicRole = (value) => {
+    if (!value) return false;
+    const normalized = String(value).toLowerCase();
+    return normalized.includes('mechanic') || normalized.includes('mekanik');
+  };
+
   const updateMechanicOptions = (technicians) => {
     if (!technicians || !Array.isArray(technicians)) return;
 
-    const names = technicians
+    const mechanicCandidates = technicians.filter((technician) => {
+      const roleHints = [
+        technician?.role,
+        technician?.role_name,
+        technician?.roleName,
+        technician?.role_profile,
+        technician?.roleProfile,
+        technician?.designation,
+        technician?.job_title,
+        technician?.jobTitle,
+        technician?.position,
+        technician?.type,
+        technician?.employment_type,
+        technician?.employee_type,
+        technician?.skill_tags,
+        technician?.notes
+      ].filter(Boolean);
+
+      return roleHints.some(isMechanicRole);
+    });
+
+    const targetList = mechanicCandidates.length > 0 ? mechanicCandidates : technicians;
+
+    const names = targetList
       .map((technician) =>
         technician?.employee_name ||
         technician?.employee ||
@@ -395,7 +424,63 @@ export function ServiceOrders({ currentUser }) {
 
     const newParts = bundleParts.map((item, index) => {
       const quantity = Math.max(1, Number(item.quantity) || 1);
-      const unitPrice = Number(item.unitPrice || 0);
+
+      const resolvedPrice = (() => {
+        const explicitPrice =
+          item.unitPrice ??
+          item.unit_price ??
+          item.rate ??
+          item.price ??
+          item.amount ??
+          item.total;
+
+        if (explicitPrice && !Number.isNaN(Number(explicitPrice))) {
+          const numericPrice = Number(explicitPrice);
+          if (numericPrice > 0) return numericPrice;
+        }
+
+        const derivedTotal = Number(item.total ?? item.amount ?? 0);
+        if (derivedTotal > 0 && quantity > 0) {
+          return derivedTotal / quantity;
+        }
+
+        const matchFromMaster = masterSpareParts.find((part) => {
+          const partIdentifiers = [
+            part.part_code,
+            part.partNumber,
+            part.item_code,
+            part.name,
+            part.part_name,
+            part.item_name
+          ].filter(Boolean);
+
+          const bundleIdentifiers = [
+            item.partCode,
+            item.partNumber,
+            item.partName,
+            item.item_code,
+            item.itemName
+          ].filter(Boolean);
+
+          return partIdentifiers.some((id) => bundleIdentifiers.includes(id));
+        });
+
+        if (matchFromMaster) {
+          const priceFromMaster =
+            matchFromMaster.unit_price ||
+            matchFromMaster.unitPrice ||
+            matchFromMaster.rate ||
+            matchFromMaster.price;
+
+          if (priceFromMaster && !Number.isNaN(Number(priceFromMaster))) {
+            return Number(priceFromMaster);
+          }
+        }
+
+        return 0;
+      })();
+
+      const unitPrice = resolvedPrice;
 
       return {
         id: `BUNDLE-${bundle.id || bundle.name}-${index}-${Date.now()}`,
