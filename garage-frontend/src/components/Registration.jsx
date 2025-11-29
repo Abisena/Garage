@@ -42,11 +42,78 @@ export function Registration({ currentUser }) {
 
   const [serviceTypeOptions, setServiceTypeOptions] = useState(DEFAULT_SERVICE_TYPES);
   const [serviceBundles, setServiceBundles] = useState([]);
+  const [lookupStatus, setLookupStatus] = useState({ type: 'idle', message: '' });
+  const [lookupLoading, setLookupLoading] = useState(false);
 
   // Save form data to localStorage whenever it changes
   useEffect(() => {
     saveToStorage('registrationFormDraft', formData);
   }, [formData]);
+
+  useEffect(() => {
+    const plate = (formData.plateNumber || '').trim().toUpperCase();
+
+    if (!plate || plate.length < 3) {
+      setLookupStatus({ type: 'idle', message: '' });
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setLookupLoading(true);
+      setLookupStatus({ type: 'loading', message: 'Mencari data kendaraan...' });
+
+      try {
+        const result = await frappeClient.lookupVehicleByPlate(plate);
+
+        if (result?.vehicle || result?.customer) {
+          setFormData((prev) => ({
+            ...prev,
+            plateNumber: result.vehicle?.license_plate?.toUpperCase() || plate,
+            chassisNumber: result.vehicle?.vin || prev.chassisNumber,
+            engineNumber: result.vehicle?.engine_number || prev.engineNumber,
+            vehicleBrand: result.vehicle?.brand || prev.vehicleBrand,
+            vehicleModel:
+              result.vehicle?.model ||
+              result.vehicle?.type_model ||
+              prev.vehicleModel,
+            vehicleYear: result.vehicle?.vehicle_year || prev.vehicleYear,
+            vehicleType:
+              result.vehicle?.type_model ||
+              result.vehicle?.vehicle_type ||
+              prev.vehicleType,
+            fuel: result.vehicle?.fuel_type || prev.fuel,
+            kilometer:
+              result.vehicle?.mileage !== undefined && result.vehicle?.mileage !== null
+                ? String(result.vehicle.mileage)
+                : prev.kilometer,
+            customerName: result.customer?.customer_name || prev.customerName,
+            phone: result.customer?.phone || prev.phone,
+            email: result.customer?.email || prev.email,
+          }));
+
+          setLookupStatus({
+            type: 'success',
+            message: 'Data kendaraan & pelanggan ditemukan dari riwayat servis.',
+          });
+        } else {
+          setLookupStatus({
+            type: 'info',
+            message: 'Nomor polisi belum pernah terdaftar, isi data secara manual.',
+          });
+        }
+      } catch (error) {
+        console.error('Lookup failed:', error);
+        setLookupStatus({
+          type: 'error',
+          message: 'Gagal mengambil data otomatis. Silakan isi data secara manual.',
+        });
+      } finally {
+        setLookupLoading(false);
+      }
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [formData.plateNumber]);
 
   const [focusedField, setFocusedField] = useState('');
   const [showWorkOrder, setShowWorkOrder] = useState(false);
@@ -587,6 +654,22 @@ export function Registration({ currentUser }) {
                         handleInputComplete('plateNumber', e.target.value);
                       }}
                     />
+                    {lookupStatus.message && (
+                      <p
+                        className={`mt-1 text-xs flex items-center gap-2 ${
+                          lookupStatus.type === 'success'
+                            ? 'text-green-700'
+                            : lookupStatus.type === 'error'
+                              ? 'text-red-700'
+                              : 'text-gray-600'
+                        }`}
+                      >
+                        {lookupLoading && (
+                          <span className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+                        )}
+                        {lookupStatus.message}
+                      </p>
+                    )}
                   </div>
                   
                   <div>

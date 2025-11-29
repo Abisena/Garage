@@ -211,6 +211,27 @@ class FrappeClient {
     }
   }
 
+  async lookupVehicleByPlate(licensePlate) {
+    if (!licensePlate) {
+      return {};
+    }
+
+    try {
+      const params = new URLSearchParams({
+        license_plate: licensePlate,
+      });
+
+      const response = await this.request(
+        `/api/method/garage.api.portal.lookup_vehicle_by_plate?${params.toString()}`
+      );
+
+      return response.message || response || {};
+    } catch (error) {
+      console.error('Failed to lookup vehicle by plate:', error);
+      throw error;
+    }
+  }
+
   async cancelServiceOrder(orderId, reason = '') {
     if (!orderId) {
       throw new Error('Service Order ID is required to cancel an order');
