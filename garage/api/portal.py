@@ -1547,6 +1547,45 @@ def _get_service_bundles() -> List[Dict[str, Any]]:
     return bundles
 
 
+def _load_service_bundle(
+    bundle_name: str,
+) -> Tuple[Optional[Any], Optional[str]]:
+    """Resolve a service bundle by name or display label.
+
+    Returns the matching document (if any) along with a display label so callers can
+    avoid linking invalid bundle names to new records.
+    """
+
+    cleaned_name = (bundle_name or "").strip()
+    if not cleaned_name:
+        return None, None
+
+    bundle_doc: Optional[Any] = None
+    bundle_label: Optional[str] = cleaned_name
+
+    try:
+        bundle_doc = _get_doc("Garage Service Bundle", cleaned_name)
+    except Exception:
+        bundle_doc = None
+
+    if not bundle_doc:
+        with _ignoring_permissions():
+            resolved_name = frappe.db.get_value(
+                "Garage Service Bundle", {"bundle_name": cleaned_name}, "name"
+            )
+
+        if resolved_name:
+            try:
+                bundle_doc = _get_doc("Garage Service Bundle", resolved_name)
+            except Exception:
+                bundle_doc = None
+
+    if bundle_doc:
+        bundle_label = getattr(bundle_doc, "bundle_name", None) or bundle_doc.name
+
+    return bundle_doc, bundle_label
+
+
 def _get_product_bundles() -> List[Dict[str, Any]]:
     """Return active Product Bundle records with their constituent items."""
 
@@ -6101,14 +6140,9 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         bundle_label = None
         if bundle_name:
             required_parts: List[Dict[str, Any]] = []
-            bundle_label = bundle_name
-            try:
-                bundle_doc = _get_doc("Garage Service Bundle", bundle_name)
-            except Exception:
-                bundle_doc = None
+            bundle_doc, bundle_label = _load_service_bundle(bundle_name)
 
             if bundle_doc:
-                bundle_label = getattr(bundle_doc, "bundle_name", None) or bundle_doc.name
                 service_payload["service_bundle"] = bundle_doc.name
 
                 for row in bundle_doc.get("spare_parts", []) or []:
@@ -6126,8 +6160,6 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
                 bundle_total = flt(getattr(bundle_doc, "grand_total", 0))
                 if bundle_total > 0 and not service_payload.get("total_estimated_amount"):
                     service_payload["total_estimated_amount"] = bundle_total
-            else:
-                service_payload["service_bundle"] = bundle_name
 
             if bundle_label:
                 service_payload["service_bundle_name"] = bundle_label
