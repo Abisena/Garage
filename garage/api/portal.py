@@ -1458,6 +1458,53 @@ def _serialize_service_bundle(doc: Any, base: Optional[Mapping[str, Any]] = None
     }
 
 
+def _serialize_product_bundle(doc: Any, base: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
+    base_map = dict(base) if base else {}
+    bundle_name = getattr(doc, "new_item_code", None) or base_map.get("new_item_code")
+    description = getattr(doc, "description", None) or base_map.get("description")
+
+    parts: List[Dict[str, Any]] = []
+    for item in getattr(doc, "items", []) or []:
+        part_code = getattr(item, "item_code", None)
+        if not part_code:
+            continue
+
+        part_name = (
+            getattr(item, "description", None)
+            or getattr(item, "item_name", None)
+            or part_code
+        )
+
+        parts.append(
+            {
+                "partCode": part_code,
+                "partName": part_name,
+                "quantity": flt(getattr(item, "qty", 1)) or 1,
+                "unitPrice": flt(getattr(item, "rate", 0)) if hasattr(item, "rate") else 0,
+                "usage": getattr(item, "description", None),
+            }
+        )
+
+    identifier = getattr(doc, "name", None) or base_map.get("name")
+
+    return {
+        "id": identifier,
+        "name": bundle_name or identifier,
+        "bundle_name": bundle_name or identifier,
+        "description": description,
+        "notes": description,
+        "service": 0,
+        "service_fee": 0,
+        "spareparts": 0,
+        "total_spare_amount": 0,
+        "materials": 0,
+        "total_material_amount": 0,
+        "total": 0,
+        "parts": parts,
+        "is_active": not bool(getattr(doc, "disabled", None) or base_map.get("disabled")),
+    }
+
+
 def _get_service_bundles() -> List[Dict[str, Any]]:
     """Return active service bundles with their aggregated line items."""
 
@@ -1494,6 +1541,44 @@ def _get_service_bundles() -> List[Dict[str, Any]]:
             continue
 
         bundles.append(_serialize_service_bundle(doc, row))
+
+    bundles.extend(_get_product_bundles())
+
+    return bundles
+
+
+def _get_product_bundles() -> List[Dict[str, Any]]:
+    """Return active Product Bundle records with their constituent items."""
+
+    bundles: List[Dict[str, Any]] = []
+    rows = _list_dicts(
+        "Product Bundle",
+        [
+            "name",
+            "new_item_code",
+            "description",
+            "disabled",
+        ],
+        filters=[["disabled", "=", 0]],
+        limit=100,
+    )
+
+    for row in rows:
+        name = row.get("name")
+        if not name:
+            continue
+
+        try:
+            with _ignoring_permissions():
+                doc = frappe.get_doc("Product Bundle", name)
+        except Exception:
+            frappe.log_error(
+                title="Product Bundle load failed",
+                message=f"{name}:\n{frappe.get_traceback()}"
+            )
+            continue
+
+        bundles.append(_serialize_product_bundle(doc, row))
 
     return bundles
 
