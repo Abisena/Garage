@@ -239,8 +239,10 @@ export function Registration({ currentUser }) {
 
   const matchServiceBundle = (value) => serviceBundles.find((bundle) =>
     bundle.id === value ||
+    bundle.item_code === value ||
     bundle.name === value ||
-    bundle.bundle_name === value
+    bundle.bundle_name === value ||
+    bundle.item_name === value
   );
 
   const handleInputComplete = (currentField, value) => {
@@ -272,6 +274,7 @@ export function Registration({ currentUser }) {
     );
 
     const activeServiceType = formData.serviceType
+      || matchedBundle?.item_name
       || matchedBundle?.bundle_name
       || matchedBundle?.name
       || formData.serviceBundleName
@@ -330,8 +333,8 @@ export function Registration({ currentUser }) {
         fuel_type: formData.fuel,
         assembly_type: formData.assemblyType,
         service_order_type: activeServiceType,
-        service_bundle: matchedBundle?.id || formData.serviceBundle || '',
-        service_bundle_name: matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
+        service_bundle: matchedBundle?.id || matchedBundle?.item_code || formData.serviceBundle || '',
+        service_bundle_name: matchedBundle?.item_name || matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
         notes: formData.customerComplaint,
         intake_type: 'Walk-In',
         priority: 'Normal',
@@ -377,8 +380,8 @@ export function Registration({ currentUser }) {
           assemblyType: formData.assemblyType,
           vehicleYear: formData.vehicleYear,
           serviceType: activeServiceType,
-          serviceBundleId: matchedBundle?.id || formData.serviceBundle || '',
-          serviceBundleName: matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
+          serviceBundleId: matchedBundle?.id || matchedBundle?.item_code || formData.serviceBundle || '',
+          serviceBundleName: matchedBundle?.item_name || matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
           customerComplaint: formData.customerComplaint,
           date: new Date().toLocaleDateString('id-ID'),
           estimatedCost: '0',
@@ -448,7 +451,7 @@ export function Registration({ currentUser }) {
         vehicleYear: formData.vehicleYear,
         serviceType: activeServiceType,
         serviceBundleId: formData.serviceBundle,
-        serviceBundleName: matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
+        serviceBundleName: matchedBundle?.item_name || matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
         customerComplaint: formData.customerComplaint,
         date: new Date().toLocaleDateString('id-ID'),
         estimatedCost: '0',
@@ -533,11 +536,7 @@ export function Registration({ currentUser }) {
     const newId = `${branchCode}-REG-${String(nextNumber).padStart(3, '0')}`;
     const newOrderId = getNextOrderNumber(currentUser.branch);
 
-    const matchedBundle = serviceBundles.find((bundle) =>
-      bundle.id === formData.serviceBundle ||
-      bundle.name === formData.serviceBundle ||
-      (bundle.bundle_name && bundle.bundle_name === formData.serviceBundle)
-    );
+    const matchedBundle = matchServiceBundle(formData.serviceBundle);
 
     const newRegistration = {
       id: newId,
@@ -557,8 +556,8 @@ export function Registration({ currentUser }) {
       assemblyType: formData.assemblyType,
       vehicleYear: formData.vehicleYear,
       serviceType: formData.serviceType,
-      serviceBundleId: matchedBundle?.id || formData.serviceBundle || '',
-      serviceBundleName: matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
+      serviceBundleId: matchedBundle?.id || matchedBundle?.item_code || formData.serviceBundle || '',
+      serviceBundleName: matchedBundle?.item_name || matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
       customerComplaint: formData.customerComplaint,
       customerSignature: customerSig,
       advisorSignature: advisorSig,
@@ -592,8 +591,8 @@ export function Registration({ currentUser }) {
 
     setFormData({
       ...formData,
-      serviceBundle: matchedBundle?.id || value,
-      serviceBundleName: matchedBundle?.bundle_name || matchedBundle?.name || '',
+      serviceBundle: matchedBundle?.id || matchedBundle?.item_code || matchedBundle?.bundle_name || matchedBundle?.name || value,
+      serviceBundleName: matchedBundle?.item_name || matchedBundle?.bundle_name || matchedBundle?.name || '',
       serviceType: ''
     });
   };
@@ -936,7 +935,7 @@ export function Registration({ currentUser }) {
 
               {/* Service Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Service Type *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Service Type (opsional jika pilih paket)</label>
                 <select
                   name="serviceType"
                   className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
@@ -977,12 +976,12 @@ export function Registration({ currentUser }) {
                 >
                   <option value="">{serviceBundles.length > 0 ? 'Select service package' : 'No service packages available'}</option>
                   {serviceBundles.map((bundle) => {
-                    const itemCode = bundle.id || bundle.name || bundle.bundle_name;
+                    const optionValue = bundle.id || bundle.item_code || bundle.name || bundle.bundle_name;
                     const displayName =
-                      itemCode && bundle.bundle_name && itemCode !== bundle.bundle_name
-                        ? `${itemCode} - ${bundle.bundle_name}`
-                        : itemCode || bundle.bundle_name;
-                    const optionValue = itemCode;
+                      bundle.item_name ||
+                      bundle.bundle_name ||
+                      bundle.name ||
+                      optionValue;
 
                     if (!displayName || !optionValue) return null;
 
