@@ -3473,6 +3473,9 @@ def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, An
         "name",
         "customer",
         "license_plate",
+    ]
+
+    optional_fields = [
         "vin",
         "brand",
         "type_model",
@@ -3486,6 +3489,12 @@ def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, An
         "engine_number",
         "last_service_date",
     ]
+
+    for field in optional_fields:
+        if frappe.db.has_column("Garage Vehicle", field):
+            vehicle_fields.append(field)
+        elif field == "type_model" and frappe.db.has_column("Garage Vehicle", "model"):
+            vehicle_fields.append("model as type_model")
     if frappe.db.has_column("Garage Vehicle", "last_service_logged_at"):
         vehicle_fields.append("last_service_logged_at")
 
