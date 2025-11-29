@@ -237,6 +237,12 @@ export function Registration({ currentUser }) {
     return `${branchCode}-${String(nextNumber).padStart(3, '0')}`;
   };
 
+  const matchServiceBundle = (value) => serviceBundles.find((bundle) =>
+    bundle.id === value ||
+    bundle.name === value ||
+    bundle.bundle_name === value
+  );
+
   const handleInputComplete = (currentField, value) => {
     if (!value) return;
     
@@ -261,21 +267,25 @@ export function Registration({ currentUser }) {
   };
 
   const handleRegisterClick = async () => {
+    const matchedBundle = matchServiceBundle(
+      formData.serviceBundle || formData.serviceBundleName
+    );
+
+    const activeServiceType = formData.serviceType
+      || matchedBundle?.bundle_name
+      || matchedBundle?.name
+      || formData.serviceBundleName
+      || formData.serviceBundle;
+
     // Validate required fields
     if (!formData.plateNumber || !formData.chassisNumber || !formData.engineNumber ||
         !formData.vehicleBrand || !formData.vehicleModel || !formData.vehicleType ||
         !formData.kilometer || !formData.fuel || !formData.assemblyType ||
         !formData.vehicleYear || !formData.customerName || !formData.phone ||
-        !formData.serviceType || !formData.customerComplaint) {
+        !activeServiceType || !formData.customerComplaint) {
       alert('Please complete all required fields (*)');
       return;
     }
-
-    const matchedBundle = serviceBundles.find((bundle) =>
-      bundle.id === formData.serviceBundle ||
-      bundle.name === formData.serviceBundle ||
-      (bundle.bundle_name && bundle.bundle_name === formData.serviceBundle)
-    );
 
     try {
       console.log('Sending registration data to Frappe...');
@@ -319,7 +329,7 @@ export function Registration({ currentUser }) {
         mileage: parseInt(formData.kilometer) || 0,
         fuel_type: formData.fuel,
         assembly_type: formData.assemblyType,
-        service_order_type: formData.serviceType,
+        service_order_type: activeServiceType,
         service_bundle: matchedBundle?.id || formData.serviceBundle || '',
         service_bundle_name: matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
         notes: formData.customerComplaint,
@@ -366,7 +376,7 @@ export function Registration({ currentUser }) {
           fuel: formData.fuel,
           assemblyType: formData.assemblyType,
           vehicleYear: formData.vehicleYear,
-          serviceType: formData.serviceType,
+          serviceType: activeServiceType,
           serviceBundleId: matchedBundle?.id || formData.serviceBundle || '',
           serviceBundleName: matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
           customerComplaint: formData.customerComplaint,
@@ -436,7 +446,7 @@ export function Registration({ currentUser }) {
         fuel: formData.fuel,
         assemblyType: formData.assemblyType,
         vehicleYear: formData.vehicleYear,
-        serviceType: formData.serviceType,
+        serviceType: activeServiceType,
         serviceBundleId: formData.serviceBundle,
         serviceBundleName: matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
         customerComplaint: formData.customerComplaint,
@@ -571,21 +581,20 @@ export function Registration({ currentUser }) {
   const handleServiceTypeChange = (value) => {
     setFormData({
       ...formData,
-      serviceType: value
+      serviceType: value,
+      serviceBundle: '',
+      serviceBundleName: ''
     });
   };
 
   const handleServiceBundleChange = (value) => {
-    const matchedBundle = serviceBundles.find((bundle) =>
-      bundle.id === value ||
-      bundle.name === value ||
-      (bundle.bundle_name && bundle.bundle_name === value)
-    );
+    const matchedBundle = matchServiceBundle(value);
 
     setFormData({
       ...formData,
       serviceBundle: matchedBundle?.id || value,
-      serviceBundleName: matchedBundle?.bundle_name || matchedBundle?.name || ''
+      serviceBundleName: matchedBundle?.bundle_name || matchedBundle?.name || '',
+      serviceType: ''
     });
   };
 
@@ -946,6 +955,7 @@ export function Registration({ currentUser }) {
                     <option key={service} value={service}>{service}</option>
                   ))}
                 </select>
+                <p className="text-xs text-gray-500 mt-1">Pilih salah satu: Service Type atau Paket Service.</p>
               </div>
 
               {/* Service Bundle */}
@@ -977,6 +987,7 @@ export function Registration({ currentUser }) {
                     );
                   })}
                 </select>
+                <p className="text-xs text-gray-500 mt-1">Paket Service diambil dari profil & product bundle. Mengisi paket akan menonaktifkan Service Type.</p>
               </div>
 
               {/* Customer Complaint */}

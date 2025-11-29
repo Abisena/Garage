@@ -83,6 +83,11 @@ export function ServiceOrders({ currentUser }) {
       selectedWorkOrder.service_bundle_id
     ].filter(Boolean);
 
+    const bundleNameCandidates = [
+      selectedWorkOrder.serviceBundleName,
+      selectedWorkOrder.serviceType
+    ].filter(Boolean);
+
     const bundleById = serviceBundles.find((bundle) =>
       bundleIdCandidates.some(
         (candidate) => candidate === bundle.id || candidate === bundle.name
@@ -92,7 +97,9 @@ export function ServiceOrders({ currentUser }) {
     if (bundleById) return bundleById;
 
     return serviceBundles.find(
-      (bundle) => (bundle.bundle_name || bundle.name) === selectedWorkOrder.serviceType
+      (bundle) =>
+        bundleNameCandidates.includes(bundle.bundle_name) ||
+        bundleNameCandidates.includes(bundle.name)
     );
   };
   
