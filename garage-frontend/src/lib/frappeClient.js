@@ -253,6 +253,30 @@ class FrappeClient {
     }
   }
 
+  async updateServiceOrderInspection(orderId, inspectionData = {}) {
+    if (!orderId) {
+      throw new Error('Service Order ID is required to save inspection data');
+    }
+
+    try {
+      const response = await this.request(
+        '/api/method/garage.api.portal.update_service_order_inspection',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            order_id: orderId,
+            inspection_data: inspectionData,
+          }),
+        },
+      );
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to update inspection on Frappe:', error);
+      throw error;
+    }
+  }
+
   async listSpareParts(filters = {}, branch) {
     try {
       const payload = {};
