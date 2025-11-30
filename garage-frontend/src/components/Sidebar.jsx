@@ -62,7 +62,7 @@ const getApprovalCounts = (currentUserDisplayName) => {
   }
 };
 
-export function Sidebar({ currentPage, setCurrentPage, isMobileMenuOpen = false, onMobileMenuClose, currentUser }) {
+export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onMobileMenuClose, currentUser }) {
   const [expandedMenus, setExpandedMenus] = React.useState(['master-menu']);
   const [approvalCounts, setApprovalCounts] = React.useState({ supervisorCount: 0, managerCount: 0, direkturCount: 0 });
 
@@ -83,7 +83,10 @@ export function Sidebar({ currentPage, setCurrentPage, isMobileMenuOpen = false,
   };
 
   const handleMenuClick = (pageId) => {
-    setCurrentPage(pageId);
+    if (onNavigate) {
+      onNavigate(pageId);
+    }
+
     // Close mobile menu after selection
     if (onMobileMenuClose) {
       onMobileMenuClose();
