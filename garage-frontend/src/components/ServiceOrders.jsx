@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Filter, Download, Eye, Wrench, ChevronRight, X, Save, Trash2, Package, Search, Send, CheckCircle, FileText, XCircle, AlertCircle } from 'lucide-react';
+import { Plus, Filter, Download, Eye, Wrench, ChevronRight, X, Save, Trash2, Package, Search, Send, CheckCircle, FileText, XCircle, AlertCircle, History } from 'lucide-react';
 import { Button } from './ui/button';
 import { SPKDocument } from './SPKDocument';
+// import { SparePartOrderModal } from './SparePartOrderModal';
 import { frappeClient } from '../lib/frappeClient';
 import { getStoredWorkOrders, persistWorkOrders } from '../lib/workOrdersStorage';
 
@@ -39,6 +40,21 @@ export function ServiceOrders({ currentUser }) {
   const [orderToCancel, setOrderToCancel] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
+
+  // View Modal States
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [orderToView, setOrderToView] = useState(null);
+
+  // Flat Rate States
+  const [selectedServiceTypeId, setSelectedServiceTypeId] = useState('');
+  const [laborCost, setLaborCost] = useState(0);
+  const [serviceTypes, setServiceTypes] = useState([
+    { id: 'ST001', code: 'SVC-OIL', name: 'Oil Change', category: 'Maintenance', flatRate: 50000 },
+    { id: 'ST002', code: 'SVC-TIRE', name: 'Tire Rotation', category: 'Maintenance', flatRate: 75000 },
+    { id: 'ST003', code: 'SVC-BRAKE', name: 'Brake Service', category: 'Repair', flatRate: 150000 },
+    { id: 'ST004', code: 'SVC-ENGINE', name: 'Engine Tune-Up', category: 'Maintenance', flatRate: 300000 },
+    { id: 'ST005', code: 'SVC-AC', name: 'AC Service', category: 'Repair', flatRate: 200000 }
+  ]);
 
   const [serviceBundles, setServiceBundles] = useState([]);
   
@@ -405,6 +421,33 @@ export function ServiceOrders({ currentUser }) {
     }
   };
 
+  // Handler untuk add flat rate
+  const handleAddFlatRate = () => {
+    if (laborCost <= 0) {
+      alert('⚠️ Labor cost harus lebih dari 0!');
+      return;
+    }
+
+    const selectedService = serviceTypes.find(st => st.id === selectedServiceTypeId);
+    const serviceName = selectedService ? selectedService.name : 'Labor / Jasa Service';
+
+    const laborPart = {
+      id: `LABOR-${Date.now()}`,
+      name: serviceName,
+      partNumber: `LABOR-${selectedServiceTypeId || Date.now()}`,
+      quantity: 1,
+      unitPrice: laborCost,
+      discount: 0,
+      discountType: 'percent',
+      totalPrice: laborCost
+    };
+
+    setSpareParts([...spareParts, laborPart]);
+    setLaborCost(0);
+    setSelectedServiceTypeId('');
+    alert('✅ Flat rate jasa berhasil ditambahkan ke grid!');
+  };
+
   const handleAddPackageParts = () => {
     if (!selectedWorkOrder) return;
 
@@ -676,6 +719,12 @@ export function ServiceOrders({ currentUser }) {
     setShowCancelModal(false);
     setOrderToCancel(null);
     setCancelReason('');
+  };
+
+  // Handler untuk view spare part history
+  const handleViewSparePartHistory = (order) => {
+    setOrderToView(order);
+    setShowViewModal(true);
   };
 
   const handleSendOrderPart = () => {
@@ -1024,48 +1073,20 @@ export function ServiceOrders({ currentUser }) {
               </div>
               <div className="col-span-2">
                 <p className="text-slate-600 text-xs mb-1">Service Type</p>
-                <p className="text-slate-900 flex-1">{selectedWorkOrder.serviceType}</p>
-                {resolvedBundle && (
-                  <div className="mt-2 inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg px-3 py-2 text-xs">
-                    <Package className="w-3 h-3" />
-                    <span>Paket Service: {resolvedBundle.bundle_name || resolvedBundle.name}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  <p className="text-slate-900 flex-1">{selectedWorkOrder.serviceType || '-'}</p>
+                  {selectedWorkOrder.serviceType?.startsWith('Paket Service') && (
+                    <Button
+                      onClick={handleAddPackageParts}
+                      disabled={hasPackageParts()}
+                      className="bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1.5 h-auto disabled:bg-slate-300 disabled:cursor-not-allowed"
+                    >
+                      <Package className="w-3 h-3 mr-1" />
+                      Add Part & Package
+                    </Button>
+                  )}
+                </div>
               </div>
-              {(() => {
-                const bundleDisplayName =
-                  resolvedBundle?.bundle_name ||
-                  resolvedBundle?.name ||
-                  selectedWorkOrder.serviceBundleName ||
-                  selectedWorkOrder.serviceBundleId ||
-                  selectedWorkOrder.serviceBundle;
-
-                if (!bundleDisplayName) return null;
-
-                return (
-                  <div className="col-span-3">
-                    <p className="text-slate-600 text-xs mb-1">Service Package</p>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded bg-slate-50 text-slate-800">
-                        {bundleDisplayName}
-                      </div>
-                      <Button
-                        onClick={handleAddPackageParts}
-                        disabled={!resolvedBundle || hasPackageParts()}
-                        className="bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1.5 h-auto disabled:bg-slate-300 disabled:cursor-not-allowed"
-                      >
-                        <Package className="w-3 h-3 mr-1" />
-                        Add Part & Package
-                      </Button>
-                    </div>
-                    {resolvedBundle && (
-                      <p className="text-xs text-slate-600 mt-1">
-                        Klik tombol untuk menarik sparepart & labor dari paket.
-                      </p>
-                    )}
-                  </div>
-                );
-              })()}
               <div className="col-span-3">
                 <p className="text-slate-600 text-xs mb-1">Diagnosis</p>
                 <p className="text-slate-900 text-sm">{selectedWorkOrder.diagnosis}</p>
@@ -1073,6 +1094,81 @@ export function ServiceOrders({ currentUser }) {
               <div className="col-span-3">
                 <p className="text-slate-600 text-xs mb-1">Recommended Parts</p>
                 <p className="text-slate-900 text-sm">{selectedWorkOrder.recommendedParts}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Flat Rate Jasa Section */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
+            <h3 className="text-blue-900 mb-4 flex items-center gap-2">
+              <Wrench className="w-4 h-4" />
+              Input Flat Rate Jasa Service
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-slate-700 mb-2 block text-sm">
+                  Select Service Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={selectedServiceTypeId}
+                  onChange={(e) => {
+                    const serviceTypeId = e.target.value;
+                    setSelectedServiceTypeId(serviceTypeId);
+                    
+                    // Auto-fill flat rate
+                    const selectedServiceType = serviceTypes.find(st => st.id === serviceTypeId);
+                    if (selectedServiceType) {
+                      setLaborCost(selectedServiceType.flatRate);
+                    } else {
+                      setLaborCost(0);
+                    }
+                  }}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                >
+                  <option value="">-- Pilih Service Type --</option>
+                  {serviceTypes.map(st => (
+                    <option key={st.id} value={st.id}>
+                      {st.code} - {st.name} ({st.category}) - {formatCurrency(st.flatRate)}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500 mt-1">
+                  Pilih jenis service untuk auto-fill flat rate jasa
+                </p>
+              </div>
+
+              <div>
+                <label className="text-slate-700 mb-2 block text-sm">
+                  Labor Cost / Biaya Jasa
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={laborCost || ''}
+                    onChange={(e) => setLaborCost(parseFloat(e.target.value) || 0)}
+                    placeholder="50000"
+                    min="0"
+                    className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <Button
+                    onClick={handleAddFlatRate}
+                    disabled={laborCost <= 0}
+                    className="bg-blue-500 hover:bg-blue-600 text-white disabled:bg-slate-300 disabled:cursor-not-allowed"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add to Grid
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Otomatis terisi dari service type, atau input manual
+                </p>
+                {laborCost > 0 && (
+                  <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                    <p className="text-emerald-800 text-sm">
+                      💰 Labor Cost: {formatCurrency(laborCost)}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1248,12 +1344,16 @@ export function ServiceOrders({ currentUser }) {
                         });
                       }
                       
+                      // Check if this is a labor/flat rate part
+                      const isLaborPart = part.partNumber.startsWith('LABOR-');
+                      
                       return (
-                        <tr key={part.id} className={`border-b border-slate-100 ${part.requested ? 'bg-slate-50' : 'hover:bg-slate-50'}`}>
+                        <tr key={part.id} className={`border-b border-slate-100 ${isLaborPart ? 'bg-blue-50' : part.requested ? 'bg-slate-50' : 'hover:bg-slate-50'}`}>
                           <td className="px-3 py-3 text-slate-600 text-sm">{index + 1}</td>
                           <td className="px-3 py-3 text-slate-900 text-sm">
                             <div className="flex items-center gap-2">
-                              {part.name}
+                              {isLaborPart && <Wrench className="w-4 h-4 text-blue-600" />}
+                              <span className={isLaborPart ? 'font-semibold text-blue-900' : ''}>{part.name}</span>
                               {getPartStatusBadge(part)}
                             </div>
                           </td>
@@ -1539,7 +1639,7 @@ export function ServiceOrders({ currentUser }) {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
-                    {/* <th className="px-6 py-4 text-left text-slate-700">Work Order ID</th> */}
+                    <th className="px-6 py-4 text-left text-slate-700">Work Order ID</th>
                     <th className="px-6 py-4 text-left text-slate-700">Order ID</th>
                     <th className="px-6 py-4 text-left text-slate-700">Customer</th>
                     <th className="px-6 py-4 text-left text-slate-700">Vehicle</th>
@@ -1556,24 +1656,26 @@ export function ServiceOrders({ currentUser }) {
                     const isCompleted = order.repairStatus === 'completed' || 
                                        order.repairStatus === 'final-inspection';
                     // Check if order has parts that have been processed by parts staff
+                    // (PREPARED or INSTALLED - not counting DRAFT, REQUESTED, or REJECTED)
                     const hasProcessedParts = order.spareParts?.some(part => 
                       part.status === 'prepared' || part.status === 'installed'
                     ) || false;
+                    // Disable if cancelled, completed, or has prepared parts
                     const isDisabled = isCancelled || isCompleted;
+                    // Disable cancel button specifically if has processed parts
                     const cannotCancel = isDisabled || hasProcessedParts;
-                    
                     return (
                       <tr 
-                        key={index} 
+                        key={order.id} 
                         className={`border-b border-slate-100 transition-colors ${
                           isDisabled
                             ? 'bg-slate-200 opacity-60 cursor-not-allowed' 
                             : 'hover:bg-slate-50'
                         }`}
                       >
-                        {/* <td className="px-6 py-4">
+                        <td className="px-6 py-4">
                           <span className={isDisabled ? "text-slate-500" : "text-blue-600"}>{order.id}</span>
-                        </td> */}
+                        </td>
                         <td className="px-6 py-4">
                           <span className={isDisabled ? "text-slate-500" : "text-slate-900"}>{order.orderId}</span>
                         </td>
@@ -1588,7 +1690,7 @@ export function ServiceOrders({ currentUser }) {
                           <p className="text-slate-500 text-sm">{order.vehicleYear}</p>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={isDisabled ? "text-slate-500" : "text-slate-700"}>{order.serviceType}</span>
+                          <span className={isDisabled ? "text-slate-500" : "text-slate-700"}>{order.serviceType || '-'}</span>
                         </td>
                         <td className="px-6 py-4">
                           <span className={`inline-block px-3 py-1 rounded-full text-sm ${
@@ -1615,6 +1717,15 @@ export function ServiceOrders({ currentUser }) {
                             >
                               <Package className="w-4 h-4 mr-1" />
                               Spare Parts
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="border-slate-300 text-slate-700 hover:bg-slate-50"
+                              onClick={() => handleViewSparePartHistory(order)}
+                              title="View Spare Part Order History"
+                            >
+                              <History className="w-4 h-4" />
                             </Button>
                             {!cannotCancel && (
                               <Button 
@@ -1724,10 +1835,10 @@ export function ServiceOrders({ currentUser }) {
               <Button
                 onClick={handleConfirmCancel}
                 className="bg-red-600 hover:bg-red-700 text-white"
-                disabled={!cancelReason || isCancelling}
+                disabled={!cancelReason}
               >
                 <XCircle className="w-4 h-4 mr-2" />
-                {isCancelling ? 'Memproses...' : 'Konfirmasi Pembatalan'}
+                Konfirmasi Pembatalan
               </Button>
             </div>
           </div>

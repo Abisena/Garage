@@ -23,22 +23,67 @@ import {
   CalendarClock,
   CalendarX,
   Wallet,
-  Receipt
+  Database,
+  ArrowRightLeft,
+  ClipboardCheck,
+  BookOpen,
+  Calculator,
+  TrendingUp,
+  Workflow
 } from 'lucide-react';
 
-export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onMobileMenuClose }) {
-  const [expandedMenus, setExpandedMenus] = React.useState(['spareparts-menu', 'payment-menu']);
+// Helper function to get approval pending counts
+const getApprovalCounts = (currentUserDisplayName) => {
+  try {
+    const purchases = JSON.parse(localStorage.getItem('purchaseOrders') || '[]');
+    
+    const supervisorCount = purchases.filter((po) => 
+      po.status === 'PENDING_APPROVAL' && 
+      po.totalAmount < 1000000 &&
+      po.requestedBy !== currentUserDisplayName
+    ).length;
+    
+    const managerCount = purchases.filter((po) => 
+      po.status === 'PENDING_APPROVAL' && 
+      po.totalAmount >= 1000000 &&
+      po.totalAmount < 10000000 &&
+      po.requestedBy !== currentUserDisplayName
+    ).length;
+    
+    const direkturCount = purchases.filter((po) => 
+      po.status === 'PENDING_APPROVAL' && 
+      po.totalAmount >= 10000000 &&
+      po.requestedBy !== currentUserDisplayName
+    ).length;
+    
+    return { supervisorCount, managerCount, direkturCount };
+  } catch {
+    return { supervisorCount: 0, managerCount: 0, direkturCount: 0 };
+  }
+};
+
+export function Sidebar({ currentPage, setCurrentPage, isMobileMenuOpen = false, onMobileMenuClose, currentUser }) {
+  const [expandedMenus, setExpandedMenus] = React.useState(['master-menu']);
+  const [approvalCounts, setApprovalCounts] = React.useState({ supervisorCount: 0, managerCount: 0, direkturCount: 0 });
+
+  // Update approval counts when component mounts or currentPage changes
+  React.useEffect(() => {
+    if (currentUser) {
+      const counts = getApprovalCounts(currentUser.displayName);
+      setApprovalCounts(counts);
+    }
+  }, [currentUser, currentPage]);
 
   const toggleMenu = (menuId) => {
-    setExpandedMenus(prev =>
-      prev.includes(menuId)
+    setExpandedMenus(prev => 
+      prev.includes(menuId) 
         ? prev.filter(id => id !== menuId)
         : [...prev, menuId]
     );
   };
 
   const handleMenuClick = (pageId) => {
-    onNavigate(pageId);
+    setCurrentPage(pageId);
     // Close mobile menu after selection
     if (onMobileMenuClose) {
       onMobileMenuClose();
@@ -46,6 +91,9 @@ export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onM
   };
 
   const menuItems = [
+    { id: 'process', label: 'Business Process Flow', icon: GitBranch },
+    { id: 'processdiagram', label: 'Process Flow Diagram', icon: Workflow },
+    { id: 'divider-dashboard' },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'divider-1' },
     { 
@@ -74,9 +122,8 @@ export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onM
       isExpandable: true,
       subItems: [
         { id: 'sparepartsrequest', label: 'Spare Parts Request', icon: Package },
-        { id: 'buyingsparepart', label: 'Buying Spare Part', icon: ShoppingCart },
         { id: 'directsales', label: 'Direct Sales Sparepart', icon: DollarSign },
-        { id: 'spareparts', label: 'Master Spare Parts', icon: Package }
+        { id: 'transferstock', label: 'Transfer Stock', icon: ArrowRightLeft }
       ]
     },
     { 
@@ -93,7 +140,7 @@ export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onM
       isExpandable: true,
       subItems: [
         { id: 'paymentprocess', label: 'Payment Process', icon: CreditCard },
-        { id: 'paymentlist', label: 'Payment List', icon: Receipt }
+        { id: 'paymentlist', label: 'Payment List', icon: FileText }
       ]
     },
     { 
@@ -111,19 +158,70 @@ export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onM
     { id: 'reports', label: 'Reports', icon: BarChart3 },
     { id: 'divider-2' },
     { 
+      id: 'master-menu',
+      label: 'Master Data',
+      icon: Database,
+      isExpandable: true,
+      subItems: [
+        { id: 'servicetypes', label: 'Service Type & Flat Rate', icon: Wrench },
+        { id: 'masterproducts', label: 'Master Products', icon: Package },
+        { id: 'spareparts', label: 'Master Spare Parts', icon: Package },
+        { id: 'customers', label: 'Customers', icon: Users }
+      ]
+    },
+    { id: 'divider-3' },
+    { 
+      id: 'purchase-menu',
+      label: 'Purchase Management',
+      icon: ShoppingCart,
+      isExpandable: true,
+      subItems: [
+        { id: 'purchaseguide', label: 'Purchase Guide', icon: BookOpen },
+        { id: 'purchasemanagement', label: 'Purchase Orders', icon: ShoppingCart },
+        { id: 'supervisorapproval', label: 'Supervisor Approval', icon: CheckCircle, badge: approvalCounts.supervisorCount },
+        { id: 'managerapproval', label: 'Manager Approval', icon: CheckCircle, badge: approvalCounts.managerCount },
+        { id: 'direkturapproval', label: 'Direktur Approval', icon: CheckCircle, badge: approvalCounts.direkturCount }
+      ]
+    },
+    { id: 'divider-purchase' },
+    { 
+      id: 'asset-menu',
+      label: 'Asset Management',
+      icon: Package,
+      isExpandable: true,
+      subItems: [
+        { id: 'assetmanagement', label: 'Asset Register', icon: Package },
+        { id: 'assetguide', label: 'Asset Guide', icon: BookOpen }
+      ]
+    },
+    { id: 'divider-4' },
+    { 
       id: 'hr-menu',
       label: 'HR Management',
       icon: Users,
       isExpandable: true,
       subItems: [
         { id: 'employees', label: 'Master Data Karyawan', icon: Users },
-        { id: 'attendance', label: 'Attendance', icon: Clock },
+        { id: 'attendance', label: 'My Attendance', icon: Clock },
+        { id: 'attendancelist', label: 'Attendance Records', icon: ClipboardCheck },
         { id: 'overtime', label: 'Overtime', icon: CalendarClock },
         { id: 'leave', label: 'Cuti', icon: CalendarX },
-        { id: 'payroll', label: 'Payroll', icon: Wallet }
+        { 
+          id: 'payroll-menu', 
+          label: 'Payroll', 
+          icon: Wallet,
+          isExpandable: true,
+          subItems: [
+            { id: 'payrollguide', label: 'Payroll Guide', icon: BookOpen },
+            { id: 'salary', label: 'Salary Components', icon: Database },
+            { id: 'salarystructure', label: 'Salary Structure', icon: Calculator },
+            { id: 'payrolladjustments', label: 'Payroll Adjustments', icon: ClipboardCheck },
+            { id: 'payroll', label: 'Payroll Management', icon: Wallet }
+          ]
+        }
       ]
     },
-    { id: 'process', label: 'Business Process Flow', icon: GitBranch },
+    { id: 'divider-5' },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -201,7 +299,7 @@ export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onM
           
           <ul className="space-y-1">
             {menuItems.map((item) => {
-              if (item.id === 'divider-1' || item.id === 'divider-2') {
+              if (item.id === 'divider-dashboard' || item.id === 'divider-1' || item.id === 'divider-2' || item.id === 'divider-3' || item.id === 'divider-4' || item.id === 'divider-purchase' || item.id === 'divider-5') {
                 return <li key={item.id} className="border-t border-slate-800 my-4"></li>;
               }
               
@@ -209,8 +307,15 @@ export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onM
               const isActive = currentPage === item.id;
               const isExpanded = expandedMenus.includes(item.id);
               
-              // Check if any submenu is active
-              const hasActiveSubItem = item.subItems?.some(sub => currentPage === sub.id);
+              // Check if any submenu is active (including nested)
+              const hasActiveSubItem = item.subItems?.some(sub => {
+                if (currentPage === sub.id) return true;
+                // Check nested subItems
+                if (sub.subItems) {
+                  return sub.subItems.some(nested => currentPage === nested.id);
+                }
+                return false;
+              });
 
               return (
                 <li key={item.id}>
@@ -242,19 +347,77 @@ export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onM
                           {item.subItems.map(subItem => {
                             const SubIcon = subItem.icon;
                             const isSubActive = currentPage === subItem.id;
+                            const isSubExpanded = expandedMenus.includes(subItem.id);
+                            
+                            // Check if any nested submenu is active
+                            const hasActiveNestedItem = subItem.subItems?.some(nested => currentPage === nested.id);
+                            
                             return (
                               <li key={subItem.id}>
-                                <button
-                                  onClick={() => handleMenuClick(subItem.id)}
-                                  className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm ${
-                                    isSubActive
-                                      ? 'bg-blue-500 text-white'
-                                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                                  }`}
-                                >
-                                  <SubIcon className="w-4 h-4 flex-shrink-0" />
-                                  <span className="flex-1 text-left">{subItem.label}</span>
-                                </button>
+                                {subItem.isExpandable ? (
+                                  <>
+                                    <button
+                                      onClick={() => toggleMenu(subItem.id)}
+                                      className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm ${
+                                        hasActiveNestedItem
+                                          ? 'bg-slate-800 text-white'
+                                          : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                                      }`}
+                                    >
+                                      <SubIcon className="w-4 h-4 flex-shrink-0" />
+                                      <span className="flex-1 text-left">{subItem.label}</span>
+                                      {isSubExpanded ? (
+                                        <ChevronDown className="w-3 h-3 flex-shrink-0" />
+                                      ) : (
+                                        <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                                      )}
+                                    </button>
+                                    {isSubExpanded && subItem.subItems && (
+                                      <ul className="mt-1 space-y-1 ml-4 pl-3 border-l border-slate-700">
+                                        {subItem.subItems.map(nestedItem => {
+                                          const NestedIcon = nestedItem.icon;
+                                          const isNestedActive = currentPage === nestedItem.id;
+                                          return (
+                                            <li key={nestedItem.id}>
+                                              <button
+                                                onClick={() => handleMenuClick(nestedItem.id)}
+                                                className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors text-xs ${
+                                                  isNestedActive
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                                                }`}
+                                              >
+                                                <NestedIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                                                <span className="flex-1 text-left">{nestedItem.label}</span>
+                                              </button>
+                                            </li>
+                                          );
+                                        })}
+                                      </ul>
+                                    )}
+                                  </>
+                                ) : (
+                                  <button
+                                    onClick={() => handleMenuClick(subItem.id)}
+                                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm ${
+                                      isSubActive
+                                        ? 'bg-blue-500 text-white'
+                                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                                    }`}
+                                  >
+                                    <SubIcon className="w-4 h-4 flex-shrink-0" />
+                                    <span className="flex-1 text-left">{subItem.label}</span>
+                                    {subItem.badge !== undefined && subItem.badge > 0 && (
+                                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                        isSubActive
+                                          ? 'bg-white text-blue-600'
+                                          : 'bg-orange-500 text-white'
+                                      }`}>
+                                        {subItem.badge}
+                                      </span>
+                                    )}
+                                  </button>
+                                )}
                               </li>
                             );
                           })}
