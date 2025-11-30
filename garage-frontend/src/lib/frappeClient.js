@@ -18,6 +18,24 @@ class FrappeClient {
     this.baseURL = FRAPPE_URL;
   }
 
+  buildListURL(doctype, fields = [], filters = null, limit = 200) {
+    const params = new URLSearchParams();
+
+    if (fields.length > 0) {
+      params.append('fields', JSON.stringify(fields));
+    }
+
+    if (filters) {
+      params.append('filters', JSON.stringify(filters));
+    }
+
+    if (limit) {
+      params.append('limit_page_length', String(limit));
+    }
+
+    return `/api/resource/${encodeURIComponent(doctype)}?${params.toString()}`;
+  }
+
   async request(endpoint, options = {}) {
     if (!endpoint.startsWith('/')) {
       endpoint = '/' + endpoint;
@@ -330,6 +348,110 @@ class FrappeClient {
     } catch (error) {
       console.error('Failed to fetch spare part stats:', error);
       throw error;
+    }
+  }
+
+  async listServiceTypes() {
+    try {
+      const fields = [
+        'name',
+        'service_type',
+        'service_code',
+        'category',
+        'service_fee',
+        'flat_rate',
+        'rate',
+        'description',
+      ];
+
+      const url = this.buildListURL('Garage Service Type', fields, null, 200);
+      const response = await this.request(url);
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to list service types:', error);
+      return [];
+    }
+  }
+
+  async listServiceBundles(limit = 200) {
+    try {
+      const fields = [
+        'name',
+        'bundle_name',
+        'service_fee',
+        'total_spare_amount',
+        'total_material_amount',
+        'grand_total',
+        'description',
+        'is_active',
+      ];
+
+      const filters = [['is_active', '=', 1]];
+      const url = this.buildListURL('Garage Service Bundle', fields, filters, limit);
+      const response = await this.request(url);
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to list service bundles:', error);
+      return [];
+    }
+  }
+
+  async listMechanics(branch = '') {
+    try {
+      const technicianFields = [
+        'name',
+        'employee',
+        'employee_name',
+        'user_id',
+        'status',
+        'skill_tags',
+        'branch',
+        'notes',
+      ];
+
+      const technicianFilters = branch ? [['branch', '=', branch]] : null;
+      const technicianUrl = this.buildListURL(
+        'Garage Technician',
+        technicianFields,
+        technicianFilters,
+        200,
+      );
+
+      const employeeFields = [
+        'name',
+        'employee_name',
+        'user_id',
+        'status',
+        'designation',
+        'employment_type',
+        'department',
+        'branch',
+      ];
+
+      const employeeFilters = [['designation', 'like', '%Mechanic%']];
+      if (branch) {
+        employeeFilters.push(['branch', '=', branch]);
+      }
+
+      const employeeUrl = this.buildListURL(
+        'Employee',
+        employeeFields,
+        employeeFilters,
+        200,
+      );
+
+      const [technicianResponse, employeeResponse] = await Promise.all([
+        this.request(technicianUrl),
+        this.request(employeeUrl),
+      ]);
+
+      const technicians = technicianResponse.data || [];
+      const employees = employeeResponse.data || [];
+
+      return { technicians, employees };
+    } catch (error) {
+      console.error('Failed to list mechanics:', error);
+      return { technicians: [], employees: [] };
     }
   }
 
