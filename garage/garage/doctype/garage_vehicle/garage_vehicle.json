@@ -20,7 +20,9 @@
     "vin",
     "brand",
     "model",
+    "vehicle_type",
     "vehicle_year",
+    "assembly_type",
     "transmission",
     "fuel_type",
     "mileage",
@@ -71,9 +73,21 @@
       "in_list_view": 1
     },
     {
+      "fieldname": "vehicle_type",
+      "fieldtype": "Select",
+      "label": "Vehicle Type",
+      "options": "Sedan\nHatchback\nSUV\nMPV\nTruck\nVan\nCoupe\nWagon"
+    },
+    {
       "fieldname": "vehicle_year",
       "fieldtype": "Int",
       "label": "Year"
+    },
+    {
+      "fieldname": "assembly_type",
+      "fieldtype": "Select",
+      "label": "Jenis Rakit",
+      "options": "CKD\nCBU"
     },
     {
       "fieldname": "transmission",

@@ -17,6 +17,8 @@
     "customer_name",
     "customer_type",
     "branch",
+    "registration_date",
+    "registration_time",
     "phone",
     "email",
     "preferred_contact_method",
@@ -54,6 +56,19 @@
       "options": "Garage Branch",
       "reqd": 1,
       "in_list_view": 1
+    },
+    {
+      "fieldname": "registration_date",
+      "fieldtype": "Date",
+      "label": "Tanggal Registrasi",
+      "read_only": 1,
+      "default": "Today"
+    },
+    {
+      "fieldname": "registration_time",
+      "fieldtype": "Time",
+      "label": "Jam Registrasi",
+      "read_only": 1
     },
     {
       "fieldname": "phone",
