@@ -24,16 +24,7 @@ export function ServiceOrders({ currentUser }) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [partOrderSent, setPartOrderSent] = useState(false);
   const [mechanicName, setMechanicName] = useState('');
-  const [availableMechanics, setAvailableMechanics] = useState([
-    'Ahmad Syahrul',
-    'Budi Santoso',
-    'Deni Pratama',
-    'Eko Wijaya',
-    'Fajar Ramadhan',
-    'Gunawan Prakoso',
-    'Hendra Kusuma',
-    'Irfan Hakim'
-  ]);
+  const [availableMechanics, setAvailableMechanics] = useState([]);
   
   // Cancel Order States
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -48,13 +39,7 @@ export function ServiceOrders({ currentUser }) {
   // Flat Rate States
   const [selectedServiceTypeId, setSelectedServiceTypeId] = useState('');
   const [laborCost, setLaborCost] = useState(0);
-  const [serviceTypes, setServiceTypes] = useState([
-    { id: 'ST001', code: 'SVC-OIL', name: 'Oil Change', category: 'Maintenance', flatRate: 50000 },
-    { id: 'ST002', code: 'SVC-TIRE', name: 'Tire Rotation', category: 'Maintenance', flatRate: 75000 },
-    { id: 'ST003', code: 'SVC-BRAKE', name: 'Brake Service', category: 'Repair', flatRate: 150000 },
-    { id: 'ST004', code: 'SVC-ENGINE', name: 'Engine Tune-Up', category: 'Maintenance', flatRate: 300000 },
-    { id: 'ST005', code: 'SVC-AC', name: 'AC Service', category: 'Repair', flatRate: 200000 }
-  ]);
+  const [serviceTypes, setServiceTypes] = useState([]);
 
   const [serviceBundles, setServiceBundles] = useState([]);
   
@@ -146,6 +131,26 @@ export function ServiceOrders({ currentUser }) {
     };
   }, [selectedWorkOrder?.id]);
 
+  useEffect(() => {
+    const branchFilter = currentUser?.branch === 'all' ? '' : currentUser?.branch || '';
+    loadMechanicRoster(branchFilter);
+    loadServiceTypesFromFrappe(branchFilter);
+  }, [currentUser?.branch]);
+
+  useEffect(() => {
+    const branchFilter = selectedWorkOrder?.branch;
+    if (branchFilter) {
+      loadMechanicRoster(branchFilter);
+      loadServiceTypesFromFrappe(branchFilter);
+    }
+  }, [selectedWorkOrder?.branch]);
+
+  useEffect(() => {
+    if (serviceBundles.length > 0) {
+      mergeServiceTypes(normalizeBundleAsServiceTypes(serviceBundles));
+    }
+  }, [serviceBundles]);
+
   const loadWorkOrders = () => {
     const storedOrders = getStoredWorkOrders();
     setWorkOrders(storedOrders);
@@ -161,6 +166,119 @@ export function ServiceOrders({ currentUser }) {
     stock: Number(part.stock_qty ?? part.stock ?? 0),
     minStock: Number(part.reorder_level ?? part.minStock ?? 0)
   });
+
+  const normalizeServiceTypes = (types = []) => {
+    return types
+      .map((type) => {
+        const resolvedId = type.id || type.name || type.service_code || type.service_type;
+        const flatRateValue = Number(
+          type.flat_rate ??
+          type.service_fee ??
+          type.rate ??
+          type.labor_rate ??
+          0
+        );
+
+        return {
+          id: resolvedId,
+          code: type.service_code || type.code || type.name || type.service_type,
+          name: type.service_type || type.name || type.code,
+          category: type.category || type.service_category || type.order_category || 'General',
+          flatRate: Number.isFinite(flatRateValue) ? flatRateValue : 0,
+          description: type.description || '',
+        };
+      })
+      .filter((type) => type.id && type.name);
+  };
+
+  const normalizeBundleAsServiceTypes = (bundles = []) => {
+    return bundles
+      .map((bundle) => {
+        const identifier = bundle.name || bundle.id;
+        return {
+          id: identifier,
+          code: bundle.bundle_name || bundle.name || bundle.id,
+          name: bundle.bundle_name || bundle.name || bundle.id,
+          category: 'Bundle',
+          flatRate: Number(bundle.service_fee ?? bundle.grand_total ?? 0) || 0,
+          description: bundle.description || '',
+        };
+      })
+      .filter((bundle) => bundle.id && bundle.name);
+  };
+
+  const mergeServiceTypes = (incoming = []) => {
+    if (!incoming || incoming.length === 0) return;
+
+    setServiceTypes((prev) => {
+      const combined = [...prev];
+      const existingIds = new Set(combined.map((item) => item.id));
+
+      incoming.forEach((item) => {
+        if (item.id && !existingIds.has(item.id)) {
+          combined.push(item);
+          existingIds.add(item.id);
+        }
+      });
+
+      return combined;
+    });
+  };
+
+  const normalizeMechanicNames = (entries = []) => entries
+    .map((mechanic) =>
+      mechanic?.employee_name ||
+      mechanic?.employee ||
+      mechanic?.name ||
+      mechanic?.full_name ||
+      mechanic?.user_id
+    )
+    .map((name) => (name ? String(name).trim() : ''))
+    .filter(Boolean);
+
+  const mergeMechanicNames = (names = []) => {
+    if (!names || names.length === 0) return;
+
+    setAvailableMechanics((prev) => {
+      const combined = new Set([...prev, ...names]);
+      return Array.from(combined);
+    });
+  };
+
+  const loadMechanicRoster = async (branchFilter = '') => {
+    try {
+      const { technicians, employees } = await frappeClient.listMechanics(branchFilter);
+      const normalized = [
+        ...normalizeMechanicNames(technicians),
+        ...normalizeMechanicNames(employees),
+      ];
+      mergeMechanicNames(normalized);
+    } catch (error) {
+      console.error('Failed to load mechanic roster:', error);
+    }
+  };
+
+  const loadServiceTypesFromFrappe = async (branchFilter = '') => {
+    try {
+      const types = await frappeClient.listServiceTypes(branchFilter);
+      const normalizedTypes = normalizeServiceTypes(types);
+
+      if (normalizedTypes.length > 0) {
+        mergeServiceTypes(normalizedTypes);
+        return;
+      }
+
+      const bundles = await frappeClient.listServiceBundles();
+      const normalizedBundles = normalizeBundleAsServiceTypes(bundles);
+      mergeServiceTypes(normalizedBundles);
+
+      if (bundles?.length) {
+        setServiceBundles((prev) => (prev.length > 0 ? prev : bundles));
+      }
+    } catch (error) {
+      console.error('Failed to load service types from Frappe:', error);
+    }
+  };
 
   const isMechanicRole = (value) => {
     if (!value) return false;
@@ -193,20 +311,10 @@ export function ServiceOrders({ currentUser }) {
     });
 
     const targetList = mechanicCandidates.length > 0 ? mechanicCandidates : technicians;
-
-    const names = targetList
-      .map((technician) =>
-        technician?.employee_name ||
-        technician?.employee ||
-        technician?.name ||
-        technician?.full_name ||
-        technician?.user_id
-      )
-      .filter(Boolean);
+    const names = normalizeMechanicNames(targetList);
 
     if (names.length > 0) {
-      const uniqueNames = Array.from(new Set(names));
-      setAvailableMechanics(uniqueNames);
+      mergeMechanicNames(names);
     }
   };
 
