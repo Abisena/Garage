@@ -986,7 +986,6 @@ export function Registration({ currentUser }) {
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">Paket Service sekarang digabung ke Service Type. Pilihan ini wajib diisi.</p>
               </div>
 
               {/* Customer Complaint */}

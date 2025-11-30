@@ -19,6 +19,9 @@ import { Payment } from './components/Payment'
 import { Handover } from './components/Handover'
 import { FollowUp } from './components/FollowUp'
 import { Report } from './components/Report'
+import { TransferStock } from './components/TransferStock'
+import BusinessProcessFlowDiagram from './components/Businessprocessflowdiagram'
+import { ProcessFlow } from './components/Processflow'
 
 const PAGE_ROLES = {
   dashboard: ['admin', 'sparepart', 'serviceAdvisor', 'foreman', 'mechanic', 'cashier', 'receptionist'],
@@ -36,6 +39,9 @@ const PAGE_ROLES = {
   handover: ['admin', 'serviceAdvisor', 'receptionist'],
   followup: ['admin', 'serviceAdvisor', 'receptionist'],
   reports: ['admin'],
+  transferstock: ['admin', 'sparepart'],
+  process: ['admin', 'serviceAdvisor', 'foreman', 'mechanic', 'sparepart', 'cashier', 'receptionist'],
+  processdiagram: ['admin', 'serviceAdvisor', 'foreman', 'mechanic', 'sparepart', 'cashier', 'receptionist'],
 };
 
 const PAGE_PATHS = {
@@ -54,6 +60,9 @@ const PAGE_PATHS = {
   handover: '/handover',
   followup: '/follow-up',
   reports: '/reports',
+  transferstock: '/spare-parts/transfer-stock',
+  process: '/process-flow',
+  processdiagram: '/business-process-flow',
 };
 
 const DEFAULT_PAGE = 'dashboard';
@@ -413,6 +422,10 @@ function App() {
 
   const renderPage = (pageId) => {
     switch (pageId) {
+      case 'process':
+        return <ProcessFlow currentUser={currentUser} />;
+      case 'processdiagram':
+        return <BusinessProcessFlowDiagram currentUser={currentUser} />;
       case 'dashboard':
         return <Dashboard />
       case 'registration':
@@ -427,8 +440,8 @@ function App() {
         return <SpareParts/>
       case 'sparepartsrequest':
         return <SparePartsRequest currentUser={currentUser} />;
-      case 'buyingsparepart':
-        return <BuyingSparePartIntegrated currentUser={currentUser} />;
+      case 'transferstock':
+        return <TransferStock currentUser={currentUser} />;
       case 'directsales':
         return <DirectSalesSparePart currentUser={currentUser} />;
       case 'workshop':
