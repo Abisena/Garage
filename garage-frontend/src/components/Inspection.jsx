@@ -3,6 +3,7 @@ import { Search, Camera, AlertTriangle, CheckCircle, Clock, FileText, X, Printer
 import { Button } from './ui/button';
 import { loadFromStorage, saveToStorage } from '../lib/storage';
 import watermarkLogo from '../assets/imogi.png';
+import { frappeClient } from '../lib/frappeClient';
 
 export function Inspection({ currentUser }) {
   const todayDate = new Date().toLocaleDateString('id-ID');
@@ -20,6 +21,9 @@ export function Inspection({ currentUser }) {
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [showDiagnosisReport, setShowDiagnosisReport] = useState(false);
   const [createdWorkOrderId, setCreatedWorkOrderId] = useState('');
+  const [syncMessage, setSyncMessage] = useState('');
+  const [syncError, setSyncError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const [inspectionData, setInspectionData] = useState({
     engine: [
       { item: 'Oil Level', status: 'ok', notes: '' },
@@ -64,6 +68,8 @@ export function Inspection({ currentUser }) {
 
   const handleVehicleSelect = (registration) => {
     setSelectedVehicle(registration);
+    setSyncMessage('');
+    setSyncError('');
     // Reset inspection data when selecting new vehicle
     setInspectionData({
       engine: [
@@ -116,9 +122,93 @@ export function Inspection({ currentUser }) {
     }));
   };
 
-  const handleCompleteInspection = () => {
+  const statusSeverityMap = {
+    ok: 'Low',
+    attention: 'Medium',
+    replace: 'High'
+  };
+
+  const statusActionMap = {
+    ok: 'No action required. Monitor during routine service.',
+    attention: 'Schedule maintenance or detailed diagnostics.',
+    replace: 'Replace the component immediately.'
+  };
+
+  const statusLabelMap = {
+    ok: 'OK',
+    attention: 'Needs Attention',
+    replace: 'Replace'
+  };
+
+  const buildInspectionItemsPayload = () => {
+    const categories = ['engine', 'brakes', 'tires', 'electrical', 'exterior'];
+
+    return categories.flatMap((category) => {
+      const items = inspectionData[category] || [];
+      return items.map((item) => {
+        const statusLabel = statusLabelMap[item.status] || 'OK';
+        const severity = statusSeverityMap[item.status] || 'Low';
+        const notesSuffix = item.notes ? ` Notes: ${item.notes}` : '';
+
+        return {
+          item: `${category.charAt(0).toUpperCase() + category.slice(1)} - ${item.item}`,
+          severity,
+          findings: `Status: ${statusLabel}.${notesSuffix}`,
+          recommended_action: statusActionMap[item.status] || 'No action recorded.'
+        };
+      });
+    });
+  };
+
+  const buildInspectionSummary = () => {
+    const summaryParts = [];
+
+    if (inspectionData.diagnosis) {
+      summaryParts.push(`Diagnosis: ${inspectionData.diagnosis}`);
+    }
+    if (inspectionData.recommendedParts) {
+      summaryParts.push(`Recommended Parts: ${inspectionData.recommendedParts}`);
+    }
+    if (inspectionData.estimatedRepairTime) {
+      summaryParts.push(`Estimated Repair Time: ${inspectionData.estimatedRepairTime}`);
+    }
+
+    return summaryParts.join('\n');
+  };
+
+  const persistInspectionToFrappe = async () => {
+    if (!selectedVehicle?.orderId) {
+      throw new Error('Service Order ID is missing, cannot sync inspection.');
+    }
+
+    const payload = {
+      inspection_summary: buildInspectionSummary() || 'Inspection completed via portal.',
+      service_notes: inspectionData.diagnosis || selectedVehicle?.customerComplaint || '',
+      inspection_items: buildInspectionItemsPayload(),
+    };
+
+    return frappeClient.updateServiceOrderInspection(selectedVehicle.orderId, payload);
+  };
+
+  const handleCompleteInspection = async () => {
     if (!selectedVehicle) return;
-    
+
+    setIsSaving(true);
+    setSyncError('');
+    setSyncMessage('Menyimpan data inspeksi ke Frappe...');
+
+    try {
+      const response = await persistInspectionToFrappe();
+      const message = response?.message || response?.msg || 'Data inspeksi berhasil disimpan.';
+      setSyncMessage(message);
+    } catch (error) {
+      console.error('Failed to sync inspection to Frappe', error);
+      setSyncMessage('');
+      setSyncError(error.message || 'Gagal menyimpan data inspeksi ke Frappe.');
+    } finally {
+      setIsSaving(false);
+    }
+
     // Get branch code for work order numbering
     const getBranchCode = (branch) => {
       switch (branch) {
@@ -737,14 +827,22 @@ export function Inspection({ currentUser }) {
 
               {/* Complete Button */}
               <div className="flex gap-3 mt-6">
-                <Button 
+                <Button
                   className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-6"
                   onClick={handleCompleteInspection}
+                  disabled={isSaving}
                 >
                   <CheckCircle className="w-5 h-5 mr-2" />
-                  Complete Inspection & Generate Report
+                  {isSaving ? 'Saving to Frappe...' : 'Complete Inspection & Generate Report'}
                 </Button>
               </div>
+
+              {syncMessage && !syncError && (
+                <p className="text-sm text-emerald-600 mt-3" role="status">{syncMessage}</p>
+              )}
+              {syncError && (
+                <p className="text-sm text-red-600 mt-3" role="alert">{syncError}</p>
+              )}
             </div>
           </div>
 
