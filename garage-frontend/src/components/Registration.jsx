@@ -245,15 +245,23 @@ export function Registration({ currentUser }) {
     bundle.item_name === value
   );
 
+  const getBundleDisplayName = (bundle) =>
+    bundle?.item_name ||
+    bundle?.bundle_name ||
+    bundle?.name ||
+    bundle?.item_code ||
+    bundle?.id ||
+    '';
+
   const handleInputComplete = (currentField, value) => {
     if (!value) return;
     
     // Define field order
     const fieldOrder = [
-      'plateNumber', 'chassisNumber', 'engineNumber', 'vehicleBrand', 
-      'vehicleModel', 'vehicleType', 'kilometer', 'fuel', 
+      'plateNumber', 'chassisNumber', 'engineNumber', 'vehicleBrand',
+      'vehicleModel', 'vehicleType', 'kilometer', 'fuel',
       'assemblyType', 'vehicleYear', 'customerName', 'phone',
-      'email', 'serviceType', 'serviceBundle', 'customerComplaint'
+      'email', 'serviceType', 'customerComplaint'
     ];
     
     const currentIndex = fieldOrder.indexOf(currentField);
@@ -578,22 +586,26 @@ export function Registration({ currentUser }) {
   };
 
   const handleServiceTypeChange = (value) => {
+    const matchedBundle = matchServiceBundle(value);
+
+    if (matchedBundle) {
+      const displayName = getBundleDisplayName(matchedBundle) || value;
+
+      setFormData({
+        ...formData,
+        serviceType: displayName,
+        serviceBundle: matchedBundle?.id || matchedBundle?.item_code || matchedBundle?.bundle_name || matchedBundle?.name || value,
+        serviceBundleName: displayName,
+      });
+
+      return;
+    }
+
     setFormData({
       ...formData,
       serviceType: value,
       serviceBundle: '',
       serviceBundleName: ''
-    });
-  };
-
-  const handleServiceBundleChange = (value) => {
-    const matchedBundle = matchServiceBundle(value);
-
-    setFormData({
-      ...formData,
-      serviceBundle: matchedBundle?.id || matchedBundle?.item_code || matchedBundle?.bundle_name || matchedBundle?.name || value,
-      serviceBundleName: matchedBundle?.item_name || matchedBundle?.bundle_name || matchedBundle?.name || '',
-      serviceType: ''
     });
   };
 
@@ -611,6 +623,26 @@ export function Registration({ currentUser }) {
   const filteredRegistrations = branchFilteredRegistrations.length > 0
     ? branchFilteredRegistrations
     : recentRegistrations;
+
+  const serviceBundleOptions = serviceBundles
+    .map((bundle) => {
+      const value = bundle.id || bundle.item_code || bundle.name || bundle.bundle_name;
+      const displayName = getBundleDisplayName(bundle);
+
+      if (!value || !displayName) return null;
+
+      return {
+        value,
+        label: `${displayName} (Package)`,
+        displayName,
+      };
+    })
+    .filter(Boolean);
+
+  const serviceSelectOptions = [
+    ...serviceTypeOptions.map((type) => ({ value: type, label: type })),
+    ...serviceBundleOptions,
+  ];
 
   return (
     <>
@@ -933,15 +965,15 @@ export function Registration({ currentUser }) {
                 </div>
               </div>
 
-              {/* Service Type */}
+              {/* Service Type (including packages) */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Service Type (opsional jika pilih paket)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Service Type *</label>
                 <select
                   name="serviceType"
                   className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
                     focusedField === 'serviceType' ? 'bg-blue-50 border-blue-400' : 'bg-white'
                   }`}
-                  value={formData.serviceType}
+                  value={formData.serviceBundle || formData.serviceType}
                   onChange={(e) => {
                     handleServiceTypeChange(e.target.value);
                     handleInputComplete('serviceType', e.target.value);
@@ -949,48 +981,12 @@ export function Registration({ currentUser }) {
                   onFocus={() => setFocusedField('serviceType')}
                   onBlur={() => setFocusedField('')}
                 >
-                  <option value="">Select service type</option>
-                  {serviceTypeOptions.map(service => (
-                    <option key={service} value={service}>{service}</option>
+                  <option value="">Select service type or package</option>
+                  {serviceSelectOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">Pilih salah satu: Service Type atau Paket Service.</p>
-              </div>
-
-              {/* Service Bundle */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Paket Service</label>
-                <select
-                  name="serviceBundle"
-                  className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
-                    focusedField === 'serviceBundle' ? 'bg-blue-50 border-blue-400' : 'bg-white'
-                  }`}
-                  value={formData.serviceBundle}
-                  onChange={(e) => {
-                    handleServiceBundleChange(e.target.value);
-                    handleInputComplete('serviceBundle', e.target.value);
-                  }}
-                  onFocus={() => setFocusedField('serviceBundle')}
-                  onBlur={() => setFocusedField('')}
-                  disabled={serviceBundles.length === 0}
-                >
-                  <option value="">{serviceBundles.length > 0 ? 'Select service package' : 'No service packages available'}</option>
-                  {serviceBundles.map((bundle) => {
-                    const optionValue = bundle.id || bundle.item_code || bundle.name || bundle.bundle_name;
-                    const displayName =
-                      bundle.item_name ||
-                      bundle.bundle_name ||
-                      bundle.name ||
-                      optionValue;
-
-                    if (!displayName || !optionValue) return null;
-
-                    return (
-                      <option key={optionValue} value={optionValue}>{displayName}</option>
-                    );
-                  })}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">Paket Service diambil dari profil & product bundle. Mengisi paket akan menonaktifkan Service Type.</p>
+                <p className="text-xs text-gray-500 mt-1">Paket Service sekarang digabung ke Service Type. Pilihan ini wajib diisi.</p>
               </div>
 
               {/* Customer Complaint */}
