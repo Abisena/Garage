@@ -11,9 +11,11 @@ dependencies = [
     # "frappe~=15.0.0" # Installed and managed by bench.
 ]
 
-[build-system]
-requires = ["setuptools>=61", "wheel"]
-build-backend = "setuptools.build_meta"
+# Avoid declaring build-system requirements so editable installs can fall back
+# to setuptools' legacy build pipeline. This prevents pip from attempting to
+# create an isolated build environment that downloads dependencies, which can
+# fail behind strict proxies and leave the `garage` module unavailable at
+# runtime.
 
 [tool.setuptools.packages.find]
 include = ["garage"]
