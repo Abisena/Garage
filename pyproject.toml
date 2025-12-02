@@ -1,19 +1,22 @@
 [project]
 name = "garage"
+version = "0.0.1"
 authors = [
     { name = "Imogi Developer", email = "imogi.indonesia@gmail.com"}
 ]
 description = "For Your manage Garage"
 requires-python = ">=3.10"
 readme = "README.md"
-dynamic = ["version"]
 dependencies = [
     # "frappe~=15.0.0" # Installed and managed by bench.
 ]
 
 [build-system]
-requires = ["flit_core >=3.4,<4"]
-build-backend = "flit_core.buildapi"
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["garage"]
 
 # These dependencies are only installed when developer mode is enabled
 [tool.bench.dev-dependencies]
