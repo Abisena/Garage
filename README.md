@@ -56,6 +56,19 @@ You can install this app using the [bench](https://github.com/frappe/bench) CLI:
 cd $PATH_TO_YOUR_BENCH
 bench get-app $URL_OF_THIS_REPO --branch develop
 bench install-app garage
+# When running outside bench or inside a fresh virtualenv, install the
+# package so Python can import the `garage` module.
+PIP_USE_PEP517=0 pip install -e apps/garage
+```
+
+> **Why disable PEP 517?**
+>
+> Several VPS providers (including ones that sit behind strict proxies)
+> block outbound traffic to PyPI during builds. The default `pip install -e`
+> tries to download build dependencies in an isolated environment, which
+> fails in those networks and leaves the `garage` module uninstalled. Setting
+> `PIP_USE_PEP517=0` forces `pip` to use the legacy `setup.py develop`
+> workflow so the app installs cleanly without reaching the internet.
 ```
 
 ### Contributing
