@@ -56,6 +56,9 @@ You can install this app using the [bench](https://github.com/frappe/bench) CLI:
 cd $PATH_TO_YOUR_BENCH
 bench get-app $URL_OF_THIS_REPO --branch develop
 bench install-app garage
+# When running outside bench or inside a fresh virtualenv, install the
+# package so Python can import the `garage` module.
+pip install -e apps/garage
 ```
 
 ### Contributing
