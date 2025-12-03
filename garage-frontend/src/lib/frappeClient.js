@@ -15,7 +15,8 @@ function getCookie(name) {
 
 class FrappeClient {
   constructor() {
-    this.baseURL = FRAPPE_URL;
+    // ✅ Remove trailing slash to prevent double slashes
+    this.baseURL = FRAPPE_URL.replace(/\/$/, '');
   }
 
   buildListURL(doctype, fields = [], filters = null, limit = 200) {
@@ -37,10 +38,12 @@ class FrappeClient {
   }
 
   async request(endpoint, options = {}) {
+    // ✅ Ensure endpoint starts with slash
     if (!endpoint.startsWith('/')) {
       endpoint = '/' + endpoint;
     }
 
+    // ✅ Build URL - no double slashes because baseURL has no trailing slash
     const url = `${this.baseURL}${endpoint}`;
     const method = (options.method || 'GET').toUpperCase();
 
@@ -88,6 +91,15 @@ class FrappeClient {
       
       if (response.message === 'Logged In') {
         const userInfo = await this.getCurrentUser();
+        
+        // ✅ Add null check
+        if (!userInfo) {
+          return {
+            success: false,
+            error: 'Failed to retrieve user information',
+          };
+        }
+        
         return {
           success: true,
           user: userInfo,
@@ -120,7 +132,6 @@ class FrappeClient {
     }
   }
 
-  // ✅ FIXED: Handle Frappe's message wrapping
   async getUserRoles() {
     try {
       console.log('🔄 Fetching user roles from API...');
