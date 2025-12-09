@@ -22,7 +22,7 @@ import {
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Checkbox } from './ui/checkbox';
+// import { Checkbox } from './ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -763,13 +763,13 @@ export function DirectSalesSparePart({ currentUser, onNavigateToPayment }) {
                       }}
                     >
                       {/* Checkbox - Width: 24px */}
-                      <div className="w-6 flex-shrink-0 mr-2">
+                      {/* <div className="w-6 flex-shrink-0 mr-2">
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={() => toggleSparePartSelection(part.id)}
                           className="w-5 h-5"
                         />
-                      </div>
+                      </div> */}
 
                       {/* Part Name - Width: 240px */}
                       <div className="w-[240px] flex-shrink-0 mr-3">

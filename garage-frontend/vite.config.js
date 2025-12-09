@@ -12,7 +12,7 @@ export default defineConfig({
     proxy: {
       // Proxy API calls ke Frappe
       '/api': {
-        target: 'http://localhost:8005',  // Sesuaikan dengan port Frappe Anda
+        target: 'http://localhost:8008',  // Sesuaikan dengan port Frappe Anda
         changeOrigin: true,
         secure: false,
       }
