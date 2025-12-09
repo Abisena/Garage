@@ -1,4 +1,4 @@
-const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || 'http://localhost:8005';
+const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || 'http://localhost:8008';
 
 const CSRF_HEADER = 'X-Frappe-CSRF-Token';
 const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];

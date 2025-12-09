@@ -15,7 +15,7 @@ import {
   Info,
   Download
 } from 'lucide-react';
-import { toPng } from 'html-to-image';
+// import { toPng } from 'html-to-image';
 
 const BusinessProcessFlowDiagram = () => {
   const processSteps = [
@@ -209,12 +209,12 @@ const BusinessProcessFlowDiagram = () => {
   const handleDownload = () => {
     const element = document.getElementById('flowchart');
     if (element) {
-      toPng(element).then(dataUrl => {
-        const link = document.createElement('a');
-        link.href = dataUrl;
-        link.download = 'business_process_flow_diagram.png';
-        link.click();
-      });
+      // toPng(element).then(dataUrl => {
+      //   const link = document.createElement('a');
+      //   link.href = dataUrl;
+      //   link.download = 'business_process_flow_diagram.png';
+      //   link.click();
+      // });
     }
   };
 
