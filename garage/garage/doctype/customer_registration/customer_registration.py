@@ -57,7 +57,18 @@ class CustomerRegistration(Document):
     """Combined vehicle + customer intake form for the desk/portal flows."""
 
     def before_insert(self):
+        self._apply_branch_default()
         self._sync_master_records()
+
+    def _apply_branch_default(self) -> None:
+        """Ensure the intake inherits the user's preferred branch when blank."""
+
+        if self.branch:
+            return
+
+        default_branch = portal._default_branch(frappe.session.user)
+        if default_branch:
+            self.branch = default_branch
 
     def _sync_master_records(self) -> None:
         """Create or update master data using the same logic as the portal."""
