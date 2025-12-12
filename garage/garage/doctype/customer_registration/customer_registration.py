@@ -152,6 +152,14 @@ def fetch_by_plate(license_plate: str, branch: Optional[str] = None) -> Dict[str
     return response
 
 
+@frappe.whitelist()
+def get_default_branch() -> Optional[str]:
+    """Expose the user's preferred branch for client defaults."""
+
+    _require_login()
+    return portal._default_branch(frappe.session.user)
+
+
 def _require_login() -> None:
     if frappe.session.user and frappe.session.user != "Guest":
         return

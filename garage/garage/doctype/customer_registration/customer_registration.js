@@ -1,4 +1,19 @@
 frappe.ui.form.on('Customer Registration', {
+  onload(frm) {
+    if (frm.doc.branch) {
+      return;
+    }
+
+    frappe.call({
+      method: 'garage.garage.doctype.customer_registration.customer_registration.get_default_branch',
+      callback: ({ message }) => {
+        if (message && !frm.doc.branch) {
+          frm.set_value('branch', message);
+        }
+      },
+    });
+  },
+
   refresh(frm) {
     if (!frm.doc.service_order_type) {
       frm.set_value('service_order_type', 'Service/Repair');
