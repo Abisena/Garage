@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { frappeClient } from './lib/frappeClient'
 import { determinePrimaryRole, buildRoleSet, hasRoleInGroup, ROLE_GROUPS } from './lib/roleUtils'
-import { clearStoredUser, persistCurrentUser, restoreCurrentUser } from './lib/secureStorage'
+import { clearStoredUser, persistCurrentUser, restoreCurrentUser } from "./utils/simpleStorage"
 import { Login } from './components/Login'
 import { Registration } from './components/Registration'
 import { Inspection } from './components/Inspection'

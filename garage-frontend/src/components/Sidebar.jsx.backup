@@ -160,6 +160,71 @@ export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onM
     },
     { id: 'reports', label: 'Reports', icon: BarChart3 },
     { id: 'divider-2' },
+    { 
+      id: 'master-menu',
+      label: 'Master Data',
+      icon: Database,
+      isExpandable: true,
+      subItems: [
+        { id: 'servicetypes', label: 'Service Type & Flat Rate', icon: Wrench },
+        { id: 'masterproducts', label: 'Master Products', icon: Package },
+        { id: 'spareparts', label: 'Master Spare Parts', icon: Package },
+        { id: 'customers', label: 'Customers', icon: Users }
+      ]
+    },
+    { id: 'divider-3' },
+    { 
+      id: 'purchase-menu',
+      label: 'Purchase Management',
+      icon: ShoppingCart,
+      isExpandable: true,
+      subItems: [
+        { id: 'purchaseguide', label: 'Purchase Guide', icon: BookOpen },
+        { id: 'purchasemanagement', label: 'Purchase Orders', icon: ShoppingCart },
+        { id: 'supervisorapproval', label: 'Supervisor Approval', icon: CheckCircle, badge: approvalCounts.supervisorCount },
+        { id: 'managerapproval', label: 'Manager Approval', icon: CheckCircle, badge: approvalCounts.managerCount },
+        { id: 'direkturapproval', label: 'Direktur Approval', icon: CheckCircle, badge: approvalCounts.direkturCount }
+      ]
+    },
+    { id: 'divider-purchase' },
+    { 
+      id: 'asset-menu',
+      label: 'Asset Management',
+      icon: Package,
+      isExpandable: true,
+      subItems: [
+        { id: 'assetmanagement', label: 'Asset Register', icon: Package },
+        { id: 'assetguide', label: 'Asset Guide', icon: BookOpen }
+      ]
+    },
+    { id: 'divider-4' },
+    { 
+      id: 'hr-menu',
+      label: 'HR Management',
+      icon: Users,
+      isExpandable: true,
+      subItems: [
+        { id: 'employees', label: 'Master Data Karyawan', icon: Users },
+        { id: 'attendance', label: 'My Attendance', icon: Clock },
+        { id: 'attendancelist', label: 'Attendance Records', icon: ClipboardCheck },
+        { id: 'overtime', label: 'Overtime', icon: CalendarClock },
+        { id: 'leave', label: 'Cuti', icon: CalendarX },
+        { 
+          id: 'payroll-menu', 
+          label: 'Payroll', 
+          icon: Wallet,
+          isExpandable: true,
+          subItems: [
+            { id: 'payrollguide', label: 'Payroll Guide', icon: BookOpen },
+            { id: 'salary', label: 'Salary Components', icon: Database },
+            { id: 'salarystructure', label: 'Salary Structure', icon: Calculator },
+            { id: 'payrolladjustments', label: 'Payroll Adjustments', icon: ClipboardCheck },
+            { id: 'payroll', label: 'Payroll Management', icon: Wallet }
+          ]
+        }
+      ]
+    },
+    { id: 'divider-5' },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

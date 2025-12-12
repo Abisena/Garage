@@ -8,11 +8,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: '0.0.0.0',  // Tambah ini agar bisa diakses dari luar
     port: 3000,
     proxy: {
-      // Proxy API calls ke Frappe
       '/api': {
-        target: 'http://localhost:8008',  // Sesuaikan dengan port Frappe Anda
+        target: 'http://localhost:8002',  // Ubah dari 8008 ke 8002
         changeOrigin: true,
         secure: false,
       }
