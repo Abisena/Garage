@@ -47,6 +47,7 @@ BRANCH_FILTER_FIELDS: Mapping[str, str] = {
     "Garage Receipt Document": "branch",
     "Garage Customer": "branch",
     "Garage Vehicle": "branch",
+    "Customer Registration": "branch",
     "Garage Technician": "branch",
     "Garage Branch": "name",
     "Sales Invoice": "branch",
@@ -6196,6 +6197,79 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
 
     if pdf_attachment:
         response["estimate_pdf_file"] = pdf_attachment
+
+    return response
+
+
+@frappe.whitelist()
+def create_customer_registration(payload: Optional[Any] = None) -> Dict[str, Any]:
+    """Persist a Customer Registration record using the intake payload."""
+
+    _require_login()
+
+    data = _ensure_dict(payload or {})
+
+    meta = _get_meta("Customer Registration")
+    allowed_fields = (
+        {df.fieldname for df in getattr(meta, "fields", []) if df.fieldname}
+        if meta
+        else set()
+    )
+
+    registration_data = {
+        key: value
+        for key, value in data.items()
+        if key in allowed_fields and value not in (None, "")
+    }
+
+    branch_name = cstr(registration_data.get("branch") or "").strip()
+    if not branch_name:
+        branch_name = _default_branch(frappe.session.user) or ""
+    if branch_name:
+        registration_data["branch"] = branch_name
+
+    creation_result = register_customer_vehicle(payload=data)
+    created = creation_result.get("created", {}) if isinstance(creation_result, dict) else {}
+    if not isinstance(created, dict):
+        created = {}
+
+    registration_doc = frappe.new_doc("Customer Registration")
+    registration_doc.flags.skip_portal_sync = True
+    registration_doc.update(registration_data)
+
+    registration_doc.customer = created.get("customer") or registration_doc.customer
+    registration_doc.vehicle = created.get("vehicle") or registration_doc.vehicle
+    registration_doc.service_order = created.get("service_order") or registration_doc.service_order
+
+    if not registration_doc.customer_name:
+        registration_doc.customer_name = (
+            created.get("customer_display_name")
+            or created.get("customer_name")
+            or created.get("full_name")
+            or registration_data.get("customer_name")
+            or registration_data.get("customer")
+        )
+
+    registration_doc = _insert_doc(registration_doc)
+
+    created["customer_registration"] = registration_doc.name
+
+    response: Dict[str, Any] = {
+        "registration": registration_doc.name,
+        "created": created,
+    }
+
+    if created.get("service_order"):
+        response["service_order"] = created.get("service_order")
+
+    if creation_result.get("service_order_status"):
+        response["service_order_status"] = creation_result.get("service_order_status")
+
+    if creation_result.get("estimate_pdf"):
+        response["estimate_pdf"] = creation_result.get("estimate_pdf")
+
+    if creation_result.get("estimate_pdf_file"):
+        response["estimate_pdf_file"] = creation_result.get("estimate_pdf_file")
 
     return response
 

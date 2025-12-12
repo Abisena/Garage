@@ -73,6 +73,9 @@ class CustomerRegistration(Document):
     def _sync_master_records(self) -> None:
         """Create or update master data using the same logic as the portal."""
 
+        if getattr(getattr(self, "flags", None), "skip_portal_sync", False):
+            return
+
         payload = self._as_portal_payload()
         result = portal.register_customer_vehicle(payload=payload)
 
