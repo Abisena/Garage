@@ -51,6 +51,11 @@ doctype_list_js = {
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
+# Redirect legacy routes
+website_route_rules = [
+    {"from_route": "/customer-entry", "to_route": "/garage/intake"},
+]
+
 # Svg Icons
 # ------------------
 # include app icons in desk
