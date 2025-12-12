@@ -1,0 +1,330 @@
+{
+  "actions": [],
+  "allow_guest_to_edit": 0,
+  "allow_guest_to_view": 0,
+  "allow_import": 1,
+  "allow_rename": 0,
+  "autoname": "format:CR-{#####}",
+  "beta": 0,
+  "creation": "2024-06-02 00:00:00.000000",
+  "default_view": "Form",
+  "disable_prepared_report": 0,
+  "docstatus": 0,
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "branch",
+    "vehicle_section",
+    "license_plate",
+    "vin",
+    "engine_number",
+    "brand",
+    "model",
+    "vehicle_type",
+    "vehicle_year",
+    "assembly_type",
+    "transmission",
+    "fuel_type",
+    "mileage",
+    "notes",
+    "customer_section",
+    "customer",
+    "customer_name",
+    "customer_type",
+    "phone",
+    "email",
+    "preferred_contact_method",
+    "id_number",
+    "address_line1",
+    "address_line2",
+    "city",
+    "state",
+    "postal_code",
+    "country",
+    "marketing_source",
+    "is_vip",
+    "service_order_type",
+    "service_bundle",
+    "service_bundle_name",
+    "priority",
+    "intake_type",
+    "service_notes",
+    "links_section",
+    "vehicle",
+    "service_order"
+  ],
+  "fields": [
+    {
+      "fieldname": "branch",
+      "fieldtype": "Link",
+      "label": "Branch",
+      "options": "Garage Branch",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "vehicle_section",
+      "fieldtype": "Section Break",
+      "label": "Vehicle Information"
+    },
+    {
+      "fieldname": "license_plate",
+      "fieldtype": "Data",
+      "label": "Plate Number",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "vin",
+      "fieldtype": "Data",
+      "label": "Chassis Number"
+    },
+    {
+      "fieldname": "engine_number",
+      "fieldtype": "Data",
+      "label": "Engine Number"
+    },
+    {
+      "fieldname": "brand",
+      "fieldtype": "Data",
+      "label": "Brand"
+    },
+    {
+      "fieldname": "model",
+      "fieldtype": "Data",
+      "label": "Model"
+    },
+    {
+      "fieldname": "vehicle_type",
+      "fieldtype": "Select",
+      "label": "Vehicle Type",
+      "options": "Sedan\nHatchback\nSUV\nMPV\nTruck\nVan\nCoupe\nWagon"
+    },
+    {
+      "fieldname": "vehicle_year",
+      "fieldtype": "Int",
+      "label": "Year"
+    },
+    {
+      "fieldname": "assembly_type",
+      "fieldtype": "Select",
+      "label": "Assembly Type",
+      "options": "CKD\nCBU"
+    },
+    {
+      "fieldname": "transmission",
+      "fieldtype": "Select",
+      "label": "Transmission",
+      "options": "Manual\nAutomatic\nCVT\nOther"
+    },
+    {
+      "fieldname": "fuel_type",
+      "fieldtype": "Select",
+      "label": "Fuel Type",
+      "options": "Petrol\nDiesel\nHybrid\nElectric\nOther"
+    },
+    {
+      "fieldname": "mileage",
+      "fieldtype": "Int",
+      "label": "Current Mileage (KM)"
+    },
+    {
+      "fieldname": "notes",
+      "fieldtype": "Small Text",
+      "label": "Customer Complaint"
+    },
+    {
+      "fieldname": "customer_section",
+      "fieldtype": "Section Break",
+      "label": "Customer Information"
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Customer",
+      "options": "Garage Customer",
+      "read_only": 1
+    },
+    {
+      "fieldname": "customer_name",
+      "fieldtype": "Data",
+      "label": "Full Name",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "customer_type",
+      "fieldtype": "Select",
+      "label": "Customer Type",
+      "options": "Individual\nCorporate",
+      "default": "Individual"
+    },
+    {
+      "fieldname": "phone",
+      "fieldtype": "Data",
+      "label": "Phone Number",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "email",
+      "fieldtype": "Data",
+      "label": "Email"
+    },
+    {
+      "fieldname": "preferred_contact_method",
+      "fieldtype": "Select",
+      "label": "Preferred Contact",
+      "options": "Phone\nEmail\nWhatsApp",
+      "default": "Phone"
+    },
+    {
+      "fieldname": "id_number",
+      "fieldtype": "Data",
+      "label": "Identity Number"
+    },
+    {
+      "fieldname": "address_line1",
+      "fieldtype": "Small Text",
+      "label": "Address Line 1"
+    },
+    {
+      "fieldname": "address_line2",
+      "fieldtype": "Small Text",
+      "label": "Address Line 2"
+    },
+    {
+      "fieldname": "city",
+      "fieldtype": "Data",
+      "label": "City"
+    },
+    {
+      "fieldname": "state",
+      "fieldtype": "Data",
+      "label": "State/Province"
+    },
+    {
+      "fieldname": "postal_code",
+      "fieldtype": "Data",
+      "label": "Postal Code"
+    },
+    {
+      "fieldname": "country",
+      "fieldtype": "Data",
+      "label": "Country",
+      "default": "Indonesia"
+    },
+    {
+      "fieldname": "marketing_source",
+      "fieldtype": "Select",
+      "label": "Marketing Source",
+      "options": "Walk In\nReferral\nOnline\nSocial Media\nOther"
+    },
+    {
+      "fieldname": "is_vip",
+      "fieldtype": "Check",
+      "label": "VIP Customer"
+    },
+    {
+      "fieldname": "service_order_type",
+      "fieldtype": "Data",
+      "label": "Service Type",
+      "reqd": 1
+    },
+    {
+      "fieldname": "service_bundle",
+      "fieldtype": "Link",
+      "label": "Service Bundle",
+      "options": "Garage Service Bundle"
+    },
+    {
+      "fieldname": "service_bundle_name",
+      "fieldtype": "Data",
+      "label": "Service Bundle Name"
+    },
+    {
+      "fieldname": "priority",
+      "fieldtype": "Select",
+      "label": "Priority",
+      "options": "Normal\nHigh\nUrgent\nCritical",
+      "default": "Normal"
+    },
+    {
+      "fieldname": "intake_type",
+      "fieldtype": "Select",
+      "label": "Intake Type",
+      "options": "Walk-In\nBooking",
+      "default": "Walk-In"
+    },
+    {
+      "fieldname": "service_notes",
+      "fieldtype": "Small Text",
+      "label": "Service Advisor Notes"
+    },
+    {
+      "fieldname": "links_section",
+      "fieldtype": "Section Break",
+      "label": "Linked Records"
+    },
+    {
+      "fieldname": "vehicle",
+      "fieldtype": "Link",
+      "label": "Vehicle",
+      "options": "Garage Vehicle",
+      "read_only": 1
+    },
+    {
+      "fieldname": "service_order",
+      "fieldtype": "Link",
+      "label": "Service Order",
+      "options": "Garage Service Order",
+      "read_only": 1
+    }
+  ],
+  "has_web_view": 0,
+  "hide_heading": 0,
+  "hide_toolbar": 0,
+  "idx": 0,
+  "image_field": "",
+  "in_create": 0,
+  "info_fields": [],
+  "is_submittable": 0,
+  "issingle": 0,
+  "istable": 0,
+  "links": [],
+  "make_attachments_public": 0,
+  "max_attachments": 0,
+  "modified": "2024-06-02 00:00:00.000000",
+  "module": "Garage",
+  "name": "Customer Registration",
+  "naming_rule": "",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1,
+      "export": 1
+    }
+  ],
+  "quick_entry": 0,
+  "read_only": 0,
+  "read_only_onload": 0,
+  "show_name_in_global_search": 1,
+  "show_preview_popup": 0,
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "subject": "",
+  "title_field": "license_plate",
+  "track_changes": 1,
+  "track_seen": 0,
+  "translated_doctype": 0,
+  "migration_hash": "",
+  "description": "Combined customer + vehicle registration aligned with the portal intake flow."
+}
