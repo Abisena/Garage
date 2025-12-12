@@ -1,6 +1,6 @@
 {
   "charts": [],
-  "content": "[{\"type\": \"header\", \"data\": {\"text\": \"Master Data\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Customer\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Vehicle\"}}, {\"type\": \"spacer\", \"data\": {}}, {\"type\": \"header\", \"data\": {\"text\": \"Operasional\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Service Order\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Spare Part Order\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Procurement Order\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Stock Movement\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Division Request\"}}, {\"type\": \"spacer\", \"data\": {}}, {\"type\": \"header\", \"data\": {\"text\": \"Keuangan\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Sales Invoice\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Payment Entry\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Receipt Document\"}}]",
+  "content": "[{\"type\": \"header\", \"data\": {\"text\": \"Master Data\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Customer Registration\"}}, {\"type\": \"spacer\", \"data\": {}}, {\"type\": \"header\", \"data\": {\"text\": \"Operasional\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Service Order\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Spare Part Order\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Procurement Order\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Stock Movement\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Division Request\"}}, {\"type\": \"spacer\", \"data\": {}}, {\"type\": \"header\", \"data\": {\"text\": \"Keuangan\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Sales Invoice\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Payment Entry\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Receipt Document\"}}]",
   "creation": "2024-07-02 00:00:00.000000",
   "docstatus": 0,
   "doctype": "Workspace",
@@ -26,16 +26,8 @@
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
       "idx": 0,
-      "label": "Garage Customer",
-      "link_to": "Garage Customer",
-      "type": "DocType"
-    },
-    {
-      "docstatus": 0,
-      "doctype": "Workspace Shortcut",
-      "idx": 1,
-      "label": "Garage Vehicle",
-      "link_to": "Garage Vehicle",
+      "label": "Customer Registration",
+      "link_to": "Customer Registration",
       "type": "DocType"
     },
     {
