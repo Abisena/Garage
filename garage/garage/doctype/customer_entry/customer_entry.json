@@ -1,0 +1,158 @@
+{
+  "actions": [],
+  "allow_guest_to_edit": 0,
+  "allow_guest_to_view": 0,
+  "allow_import": 0,
+  "allow_rename": 0,
+  "autoname": "format:CE-{#####}",
+  "beta": 0,
+  "creation": "2024-07-02 00:00:00.000000",
+  "default_view": "List",
+  "disable_prepared_report": 0,
+  "docstatus": 0,
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "queue_number",
+    "branch",
+    "link_section",
+    "customer_registration",
+    "service_order",
+    "customer_section",
+    "customer",
+    "customer_name",
+    "phone",
+    "vehicle_section",
+    "license_plate",
+    "vehicle"
+  ],
+  "fields": [
+    {
+      "fieldname": "queue_number",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "Queue Number",
+      "read_only": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "branch",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "label": "Branch",
+      "options": "Garage Branch",
+      "read_only": 1
+    },
+    {
+      "fieldname": "link_section",
+      "fieldtype": "Section Break",
+      "label": "Linked Records"
+    },
+    {
+      "fieldname": "customer_registration",
+      "fieldtype": "Link",
+      "label": "Customer Registration",
+      "options": "Customer Registration",
+      "read_only": 1
+    },
+    {
+      "fieldname": "service_order",
+      "fieldtype": "Link",
+      "label": "Garage Service Order",
+      "options": "Garage Service Order",
+      "read_only": 1
+    },
+    {
+      "fieldname": "customer_section",
+      "fieldtype": "Section Break",
+      "label": "Customer"
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Customer",
+      "options": "Garage Customer",
+      "read_only": 1
+    },
+    {
+      "fieldname": "customer_name",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "Customer Name",
+      "read_only": 1
+    },
+    {
+      "fieldname": "phone",
+      "fieldtype": "Data",
+      "label": "Phone Number",
+      "read_only": 1
+    },
+    {
+      "fieldname": "vehicle_section",
+      "fieldtype": "Section Break",
+      "label": "Vehicle"
+    },
+    {
+      "fieldname": "license_plate",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "Plate Number",
+      "read_only": 1
+    },
+    {
+      "fieldname": "vehicle",
+      "fieldtype": "Link",
+      "label": "Vehicle",
+      "options": "Garage Vehicle",
+      "read_only": 1
+    }
+  ],
+  "has_web_view": 0,
+  "hide_heading": 0,
+  "hide_toolbar": 1,
+  "idx": 0,
+  "image_field": "",
+  "in_create": 0,
+  "info_fields": [],
+  "is_submittable": 0,
+  "issingle": 0,
+  "istable": 0,
+  "links": [],
+  "make_attachments_public": 0,
+  "max_attachments": 0,
+  "migration_hash": "",
+  "modified": "2024-07-02 00:00:00.000000",
+  "module": "Garage",
+  "name": "Customer Entry",
+  "naming_rule": "",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "create": 0,
+      "read": 1,
+      "write": 0,
+      "delete": 0,
+      "email": 1,
+      "print": 1,
+      "report": 1,
+      "share": 1,
+      "export": 1
+    }
+  ],
+  "quick_entry": 0,
+  "read_only": 1,
+  "read_only_onload": 1,
+  "show_name_in_global_search": 1,
+  "show_preview_popup": 0,
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "subject": "",
+  "title_field": "queue_number",
+  "track_changes": 1,
+  "track_seen": 0,
+  "translated_doctype": 0,
+  "description": "Read-only queue entries generated from Customer Registration."
+}

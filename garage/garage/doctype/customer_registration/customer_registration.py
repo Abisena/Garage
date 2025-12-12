@@ -10,6 +10,7 @@ from frappe import _
 from frappe.model.document import Document
 
 from garage.api import portal
+from garage.garage.doctype.customer_entry.customer_entry import create_from_registration
 
 VEHICLE_FIELDS = (
     "license_plate",
@@ -59,6 +60,9 @@ class CustomerRegistration(Document):
     def before_insert(self):
         self._apply_branch_default()
         self._sync_master_records()
+
+    def after_insert(self):
+        create_from_registration(self)
 
     def _apply_branch_default(self) -> None:
         """Ensure the intake inherits the user's preferred branch when blank."""
