@@ -139,6 +139,54 @@
       "report": 1,
       "share": 1,
       "export": 1
+    },
+    {
+      "role": "Garage Manager",
+      "create": 0,
+      "read": 1,
+      "write": 0,
+      "delete": 0,
+      "email": 0,
+      "print": 0,
+      "report": 0,
+      "share": 0,
+      "export": 0
+    },
+    {
+      "role": "Service Advisor",
+      "create": 0,
+      "read": 1,
+      "write": 0,
+      "delete": 0,
+      "email": 0,
+      "print": 0,
+      "report": 0,
+      "share": 0,
+      "export": 0
+    },
+    {
+      "role": "Customer Service",
+      "create": 0,
+      "read": 1,
+      "write": 0,
+      "delete": 0,
+      "email": 0,
+      "print": 0,
+      "report": 0,
+      "share": 0,
+      "export": 0
+    },
+    {
+      "role": "Front Desk",
+      "create": 0,
+      "read": 1,
+      "write": 0,
+      "delete": 0,
+      "email": 0,
+      "print": 0,
+      "report": 0,
+      "share": 0,
+      "export": 0
     }
   ],
   "quick_entry": 0,
