@@ -192,10 +192,31 @@ class FrappeClient {
       );
 
       console.log('API Response:', response);
-      
+
       return response.message || response;
     } catch (error) {
       console.error('Failed to register customer/vehicle:', error);
+      throw error;
+    }
+  }
+
+  async createCustomerRegistration(payload) {
+    try {
+      console.log('Calling create_customer_registration with payload:', payload);
+
+      const response = await this.request(
+        '/api/method/garage.api.portal.create_customer_registration',
+        {
+          method: 'POST',
+          body: JSON.stringify({ payload }),
+        },
+      );
+
+      console.log('Customer Registration API Response:', response);
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to create customer registration:', error);
       throw error;
     }
   }

@@ -352,7 +352,7 @@ export function Registration({ currentUser }) {
 
       console.log('Payload:', payload);
 
-      const result = await frappeClient.registerCustomerVehicle(payload);
+      const result = await frappeClient.createCustomerRegistration(payload);
       console.log('Registration API Response:', result);
 
       if (result && result.created) {
@@ -370,10 +370,21 @@ export function Registration({ currentUser }) {
           minute: '2-digit'
         });
 
+        const registrationId =
+          createdData.customer_registration ||
+          result.registration ||
+          createdData.service_order ||
+          createdData.vehicle ||
+          Date.now().toString();
+
         const newRegistration = {
-          id: createdData.service_order || createdData.vehicle || Date.now().toString(),
+          id: registrationId,
           time: newTime,
-          orderId: createdData.service_order || `ORD-${Date.now().toString().slice(-6)}`,
+          orderId:
+            createdData.service_order ||
+            result.service_order ||
+            registrationId ||
+            `ORD-${Date.now().toString().slice(-6)}`,
           customerName: displayCustomerName,  // ✅ NOW USING CORRECT NAME
           phone: formData.phone,
           email: formData.email,
@@ -406,8 +417,11 @@ export function Registration({ currentUser }) {
         successMessage += `Customer: ${displayCustomerName}\n`;
         successMessage += `Vehicle: ${formData.plateNumber}\n`;
 
-        if (createdData.service_order) {
-          successMessage += `Service Order: ${createdData.service_order}\n`;
+        if (createdData.customer_registration || result.registration) {
+          successMessage += `Registration: ${createdData.customer_registration || result.registration}\n`;
+        }
+        if (createdData.service_order || result.service_order) {
+          successMessage += `Service Order: ${createdData.service_order || result.service_order}\n`;
         }
         if (createdData.customer) {
           successMessage += `Customer ID: ${createdData.customer}\n`;
