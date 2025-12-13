@@ -34,7 +34,7 @@
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
       "idx": 1,
-      "label": "Garage Customer",
+      "label": "Master Data Customer",
       "link_to": "Garage Customer",
       "type": "DocType"
     },
@@ -42,7 +42,7 @@
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
       "idx": 2,
-      "label": "Garage Vehicle",
+      "label": "Master Data Vehicle",
       "link_to": "Garage Vehicle",
       "type": "DocType"
     },
