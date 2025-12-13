@@ -452,6 +452,17 @@
       "fieldtype": "Column Break"
     },
     {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Customer",
+      "options": "Garage Customer",
+      "read_only": 1
+    },
+    {
+      "fieldname": "cb_l1",
+      "fieldtype": "Column Break"
+    },
+    {
       "fieldname": "service_order",
       "fieldtype": "Link",
       "label": "Service Order",
