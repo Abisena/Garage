@@ -76,6 +76,7 @@
     "rejection_reason",
     "notes_section",
     "inspection_summary",
+    "inspection_record",
     "service_notes",
     "operations_section",
     "inspection_items",
@@ -411,6 +412,13 @@
       "fieldname": "inspection_summary",
       "fieldtype": "Small Text",
       "label": "Inspection Summary"
+    },
+    {
+      "fieldname": "inspection_record",
+      "fieldtype": "Link",
+      "label": "Inspection Document",
+      "options": "Garage Vehicle Inspection",
+      "read_only": 1
     },
     {
       "fieldname": "service_notes",

@@ -11,7 +11,7 @@ awal sehingga Anda dapat menguji proses end-to-end langsung dari Desk.
 | --- | --- | --- |
 | Customer Datang | **Garage Customer**, **Garage Vehicle** | Mencatat identitas pelanggan dan kendaraan. |
 | Create Service Booking | **Garage Service Order** | Menentukan tipe layanan, prioritas, dan asesor. |
-| Vehicle Inspection | Tabel anak **Garage Service Order Inspection** | Merekam temuan inspeksi dan severity. |
+| Vehicle Inspection | **Garage Vehicle Inspection** (link ke service order, memuat child table **Garage Service Order Inspection**) | Merekam temuan inspeksi dan severity tanpa menambah field di service order. |
 | Create Job Card / Work Order | Field status pada **Garage Service Order** | Status `job_card_status` dan `work_order_status` melacak progres. |
 | Estimate Biaya & Approval | Field nilai dan jadwal pembayaran di **Garage Service Order** | Menyimpan estimasi biaya, persetujuan, dan termin. |
 | Work Order & Pengambilan Material | **Garage Procurement Order**, **Garage Stock Movement** | Mencatat pengadaan dan pergerakan stok. |
