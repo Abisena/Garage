@@ -6201,6 +6201,236 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
     return response
 
 
+def build_master_data_snapshot(
+    customer: Optional[str] = None,
+    vehicle: Optional[str] = None,
+    license_plate: Optional[str] = None,
+    *,
+    user: Optional[str] = None,
+    enforce_login: bool = True,
+) -> Dict[str, Any]:
+    """Compile a master data snapshot for the given customer/vehicle."""
+
+    if enforce_login:
+        _require_login()
+
+    active_user = user or frappe.session.user
+
+    if not active_user or active_user == "Guest":
+        allowed_branches = None
+    else:
+        allowed_branches = _allowed_branches(active_user)
+    allowed_set = tuple(branch for branch in (allowed_branches or []) if branch)
+
+    customer_fields = (
+        "name",
+        "customer_name",
+        "customer_type",
+        "phone",
+        "email",
+        "preferred_contact_method",
+        "id_number",
+        "address_line1",
+        "address_line2",
+        "city",
+        "state",
+        "postal_code",
+        "country",
+        "marketing_source",
+        "is_vip",
+        "branch",
+        "creation",
+    )
+
+    vehicle_fields = (
+        "name",
+        "customer",
+        "branch",
+        "license_plate",
+        "vin",
+        "engine_number",
+        "brand",
+        "model",
+        "vehicle_type",
+        "vehicle_year",
+        "assembly_type",
+        "transmission",
+        "fuel_type",
+        "mileage",
+        "last_service_date",
+        "last_service_logged_at",
+        "notes",
+    )
+
+    vehicle_filters: Dict[str, Any] = {}
+    normalized_plate = (license_plate or "").strip()
+    if vehicle:
+        vehicle_filters["name"] = vehicle.strip()
+    if normalized_plate:
+        vehicle_filters["license_plate"] = normalized_plate
+    if allowed_branches is not None:
+        if not allowed_set:
+            return {}
+        vehicle_filters["branch"] = ["in", allowed_set]
+
+    vehicle_doc = (
+        frappe.db.get_value("Garage Vehicle", vehicle_filters, vehicle_fields, as_dict=True)
+        if vehicle_filters
+        else None
+    )
+
+    customer_name = (customer or "").strip()
+    if not customer_name and vehicle_doc:
+        customer_name = cstr(vehicle_doc.get("customer") or "").strip()
+
+    customer_doc = (
+        frappe.db.get_value("Garage Customer", customer_name, customer_fields, as_dict=True)
+        if customer_name
+        else None
+    )
+
+    if not customer_doc and not vehicle_doc:
+        frappe.throw(_("Customer atau kendaraan tidak ditemukan."))
+
+    if not customer_doc and vehicle_doc:
+        linked_customer = cstr(vehicle_doc.get("customer") or "").strip()
+        if linked_customer:
+            customer_doc = frappe.db.get_value(
+                "Garage Customer", linked_customer, customer_fields, as_dict=True
+            )
+
+    if not customer_doc:
+        frappe.throw(_("Customer tidak ditemukan atau tidak dapat diakses."))
+
+    branch_filters: Dict[str, Any] = {}
+    if allowed_branches is not None:
+        if not allowed_set:
+            return {}
+        branch_filters["branch"] = ["in", allowed_set]
+
+    service_filters: Dict[str, Any] = {"customer": customer_doc.get("name")}
+    if vehicle_doc:
+        service_filters["vehicle"] = vehicle_doc.get("name")
+    service_filters.update(branch_filters)
+
+    if service_filters.get("branch") == ["in", ()]:
+        service_orders: List[Mapping[str, Any]] = []
+    else:
+        service_orders = frappe.get_all(
+            "Garage Service Order",
+            filters=service_filters,
+            fields=[
+                "name",
+                "service_order_type",
+                "status",
+                "vehicle",
+                "branch",
+                "service_booking_date",
+                "actual_delivery_date",
+                "total_estimated_amount",
+                "total_approved_amount",
+                "creation",
+            ],
+            order_by="service_booking_date desc, creation desc",
+        )
+
+    visit_dates: List[str] = []
+    for order in service_orders:
+        for field in ("actual_delivery_date", "service_booking_date", "creation"):
+            value = cstr(order.get(field) or "").strip()
+            if value:
+                visit_dates.append(value)
+                break
+
+    last_visit = max(visit_dates) if visit_dates else None
+    total_visits = len(service_orders)
+
+    service_order_names = [order.get("name") for order in service_orders if order.get("name")]
+
+    invoice_filters: Dict[str, Any] = {"customer": customer_doc.get("name")}
+    invoice_filters.update(branch_filters)
+    invoices = frappe.get_all(
+        "Garage Sales Invoice",
+        filters=invoice_filters,
+        fields=["name", "total_amount", "source_type", "source_name", "invoice_date"],
+    )
+
+    relevant_invoices: List[Mapping[str, Any]] = []
+    if vehicle_doc and service_order_names:
+        invoice_lookup = {
+            row.get("name"): row
+            for row in invoices
+            if row.get("source_type") == "Garage Service Order"
+            and row.get("source_name") in service_order_names
+        }
+        relevant_invoices = list(invoice_lookup.values())
+    else:
+        relevant_invoices = invoices
+
+    total_spend = sum(flt(row.get("total_amount") or 0) for row in relevant_invoices)
+
+    history: List[Dict[str, Any]] = []
+    invoice_by_source = {
+        row.get("source_name"): row for row in relevant_invoices if row.get("source_name")
+    }
+
+    for order in service_orders:
+        source_invoice = invoice_by_source.get(order.get("name"))
+        amount = flt(order.get("total_approved_amount") or order.get("total_estimated_amount") or 0)
+        if source_invoice:
+            amount = flt(source_invoice.get("total_amount") or amount)
+
+        history.append(
+            {
+                "service_order": order.get("name"),
+                "service_type": order.get("service_order_type"),
+                "status": order.get("status"),
+                "branch": order.get("branch"),
+                "vehicle": order.get("vehicle"),
+                "visit_date": order.get("actual_delivery_date")
+                or order.get("service_booking_date")
+                or order.get("creation"),
+                "amount": amount,
+                "invoice": source_invoice.get("name") if source_invoice else None,
+                "invoice_date": source_invoice.get("invoice_date") if source_invoice else None,
+            }
+        )
+
+    return {
+        "customer": customer_doc,
+        "vehicle": vehicle_doc,
+        "stats": {
+            "total_visits": total_visits,
+            "total_spend": total_spend,
+            "member_since": customer_doc.get("creation"),
+            "last_visit": last_visit,
+        },
+        "history": history,
+    }
+
+
+@frappe.whitelist()
+def get_master_data(
+    customer: Optional[str] = None,
+    vehicle: Optional[str] = None,
+    license_plate: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Aggregate customer + vehicle profile data with visit counts and spend.
+
+    The payload mirrors the web mockup: it exposes core customer/vehicle fields,
+    total visits, cumulative spend, member since date, and a recent service
+    history derived from Garage Service Orders and Garage Sales Invoices.
+    """
+
+    return build_master_data_snapshot(
+        customer=customer,
+        vehicle=vehicle,
+        license_plate=license_plate,
+        user=frappe.session.user,
+        enforce_login=True,
+    )
+
+
 @frappe.whitelist()
 def get_master_data(
     customer: Optional[str] = None,

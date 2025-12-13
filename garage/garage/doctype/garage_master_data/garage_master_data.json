@@ -1,0 +1,331 @@
+{
+  "actions": [],
+  "allow_guest_to_edit": 0,
+  "allow_guest_to_view": 0,
+  "allow_import": 1,
+  "allow_rename": 0,
+  "autoname": "format:MD-{#####}",
+  "beta": 0,
+  "creation": "2024-06-10 00:00:00.000000",
+  "default_view": "Form",
+  "disable_prepared_report": 0,
+  "docstatus": 0,
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "customer",
+    "customer_name",
+    "customer_type",
+    "branch",
+    "license_plate",
+    "vehicle",
+    "member_since",
+    "last_visit",
+    "total_visits",
+    "total_spend",
+    "phone",
+    "email",
+    "preferred_contact_method",
+    "id_number",
+    "address_line1",
+    "address_line2",
+    "city",
+    "state",
+    "postal_code",
+    "country",
+    "marketing_source",
+    "is_vip",
+    "vehicle_brand",
+    "vehicle_model",
+    "vehicle_type",
+    "vehicle_year",
+    "assembly_type",
+    "transmission",
+    "fuel_type",
+    "mileage",
+    "last_service_date",
+    "last_service_order",
+    "last_invoice",
+    "last_invoice_amount",
+    "notes",
+    "history"
+  ],
+  "fields": [
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Customer",
+      "options": "Garage Customer",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "customer_name",
+      "fieldtype": "Data",
+      "label": "Customer Name",
+      "read_only": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "customer_type",
+      "fieldtype": "Data",
+      "label": "Customer Type",
+      "read_only": 1
+    },
+    {
+      "fieldname": "branch",
+      "fieldtype": "Link",
+      "label": "Branch",
+      "options": "Garage Branch",
+      "read_only": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "license_plate",
+      "fieldtype": "Data",
+      "label": "License Plate",
+      "read_only": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "vehicle",
+      "fieldtype": "Link",
+      "label": "Vehicle",
+      "options": "Garage Vehicle",
+      "read_only": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "member_since",
+      "fieldtype": "Datetime",
+      "label": "Member Since",
+      "read_only": 1
+    },
+    {
+      "fieldname": "last_visit",
+      "fieldtype": "Datetime",
+      "label": "Last Visit",
+      "read_only": 1
+    },
+    {
+      "fieldname": "total_visits",
+      "fieldtype": "Int",
+      "label": "Total Visits",
+      "read_only": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "total_spend",
+      "fieldtype": "Currency",
+      "label": "Total Spend",
+      "options": "currency",
+      "read_only": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "phone",
+      "fieldtype": "Data",
+      "label": "Phone",
+      "read_only": 1
+    },
+    {
+      "fieldname": "email",
+      "fieldtype": "Data",
+      "label": "Email",
+      "read_only": 1
+    },
+    {
+      "fieldname": "preferred_contact_method",
+      "fieldtype": "Data",
+      "label": "Preferred Contact",
+      "read_only": 1
+    },
+    {
+      "fieldname": "id_number",
+      "fieldtype": "Data",
+      "label": "Identity Number",
+      "read_only": 1
+    },
+    {
+      "fieldname": "address_line1",
+      "fieldtype": "Small Text",
+      "label": "Address Line 1",
+      "read_only": 1
+    },
+    {
+      "fieldname": "address_line2",
+      "fieldtype": "Small Text",
+      "label": "Address Line 2",
+      "read_only": 1
+    },
+    {
+      "fieldname": "city",
+      "fieldtype": "Data",
+      "label": "City",
+      "read_only": 1
+    },
+    {
+      "fieldname": "state",
+      "fieldtype": "Data",
+      "label": "State/Province",
+      "read_only": 1
+    },
+    {
+      "fieldname": "postal_code",
+      "fieldtype": "Data",
+      "label": "Postal Code",
+      "read_only": 1
+    },
+    {
+      "fieldname": "country",
+      "fieldtype": "Data",
+      "label": "Country",
+      "read_only": 1
+    },
+    {
+      "fieldname": "marketing_source",
+      "fieldtype": "Data",
+      "label": "Marketing Source",
+      "read_only": 1
+    },
+    {
+      "fieldname": "is_vip",
+      "fieldtype": "Check",
+      "label": "VIP Customer",
+      "read_only": 1
+    },
+    {
+      "fieldname": "vehicle_brand",
+      "fieldtype": "Data",
+      "label": "Brand",
+      "read_only": 1
+    },
+    {
+      "fieldname": "vehicle_model",
+      "fieldtype": "Data",
+      "label": "Model",
+      "read_only": 1
+    },
+    {
+      "fieldname": "vehicle_type",
+      "fieldtype": "Data",
+      "label": "Vehicle Type",
+      "read_only": 1
+    },
+    {
+      "fieldname": "vehicle_year",
+      "fieldtype": "Int",
+      "label": "Vehicle Year",
+      "read_only": 1
+    },
+    {
+      "fieldname": "assembly_type",
+      "fieldtype": "Data",
+      "label": "Assembly Type",
+      "read_only": 1
+    },
+    {
+      "fieldname": "transmission",
+      "fieldtype": "Data",
+      "label": "Transmission",
+      "read_only": 1
+    },
+    {
+      "fieldname": "fuel_type",
+      "fieldtype": "Data",
+      "label": "Fuel Type",
+      "read_only": 1
+    },
+    {
+      "fieldname": "mileage",
+      "fieldtype": "Int",
+      "label": "Current Mileage",
+      "read_only": 1
+    },
+    {
+      "fieldname": "last_service_date",
+      "fieldtype": "Date",
+      "label": "Last Service Date",
+      "read_only": 1
+    },
+    {
+      "fieldname": "last_service_order",
+      "fieldtype": "Link",
+      "label": "Last Service Order",
+      "options": "Garage Service Order",
+      "read_only": 1
+    },
+    {
+      "fieldname": "last_invoice",
+      "fieldtype": "Link",
+      "label": "Last Invoice",
+      "options": "Garage Sales Invoice",
+      "read_only": 1
+    },
+    {
+      "fieldname": "last_invoice_amount",
+      "fieldtype": "Currency",
+      "label": "Last Invoice Amount",
+      "options": "currency",
+      "read_only": 1
+    },
+    {
+      "fieldname": "notes",
+      "fieldtype": "Small Text",
+      "label": "Notes"
+    },
+    {
+      "fieldname": "history",
+      "fieldtype": "Table",
+      "label": "Service History",
+      "options": "Garage Master Data History"
+    }
+  ],
+  "has_web_view": 0,
+  "hide_heading": 0,
+  "hide_toolbar": 0,
+  "idx": 0,
+  "image_field": "",
+  "in_create": 0,
+  "info_fields": [],
+  "is_submittable": 0,
+  "issingle": 0,
+  "istable": 0,
+  "links": [],
+  "make_attachments_public": 0,
+  "max_attachments": 0,
+  "modified": "2024-06-10 00:00:00.000000",
+  "module": "Garage",
+  "name": "Garage Master Data",
+  "naming_rule": "",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1,
+      "export": 1
+    }
+  ],
+  "quick_entry": 0,
+  "read_only": 0,
+  "read_only_onload": 0,
+  "show_name_in_global_search": 1,
+  "show_preview_popup": 0,
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "subject": "",
+  "title_field": "customer_name",
+  "track_changes": 1,
+  "track_seen": 0,
+  "translated_doctype": 0,
+  "migration_hash": "",
+  "description": "Aggregated master data for customers and vehicles, including visit history and spend."
+}
