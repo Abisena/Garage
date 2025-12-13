@@ -326,8 +326,9 @@
     },
     {
       "fieldname": "service_order_type",
-      "fieldtype": "Data",
+      "fieldtype": "Link",
       "label": "Service Type",
+      "options": "Garage Service Type",
       "reqd": 1
     },
     {
