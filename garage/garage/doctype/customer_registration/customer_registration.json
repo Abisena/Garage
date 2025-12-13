@@ -287,40 +287,7 @@
       "fieldname": "cb_c3",
       "fieldtype": "Column Break"
     },
-    {
-      "fieldname": "id_number",
-      "fieldtype": "Data",
-      "label": "Identity Number"
-    },
 
-    {
-      "fieldname": "row_c4",
-      "fieldtype": "Section Break"
-    },
-    {
-      "fieldname": "city",
-      "fieldtype": "Data",
-      "label": "City"
-    },
-    {
-      "fieldname": "cb_c4",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "state",
-      "fieldtype": "Data",
-      "label": "State / Province"
-    },
-
-    {
-      "fieldname": "row_c5",
-      "fieldtype": "Section Break"
-    },
-    {
-      "fieldname": "postal_code",
-      "fieldtype": "Data",
-      "label": "Postal Code"
-    },
     {
       "fieldname": "cb_c5",
       "fieldtype": "Column Break"
