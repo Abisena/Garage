@@ -14,38 +14,70 @@
   "editable_grid": 0,
   "engine": "InnoDB",
   "field_order": [
+    "basic_section",
     "branch",
-    "branch_code",
+    "cb_basic_1",
     "service_order_type",
-    "service_bundle",
-    "service_bundle_name",
+    "row_basic_2",
     "order_category",
-    "status",
-    "priority",
+    "cb_basic_2",
     "intake_type",
-    "booking_channel",
-    "booking_reference",
-    "service_booking_date",
-    "customer",
-    "vehicle",
-    "service_advisor",
-    "primary_contact",
-    "job_card_status",
-    "work_order_status",
-    "qc_status",
-    "part_charge_status",
-    "note_status",
-    "invoice_status",
-    "sikk_status",
+    "row_basic_3",
+    "status",
+    "cb_basic_3",
+    "priority",
+    "row_basic_4",
     "estimated_delivery_date",
+    "cb_basic_4",
     "actual_delivery_date",
+    "row_basic_5",
+    "service_advisor",
+    "cb_basic_5",
+    "primary_contact",
+    "row_basic_6",
+    "booking_channel",
+    "cb_basic_6",
+    "booking_reference",
+    "row_basic_7",
+    "service_booking_date",
+    "cb_basic_7",
+    "branch_code",
+    "row_basic_8",
+    "service_bundle",
+    "cb_basic_8",
+    "service_bundle_name",
+    "customer_vehicle_section",
+    "customer",
+    "cb_cv_1",
+    "vehicle",
+    "process_status_section",
+    "job_card_status",
+    "cb_ps_1",
+    "work_order_status",
+    "row_ps_2",
+    "qc_status",
+    "cb_ps_2",
+    "part_charge_status",
+    "row_ps_3",
+    "note_status",
+    "cb_ps_3",
+    "invoice_status",
+    "row_ps_4",
+    "sikk_status",
+    "financial_section",
     "total_estimated_amount",
+    "cb_fin_1",
     "total_approved_amount",
+    "row_fin_2",
     "approval_date",
+    "cb_fin_2",
     "customer_confirmation",
+    "row_fin_3",
     "rejection_reason",
+    "notes_section",
     "inspection_summary",
     "service_notes",
+    "operations_section",
     "inspection_items",
     "service_tasks",
     "required_parts",
@@ -55,6 +87,11 @@
   ],
   "fields": [
     {
+      "fieldname": "basic_section",
+      "fieldtype": "Section Break",
+      "label": "Basic Information"
+    },
+    {
       "fieldname": "branch",
       "fieldtype": "Link",
       "label": "Branch",
@@ -63,12 +100,8 @@
       "in_list_view": 1
     },
     {
-      "fieldname": "branch_code",
-      "fieldtype": "Data",
-      "label": "Branch Code",
-      "read_only": 1,
-      "hidden": 1,
-      "fetch_from": "branch.branch_code"
+      "fieldname": "cb_basic_1",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "service_order_type",
@@ -78,15 +111,8 @@
       "reqd": 1
     },
     {
-      "fieldname": "service_bundle",
-      "fieldtype": "Link",
-      "label": "Service Bundle",
-      "options": "Garage Service Bundle"
-    },
-    {
-      "fieldname": "service_bundle_name",
-      "fieldtype": "Data",
-      "label": "Service Bundle Name"
+      "fieldname": "row_basic_2",
+      "fieldtype": "Section Break"
     },
     {
       "fieldname": "order_category",
@@ -96,19 +122,8 @@
       "default": "Workshop Service"
     },
     {
-      "fieldname": "status",
-      "fieldtype": "Select",
-      "label": "Status",
-      "options": "Draft\nInspection\nEstimate\nAwaiting Approval\nApproved\nWork In Progress\nAwaiting QC\nCompleted\nCancelled",
-      "default": "Draft",
-      "in_list_view": 1
-    },
-    {
-      "fieldname": "priority",
-      "fieldtype": "Select",
-      "label": "Priority",
-      "options": "Normal\nHigh\nCritical",
-      "default": "Normal"
+      "fieldname": "cb_basic_2",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "intake_type",
@@ -120,10 +135,78 @@
       "in_list_view": 1
     },
     {
+      "fieldname": "row_basic_3",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Draft\nInspection\nEstimate\nAwaiting Approval\nApproved\nWork In Progress\nAwaiting QC\nCompleted\nCancelled",
+      "default": "Draft",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "cb_basic_3",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "priority",
+      "fieldtype": "Select",
+      "label": "Priority",
+      "options": "Normal\nHigh\nCritical",
+      "default": "Normal"
+    },
+    {
+      "fieldname": "row_basic_4",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "estimated_delivery_date",
+      "fieldtype": "Date",
+      "label": "Estimated Delivery"
+    },
+    {
+      "fieldname": "cb_basic_4",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "actual_delivery_date",
+      "fieldtype": "Date",
+      "label": "Actual Delivery"
+    },
+    {
+      "fieldname": "row_basic_5",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "service_advisor",
+      "fieldtype": "Link",
+      "label": "Service Advisor",
+      "options": "User"
+    },
+    {
+      "fieldname": "cb_basic_5",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "primary_contact",
+      "fieldtype": "Data",
+      "label": "Primary Contact"
+    },
+    {
+      "fieldname": "row_basic_6",
+      "fieldtype": "Section Break"
+    },
+    {
       "fieldname": "booking_channel",
       "fieldtype": "Select",
       "label": "Booking Channel",
       "options": "\nWhatsApp\nPhone Call\nAdmin Input\nWebsite\nOther"
+    },
+    {
+      "fieldname": "cb_basic_6",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "booking_reference",
@@ -131,9 +214,49 @@
       "label": "Booking Reference"
     },
     {
+      "fieldname": "row_basic_7",
+      "fieldtype": "Section Break"
+    },
+    {
       "fieldname": "service_booking_date",
       "fieldtype": "Datetime",
       "label": "Booking Datetime"
+    },
+    {
+      "fieldname": "cb_basic_7",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "branch_code",
+      "fieldtype": "Data",
+      "label": "Branch Code",
+      "read_only": 1,
+      "hidden": 1,
+      "fetch_from": "branch.branch_code"
+    },
+    {
+      "fieldname": "row_basic_8",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "service_bundle",
+      "fieldtype": "Link",
+      "label": "Service Bundle",
+      "options": "Garage Service Bundle"
+    },
+    {
+      "fieldname": "cb_basic_8",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "service_bundle_name",
+      "fieldtype": "Data",
+      "label": "Service Bundle Name"
+    },
+    {
+      "fieldname": "customer_vehicle_section",
+      "fieldtype": "Section Break",
+      "label": "Customer & Vehicle"
     },
     {
       "fieldname": "customer",
@@ -144,6 +267,10 @@
       "in_list_view": 1
     },
     {
+      "fieldname": "cb_cv_1",
+      "fieldtype": "Column Break"
+    },
+    {
       "fieldname": "vehicle",
       "fieldtype": "Link",
       "label": "Vehicle",
@@ -152,15 +279,9 @@
       "in_list_view": 1
     },
     {
-      "fieldname": "service_advisor",
-      "fieldtype": "Link",
-      "label": "Service Advisor",
-      "options": "User"
-    },
-    {
-      "fieldname": "primary_contact",
-      "fieldtype": "Data",
-      "label": "Primary Contact"
+      "fieldname": "process_status_section",
+      "fieldtype": "Section Break",
+      "label": "Process Status"
     },
     {
       "fieldname": "job_card_status",
@@ -170,11 +291,19 @@
       "default": "Not Created"
     },
     {
+      "fieldname": "cb_ps_1",
+      "fieldtype": "Column Break"
+    },
+    {
       "fieldname": "work_order_status",
       "fieldtype": "Select",
       "label": "Work Order Status",
       "options": "Not Created\nIn Progress\nAwaiting Parts\nCompleted\nCancelled",
       "default": "Not Created"
+    },
+    {
+      "fieldname": "row_ps_2",
+      "fieldtype": "Section Break"
     },
     {
       "fieldname": "qc_status",
@@ -184,11 +313,19 @@
       "default": "Not Required"
     },
     {
+      "fieldname": "cb_ps_2",
+      "fieldtype": "Column Break"
+    },
+    {
       "fieldname": "part_charge_status",
       "fieldtype": "Select",
       "label": "Status Pembebanan Sparepart & Bahan",
       "options": "Not Started\nPending\nPartial Approve\nPartial Reject\nApproved\nRejected",
       "default": "Not Started"
+    },
+    {
+      "fieldname": "row_ps_3",
+      "fieldtype": "Section Break"
     },
     {
       "fieldname": "note_status",
@@ -198,11 +335,19 @@
       "default": "Not Started"
     },
     {
+      "fieldname": "cb_ps_3",
+      "fieldtype": "Column Break"
+    },
+    {
       "fieldname": "invoice_status",
       "fieldtype": "Select",
       "label": "Status Invoice",
       "options": "Not Started\nPending\nApproved\nCompleted\nCancelled",
       "default": "Not Started"
+    },
+    {
+      "fieldname": "row_ps_4",
+      "fieldtype": "Section Break"
     },
     {
       "fieldname": "sikk_status",
@@ -212,14 +357,9 @@
       "default": "Not Started"
     },
     {
-      "fieldname": "estimated_delivery_date",
-      "fieldtype": "Date",
-      "label": "Estimated Delivery"
-    },
-    {
-      "fieldname": "actual_delivery_date",
-      "fieldtype": "Date",
-      "label": "Actual Delivery"
+      "fieldname": "financial_section",
+      "fieldtype": "Section Break",
+      "label": "Financial"
     },
     {
       "fieldname": "total_estimated_amount",
@@ -227,9 +367,17 @@
       "label": "Estimated Amount"
     },
     {
+      "fieldname": "cb_fin_1",
+      "fieldtype": "Column Break"
+    },
+    {
       "fieldname": "total_approved_amount",
       "fieldtype": "Currency",
       "label": "Approved Amount"
+    },
+    {
+      "fieldname": "row_fin_2",
+      "fieldtype": "Section Break"
     },
     {
       "fieldname": "approval_date",
@@ -237,14 +385,27 @@
       "label": "Approval Date"
     },
     {
+      "fieldname": "cb_fin_2",
+      "fieldtype": "Column Break"
+    },
+    {
       "fieldname": "customer_confirmation",
       "fieldtype": "Check",
       "label": "Customer Approved"
     },
     {
+      "fieldname": "row_fin_3",
+      "fieldtype": "Section Break"
+    },
+    {
       "fieldname": "rejection_reason",
       "fieldtype": "Small Text",
       "label": "Rejection Reason"
+    },
+    {
+      "fieldname": "notes_section",
+      "fieldtype": "Section Break",
+      "label": "Notes"
     },
     {
       "fieldname": "inspection_summary",
@@ -255,6 +416,11 @@
       "fieldname": "service_notes",
       "fieldtype": "Text",
       "label": "Service Notes"
+    },
+    {
+      "fieldname": "operations_section",
+      "fieldtype": "Section Break",
+      "label": "Operations"
     },
     {
       "fieldname": "inspection_items",
