@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Iterable, Optional
 
+import frappe
+
 from frappe.model.document import Document
 
 from garage.utils import naming
@@ -33,7 +35,42 @@ class GarageServiceOrder(Document):
         naming.make_branch_autoname(self, "SPK", include_year=True)
 
     def validate(self) -> None:
+        self._update_display_fields()
         self._update_part_charge_status()
+
+    def _update_display_fields(self) -> None:
+        customer_name: Optional[str] = None
+        if self.customer:
+            customer_name = frappe.db.get_value("Garage Customer", self.customer, "customer_name")
+
+        self.customer_display = customer_name or self.customer
+
+        vehicle_parts: dict[str, object] = {}
+        if self.vehicle:
+            vehicle_parts = frappe.db.get_value(
+                "Garage Vehicle",
+                self.vehicle,
+                ["license_plate", "brand", "model", "vehicle_year"],
+                as_dict=True,
+            ) or {}
+
+        vehicle_bits = []
+        license_plate = vehicle_parts.get("license_plate")
+        if license_plate:
+            vehicle_bits.append(str(license_plate))
+
+        brand_model = " ".join(
+            filter(None, [vehicle_parts.get("brand"), vehicle_parts.get("model")])
+        ).strip()
+        if brand_model:
+            vehicle_bits.append(brand_model)
+
+        vehicle_year = vehicle_parts.get("vehicle_year")
+        if vehicle_year:
+            vehicle_bits.append(str(vehicle_year))
+
+        display_value = " • ".join(vehicle_bits) if vehicle_bits else None
+        self.vehicle_display = display_value or self.vehicle
 
     def _update_part_charge_status(self) -> None:
         """Derive the aggregated sparepart/material charge status."""
