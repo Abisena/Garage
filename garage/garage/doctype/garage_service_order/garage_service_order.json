@@ -48,8 +48,10 @@
     "service_bundle_name",
     "customer_vehicle_section",
     "customer",
+    "customer_display",
     "cb_cv_1",
     "vehicle",
+    "vehicle_display",
     "process_status_section",
     "job_card_status",
     "cb_ps_1",
@@ -268,6 +270,13 @@
       "in_list_view": 1
     },
     {
+      "fieldname": "customer_display",
+      "fieldtype": "Data",
+      "label": "Customer Name",
+      "read_only": 1,
+      "fetch_from": "customer.customer_name"
+    },
+    {
       "fieldname": "cb_cv_1",
       "fieldtype": "Column Break"
     },
@@ -278,6 +287,12 @@
       "options": "Garage Vehicle",
       "reqd": 1,
       "in_list_view": 1
+    },
+    {
+      "fieldname": "vehicle_display",
+      "fieldtype": "Data",
+      "label": "Vehicle Details",
+      "read_only": 1
     },
     {
       "fieldname": "process_status_section",
