@@ -34,6 +34,10 @@
     "service_advisor",
     "cb_basic_5",
     "primary_contact",
+    "row_basic_5b",
+    "assigned_mechanic",
+    "cb_basic_5b",
+    "assigned_mechanic_name",
     "row_basic_6",
     "booking_channel",
     "cb_basic_6",
@@ -196,6 +200,28 @@
       "fieldname": "primary_contact",
       "fieldtype": "Data",
       "label": "Primary Contact"
+    },
+    {
+      "fieldname": "row_basic_5b",
+      "fieldtype": "Section Break",
+      "label": "Mechanic Assignment"
+    },
+    {
+      "fieldname": "assigned_mechanic",
+      "fieldtype": "Link",
+      "label": "Mechanic",
+      "options": "Employee"
+    },
+    {
+      "fieldname": "cb_basic_5b",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "assigned_mechanic_name",
+      "fieldtype": "Data",
+      "label": "Mechanic Name",
+      "fetch_from": "assigned_mechanic.employee_name",
+      "read_only": 1
     },
     {
       "fieldname": "row_basic_6",

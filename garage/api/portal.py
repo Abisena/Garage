@@ -4182,6 +4182,31 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
         if order.get("cancelReason") and hasattr(doc, "rejection_reason"):
             applied["rejection_reason"] = cstr(order.get("cancelReason"))
 
+        # -------- Assigned Mechanic --------
+        mechanic_value = None
+        for key in (
+            "assigned_mechanic",
+            "mechanic_id",
+            "mechanic",
+            "mechanicName",
+            "mechanic_name",
+            "technician",
+        ):
+            candidate = cstr(order.get(key) or "").strip()
+            if candidate:
+                mechanic_value = candidate
+                break
+
+        if mechanic_value and hasattr(doc, "assigned_mechanic"):
+            applied["assigned_mechanic"] = mechanic_value
+            doc.assigned_mechanic = mechanic_value
+
+            if hasattr(doc, "assigned_mechanic_name"):
+                display_map = _employee_display_map([mechanic_value]) or {}
+                mechanic_name = display_map.get(mechanic_value) or mechanic_value
+                applied["assigned_mechanic_name"] = mechanic_name
+                doc.assigned_mechanic_name = mechanic_name
+
         # -------- Progress Logs --------
         history = order.get("progressHistory") or []
         added_logs = _append_progress_logs(doc, history)
