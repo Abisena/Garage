@@ -13,8 +13,6 @@
     "branch",
 
     "vehicle_section",
-
-    "row_v1",
     "license_plate",
     "cb_v1",
     "vin",
@@ -46,8 +44,6 @@
     "notes",
 
     "customer_section",
-
-    "row_c1",
     "customer_name",
     "cb_c1",
     "phone",
@@ -84,8 +80,6 @@
     "address_line2",
 
     "service_section",
-
-    "row_s1",
     "service_order_type",
     "cb_s1",
     "priority",
@@ -102,8 +96,6 @@
     "service_notes",
 
     "links_section",
-
-    "row_l1",
     "vehicle",
     "cb_l1",
     "service_order"
@@ -124,20 +116,54 @@
       "fieldtype": "Section Break",
       "label": "Vehicle Information"
     },
+    {
+      "fieldname": "license_plate",
+      "fieldtype": "Data",
+      "label": "Plate Number",
+      "reqd": 1
+    },
+    {
+      "fieldname": "cb_v1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "vin",
+      "fieldtype": "Data",
+      "label": "Chassis Number"
+    },
 
-    { "fieldname": "row_v1", "fieldtype": "Section Break" },
-    { "fieldname": "license_plate", "fieldtype": "Data", "label": "Plate Number", "reqd": 1 },
-    { "fieldname": "cb_v1", "fieldtype": "Column Break" },
-    { "fieldname": "vin", "fieldtype": "Data", "label": "Chassis Number" },
+    {
+      "fieldname": "row_v2",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "engine_number",
+      "fieldtype": "Data",
+      "label": "Engine Number"
+    },
+    {
+      "fieldname": "cb_v2",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "brand",
+      "fieldtype": "Data",
+      "label": "Brand"
+    },
 
-    { "fieldname": "row_v2", "fieldtype": "Section Break" },
-    { "fieldname": "engine_number", "fieldtype": "Data", "label": "Engine Number" },
-    { "fieldname": "cb_v2", "fieldtype": "Column Break" },
-    { "fieldname": "brand", "fieldtype": "Data", "label": "Brand" },
-
-    { "fieldname": "row_v3", "fieldtype": "Section Break" },
-    { "fieldname": "model", "fieldtype": "Data", "label": "Model" },
-    { "fieldname": "cb_v3", "fieldtype": "Column Break" },
+    {
+      "fieldname": "row_v3",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "model",
+      "fieldtype": "Data",
+      "label": "Model"
+    },
+    {
+      "fieldname": "cb_v3",
+      "fieldtype": "Column Break"
+    },
     {
       "fieldname": "vehicle_type",
       "fieldtype": "Select",
@@ -145,9 +171,19 @@
       "options": "Sedan\nHatchback\nSUV\nMPV\nTruck\nVan\nCoupe\nWagon"
     },
 
-    { "fieldname": "row_v4", "fieldtype": "Section Break" },
-    { "fieldname": "vehicle_year", "fieldtype": "Int", "label": "Year" },
-    { "fieldname": "cb_v4", "fieldtype": "Column Break" },
+    {
+      "fieldname": "row_v4",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "vehicle_year",
+      "fieldtype": "Int",
+      "label": "Year"
+    },
+    {
+      "fieldname": "cb_v4",
+      "fieldtype": "Column Break"
+    },
     {
       "fieldname": "assembly_type",
       "fieldtype": "Select",
@@ -155,14 +191,20 @@
       "options": "CKD\nCBU"
     },
 
-    { "fieldname": "row_v5", "fieldtype": "Section Break" },
+    {
+      "fieldname": "row_v5",
+      "fieldtype": "Section Break"
+    },
     {
       "fieldname": "transmission",
       "fieldtype": "Select",
       "label": "Transmission",
       "options": "Manual\nAutomatic\nCVT\nOther"
     },
-    { "fieldname": "cb_v5", "fieldtype": "Column Break" },
+    {
+      "fieldname": "cb_v5",
+      "fieldtype": "Column Break"
+    },
     {
       "fieldname": "fuel_type",
       "fieldtype": "Select",
@@ -170,31 +212,61 @@
       "options": "Petrol\nDiesel\nHybrid\nElectric\nOther"
     },
 
-    { "fieldname": "row_v6", "fieldtype": "Section Break" },
-    { "fieldname": "mileage", "fieldtype": "Int", "label": "Current Mileage (KM)" },
+    {
+      "fieldname": "row_v6",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "mileage",
+      "fieldtype": "Int",
+      "label": "Current Mileage (KM)"
+    },
 
-    { "fieldname": "row_v_notes", "fieldtype": "Section Break" },
-    { "fieldname": "notes", "fieldtype": "Small Text", "label": "Customer Complaint" },
+    {
+      "fieldname": "row_v_notes",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "notes",
+      "fieldtype": "Small Text",
+      "label": "Customer Complaint"
+    },
 
     {
       "fieldname": "customer_section",
       "fieldtype": "Section Break",
       "label": "Customer Information"
     },
+    {
+      "fieldname": "customer_name",
+      "fieldtype": "Data",
+      "label": "Full Name",
+      "reqd": 1
+    },
+    {
+      "fieldname": "cb_c1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "phone",
+      "fieldtype": "Data",
+      "label": "Phone Number"
+    },
 
-    { "fieldname": "row_c1", "fieldtype": "Section Break" },
-    { "fieldname": "customer_name", "fieldtype": "Data", "label": "Full Name", "reqd": 1 },
-    { "fieldname": "cb_c1", "fieldtype": "Column Break" },
-    { "fieldname": "phone", "fieldtype": "Data", "label": "Phone Number" },
-
-    { "fieldname": "row_c2", "fieldtype": "Section Break" },
+    {
+      "fieldname": "row_c2",
+      "fieldtype": "Section Break"
+    },
     {
       "fieldname": "customer_type",
       "fieldtype": "Select",
       "label": "Customer Type",
       "options": "Individual\nCorporate"
     },
-    { "fieldname": "cb_c2", "fieldtype": "Column Break" },
+    {
+      "fieldname": "cb_c2",
+      "fieldtype": "Column Break"
+    },
     {
       "fieldname": "preferred_contact_method",
       "fieldtype": "Select",
@@ -202,46 +274,119 @@
       "options": "Phone\nEmail\nWhatsApp"
     },
 
-    { "fieldname": "row_c3", "fieldtype": "Section Break" },
-    { "fieldname": "email", "fieldtype": "Data", "label": "Email" },
-    { "fieldname": "cb_c3", "fieldtype": "Column Break" },
-    { "fieldname": "id_number", "fieldtype": "Data", "label": "Identity Number" },
+    {
+      "fieldname": "row_c3",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "email",
+      "fieldtype": "Data",
+      "label": "Email"
+    },
+    {
+      "fieldname": "cb_c3",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "id_number",
+      "fieldtype": "Data",
+      "label": "Identity Number"
+    },
 
-    { "fieldname": "row_c4", "fieldtype": "Section Break" },
-    { "fieldname": "city", "fieldtype": "Data", "label": "City" },
-    { "fieldname": "cb_c4", "fieldtype": "Column Break" },
-    { "fieldname": "state", "fieldtype": "Data", "label": "State / Province" },
+    {
+      "fieldname": "row_c4",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "city",
+      "fieldtype": "Data",
+      "label": "City"
+    },
+    {
+      "fieldname": "cb_c4",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "state",
+      "fieldtype": "Data",
+      "label": "State / Province"
+    },
 
-    { "fieldname": "row_c5", "fieldtype": "Section Break" },
-    { "fieldname": "postal_code", "fieldtype": "Data", "label": "Postal Code" },
-    { "fieldname": "cb_c5", "fieldtype": "Column Break" },
-    { "fieldname": "country", "fieldtype": "Data", "label": "Country", "default": "Indonesia" },
+    {
+      "fieldname": "row_c5",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "postal_code",
+      "fieldtype": "Data",
+      "label": "Postal Code"
+    },
+    {
+      "fieldname": "cb_c5",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "country",
+      "fieldtype": "Data",
+      "label": "Country",
+      "default": "Indonesia"
+    },
 
-    { "fieldname": "row_c6", "fieldtype": "Section Break" },
+    {
+      "fieldname": "row_c6",
+      "fieldtype": "Section Break"
+    },
     {
       "fieldname": "marketing_source",
       "fieldtype": "Select",
       "label": "Marketing Source",
       "options": "Walk In\nReferral\nOnline\nSocial Media\nOther"
     },
-    { "fieldname": "cb_c6", "fieldtype": "Column Break" },
-    { "fieldname": "is_vip", "fieldtype": "Check", "label": "VIP Customer" },
+    {
+      "fieldname": "cb_c6",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "is_vip",
+      "fieldtype": "Check",
+      "label": "VIP Customer"
+    },
 
-    { "fieldname": "row_address1", "fieldtype": "Section Break" },
-    { "fieldname": "address_line1", "fieldtype": "Small Text", "label": "Address Line 1" },
+    {
+      "fieldname": "row_address1",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "address_line1",
+      "fieldtype": "Small Text",
+      "label": "Address Line 1"
+    },
 
-    { "fieldname": "row_address2", "fieldtype": "Section Break" },
-    { "fieldname": "address_line2", "fieldtype": "Small Text", "label": "Address Line 2" },
+    {
+      "fieldname": "row_address2",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "address_line2",
+      "fieldtype": "Small Text",
+      "label": "Address Line 2"
+    },
 
     {
       "fieldname": "service_section",
       "fieldtype": "Section Break",
       "label": "Service Information"
     },
-
-    { "fieldname": "row_s1", "fieldtype": "Section Break" },
-    { "fieldname": "service_order_type", "fieldtype": "Data", "label": "Service Type", "reqd": 1 },
-    { "fieldname": "cb_s1", "fieldtype": "Column Break" },
+    {
+      "fieldname": "service_order_type",
+      "fieldtype": "Data",
+      "label": "Service Type",
+      "reqd": 1
+    },
+    {
+      "fieldname": "cb_s1",
+      "fieldtype": "Column Break"
+    },
     {
       "fieldname": "priority",
       "fieldtype": "Select",
@@ -249,12 +394,30 @@
       "options": "Normal\nHigh\nUrgent\nCritical"
     },
 
-    { "fieldname": "row_s2", "fieldtype": "Section Break" },
-    { "fieldname": "service_bundle", "fieldtype": "Link", "label": "Service Bundle", "options": "Garage Service Bundle" },
-    { "fieldname": "cb_s2", "fieldtype": "Column Break" },
-    { "fieldname": "service_bundle_name", "fieldtype": "Data", "label": "Service Bundle Name" },
+    {
+      "fieldname": "row_s2",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "service_bundle",
+      "fieldtype": "Link",
+      "label": "Service Bundle",
+      "options": "Garage Service Bundle"
+    },
+    {
+      "fieldname": "cb_s2",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "service_bundle_name",
+      "fieldtype": "Data",
+      "label": "Service Bundle Name"
+    },
 
-    { "fieldname": "row_s3", "fieldtype": "Section Break" },
+    {
+      "fieldname": "row_s3",
+      "fieldtype": "Section Break"
+    },
     {
       "fieldname": "intake_type",
       "fieldtype": "Select",
@@ -262,19 +425,39 @@
       "options": "Walk-In\nBooking"
     },
 
-    { "fieldname": "row_s_notes", "fieldtype": "Section Break" },
-    { "fieldname": "service_notes", "fieldtype": "Small Text", "label": "Service Advisor Notes" },
+    {
+      "fieldname": "row_s_notes",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "service_notes",
+      "fieldtype": "Small Text",
+      "label": "Service Advisor Notes"
+    },
 
     {
       "fieldname": "links_section",
       "fieldtype": "Section Break",
       "label": "Linked Records"
     },
-
-    { "fieldname": "row_l1", "fieldtype": "Section Break" },
-    { "fieldname": "vehicle", "fieldtype": "Link", "label": "Vehicle", "options": "Garage Vehicle", "read_only": 1 },
-    { "fieldname": "cb_l1", "fieldtype": "Column Break" },
-    { "fieldname": "service_order", "fieldtype": "Link", "label": "Service Order", "options": "Garage Service Order", "read_only": 1 }
+    {
+      "fieldname": "vehicle",
+      "fieldtype": "Link",
+      "label": "Vehicle",
+      "options": "Garage Vehicle",
+      "read_only": 1
+    },
+    {
+      "fieldname": "cb_l1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "service_order",
+      "fieldtype": "Link",
+      "label": "Service Order",
+      "options": "Garage Service Order",
+      "read_only": 1
+    }
   ],
 
   "has_web_view": 0,
