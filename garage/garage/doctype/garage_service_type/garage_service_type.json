@@ -24,7 +24,6 @@
       "fieldname": "service_type",
       "fieldtype": "Data",
       "label": "Service Type",
-      "reqd": 1,
       "unique": 1,
       "in_list_view": 1
     },
