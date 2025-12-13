@@ -15,9 +15,22 @@ frappe.ui.form.on('Customer Registration', {
   },
 
   refresh(frm) {
-    if (!frm.doc.service_order_type) {
-      frm.set_value('service_order_type', 'Service/Repair');
+    if (frm.doc.service_order_type) {
+      return;
     }
+
+    frappe.db
+      .get_list('Garage Service Type', {
+        fields: ['name'],
+        filters: { is_active: 1 },
+        limit: 1,
+        order_by: 'modified desc',
+      })
+      .then(([serviceType]) => {
+        if (serviceType && !frm.doc.service_order_type) {
+          frm.set_value('service_order_type', serviceType.name);
+        }
+      });
   },
 
   license_plate(frm) {
