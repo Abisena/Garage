@@ -221,6 +221,61 @@ class FrappeClient {
     }
   }
 
+  async listCustomerRegistrations({ branch = '', startDate, endDate, limit = 200 } = {}) {
+    try {
+      const fields = [
+        'name',
+        'branch',
+        'creation',
+        'license_plate',
+        'vin',
+        'engine_number',
+        'brand',
+        'model',
+        'vehicle_type',
+        'vehicle_year',
+        'assembly_type',
+        'fuel_type',
+        'mileage',
+        'customer_name',
+        'customer',
+        'phone',
+        'email',
+        'service_order_type',
+        'service_bundle',
+        'service_bundle_name',
+        'intake_type',
+        'priority',
+        'notes',
+        'service_notes',
+        'service_order',
+        'vehicle',
+      ];
+
+      const filters = [];
+
+      if (branch && branch !== 'all') {
+        filters.push(['branch', '=', branch]);
+      }
+
+      if (startDate) {
+        filters.push(['creation', '>=', startDate]);
+      }
+
+      if (endDate) {
+        filters.push(['creation', '<=', endDate]);
+      }
+
+      const url = this.buildListURL('Customer Registration', fields, filters, limit);
+      const response = await this.request(url);
+
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to list customer registrations:', error);
+      return [];
+    }
+  }
+
   async getPortalBootstrap(params = {}) {
     try {
       const searchParams = new URLSearchParams();

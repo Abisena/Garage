@@ -64,6 +64,69 @@ export function Inspection({ currentUser }) {
     recommendedParts: '',
     photos: []
   });
+
+  const normalizeFrappeRegistration = (record) => {
+    if (!record) return null;
+
+    const createdAt = record.creation ? new Date(record.creation) : new Date();
+    const formattedDate = createdAt.toLocaleDateString('id-ID');
+    const formattedTime = createdAt.toLocaleTimeString('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    return {
+      id: record.name,
+      time: formattedTime,
+      orderId: record.service_order || record.name,
+      customerName: record.customer_name || 'Customer',
+      customer: record.customer,
+      phone: record.phone || '',
+      email: record.email || '',
+      plateNumber: record.license_plate || '',
+      chassisNumber: record.vin || '',
+      engineNumber: record.engine_number || '',
+      vehicleBrand: record.brand || '',
+      vehicleModel: record.model || record.vehicle_type || '',
+      vehicleType: record.vehicle_type || '',
+      vehicleYear: record.vehicle_year || '',
+      serviceType: record.service_order_type || 'Inspection',
+      serviceBundleId: record.service_bundle || '',
+      serviceBundleName: record.service_bundle_name || '',
+      customerComplaint: record.service_notes || record.notes || '',
+      date: formattedDate,
+      estimatedCost: '0',
+      estimatedDays: '1',
+      branch: record.branch || currentUser?.branch || '',
+      status: 'Inspection',
+      inspectionStatus: 'waiting'
+    };
+  };
+
+  const mergeRegistrations = (localRegs, remoteRegs) => {
+    const merged = new Map();
+
+    (remoteRegs || []).forEach((reg) => {
+      if (!reg?.id) return;
+      merged.set(reg.id, reg);
+    });
+
+    (localRegs || []).forEach((reg) => {
+      if (!reg?.id) return;
+      const existing = merged.get(reg.id);
+      if (existing) {
+        merged.set(reg.id, {
+          ...existing,
+          ...reg,
+          inspectionStatus: reg.inspectionStatus || existing.inspectionStatus || 'waiting'
+        });
+      } else {
+        merged.set(reg.id, reg);
+      }
+    });
+
+    return Array.from(merged.values());
+  };
   
 
   const handleVehicleSelect = (registration) => {
@@ -284,6 +347,45 @@ export function Inspection({ currentUser }) {
   };
 
   useEffect(() => {
+    const fetchRegistrationsFromFrappe = async () => {
+      try {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const frappeRegistrations = await frappeClient.listCustomerRegistrations({
+          branch: currentUser?.branch,
+          startDate: startOfDay.toISOString(),
+          endDate: endOfDay.toISOString(),
+          limit: 200,
+        });
+
+        const normalizedRegistrations = frappeRegistrations
+          .map(normalizeFrappeRegistration)
+          .filter(Boolean)
+          .filter((reg) => {
+            if (reg.date !== todayDate) return false;
+            if (!currentUser?.branch || currentUser.branch === 'all') return true;
+            return reg.branch === currentUser.branch;
+          });
+
+        const localRegistrations = getTodayRegistrations(currentUser?.branch);
+        const mergedRegistrations = mergeRegistrations(localRegistrations, normalizedRegistrations);
+
+        saveToStorage('registrations', mergedRegistrations);
+        setRegistrations(mergedRegistrations);
+      } catch (error) {
+        console.error('Failed to load registrations from Frappe:', error);
+        setSyncError('Gagal memuat data registrasi dari Frappe.');
+        setRegistrations(getTodayRegistrations(currentUser?.branch));
+      }
+    };
+
+    fetchRegistrationsFromFrappe();
+  }, [currentUser?.branch, todayDate]);
+
+  useEffect(() => {
     const reloadRegistrations = () => {
       setRegistrations(getTodayRegistrations(currentUser?.branch));
     };
@@ -298,10 +400,6 @@ export function Inspection({ currentUser }) {
       window.removeEventListener('storage', reloadRegistrations);
       window.removeEventListener('focus', reloadRegistrations);
     };
-  }, [currentUser?.branch]);
-
-  useEffect(() => {
-    setRegistrations(getTodayRegistrations(currentUser?.branch));
   }, [currentUser?.branch]);
 
   const handlePrint = () => {
