@@ -23,6 +23,7 @@ export function Inspection({ currentUser }) {
   const [createdWorkOrderId, setCreatedWorkOrderId] = useState('');
   const [syncMessage, setSyncMessage] = useState('');
   const [syncError, setSyncError] = useState('');
+  const [inspectionRecordInfo, setInspectionRecordInfo] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [inspectionData, setInspectionData] = useState({
     engine: [
@@ -70,6 +71,7 @@ export function Inspection({ currentUser }) {
     setSelectedVehicle(registration);
     setSyncMessage('');
     setSyncError('');
+    setInspectionRecordInfo(null);
     // Reset inspection data when selecting new vehicle
     setInspectionData({
       engine: [
@@ -199,12 +201,28 @@ export function Inspection({ currentUser }) {
 
     try {
       const response = await persistInspectionToFrappe();
-      const message = response?.message || response?.msg || 'Data inspeksi berhasil disimpan.';
+      const message = typeof response === 'object'
+        ? response?.message || response?.msg || 'Data inspeksi berhasil disimpan.'
+        : response || 'Data inspeksi berhasil disimpan.';
+
+      const inspectionRecord = typeof response === 'object' ? response?.inspection_record : null;
+      const inspectionRecordUrl = typeof response === 'object' ? response?.inspection_record_url : null;
+
+      setInspectionRecordInfo(
+        inspectionRecord
+          ? {
+              name: inspectionRecord,
+              url: inspectionRecordUrl,
+            }
+          : null
+      );
+
       setSyncMessage(message);
     } catch (error) {
       console.error('Failed to sync inspection to Frappe', error);
       setSyncMessage('');
       setSyncError(error.message || 'Gagal menyimpan data inspeksi ke Frappe.');
+      setInspectionRecordInfo(null);
     } finally {
       setIsSaving(false);
     }
@@ -839,6 +857,24 @@ export function Inspection({ currentUser }) {
 
               {syncMessage && !syncError && (
                 <p className="text-sm text-emerald-600 mt-3" role="status">{syncMessage}</p>
+              )}
+              {inspectionRecordInfo?.name && (
+                <p className="text-sm text-blue-700 mt-2">
+                  Data inspeksi tersimpan sebagai{' '}
+                  {inspectionRecordInfo.url ? (
+                    <a
+                      href={inspectionRecordInfo.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-semibold underline"
+                    >
+                      {inspectionRecordInfo.name}
+                    </a>
+                  ) : (
+                    <span className="font-semibold">{inspectionRecordInfo.name}</span>
+                  )}
+                  {' '}di Frappe. Buka dari Desk jika perlu mengedit secara manual.
+                </p>
               )}
               {syncError && (
                 <p className="text-sm text-red-600 mt-3" role="alert">{syncError}</p>

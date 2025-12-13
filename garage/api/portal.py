@@ -5579,6 +5579,8 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
 
     if inspection_doc:
         response["inspection_record"] = inspection_doc.name
+        inspection_route = _desk_route("Garage Vehicle Inspection")
+        response["inspection_record_url"] = f"{get_url()}{inspection_route['form'].format(name=quote(inspection_doc.name))}"
 
     if auto_assignments:
         response["auto_assignments"] = auto_assignments
