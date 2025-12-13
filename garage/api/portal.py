@@ -5224,6 +5224,28 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
         "sikk_status": getattr(doc, "sikk_status", None),
     }
 
+    inspection_name = getattr(doc, "inspection_record", None) or frappe.db.exists(
+        "Garage Vehicle Inspection", {"service_order": doc.name}
+    )
+
+    if inspection_name:
+        try:
+            inspection_doc = frappe.get_doc("Garage Vehicle Inspection", inspection_name)
+            result["inspection_record"] = inspection_doc.name
+
+            if inspection_doc.inspection_summary is not None:
+                result["inspection_summary"] = inspection_doc.inspection_summary
+
+            if inspection_doc.service_notes is not None:
+                result["service_notes"] = inspection_doc.service_notes
+
+            if inspection_doc.inspection_items:
+                result["inspection_items"] = [
+                    item.as_dict() for item in inspection_doc.inspection_items
+                ]
+        except Exception:
+            pass
+
     assigned_mechanic = getattr(doc, "assigned_mechanic", None) or getattr(doc, "mechanic_in_charge", None)
     if assigned_mechanic:
         result["assigned_mechanic"] = assigned_mechanic
@@ -5380,6 +5402,12 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
     
     data = _ensure_dict(inspection_data or {})
 
+    inspection_payload = {
+        "inspection_summary": data.pop("inspection_summary", None),
+        "service_notes": data.pop("service_notes", None),
+        "inspection_items": data.pop("inspection_items", None),
+    }
+
     auto_assignments: List[Dict[str, Any]] = []
 
     # Get the document
@@ -5393,8 +5421,6 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
         "priority",
         "estimated_delivery_date",
         "total_estimated_amount",
-        "inspection_summary",
-        "service_notes",
         "assigned_mechanic",
     }
     
@@ -5437,16 +5463,59 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
         if status_update == "Awaiting QC" and hasattr(doc, "qc_status"):
             doc.qc_status = "Pending"
     
-    # Handle child tables if provided - with error handling
-    if "inspection_items" in data:
-        try:
-            if hasattr(doc, "inspection_items"):
-                doc.inspection_items = []
-                for item in data["inspection_items"]:
-                    doc.append("inspection_items", item)
-        except Exception as e:
-            frappe.log_error(f"Error updating inspection_items: {str(e)}")
-    
+    def _get_or_create_inspection(order: frappe.Document) -> frappe.Document:
+        existing_name = frappe.db.exists(
+            "Garage Vehicle Inspection", {"service_order": order.name}
+        )
+
+        if existing_name:
+            return frappe.get_doc("Garage Vehicle Inspection", existing_name)
+
+        inspection_doc = frappe.new_doc("Garage Vehicle Inspection")
+        inspection_doc.service_order = order.name
+        inspection_doc.branch = getattr(order, "branch", None)
+        inspection_doc.vehicle = getattr(order, "vehicle", None)
+        return inspection_doc
+
+    inspection_doc = None
+
+    if any(value is not None for value in inspection_payload.values()):
+        inspection_doc = _get_or_create_inspection(doc)
+
+        inspection_doc.branch = getattr(doc, "branch", None) or inspection_doc.branch
+        inspection_doc.vehicle = getattr(doc, "vehicle", None) or inspection_doc.vehicle
+
+        if inspection_payload["inspection_summary"] is not None:
+            inspection_doc.inspection_summary = inspection_payload["inspection_summary"]
+
+        if inspection_payload["service_notes"] is not None:
+            inspection_doc.service_notes = inspection_payload["service_notes"]
+
+        if inspection_payload["inspection_items"] is not None:
+            try:
+                inspection_doc.inspection_items = []
+                child_config = ALLOWED_DOCS["Garage Service Order"]["children"]["inspection_items"]
+                inspection_items = _sanitize_child_rows(
+                    "inspection_items",
+                    inspection_payload["inspection_items"],
+                    child_config,
+                )
+                for item in inspection_items:
+                    inspection_doc.append("inspection_items", item)
+            except Exception as e:
+                frappe.log_error(f"Error updating inspection_items: {str(e)}")
+
+        _save_doc(inspection_doc)
+
+        if hasattr(doc, "inspection_record"):
+            doc.inspection_record = inspection_doc.name
+
+        if hasattr(doc, "inspection_summary"):
+            doc.inspection_summary = inspection_doc.inspection_summary
+
+        if hasattr(doc, "service_notes"):
+            doc.service_notes = inspection_doc.service_notes
+
     if "service_tasks" in data:
         try:
             if hasattr(doc, "service_tasks"):
@@ -5507,6 +5576,9 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
             branch=getattr(doc, "branch", None),
         ),
     }
+
+    if inspection_doc:
+        response["inspection_record"] = inspection_doc.name
 
     if auto_assignments:
         response["auto_assignments"] = auto_assignments

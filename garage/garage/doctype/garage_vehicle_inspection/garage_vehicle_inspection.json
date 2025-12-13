@@ -1,0 +1,110 @@
+{
+  "actions": [],
+  "allow_guest_to_edit": 0,
+  "allow_guest_to_view": 0,
+  "allow_import": 1,
+  "allow_rename": 0,
+  "autoname": "autoincrement",
+  "beta": 0,
+  "creation": "2024-06-02 00:00:00.000000",
+  "default_view": "Form",
+  "disable_prepared_report": 0,
+  "docstatus": 0,
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "service_order",
+    "branch",
+    "vehicle",
+    "inspection_summary",
+    "service_notes",
+    "inspection_items"
+  ],
+  "fields": [
+    {
+      "fieldname": "service_order",
+      "fieldtype": "Link",
+      "label": "Service Order",
+      "options": "Garage Service Order",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "branch",
+      "fieldtype": "Link",
+      "label": "Branch",
+      "options": "Garage Branch",
+      "read_only": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "vehicle",
+      "fieldtype": "Link",
+      "label": "Vehicle",
+      "options": "Garage Vehicle",
+      "read_only": 1
+    },
+    {
+      "fieldname": "inspection_summary",
+      "fieldtype": "Small Text",
+      "label": "Inspection Summary"
+    },
+    {
+      "fieldname": "service_notes",
+      "fieldtype": "Text",
+      "label": "Service Notes"
+    },
+    {
+      "fieldname": "inspection_items",
+      "fieldtype": "Table",
+      "label": "Inspection Items",
+      "options": "Garage Service Order Inspection"
+    }
+  ],
+  "has_web_view": 0,
+  "hide_heading": 0,
+  "hide_toolbar": 0,
+  "idx": 0,
+  "image_field": "",
+  "in_create": 0,
+  "info_fields": [],
+  "is_submittable": 0,
+  "issingle": 0,
+  "istable": 0,
+  "links": [],
+  "make_attachments_public": 0,
+  "max_attachments": 0,
+  "modified": "2024-06-02 00:00:00.000000",
+  "module": "Garage",
+  "name": "Garage Vehicle Inspection",
+  "naming_rule": "",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1,
+      "export": 1
+    }
+  ],
+  "quick_entry": 0,
+  "read_only": 0,
+  "read_only_onload": 0,
+  "show_name_in_global_search": 1,
+  "show_preview_popup": 0,
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "subject": "",
+  "track_changes": 1,
+  "track_seen": 0,
+  "translated_doctype": 0,
+  "migration_hash": "",
+  "description": "Standalone inspection document linked to a garage service order."
+}
