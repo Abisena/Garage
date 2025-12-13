@@ -320,26 +320,6 @@
     },
 
     {
-      "fieldname": "row_address1",
-      "fieldtype": "Section Break"
-    },
-    {
-      "fieldname": "address_line1",
-      "fieldtype": "Small Text",
-      "label": "Address Line 1"
-    },
-
-    {
-      "fieldname": "row_address2",
-      "fieldtype": "Section Break"
-    },
-    {
-      "fieldname": "address_line2",
-      "fieldtype": "Small Text",
-      "label": "Address Line 2"
-    },
-
-    {
       "fieldname": "service_section",
       "fieldtype": "Section Break",
       "label": "Service Information"
