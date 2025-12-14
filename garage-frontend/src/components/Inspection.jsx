@@ -186,9 +186,9 @@ export function Inspection({ currentUser }) {
   };
 
   const statusSeverityMap = {
-    ok: 'Low',
-    attention: 'Medium',
-    replace: 'High'
+    ok: 'OK',
+    attention: 'Need Attention',
+    replace: 'Replace'
   };
 
   const statusActionMap = {
@@ -210,7 +210,7 @@ export function Inspection({ currentUser }) {
       const items = inspectionData[category] || [];
       return items.map((item) => {
         const statusLabel = statusLabelMap[item.status] || 'OK';
-        const severity = statusSeverityMap[item.status] || 'Low';
+        const severity = statusSeverityMap[item.status] || 'OK';
         const notesSuffix = item.notes ? ` Notes: ${item.notes}` : '';
 
         return {
