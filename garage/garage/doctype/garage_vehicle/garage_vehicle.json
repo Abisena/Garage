@@ -62,14 +62,16 @@
     },
     {
       "fieldname": "brand",
-      "fieldtype": "Data",
+      "fieldtype": "Link",
       "label": "Merk",
+      "options": "Garage Brand",
       "in_list_view": 1
     },
     {
       "fieldname": "model",
-      "fieldtype": "Data",
+      "fieldtype": "Link",
       "label": "Model",
+      "options": "Garage Model",
       "in_list_view": 1
     },
     {

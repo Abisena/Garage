@@ -147,8 +147,9 @@
     },
     {
       "fieldname": "brand",
-      "fieldtype": "Data",
-      "label": "Brand"
+      "fieldtype": "Link",
+      "label": "Brand",
+      "options": "Garage Brand"
     },
 
     {
@@ -157,8 +158,9 @@
     },
     {
       "fieldname": "model",
-      "fieldtype": "Data",
-      "label": "Model"
+      "fieldtype": "Link",
+      "label": "Model",
+      "options": "Garage Model"
     },
     {
       "fieldname": "cb_v3",
