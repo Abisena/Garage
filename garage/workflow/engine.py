@@ -465,7 +465,7 @@ class GarageWorkflowEngine:
         booking_id: str,
         advisor: User,
         notes: str,
-        severity: InspectionSeverity = InspectionSeverity.MEDIUM,
+        severity: InspectionSeverity = InspectionSeverity.NEED_ATTENTION,
     ) -> InspectionReport:
         self.access.require(user, "record_inspection")
         booking = self._get_booking(booking_id)
@@ -593,7 +593,7 @@ class GarageWorkflowEngine:
         technician: User,
         *,
         inspection_notes: str,
-        severity: InspectionSeverity = InspectionSeverity.MEDIUM,
+        severity: InspectionSeverity = InspectionSeverity.NEED_ATTENTION,
         print_reference: Optional[str] = None,
     ) -> JobCard:
         booking = self._get_booking(booking_id)

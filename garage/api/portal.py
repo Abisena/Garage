@@ -5258,6 +5258,10 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
             inspection_doc = frappe.get_doc("Garage Vehicle Inspection", inspection_name)
             result["inspection_record"] = inspection_doc.name
 
+            if getattr(doc, "inspection_record", None) != inspection_doc.name:
+                doc.inspection_record = inspection_doc.name
+                _save_doc(doc)
+
             if inspection_doc.inspection_summary is not None:
                 result["inspection_summary"] = inspection_doc.inspection_summary
 

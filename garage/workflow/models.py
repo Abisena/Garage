@@ -102,9 +102,9 @@ class InventoryCategory(str, Enum):
 
 
 class InspectionSeverity(str, Enum):
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
+    OK = "ok"
+    NEED_ATTENTION = "need_attention"
+    REPLACE = "replace"
 
 
 class QualityResult(str, Enum):

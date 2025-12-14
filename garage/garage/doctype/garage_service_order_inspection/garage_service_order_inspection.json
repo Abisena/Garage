@@ -32,7 +32,7 @@
       "fieldname": "severity",
       "fieldtype": "Select",
       "label": "Severity",
-      "options": "Low\nMedium\nHigh\nCritical",
+      "options": "OK\nNeed Attention\nReplace",
       "in_list_view": 1
     },
     {
