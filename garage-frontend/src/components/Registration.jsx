@@ -44,6 +44,8 @@ export function Registration({ currentUser }) {
   const [serviceBundles, setServiceBundles] = useState([]);
   const [lookupStatus, setLookupStatus] = useState({ type: 'idle', message: '' });
   const [lookupLoading, setLookupLoading] = useState(false);
+  const [vehicleBrands, setVehicleBrands] = useState([]);
+  const [vehicleModelsByBrand, setVehicleModelsByBrand] = useState({});
 
   // Save form data to localStorage whenever it changes
   useEffect(() => {
@@ -186,17 +188,50 @@ export function Registration({ currentUser }) {
     'CBU'
   ];
 
-  // Vehicle models by brand
-  const vehicleModelsByBrand = {
-    'Toyota': ['Avanza', 'Innova', 'Fortuner', 'Rush', 'Calya', 'Agya', 'Yaris', 'Corolla', 'Camry', 'Alphard', 'Vellfire', 'Land Cruiser', 'Hilux'],
-    'Honda': ['Brio', 'Jazz', 'Mobilio', 'BR-V', 'HR-V', 'CR-V', 'City', 'Civic', 'Accord', 'Odyssey'],
-    'Suzuki': ['Ertiga', 'XL7', 'Ignis', 'Swift', 'Baleno', 'Jimny', 'Carry', 'APV'],
-    'Mitsubishi': ['Xpander', 'Pajero Sport', 'Outlander', 'Eclipse Cross', 'L300', 'Triton'],
-    'Daihatsu': ['Ayla', 'Sigra', 'Terios', 'Rocky', 'Luxio', 'Gran Max', 'Xenia'],
-    'Nissan': ['Livina', 'Kicks', 'X-Trail', 'Terra', 'Serena', 'Navara'],
-    'Mazda': ['CX-3', 'CX-5', 'CX-9', 'Mazda2', 'Mazda3', 'Mazda6'],
-    'Isuzu': ['D-Max', 'MU-X', 'Panther', 'Traga', 'Giga']
-  };
+  useEffect(() => {
+    const loadVehicleOptions = async () => {
+      try {
+        const [brandsResponse, modelsResponse] = await Promise.all([
+          frappeClient.listGarageBrands(),
+          frappeClient.listGarageModels(),
+        ]);
+
+        const brandNames = Array.from(new Set(
+          (brandsResponse || []).map((brand) => brand.brand_name || brand.name).filter(Boolean)
+        )).sort();
+
+        setVehicleBrands(brandNames);
+
+        const modelsMap = (modelsResponse || []).reduce((acc, model) => {
+          const brand = model.brand;
+          const modelName = model.model_name || model.name;
+
+          if (!brand || !modelName) return acc;
+
+          if (!acc[brand]) {
+            acc[brand] = [];
+          }
+
+          acc[brand].push(modelName);
+          return acc;
+        }, {});
+
+        Object.keys(modelsMap).forEach((brand) => {
+          modelsMap[brand] = Array.from(new Set(modelsMap[brand])).sort();
+        });
+
+        setVehicleModelsByBrand(modelsMap);
+      } catch (error) {
+        console.error('Failed to load vehicle brands and models:', error);
+      }
+    };
+
+    loadVehicleOptions();
+  }, []);
+
+  const brandOptions = vehicleBrands.length > 0
+    ? vehicleBrands
+    : Object.keys(vehicleModelsByBrand);
 
   // Get available models based on selected brand
   const availableModels = formData.vehicleBrand ? vehicleModelsByBrand[formData.vehicleBrand] || [] : [];
@@ -780,7 +815,7 @@ export function Registration({ currentUser }) {
                       onBlur={() => setFocusedField('')}
                     >
                       <option value="">Select brand</option>
-                      {Object.keys(vehicleModelsByBrand).map(brand => (
+                      {brandOptions.map(brand => (
                         <option key={brand} value={brand}>{brand}</option>
                       ))}
                     </select>

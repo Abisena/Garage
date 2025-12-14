@@ -276,6 +276,33 @@ class FrappeClient {
     }
   }
 
+  async listGarageBrands(limit = 200) {
+    try {
+      const fields = ['name', 'brand_name'];
+      const url = this.buildListURL('Garage Brand', fields, null, limit);
+      const response = await this.request(url);
+
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to list garage brands:', error);
+      return [];
+    }
+  }
+
+  async listGarageModels({ brand = '', limit = 500 } = {}) {
+    try {
+      const fields = ['name', 'brand', 'model_name'];
+      const filters = brand ? [['brand', '=', brand]] : null;
+      const url = this.buildListURL('Garage Model', fields, filters, limit);
+      const response = await this.request(url);
+
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to list garage models:', error);
+      return [];
+    }
+  }
+
   async getPortalBootstrap(params = {}) {
     try {
       const searchParams = new URLSearchParams();
