@@ -1,4 +1,15 @@
 frappe.ui.form.on('Customer Registration', {
+  setup(frm) {
+    frm.set_query('model', () => {
+      const filters = {};
+      if (frm.doc.brand) {
+        filters.brand = frm.doc.brand;
+      }
+
+      return { filters };
+    });
+  },
+
   onload(frm) {
     if (frm.doc.branch) {
       return;
@@ -12,6 +23,12 @@ frappe.ui.form.on('Customer Registration', {
         }
       },
     });
+  },
+
+  brand(frm) {
+    if (frm.is_dirty() && frm.doc.model) {
+      frm.set_value('model', null);
+    }
   },
 
   refresh(frm) {
