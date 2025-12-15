@@ -252,10 +252,11 @@ export function ServiceOrders({ currentUser }) {
 
   const loadMechanicRoster = async (branchFilter = '') => {
     try {
-      const { technicians, employees } = await frappeClient.listMechanics(branchFilter);
+      const { technicians, employees, users } = await frappeClient.listMechanics(branchFilter);
       const normalized = [
         ...normalizeMechanicNames(technicians),
         ...normalizeMechanicNames(employees),
+        ...normalizeMechanicNames(users),
       ];
       mergeMechanicNames(normalized);
     } catch (error) {
