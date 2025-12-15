@@ -3750,6 +3750,47 @@ def _normalize_status(status: Any) -> str:
     return normalized.strip("-")
 
 
+def _ensure_erp_customer(
+    customer_link: str, branch: Optional[str] = None
+) -> Optional[str]:
+    """Guarantee existence of a standard ERPNext Customer from a Garage Customer.
+
+    This is reused by billing helpers and customer registration to keep the
+    accounting module in sync with portal records.
+    """
+
+    name = cstr(customer_link or "").strip()
+    if not name:
+        return None
+
+    if frappe.db.exists("Customer", name):
+        return name
+
+    # Create Customer from Garage Customer record
+    try:
+        g = _get_doc("Garage Customer", name)
+    except Exception:
+        return None
+
+    cust = frappe.new_doc("Customer")
+    cust.customer_name = getattr(g, "customer_name", None) or name
+    cust.customer_type = getattr(g, "customer_type", None) or "Individual"
+    cust.mobile_no = getattr(g, "phone", None)
+    cust.email_id = getattr(g, "email", None)
+    cust.customer_group = (
+        frappe.defaults.get_user_default("customer_group")
+        or frappe.defaults.get_global_default("customer_group")
+        or "All Customer Groups"
+    )
+    cust.territory = frappe.get_value("Territory", {"is_group": 0}) or "All Territories"
+
+    if branch and _doctype_has_field("Customer", "branch"):
+        cust.branch = branch
+
+    _insert_doc(cust)
+    return cust.name
+
+
 def _map_repair_status(status: str) -> Dict[str, Optional[str]]:
     normalized = _normalize_status(status)
     mapping: Dict[str, Dict[str, Optional[str]]] = {
@@ -3942,6 +3983,24 @@ def _ensure_billing_placeholders(
     status_hint = _normalize_status(order.get("status") or order.get("repairStatus"))
     progress = _extract_repair_progress(order, doc)
 
+    # When payload does not contain a status/progress hint (manual updates in Desk),
+    # fall back to the document's own lifecycle fields.
+    if not status_hint:
+        for candidate in (
+            getattr(doc, "work_order_status", None),
+            getattr(doc, "job_card_status", None),
+            getattr(doc, "status", None),
+            getattr(doc, "qc_status", None),
+        ):
+            status_hint = _normalize_status(candidate)
+            if status_hint:
+                break
+
+    if not progress:
+        stored_logs = getattr(doc, "progress_logs", None) or []
+        for row in stored_logs:
+            progress = max(progress, cint(getattr(row, "percent_complete", 0)))
+
     # Explicitly block incomplete states (e.g. waiting for parts)
     waiting_states = {"waiting-parts", "waiting-part", "awaiting-parts"}
     if status_hint in waiting_states:
@@ -3971,38 +4030,6 @@ def _ensure_billing_placeholders(
     # -------------------------
     # ✅ Ensure valid ERPNext Customer
     # -------------------------
-    def _ensure_customer_party(customer_link: str, branch: Optional[str] = None) -> Optional[str]:
-        name = cstr(customer_link or "").strip()
-        if not name:
-            return None
-
-        if frappe.db.exists("Customer", name):
-            return name
-
-        # Create Customer from Garage Customer record
-        try:
-            g = _get_doc("Garage Customer", name)
-        except Exception:
-            return None
-
-        cust = frappe.new_doc("Customer")
-        cust.customer_name = getattr(g, "customer_name", None) or name
-        cust.customer_type = getattr(g, "customer_type", None) or "Individual"
-        cust.mobile_no = getattr(g, "phone", None)
-        cust.email_id = getattr(g, "email", None)
-        cust.customer_group = (
-            frappe.defaults.get_user_default("customer_group")
-            or frappe.defaults.get_global_default("customer_group")
-            or "All Customer Groups"
-        )
-        cust.territory = frappe.get_value("Territory", {"is_group": 0}) or "All Territories"
-
-        if branch and _doctype_has_field("Customer", "branch"):
-            cust.branch = branch
-
-        _insert_doc(cust)
-        return cust.name
-
     billing: Dict[str, Any] = {}
 
     total_amount = flt(
@@ -4031,7 +4058,7 @@ def _ensure_billing_placeholders(
         # -------------------------
         # ✅ Build new Sales Invoice
         # -------------------------
-        invoice_customer = _ensure_customer_party(doc.customer, getattr(doc, "branch", None))
+        invoice_customer = _ensure_erp_customer(doc.customer, getattr(doc, "branch", None))
         if not invoice_customer:
             return None
 
@@ -6203,6 +6230,10 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         customer_doc = _insert_document("Garage Customer", customer_payload)
         customer_name = customer_doc.name
         created["customer"] = customer_doc.name
+
+        # Immediately provision an ERPNext Customer so billing can proceed
+        # without waiting for QC/payment automation.
+        _ensure_erp_customer(customer_name, branch_name)
     else:
         customer_doc = _get_doc("Garage Customer", existing_customer)
         customer_branch = cstr(getattr(customer_doc, "branch", "")).strip()
@@ -6213,6 +6244,8 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
                     customer_branch,
                 )
             )
+
+        _ensure_erp_customer(existing_customer, branch_name)
 
     vehicle_fields = ALLOWED_DOCS["Garage Vehicle"]["fields"] - {"customer"}
     vehicle_payload = _filter_fields(data, vehicle_fields)
