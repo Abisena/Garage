@@ -12,6 +12,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+# Ensure the production helper is loaded instead of any placeholder module
+sys.modules.pop("garage.utils.spare_part_issue", None)
+sys.modules.pop("garage.utils.service_estimate", None)
+
 
 def _install_frappe_stubs() -> None:
     """Provide lightweight frappe modules required for the helpers under test."""
@@ -20,6 +24,9 @@ def _install_frappe_stubs() -> None:
     if frappe_stub is None:
         frappe_stub = types.ModuleType("frappe")
         sys.modules["frappe"] = frappe_stub
+
+    if not hasattr(frappe_stub, "__path__"):
+        frappe_stub.__path__ = []  # type: ignore[attr-defined]
 
     if not hasattr(frappe_stub, "flags"):
         frappe_stub.flags = types.SimpleNamespace()
@@ -53,6 +60,9 @@ def _install_frappe_stubs() -> None:
     if utils_stub is None:
         utils_stub = types.ModuleType("frappe.utils")
         sys.modules["frappe.utils"] = utils_stub
+
+    if not hasattr(utils_stub, "__path__"):
+        utils_stub.__path__ = []  # type: ignore[attr-defined]
 
     utils_stub.cint = getattr(utils_stub, "cint", lambda value: int(float(value or 0)))
 

@@ -8,21 +8,34 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-if "frappe" not in sys.modules:
+# Remove lightweight stubs installed by other tests so the real module is loaded
+sys.modules.pop("garage.garage.doctype.garage_service_order.garage_service_order", None)
+
+frappe_stub = sys.modules.get("frappe")
+if frappe_stub is None:
     frappe_stub = types.ModuleType("frappe")
-    model_stub = types.ModuleType("frappe.model")
-    document_stub = types.ModuleType("frappe.model.document")
-
-    class Document:  # pragma: no cover - simple stand-in for frappe.model.document.Document
-        pass
-
-    document_stub.Document = Document
-    frappe_stub.model = model_stub
-    model_stub.document = document_stub
-
     sys.modules["frappe"] = frappe_stub
+
+frappe_stub.__path__ = getattr(frappe_stub, "__path__", [])  # type: ignore[attr-defined]
+
+model_stub = sys.modules.get("frappe.model")
+if model_stub is None:
+    model_stub = types.ModuleType("frappe.model")
     sys.modules["frappe.model"] = model_stub
+
+model_stub.__path__ = getattr(model_stub, "__path__", [])  # type: ignore[attr-defined]
+
+document_stub = sys.modules.get("frappe.model.document")
+if document_stub is None:
+    document_stub = types.ModuleType("frappe.model.document")
     sys.modules["frappe.model.document"] = document_stub
+
+class Document:  # pragma: no cover - simple stand-in for frappe.model.document.Document
+    pass
+
+document_stub.Document = Document
+frappe_stub.model = model_stub
+model_stub.document = document_stub
 
 if "garage.utils.naming" not in sys.modules:
     naming_stub = types.ModuleType("garage.utils.naming")
