@@ -1747,7 +1747,6 @@ export function ServiceOrders({ currentUser }) {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="px-6 py-4 text-left text-slate-700">Work Order ID</th>
                     <th className="px-6 py-4 text-left text-slate-700">Order ID</th>
                     <th className="px-6 py-4 text-left text-slate-700">Customer</th>
                     <th className="px-6 py-4 text-left text-slate-700">Vehicle</th>
@@ -1777,13 +1776,10 @@ export function ServiceOrders({ currentUser }) {
                         key={order.id} 
                         className={`border-b border-slate-100 transition-colors ${
                           isDisabled
-                            ? 'bg-slate-200 opacity-60 cursor-not-allowed' 
+                            ? 'bg-slate-200 opacity-60 cursor-not-allowed'
                             : 'hover:bg-slate-50'
                         }`}
                       >
-                        <td className="px-6 py-4">
-                          <span className={isDisabled ? "text-slate-500" : "text-blue-600"}>{order.id}</span>
-                        </td>
                         <td className="px-6 py-4">
                           <span className={isDisabled ? "text-slate-500" : "text-slate-900"}>{order.orderId}</span>
                         </td>
