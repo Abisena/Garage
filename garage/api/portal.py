@@ -1677,6 +1677,23 @@ def _normalize_inspection_severity(value: Any) -> Optional[str]:
     return canonical.get(normalized)
 
 
+def _normalize_inspection_items(doc: frappe.Document) -> None:
+    if not hasattr(doc, "inspection_items"):
+        return
+
+    for row in doc.inspection_items:
+        normalized = _normalize_inspection_severity(getattr(row, "severity", None))
+        if normalized:
+            row.severity = normalized
+        elif hasattr(row, "severity"):
+            row.severity = None
+
+
+def _normalize_doc_before_save(doc: frappe.Document) -> None:
+    if getattr(doc, "doctype", None) == "Garage Service Order Inspection":
+        _normalize_inspection_items(doc)
+
+
 @lru_cache(maxsize=None)
 def _get_meta(doctype: str):
     try:
@@ -2904,6 +2921,7 @@ def _submit_doc(doc: frappe.Document) -> frappe.Document:
 
 
 def _save_doc(doc: frappe.Document) -> frappe.Document:
+    _normalize_doc_before_save(doc)
     _ensure_branch_allowed(doc)
     with _ignoring_permissions():
         doc.save(ignore_permissions=True)
