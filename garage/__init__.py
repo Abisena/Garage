@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-import frappe
+try:
+    import frappe
+except ModuleNotFoundError:
+    frappe = None  # type: ignore[assignment]
 
 __version__ = "0.1.0"
 
 
 def _patch_errprint() -> None:
-    """Wrap ``frappe.errprint`` to ignore BrokenPipeError.
+    """Wrap ``frappe.errprint`` to ignore BrokenPipeError when available.
 
     When the HTTP client disconnects while Frappe is logging an error,
     the underlying ``print`` call inside ``frappe.errprint`` may raise
@@ -14,6 +17,9 @@ def _patch_errprint() -> None:
     while suppressing that specific exception so the application can
     finish handling the request gracefully.
     """
+
+    if frappe is None:
+        return
 
     if getattr(frappe, "_garage_errprint_patched", False):
         return
