@@ -1037,6 +1037,21 @@ def _ensure_dict(payload: Any) -> MutableMapping[str, Any]:
     return data
 
 
+def _unwrap_payload_container(data: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+    """Allow requests that wrap the actual payload inside a ``payload`` key."""
+
+    nested = data.get("payload")
+    if isinstance(nested, MutableMapping):
+        # Merge nested data with any top-level overrides except the container itself
+        merged = {**_ensure_dict(nested)}
+        for key, value in data.items():
+            if key != "payload":
+                merged[key] = value
+        return merged
+
+    return data
+
+
 def _serialize_bundle_part(row: Any, usage: str) -> Optional[Dict[str, Any]]:
     """Return a normalized representation of a bundle line item."""
 
@@ -7859,7 +7874,7 @@ def update_stock_movement(name: str, updates: Optional[Any] = None) -> Dict[str,
 @frappe.whitelist()
 def create_sales_invoice(invoice: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
-    data = _ensure_dict(invoice or {})
+    data = _unwrap_payload_container(_ensure_dict(invoice or {}))
     doc = _insert_document("Garage Sales Invoice", data)
     return {"name": doc.name, "status": doc.status}
 
@@ -7875,7 +7890,7 @@ def update_sales_invoice(name: str, updates: Optional[Any] = None) -> Dict[str, 
 @frappe.whitelist()
 def create_payment_entry(entry: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
-    data = _ensure_dict(entry or {})
+    data = _unwrap_payload_container(_ensure_dict(entry or {}))
 
     # ===== TAMBAHKAN LOGGING INI DI AWAL =====
     frappe.logger().info(
