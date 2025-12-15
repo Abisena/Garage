@@ -554,13 +554,53 @@ class FrappeClient {
         200,
       );
 
-      const [technicianResponse, employeeResponse] = await Promise.all([
+      const roleName = 'Mechanic';
+      const roleAssignmentFields = ['parent', 'role'];
+      const roleAssignmentFilters = [['role', '=', roleName]];
+      const roleAssignmentsUrl = this.buildListURL(
+        'Has Role',
+        roleAssignmentFields,
+        roleAssignmentFilters,
+        200,
+      );
+
+      const [technicianResponse, employeeResponse, roleAssignmentsResponse] = await Promise.all([
         this.request(technicianUrl),
         this.request(employeeUrl),
+        this.request(roleAssignmentsUrl),
       ]);
 
+      const roleAssignments = roleAssignmentsResponse.data || [];
+      const mechanicUserIds = Array.from(
+        new Set(
+          roleAssignments
+            .map((assignment) => assignment?.parent)
+            .filter(Boolean),
+        ),
+      );
+
+      let roleEmployees = [];
+
+      if (mechanicUserIds.length > 0) {
+        const roleEmployeeFilters = [['user_id', 'in', mechanicUserIds]];
+
+        if (branch) {
+          roleEmployeeFilters.push(['branch', '=', branch]);
+        }
+
+        const roleEmployeeUrl = this.buildListURL(
+          'Employee',
+          employeeFields,
+          roleEmployeeFilters,
+          200,
+        );
+
+        const roleEmployeeResponse = await this.request(roleEmployeeUrl);
+        roleEmployees = roleEmployeeResponse.data || [];
+      }
+
       const technicians = technicianResponse.data || [];
-      const employees = employeeResponse.data || [];
+      const employees = [...(employeeResponse.data || []), ...roleEmployees];
 
       return { technicians, employees };
     } catch (error) {
