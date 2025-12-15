@@ -1,0 +1,335 @@
+{
+  "actions": [],
+  "allow_guest_to_edit": 0,
+  "allow_guest_to_view": 0,
+  "allow_import": 1,
+  "allow_rename": 0,
+  "autoname": "autoincrement",
+  "beta": 0,
+  "creation": "2024-10-23 00:00:00.000000",
+  "default_view": "Form",
+  "disable_prepared_report": 0,
+  "docstatus": 0,
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "service_order",
+    "payment_entry",
+    "receipt_number",
+    "branch",
+    "branch_code",
+    "permit_number",
+    "sikk_number",
+    "permit_type",
+    "column_break_dates",
+    "valid_from",
+    "valid_until",
+    "submission_date",
+    "requesting_unit",
+    "applicant",
+    "approved_by",
+    "permit_notes",
+    "vehicle_section",
+    "vehicle",
+    "license_plate",
+    "vehicle_brand",
+    "vehicle_model",
+    "vehicle_color",
+    "transmission",
+    "body_notes",
+    "personnel_section",
+    "workshop_name",
+    "responsible_person",
+    "recipient_name",
+    "checklist_section",
+    "checklist_instructions",
+    "completeness_checked",
+    "spare_part_release_confirmed",
+    "body_checked",
+    "workshop_approved",
+    "signature_captured",
+    "stamped",
+    "handover_completed",
+    "handover_date",
+    "print_count"
+  ],
+  "fields": [
+    {
+      "fieldname": "service_order",
+      "fieldtype": "Link",
+      "label": "Service Order",
+      "options": "Garage Service Order",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "payment_entry",
+      "fieldtype": "Link",
+      "label": "Payment Entry",
+      "options": "Garage Payment Entry"
+    },
+    {
+      "fieldname": "receipt_number",
+      "fieldtype": "Data",
+      "label": "Receipt Number",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "branch",
+      "fieldtype": "Link",
+      "label": "Branch",
+      "options": "Garage Branch",
+      "reqd": 1
+    },
+    {
+      "fieldname": "branch_code",
+      "fieldtype": "Data",
+      "label": "Branch Code",
+      "fetch_from": "branch.branch_code",
+      "read_only": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "permit_number",
+      "fieldtype": "Data",
+      "label": "Document Number",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "sikk_number",
+      "fieldtype": "Data",
+      "label": "SIKK Number",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "permit_type",
+      "fieldtype": "Select",
+      "label": "Jenis Perizinan",
+      "options": "Keluar Workshop\nMasuk Workshop",
+      "default": "Keluar Workshop",
+      "reqd": 1
+    },
+    {
+      "fieldname": "column_break_dates",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "valid_from",
+      "fieldtype": "Date",
+      "label": "Periode Berlaku"
+    },
+    {
+      "fieldname": "valid_until",
+      "fieldtype": "Datetime",
+      "label": "Batas Waktu"
+    },
+    {
+      "fieldname": "submission_date",
+      "fieldtype": "Date",
+      "label": "Tanggal Pengajuan",
+      "default": "Today"
+    },
+    {
+      "fieldname": "requesting_unit",
+      "fieldtype": "Data",
+      "label": "Pengajuan Dari"
+    },
+    {
+      "fieldname": "applicant",
+      "fieldtype": "Link",
+      "label": "Pemohon",
+      "options": "User"
+    },
+    {
+      "fieldname": "approved_by",
+      "fieldtype": "Link",
+      "label": "Disetujui Oleh",
+      "options": "User"
+    },
+    {
+      "fieldname": "permit_notes",
+      "fieldtype": "Small Text",
+      "label": "Catatan"
+    },
+    {
+      "fieldname": "vehicle_section",
+      "fieldtype": "Section Break",
+      "label": "Informasi Kendaraan"
+    },
+    {
+      "fieldname": "vehicle",
+      "fieldtype": "Link",
+      "label": "Kendaraan",
+      "options": "Garage Vehicle"
+    },
+    {
+      "fieldname": "license_plate",
+      "fieldtype": "Data",
+      "label": "No. Polisi",
+      "fetch_from": "vehicle.license_plate",
+      "read_only": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "vehicle_brand",
+      "fieldtype": "Data",
+      "label": "Merk",
+      "fetch_from": "vehicle.brand",
+      "read_only": 1
+    },
+    {
+      "fieldname": "vehicle_model",
+      "fieldtype": "Data",
+      "label": "Model",
+      "fetch_from": "vehicle.model",
+      "read_only": 1
+    },
+    {
+      "fieldname": "vehicle_color",
+      "fieldtype": "Data",
+      "label": "Warna"
+    },
+    {
+      "fieldname": "transmission",
+      "fieldtype": "Select",
+      "label": "Tipe / Transmisi",
+      "options": "AT\nMT"
+    },
+    {
+      "fieldname": "body_notes",
+      "fieldtype": "Small Text",
+      "label": "Catatan Bodi"
+    },
+    {
+      "fieldname": "personnel_section",
+      "fieldtype": "Section Break",
+      "label": "Pihak Keluarkan"
+    },
+    {
+      "fieldname": "workshop_name",
+      "fieldtype": "Data",
+      "label": "Bengkel"
+    },
+    {
+      "fieldname": "responsible_person",
+      "fieldtype": "Link",
+      "label": "Penanggung Jawab",
+      "options": "User"
+    },
+    {
+      "fieldname": "recipient_name",
+      "fieldtype": "Data",
+      "label": "Penerima"
+    },
+    {
+      "fieldname": "checklist_section",
+      "fieldtype": "Section Break",
+      "label": "Checklist Security"
+    },
+    {
+      "fieldname": "checklist_instructions",
+      "fieldtype": "HTML",
+      "label": "Petunjuk Checklist",
+      "options": "<div class=\"text-muted\">Checklist Security wajib dilengkapi sebelum kendaraan keluar area bengkel.</div>"
+    },
+    {
+      "default": 0,
+      "fieldname": "completeness_checked",
+      "fieldtype": "Check",
+      "label": "Kelengkapan Kendaraan"
+    },
+    {
+      "default": 0,
+      "fieldname": "spare_part_release_confirmed",
+      "fieldtype": "Check",
+      "label": "Pengeluaran Sparepart"
+    },
+    {
+      "default": 0,
+      "fieldname": "body_checked",
+      "fieldtype": "Check",
+      "label": "Checklist Bodi"
+    },
+    {
+      "default": 0,
+      "fieldname": "workshop_approved",
+      "fieldtype": "Check",
+      "label": "Persetujuan Workshop"
+    },
+    {
+      "default": 0,
+      "fieldname": "signature_captured",
+      "fieldtype": "Check",
+      "label": "TTD"
+    },
+    {
+      "default": 0,
+      "fieldname": "stamped",
+      "fieldtype": "Check",
+      "label": "Stempel"
+    },
+    {
+      "default": 0,
+      "fieldname": "handover_completed",
+      "fieldtype": "Check",
+      "label": "Handover Selesai"
+    },
+    {
+      "fieldname": "handover_date",
+      "fieldtype": "Datetime",
+      "label": "Tanggal Handover"
+    },
+    {
+      "default": "0",
+      "fieldname": "print_count",
+      "fieldtype": "Int",
+      "label": "Jumlah Cetak SIKK",
+      "read_only": 1
+    }
+  ],
+  "has_web_view": 0,
+  "hide_heading": 0,
+  "hide_toolbar": 0,
+  "index_web_pages_for_search": 0,
+  "inline_filters": 0,
+  "is_published_field": "",
+  "issingle": 0,
+  "istable": 0,
+  "links": [],
+  "make_attachments_public": 0,
+  "max_attachments": 0,
+  "modified": "2024-10-23 00:00:00.000000",
+  "module": "Garage",
+  "name": "Vehicle Handover",
+  "naming_rule": "",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1,
+      "export": 1
+    }
+  ],
+  "quick_entry": 0,
+  "read_only": 0,
+  "read_only_onload": 0,
+  "show_name_in_global_search": 1,
+  "show_preview_popup": 0,
+  "show_title_field_in_link": 0,
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "subject": "",
+  "title_field": "sikk_number",
+  "track_changes": 1,
+  "track_seen": 0,
+  "translated_doctype": 0,
+  "migration_hash": "",
+  "description": "Vehicle Handover / SIKK document capturing branch, permit validity, vehicle details, and security checklist for manual or web entries."
+}
