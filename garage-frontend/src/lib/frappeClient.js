@@ -576,7 +576,12 @@ class FrappeClient {
 
       const userFilters = [
         ['enabled', '=', 1],
-        ['roles.role', '=', 'Mechanic'],
+      ];
+
+      const hasRoleFields = ['name', 'parent'];
+      const hasRoleFilters = [
+        ['parenttype', '=', 'User'],
+        ['role', '=', 'Mechanic'],
       ];
 
       const userUrl = this.buildListURL(
@@ -586,15 +591,31 @@ class FrappeClient {
         200,
       );
 
-      const [technicianResponse, employeeResponse, userResponse] = await Promise.all([
+      const hasRoleUrl = this.buildListURL(
+        'Has Role',
+        hasRoleFields,
+        hasRoleFilters,
+        200,
+      );
+
+      const [technicianResponse, employeeResponse, userResponse, hasRoleResponse] = await Promise.all([
         this.request(technicianUrl),
         this.request(employeeUrl),
         this.request(userUrl),
+        this.request(hasRoleUrl),
       ]);
 
       const technicians = technicianResponse.data || [];
       const employees = employeeResponse.data || [];
-      const users = userResponse.data || [];
+      const roleAssignments = hasRoleResponse.data || [];
+
+      const mechanicUsers = new Set(
+        roleAssignments
+          .map((assignment) => assignment?.parent)
+          .filter(Boolean),
+      );
+
+      const users = (userResponse.data || []).filter((user) => mechanicUsers.has(user.name));
 
       return { technicians, employees, users };
     } catch (error) {
