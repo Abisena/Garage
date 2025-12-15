@@ -1,6 +1,6 @@
 {
   "charts": [],
-  "content": "[{\"type\": \"header\", \"data\": {\"text\": \"Master Data\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Customer Registration\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Customer Entry\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Master Data Customer\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Master Data Vehicle\"}}, {\"type\": \"spacer\", \"data\": {}}, {\"type\": \"header\", \"data\": {\"text\": \"Operasional\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Service Order\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Spare Part Order\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Procurement Order\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Stock Movement\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Division Request\"}}, {\"type\": \"spacer\", \"data\": {}}, {\"type\": \"header\", \"data\": {\"text\": \"Keuangan\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Sales Invoice\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Payment Entry\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Receipt Document\"}}]",
+  "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Master Data\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Entry\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Customer\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Vehicle\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Brand\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Model\"}},{\"type\":\"spacer\",\"data\":{}},{\"type\":\"header\",\"data\":{\"text\":\"Operasional\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Registration\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Service Order\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Spare Part Request\"}}]",
   "creation": "2024-07-02 00:00:00.000000",
   "docstatus": 0,
   "doctype": "Workspace",
@@ -26,8 +26,8 @@
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
       "idx": 0,
-      "label": "Customer Registration",
-      "link_to": "Customer Registration",
+      "label": "Customer Entry",
+      "link_to": "Customer Entry",
       "type": "DocType"
     },
     {
@@ -50,14 +50,30 @@
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
       "idx": 3,
-      "label": "Customer Entry",
-      "link_to": "Customer Entry",
+      "label": "Garage Brand",
+      "link_to": "Garage Brand",
       "type": "DocType"
     },
     {
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
       "idx": 4,
+      "label": "Garage Model",
+      "link_to": "Garage Model",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 5,
+      "label": "Customer Registration",
+      "link_to": "Customer Registration",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 6,
       "label": "Garage Service Order",
       "link_to": "Garage Service Order",
       "type": "DocType"
@@ -65,57 +81,9 @@
     {
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
-      "idx": 5,
-      "label": "Garage Spare Part Order",
-      "link_to": "Garage Spare Part Order",
-      "type": "DocType"
-    },
-    {
-      "docstatus": 0,
-      "doctype": "Workspace Shortcut",
-      "idx": 6,
-      "label": "Garage Procurement Order",
-      "link_to": "Garage Procurement Order",
-      "type": "DocType"
-    },
-    {
-      "docstatus": 0,
-      "doctype": "Workspace Shortcut",
       "idx": 7,
-      "label": "Garage Stock Movement",
-      "link_to": "Garage Stock Movement",
-      "type": "DocType"
-    },
-    {
-      "docstatus": 0,
-      "doctype": "Workspace Shortcut",
-      "idx": 8,
-      "label": "Garage Sales Invoice",
-      "link_to": "Garage Sales Invoice",
-      "type": "DocType"
-    },
-    {
-      "docstatus": 0,
-      "doctype": "Workspace Shortcut",
-      "idx": 9,
-      "label": "Garage Payment Entry",
-      "link_to": "Garage Payment Entry",
-      "type": "DocType"
-    },
-    {
-      "docstatus": 0,
-      "doctype": "Workspace Shortcut",
-      "idx": 10,
-      "label": "Garage Receipt Document",
-      "link_to": "Garage Receipt Document",
-      "type": "DocType"
-    },
-    {
-      "docstatus": 0,
-      "doctype": "Workspace Shortcut",
-      "idx": 11,
-      "label": "Garage Division Request",
-      "link_to": "Garage Division Request",
+      "label": "Spare Part Request",
+      "link_to": "Spare Part Request",
       "type": "DocType"
     }
   ],

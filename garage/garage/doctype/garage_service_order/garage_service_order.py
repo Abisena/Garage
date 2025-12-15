@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Iterable, Optional
 
 import frappe
+from frappe.utils import nowdate
 
 from frappe.model.document import Document
 
@@ -37,6 +38,10 @@ class GarageServiceOrder(Document):
     def validate(self) -> None:
         self._update_display_fields()
         self._update_part_charge_status()
+        self._sync_spare_part_request()
+
+    def on_update(self):  # pragma: no cover - frappe lifecycle hook
+        self._sync_spare_part_request()
 
     def _update_display_fields(self) -> None:
         customer_name: Optional[str] = None
@@ -114,6 +119,46 @@ class GarageServiceOrder(Document):
                 statuses.append("Pending")
 
         return derive_part_charge_status(statuses, getattr(self, "part_charge_status", None))
+
+    def _sync_spare_part_request(self) -> None:
+        """Ensure a Spare Part Request document mirrors required part rows."""
+
+        required_parts = [row for row in getattr(self, "required_parts", []) if getattr(row, "item_code", None)]
+        if not required_parts:
+            return
+
+        request_name = frappe.db.get_value("Spare Part Request", {"service_order": self.name}, "name")
+        if request_name:
+            request = frappe.get_doc("Spare Part Request", request_name)
+        else:
+            request = frappe.new_doc("Spare Part Request")
+            request.service_order = self.name
+            request.request_date = nowdate()
+
+        request.customer = self.customer
+        request.vehicle = self.vehicle
+
+        existing_rows = {row.service_order_part: row for row in getattr(request, "items", [])}
+        request.set("items", [])
+
+        for part in required_parts:
+            preserved = existing_rows.get(part.name)
+            request.append(
+                "items",
+                {
+                    "service_order_part": part.name,
+                    "item_code": getattr(part, "item_code", None),
+                    "item_name": getattr(part, "item_name", None),
+                    "description": getattr(part, "description", None),
+                    "qty": getattr(part, "qty", None),
+                    "uom": getattr(part, "uom", None),
+                    "source_warehouse": getattr(part, "warehouse", None),
+                    "approval_status": getattr(preserved, "approval_status", None) or "Pending",
+                    "stock_movement": getattr(preserved, "stock_movement", None),
+                },
+            )
+
+        request.save(ignore_permissions=True)
 
 
 def derive_part_charge_status(
