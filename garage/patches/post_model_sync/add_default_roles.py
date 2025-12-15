@@ -43,8 +43,8 @@ ROLE_NAMES = [
 ]
 
 
-def execute():
-    """Ensure default Garage roles exist so they can be assigned from Role DocType."""
+def ensure_default_roles():
+    """Create default Garage roles if they do not exist."""
     for role_name in ROLE_NAMES:
         if frappe.db.exists("Role", role_name):
             continue
@@ -53,3 +53,8 @@ def execute():
         role.role_name = role_name
         role.desk_access = 1
         role.insert(ignore_permissions=True)
+
+
+def execute():
+    """Ensure default Garage roles exist so they can be assigned from Role DocType."""
+    ensure_default_roles()
