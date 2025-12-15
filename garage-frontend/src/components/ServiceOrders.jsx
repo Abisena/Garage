@@ -183,9 +183,14 @@ export function ServiceOrders({ currentUser }) {
           id: resolvedId,
           code: type.service_code || type.code || type.name || type.service_type,
           name: type.service_type || type.name || type.code,
-          category: type.category || type.service_category || type.order_category || 'General',
+          category:
+            type.category ||
+            type.service_category ||
+            type.order_category ||
+            type.product_bundle ||
+            'General',
           flatRate: Number.isFinite(flatRateValue) ? flatRateValue : 0,
-          description: type.description || '',
+          description: type.description || type.bundle_description || '',
         };
       })
       .filter((type) => type.id && type.name);

@@ -470,12 +470,9 @@ class FrappeClient {
       const fields = [
         'name',
         'service_type',
-        'service_code',
-        'category',
-        'service_fee',
-        'flat_rate',
-        'rate',
-        'description',
+        'product_bundle',
+        'bundle_description',
+        'is_active',
       ];
 
       const url = this.buildListURL('Garage Service Type', fields, null, 200);
