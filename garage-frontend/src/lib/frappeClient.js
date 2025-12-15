@@ -513,115 +513,18 @@ class FrappeClient {
       const bootstrap = await this.getPortalBootstrap({ branch });
       const roster = bootstrap?.available_technicians;
 
-      if (Array.isArray(roster) && roster.length > 0) {
+      if (Array.isArray(roster)) {
         return {
           technicians: roster,
           employees: [],
+          users: [],
         };
       }
     } catch (error) {
-      console.warn('Portal bootstrap roster unavailable, falling back to direct list:', error);
+      console.warn('Failed to load mechanic roster from portal bootstrap:', error);
     }
 
-    try {
-      const technicianFields = [
-        'name',
-        'employee',
-        'employee_name',
-        'user_id',
-        'status',
-        'skill_tags',
-        'branch',
-        'notes',
-      ];
-
-      const technicianFilters = branch ? [['branch', '=', branch]] : null;
-      const technicianUrl = this.buildListURL(
-        'Garage Technician',
-        technicianFields,
-        technicianFilters,
-        200,
-      );
-
-      const employeeFields = [
-        'name',
-        'employee_name',
-        'user_id',
-        'status',
-        'designation',
-        'employment_type',
-        'department',
-        'branch',
-      ];
-
-      const employeeFilters = [['designation', 'like', '%Mechanic%']];
-      if (branch) {
-        employeeFilters.push(['branch', '=', branch]);
-      }
-
-      const employeeUrl = this.buildListURL(
-        'Employee',
-        employeeFields,
-        employeeFilters,
-        200,
-      );
-
-      const userFields = [
-        'name',
-        'full_name',
-        'email',
-        'username',
-        'role_profile_name',
-      ];
-
-      const userFilters = [
-        ['enabled', '=', 1],
-      ];
-
-      const hasRoleFields = ['name', 'parent'];
-      const hasRoleFilters = [
-        ['parenttype', '=', 'User'],
-        ['role', '=', 'Mechanic'],
-      ];
-
-      const userUrl = this.buildListURL(
-        'User',
-        userFields,
-        userFilters,
-        200,
-      );
-
-      const hasRoleUrl = this.buildListURL(
-        'Has Role',
-        hasRoleFields,
-        hasRoleFilters,
-        200,
-      );
-
-      const [technicianResponse, employeeResponse, userResponse, hasRoleResponse] = await Promise.all([
-        this.request(technicianUrl),
-        this.request(employeeUrl),
-        this.request(userUrl),
-        this.request(hasRoleUrl),
-      ]);
-
-      const technicians = technicianResponse.data || [];
-      const employees = employeeResponse.data || [];
-      const roleAssignments = hasRoleResponse.data || [];
-
-      const mechanicUsers = new Set(
-        roleAssignments
-          .map((assignment) => assignment?.parent)
-          .filter(Boolean),
-      );
-
-      const users = (userResponse.data || []).filter((user) => mechanicUsers.has(user.name));
-
-      return { technicians, employees, users };
-    } catch (error) {
-      console.error('Failed to list mechanics:', error);
-      return { technicians: [], employees: [], users: [] };
-    }
+    return { technicians: [], employees: [], users: [] };
   }
 
   async syncWorkOrders(workOrders) {
