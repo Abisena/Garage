@@ -1641,6 +1641,42 @@ def _filter_fields(data: Mapping[str, Any], allowed: Iterable[str]) -> Dict[str,
     return result
 
 
+def _normalize_inspection_severity(value: Any) -> Optional[str]:
+    """Return a valid severity option for inspection items.
+
+    The Garage Service Order Inspection child table accepts only
+    "OK", "Need Attention", or "Replace". Frontend payloads may send
+    alternative labels (for example, "Low"), so we normalize them to the
+    closest valid option. Any unrecognized value is discarded to avoid
+    validation errors.
+    """
+
+    if not value:
+        return None
+
+    text = cstr(value).strip()
+    if not text:
+        return None
+
+    normalized = text.lower()
+    canonical = {
+        "ok": "OK",
+        "good": "OK",
+        "normal": "OK",
+        "need attention": "Need Attention",
+        "needs attention": "Need Attention",
+        "attention": "Need Attention",
+        "issue": "Need Attention",
+        "low": "Need Attention",
+        "medium": "Need Attention",
+        "replace": "Replace",
+        "high": "Replace",
+        "critical": "Replace",
+    }
+
+    return canonical.get(normalized)
+
+
 @lru_cache(maxsize=None)
 def _get_meta(doctype: str):
     try:
@@ -5530,6 +5566,11 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
                     child_config,
                 )
                 for item in inspection_items:
+                    severity = _normalize_inspection_severity(item.get("severity"))
+                    if severity:
+                        item["severity"] = severity
+                    elif "severity" in item:
+                        item.pop("severity", None)
                     inspection_doc.append("inspection_items", item)
             except Exception as e:
                 frappe.log_error(f"Error updating inspection_items: {str(e)}")
