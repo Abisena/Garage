@@ -1096,7 +1096,7 @@ export function ServiceOrders({ currentUser }) {
               </Button>
               <div>
                 <h1 className="text-slate-800">Sparepart Order</h1>
-                <p className="text-slate-600">Work Order: {selectedWorkOrder.id} - {selectedWorkOrder.vehicleBrand} {selectedWorkOrder.vehicleModel}</p>
+                <p className="text-slate-600">SPK: {selectedWorkOrder.id} - {selectedWorkOrder.vehicleBrand} {selectedWorkOrder.vehicleModel}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -1132,12 +1132,12 @@ export function ServiceOrders({ currentUser }) {
             </div>
           </div>
 
-          {/* Work Order Info - Horizontal Card at Top */}
+          {/* SPK Info - Horizontal Card at Top */}
           <div className="bg-white rounded-xl border border-slate-200 p-6 sticky top-0 z-10 shadow-sm">
-            <h3 className="text-slate-800 mb-4">Work Order Info</h3>
+            <h3 className="text-slate-800 mb-4">SPK Info</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
               <div>
-                <p className="text-slate-600 text-xs mb-1">Work Order ID</p>
+                <p className="text-slate-600 text-xs mb-1">SPK ID</p>
                 <p className="text-slate-900">{selectedWorkOrder.id}</p>
               </div>
               <div>
