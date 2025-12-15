@@ -508,6 +508,21 @@ class FrappeClient {
   }
 
   async listMechanics(branch = '') {
+    // Prefer portal bootstrap which is designed for portal users and avoids permission issues
+    try {
+      const bootstrap = await this.getPortalBootstrap({ branch });
+      const roster = bootstrap?.available_technicians;
+
+      if (Array.isArray(roster) && roster.length > 0) {
+        return {
+          technicians: roster,
+          employees: [],
+        };
+      }
+    } catch (error) {
+      console.warn('Portal bootstrap roster unavailable, falling back to direct list:', error);
+    }
+
     try {
       const technicianFields = [
         'name',
