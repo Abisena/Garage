@@ -566,18 +566,40 @@ class FrappeClient {
         200,
       );
 
-      const [technicianResponse, employeeResponse] = await Promise.all([
+      const userFields = [
+        'name',
+        'full_name',
+        'email',
+        'username',
+        'role_profile_name',
+      ];
+
+      const userFilters = [
+        ['enabled', '=', 1],
+        ['roles.role', '=', 'Mechanic'],
+      ];
+
+      const userUrl = this.buildListURL(
+        'User',
+        userFields,
+        userFilters,
+        200,
+      );
+
+      const [technicianResponse, employeeResponse, userResponse] = await Promise.all([
         this.request(technicianUrl),
         this.request(employeeUrl),
+        this.request(userUrl),
       ]);
 
       const technicians = technicianResponse.data || [];
       const employees = employeeResponse.data || [];
+      const users = userResponse.data || [];
 
-      return { technicians, employees };
+      return { technicians, employees, users };
     } catch (error) {
       console.error('Failed to list mechanics:', error);
-      return { technicians: [], employees: [] };
+      return { technicians: [], employees: [], users: [] };
     }
   }
 
