@@ -5616,6 +5616,25 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
 
 
 @frappe.whitelist()
+def list_mechanics(branch: Optional[str] = None, only_active: bool = False):
+    """Expose technician roster for the portal UI, including role-based fallbacks."""
+
+    _require_login()
+
+    branch_filter = cstr(branch or "").strip()
+    roster = _get_technician_roster(
+        only_active=cint(only_active),
+        branch=branch_filter or None,
+    )
+
+    return {
+        "technicians": roster,
+        "employees": [],
+        "users": [],
+    }
+
+
+@frappe.whitelist()
 def move_to_in_progress(order_id: str) -> Dict[str, Any]:
     """Move service order from inspection planning stages into execution."""
     

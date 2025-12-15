@@ -508,6 +508,30 @@ class FrappeClient {
   }
 
   async listMechanics(branch = '') {
+    try {
+      const searchParams = new URLSearchParams();
+      const branchFilter = typeof branch === 'string' ? branch.trim() : '';
+
+      if (branchFilter) {
+        searchParams.append('branch', branchFilter);
+      }
+
+      const query = searchParams.toString();
+      const endpoint = query
+        ? `/api/method/garage.api.portal.list_mechanics?${query}`
+        : '/api/method/garage.api.portal.list_mechanics';
+
+      const response = await this.request(endpoint);
+      const roster = response.message || response;
+
+      if (roster && typeof roster === 'object') {
+        const { technicians = [], employees = [], users = [] } = roster;
+        return { technicians, employees, users };
+      }
+    } catch (error) {
+      console.warn('Failed to load mechanic roster via list_mechanics:', error);
+    }
+
     // Prefer portal bootstrap which is designed for portal users and avoids permission issues
     try {
       const bootstrap = await this.getPortalBootstrap({ branch });
