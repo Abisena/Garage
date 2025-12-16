@@ -3897,6 +3897,47 @@ def _map_repair_status(status: str) -> Dict[str, Optional[str]]:
     return mapping.get(normalized, {})
 
 
+def _sync_quality_check(service_order: str, payload: Optional[Any]) -> Optional[Dict[str, Any]]:
+    data = _ensure_dict(payload)
+    if not data:
+        return None
+
+    try:
+        fieldnames = {
+            df.fieldname for df in frappe.get_meta("Garage Quality Check").fields
+        }
+
+        existing = frappe.db.get_value(
+            "Garage Quality Check", {"service_order": service_order}, "name"
+        )
+        doc = (
+            frappe.get_doc("Garage Quality Check", existing)
+            if existing
+            else frappe.new_doc("Garage Quality Check")
+        )
+        doc.service_order = service_order
+
+        applied: Dict[str, Any] = {}
+        for fieldname, value in data.items():
+            if fieldname not in fieldnames:
+                continue
+            doc.set(fieldname, value)
+            applied[fieldname] = value
+
+        if not applied and existing:
+            return {"name": existing}
+
+        doc.save(ignore_permissions=True)
+        applied["name"] = doc.name
+        return applied
+    except Exception:
+        frappe.log_error(
+            frappe.get_traceback(),
+            "Garage Frontend Sync: Quality Check failed",
+        )
+        return {"error": "quality_check_sync_failed"}
+
+
 def _map_part_status(status: str) -> Optional[str]:
     normalized = cstr(status or "").strip().lower()
     mapping = {
@@ -4439,6 +4480,11 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
             # ✅ update invoice status WITHOUT triggering timestamp mismatch
             if hasattr(doc, "invoice_status"):
                 frappe.db.set_value(doc.doctype, doc.name, "invoice_status", "Pending")
+
+        quality_payload = _ensure_dict(order.get("qualityCheck") or order.get("quality_check"))
+        qc_result = _sync_quality_check(doc.name, quality_payload)
+        if qc_result:
+            applied["quality_check"] = qc_result
 
         updated += 1
         results.append({"status": "updated", "order_id": doc.name, "applied": applied})
