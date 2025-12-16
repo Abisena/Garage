@@ -27,6 +27,12 @@ export const ROLE_GROUPS = {
     'Servis',
     'Head Service',
   ]),
+  qualityManager: new Set([
+    'Quality Manager',
+    'QC Manager',
+    'QC Lead',
+    'Quality Control',
+  ]),
   foreman: new Set([
     'Foreman',
     'Qc Foreman',
@@ -40,6 +46,11 @@ export const ROLE_GROUPS = {
   cashier: new Set([
     'Cashier',
     'Head Cashier',
+  ]),
+  finance: new Set([
+    'Finance',
+    'Finance Staff',
+    'Finance Manager',
   ]),
   receptionist: new Set([
     'Front Desk',
@@ -104,21 +115,29 @@ export const determinePrimaryRole = (roles = [], username) => {
   if (hasRoleInGroup(normalized, 'foreman')) {
     return 'foreman';
   }
-  
+
   if (hasRoleInGroup(normalized, 'mechanic')) {
     return 'mechanic';
   }
-  
+
   if (hasRoleInGroup(normalized, 'serviceAdvisor')) {
     return 'serviceAdvisor';
   }
-  
+
+  if (hasRoleInGroup(normalized, 'qualityManager')) {
+    return 'qualityManager';
+  }
+
   if (hasRoleInGroup(normalized, 'sparepart')) {
     return 'sparepart';
   }
-  
+
   if (hasRoleInGroup(normalized, 'cashier')) {
     return 'cashier';
+  }
+
+  if (hasRoleInGroup(normalized, 'finance')) {
+    return 'finance';
   }
   
   if (hasRoleInGroup(normalized, 'receptionist')) {
