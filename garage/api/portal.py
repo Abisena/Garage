@@ -1333,7 +1333,6 @@ def _fetch_item_spare_parts(
         "image",
         "modified",
         "owner",
-        "default_warehouse",
     ]
 
     filters: List[List[Any]] = [["is_stock_item", "=", 1]]
@@ -1366,6 +1365,7 @@ def _fetch_item_spare_parts(
     )
 
     item_codes = [item.get("item_code") for item in items]
+    default_warehouse_map = _get_default_warehouse_map([item.get("name") for item in items])
 
     stock_map = _aggregate_item_stock(item_codes)
     price_map = _item_price_map(item_codes)
@@ -1376,10 +1376,32 @@ def _fetch_item_spare_parts(
         record = _item_to_spare_part_record(item, stock_map, price_map)
         if not record.get("reorder_level"):
             record["reorder_level"] = flt(item.get("safety_stock") or 0)
-        record["default_warehouse"] = item.get("default_warehouse")
+        record["default_warehouse"] = default_warehouse_map.get(item.get("name")) or default_warehouse_map.get(part_code)
         processed.append(record)
 
     return processed
+
+
+def _get_default_warehouse_map(item_names: Iterable[str]) -> Dict[str, str]:
+    names = [cstr(name or "") for name in item_names if name]
+    if not names:
+        return {}
+
+    defaults = frappe.get_all(
+        "Item Default",
+        fields=["parent", "default_warehouse"],
+        filters=[["parent", "in", names]],
+        limit=5000,
+    )
+
+    default_map: Dict[str, str] = {}
+    for row in defaults:
+        parent = cstr(row.get("parent") or "")
+        warehouse = cstr(row.get("default_warehouse") or "")
+        if parent and warehouse and parent not in default_map:
+            default_map[parent] = warehouse
+
+    return default_map
 
 
 def _aggregate_item_stock(item_codes: Iterable[str]) -> Dict[str, Dict[str, Any]]:
