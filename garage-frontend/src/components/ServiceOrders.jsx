@@ -841,7 +841,7 @@ export function ServiceOrders({ currentUser }) {
     setShowViewModal(true);
   };
 
-  const handleSendOrderPart = () => {
+  const handleSendOrderPart = async () => {
     if (selectedWorkOrder) {
       // Validate mechanic field - MANDATORY
       if (!mechanicName || mechanicName.trim() === '') {
@@ -956,6 +956,27 @@ export function ServiceOrders({ currentUser }) {
         }
         
         localStorage.setItem('sparePartsRequests', JSON.stringify(requests));
+
+        try {
+          await frappeClient.syncSparePartRequest({
+            service_order: partsRequest.orderId,
+            request_title: `Spare Part Request ${partsRequest.orderId}`,
+            request_date: partsRequest.requestDate,
+            customer: selectedWorkOrder.customerId || selectedWorkOrder.customerName,
+            vehicle: selectedWorkOrder.vehicleId || selectedWorkOrder.plateNumber,
+            items: partsRequest.parts.map((part) => ({
+              part_code: part.partCode,
+              part_name: part.partName,
+              requested_qty: part.requestedQty,
+              qty: part.requestedQty,
+              uom: part.unit || 'Unit',
+              status: part.status,
+              source_warehouse: part.location,
+            })),
+          });
+        } catch (error) {
+          console.error('Failed to sync spare part request to Frappe:', error);
+        }
       }
       
       // Prepare success message

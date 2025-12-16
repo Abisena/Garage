@@ -19,6 +19,12 @@ from garage.utils import service_estimate, spare_part_issue
 from garage.garage.doctype.garage_service_order.garage_service_order import (
     derive_part_charge_status,
 )
+from garage.garage.doctype.spare_part_request.spare_part_request import (
+    ITEM_APPROVED,
+    ITEM_PENDING,
+    ITEM_REJECTED,
+    derive_request_status,
+)
 import json
 
 # Treat blank/None statuses on tasks as active to ensure newly created tasks
@@ -7287,6 +7293,114 @@ def adjust_spare_part_stock(
         "part_code": code,
         "stock_qty": updated_stock,
         "warehouse": warehouse,
+    }
+
+
+@frappe.whitelist()
+def sync_spare_part_request(payload: Optional[Any] = None) -> Dict[str, Any]:
+    """Create or refresh a Spare Part Request document from portal actions.
+
+    The portal keeps a lightweight queue of requested parts. This helper ensures
+    the Desk receives an up-to-date "Spare Part Request" document even before
+    warehouse staff click *Prepare* so approvers can track the request status.
+    """
+
+    _require_login()
+
+    data = _ensure_dict(payload or {})
+    service_order = cstr(data.get("service_order") or "").strip()
+    if not service_order:
+        frappe.throw(_("Service order wajib diisi."))
+
+    items = data.get("items") or []
+    if not isinstance(items, list):
+        frappe.throw(_("Format items tidak valid."))
+
+    request_name = frappe.db.get_value(
+        "Spare Part Request", {"service_order": service_order, "docstatus": ("!=", 2)}, "name"
+    )
+
+    if request_name:
+        doc = _get_doc("Spare Part Request", request_name)
+    else:
+        doc = frappe.new_doc("Spare Part Request")
+        doc.request_title = data.get("request_title") or _("Spare Part Request {0}").format(service_order)
+        doc.request_date = data.get("request_date") or nowdate()
+        doc.service_order = service_order
+        doc.customer = data.get("customer")
+        doc.vehicle = data.get("vehicle")
+        doc.status = ITEM_PENDING
+
+    existing_rows = list(doc.items or [])
+    used_indexes: Set[int] = set()
+
+    def _map_status(raw_status: str) -> str:
+        normalized = (raw_status or "").strip().upper()
+        if normalized == "PREPARED":
+            return ITEM_APPROVED
+        if normalized == "REJECTED":
+            return ITEM_REJECTED
+        return ITEM_PENDING
+
+    def _find_existing(item_code: str, qty: float) -> Optional[frappe.Document]:
+        for idx, row in enumerate(existing_rows):
+            if idx in used_indexes:
+                continue
+            if cstr(row.item_code).strip().lower() == cstr(item_code).strip().lower() and flt(row.qty) == flt(qty):
+                used_indexes.add(idx)
+                return row
+        return None
+
+    doc.set("items", [])
+    for item in items:
+        code = cstr(item.get("part_code") or item.get("item_code") or "").strip()
+        if not code:
+            frappe.throw(_("Kode sparepart pada item tidak boleh kosong."))
+
+        qty = flt(item.get("requested_qty") or item.get("qty") or 0)
+        if qty <= 0:
+            frappe.throw(_("Qty untuk {0} tidak valid.").format(code))
+
+        matched = _find_existing(code, qty)
+        mapped_status = _map_status(item.get("status"))
+
+        new_row = {
+            "service_order_part": item.get("service_order_part") or getattr(matched, "service_order_part", None),
+            "item_code": code,
+            "item_name": item.get("part_name") or item.get("item_name") or code,
+            "description": item.get("description") or getattr(matched, "description", None),
+            "qty": qty,
+            "uom": item.get("uom") or getattr(matched, "uom", None) or "Unit",
+            "source_warehouse": item.get("source_warehouse") or getattr(matched, "source_warehouse", None),
+            "approval_status": mapped_status,
+            "stock_movement": getattr(matched, "stock_movement", None),
+        }
+
+        doc.append("items", new_row)
+
+    doc.status = derive_request_status([row.approval_status for row in doc.items or []], doc.status)
+
+    if doc.is_new():
+        doc = _insert_doc(doc)
+    else:
+        doc = _save_doc(doc)
+
+    issued = False
+    for row in doc.items or []:
+        if (row.approval_status or "").strip() == ITEM_APPROVED and not row.stock_movement:
+            row.stock_movement = doc._issue_stock(row)
+            issued = True
+
+    if issued:
+        doc = _save_doc(doc)
+
+    return {
+        "name": doc.name,
+        "status": doc.status,
+        "items": [
+            {"name": row.name, "status": row.approval_status, "stock_movement": row.stock_movement}
+            for row in doc.items or []
+        ],
     }
 
 

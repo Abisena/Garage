@@ -43,6 +43,31 @@ export function SparePartsRequest({ currentUser }) {
     localStorage.setItem('sparePartsRequests', JSON.stringify(updatedRequests));
   };
 
+  const syncRequestToFrappe = async (request) => {
+    if (!request) return;
+
+    try {
+      await frappeClient.syncSparePartRequest({
+        service_order: request.orderId,
+        request_title: `Spare Part Request ${request.orderId}`,
+        request_date: request.requestDate,
+        customer: request.customerName,
+        vehicle: request.plateNumber,
+        items: request.parts.map((part) => ({
+          part_code: part.partCode,
+          part_name: part.partName,
+          requested_qty: part.requestedQty,
+          qty: part.requestedQty,
+          uom: part.unit || 'Unit',
+          status: part.status,
+          source_warehouse: part.location,
+        })),
+      });
+    } catch (error) {
+      console.error('Failed to sync spare part request to Frappe:', error);
+    }
+  };
+
   const filteredRequests = requests.filter(req => {
     const shouldFilterByBranch = currentUser.branch && currentUser.branch !== 'all';
     if (shouldFilterByBranch && req.branch !== currentUser.branch) {
@@ -308,9 +333,13 @@ export function SparePartsRequest({ currentUser }) {
         setSelectedRequest(updated);
       }
     }
+
+    if (updatedRequest) {
+      await syncRequestToFrappe(updatedRequest);
+    }
   };
 
-  const handleOrder = (orderId, partCode, index) => {
+  const handleOrder = async (orderId, partCode, index) => {
     const updatedRequests = requests.map(req => {
       if (req.orderId === orderId) {
         const updatedParts = req.parts.map((part, i) => {
@@ -333,45 +362,56 @@ export function SparePartsRequest({ currentUser }) {
     saveRequests(updatedRequests);
 
     // Update selected request if in detail view
-    if (selectedRequest && selectedRequest.orderId === orderId) {
-      const updated = updatedRequests.find(r => r.orderId === orderId);
-      if (updated) setSelectedRequest(updated);
+    const updated = updatedRequests.find(r => r.orderId === orderId);
+    if (selectedRequest && selectedRequest.orderId === orderId && updated) {
+      setSelectedRequest(updated);
+    }
+
+    if (updated) {
+      await syncRequestToFrappe(updated);
     }
   };
 
-  const handleReject = (orderId, partCode, index) => {
-    if (!confirm('⚠️ Apakah Anda yakin ingin REJECT part ini?\n\nPart yang di-reject akan dihapus dari request list.')) {
+  const handleReject = async (orderId, partCode, index) => {
+    if (!confirm('⚠️ Apakah Anda yakin ingin REJECT part ini?\n\nPart akan ditandai sebagai REJECTED.')) {
       return;
     }
 
     const updatedRequests = requests.map(req => {
       if (req.orderId === orderId) {
-        // Remove rejected part by index
-        const updatedParts = req.parts.filter((_, i) => i !== index);
-        
-        // If no parts left, mark as completed (cancelled)
-        if (updatedParts.length === 0) {
-          return {
-            ...req,
-            parts: updatedParts,
-            status: 'COMPLETED'
-          };
-        }
+        const updatedParts = req.parts.map((part, i) => {
+          if (i === index) {
+            return { ...part, status: 'REJECTED' };
+          }
+          return part;
+        });
 
-        // Recalculate status
         const allPrepared = updatedParts.every(p => p.status === 'PREPARED');
         const somePrepared = updatedParts.some(p => p.status === 'PREPARED');
+        const anyPending = updatedParts.some(p => p.status === 'REQUESTED' || p.status === 'ON_ORDER');
+        const anyRejected = updatedParts.some(p => p.status === 'REJECTED');
+
+        let requestStatus = 'PENDING';
+        if (allPrepared) {
+          requestStatus = 'READY';
+        } else if (somePrepared) {
+          requestStatus = 'PARTIAL';
+        } else if (!anyPending && anyRejected) {
+          requestStatus = 'COMPLETED';
+        }
 
         return {
           ...req,
           parts: updatedParts,
-          status: allPrepared ? 'READY' : (somePrepared ? 'PARTIAL' : 'PENDING')
+          status: requestStatus
         };
       }
       return req;
     });
-    
+
     saveRequests(updatedRequests);
+
+    const updatedRequest = updatedRequests.find(r => r.orderId === orderId);
 
     // Update workOrders to mark part as REJECTED
     const workOrders = getStoredWorkOrders();
@@ -391,17 +431,16 @@ export function SparePartsRequest({ currentUser }) {
       persistWorkOrders(updatedWorkOrders);
     }
 
-    // Update selected request if in detail view
-    if (selectedRequest && selectedRequest.orderId === orderId) {
-      const updated = updatedRequests.find(r => r.orderId === orderId);
-      if (updated) {
-        setSelectedRequest(updated);
-        // If no parts left, go back to list
-        if (updated.parts.length === 0) {
-          alert('✅ Semua parts telah di-reject. Request ditutup.');
-          handleBackToList();
-        }
+    if (selectedRequest && selectedRequest.orderId === orderId && updatedRequest) {
+      setSelectedRequest(updatedRequest);
+      if (updatedRequest.status === 'COMPLETED') {
+        alert('✅ Semua parts telah di-reject. Request ditutup.');
+        handleBackToList();
       }
+    }
+
+    if (updatedRequest) {
+      await syncRequestToFrappe(updatedRequest);
     }
   };
 
@@ -516,16 +555,22 @@ export function SparePartsRequest({ currentUser }) {
         label: '📋 Requested',
         shadow: 'shadow-sm'
       },
-      PREPARED: { 
-        bg: 'bg-gradient-to-r from-emerald-500 to-teal-500', 
-        text: 'text-white', 
+      PREPARED: {
+        bg: 'bg-gradient-to-r from-emerald-500 to-teal-500',
+        text: 'text-white',
         label: '✅ Prepared',
         shadow: 'shadow-sm'
       },
-      ON_ORDER: { 
-        bg: 'bg-gradient-to-r from-amber-500 to-orange-500', 
-        text: 'text-white', 
+      ON_ORDER: {
+        bg: 'bg-gradient-to-r from-amber-500 to-orange-500',
+        text: 'text-white',
         label: '🚚 On Order',
+        shadow: 'shadow-sm'
+      },
+      REJECTED: {
+        bg: 'bg-gradient-to-r from-red-500 to-rose-500',
+        text: 'text-white',
+        label: '⛔ Rejected',
         shadow: 'shadow-sm'
       }
     };
