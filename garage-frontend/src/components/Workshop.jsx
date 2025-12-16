@@ -313,6 +313,49 @@ export function Workshop({ currentUser }) {
     setCurrentTab('qc');
   };
 
+  const buildQualityCheckPayload = () => {
+    const fieldMap = {
+      'qc-1': 'engine_starts_smoothly',
+      'qc-2': 'no_fluid_leaks_detected',
+      'qc-3': 'lights_and_signals_functional',
+      'qc-4': 'brakes_functioning_properly',
+      'qc-5': 'steering_alignment_normal',
+      'qc-6': 'suspension_normal',
+      'td-1': 'acceleration_smooth_responsive',
+      'td-2': 'braking_effective_without_pulling',
+      'td-3': 'no_unusual_noise_during_drive',
+      'td-4': 'dry_and_wet_brakes_tested',
+      'td-5': 'dashboard_indicators_normal',
+      'ae-1': 'exterior_washed_and_dried',
+      'ae-2': 'interior_vacuumed_and_wiped',
+      'ae-3': 'interior_disinfected',
+      'ae-4': 'windows_and_mirrors_cleaned',
+      'doc-1': 'all_work_order_documented',
+      'doc-2': 'spare_parts_installation_verified',
+      'doc-3': 'photos_before_after_taken'
+    };
+
+    const qcPayload = {
+      qc_inspector: currentUser?.name,
+      qc_notes: qcNotes,
+      inspection_date: new Date().toISOString().split('T')[0],
+    };
+
+    [
+      ...qcMechanicalChecks,
+      ...qcTestDrive,
+      ...qcAesthetics,
+      ...qcDocumentation,
+    ].forEach(item => {
+      const fieldname = fieldMap[item.id];
+      if (fieldname) {
+        qcPayload[fieldname] = !!item.checked;
+      }
+    });
+
+    return qcPayload;
+  };
+
   const handleQCFinished = () => {
     if (!selectedOrder) return;
 
@@ -353,7 +396,11 @@ export function Workshop({ currentUser }) {
       qcInspector: currentUser.name, // Auto-fill from logged in user
       qcNotes,
       qcDate,
-      progressHistory: updatedHistory
+      progressHistory: updatedHistory,
+      qualityCheck: {
+        service_order: selectedOrder.orderId || selectedOrder.id,
+        ...buildQualityCheckPayload(),
+      },
     };
 
     const updatedOrders = workOrders.map(o => 
