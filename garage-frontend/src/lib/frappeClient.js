@@ -586,6 +586,15 @@ class FrappeClient {
 
     return response.message || response;
   }
+
+  async syncSparePartRequest(payload) {
+    const response = await this.request('/api/method/garage.api.portal.sync_spare_part_request', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    return response.message || response;
+  }
 }
 
 export const frappeClient = new FrappeClient();
