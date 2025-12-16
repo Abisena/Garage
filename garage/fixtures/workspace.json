@@ -1,6 +1,6 @@
 {
   "charts": [],
-  "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Master Data\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Entry\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Customer\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Vehicle\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Brand\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Model\"}},{\"type\":\"spacer\",\"data\":{}},{\"type\":\"header\",\"data\":{\"text\":\"Operasional\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Registration\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Service Order\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Spare Part Request\"}}]",
+  "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Master Data\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Entry\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Customer\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Vehicle\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Brand\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Model\"}},{\"type\":\"spacer\",\"data\":{}},{\"type\":\"header\",\"data\":{\"text\":\"Operasional\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Registration\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Service Order\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Spare Part Request\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Vehicle Handover\"}}]",
   "creation": "2024-07-02 00:00:00.000000",
   "docstatus": 0,
   "doctype": "Workspace",
@@ -84,6 +84,14 @@
       "idx": 7,
       "label": "Spare Part Request",
       "link_to": "Spare Part Request",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 8,
+      "label": "Vehicle Handover",
+      "link_to": "Vehicle Handover",
       "type": "DocType"
     }
   ],
