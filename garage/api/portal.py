@@ -2017,6 +2017,62 @@ def _extract_payment_allocations(payload: Mapping[str, Any]) -> List[Dict[str, A
     return allocations
 
 
+def _normalize_payment_mode(mode: Any) -> Optional[str]:
+    """Map payment modes from the UI into canonical ERPNext values."""
+
+    if mode is None:
+        return None
+
+    value = cstr(mode).strip()
+    if not value:
+        return None
+
+    lowered = value.casefold()
+    aliases = {
+        "transfer": "Bank Transfer",
+        "bank": "Bank Transfer",
+        "banktransfer": "Bank Transfer",
+        "bank transfer": "Bank Transfer",
+        "bank-transfer": "Bank Transfer",
+    }
+
+    if lowered in aliases:
+        return aliases[lowered]
+
+    if "bank" in lowered and "transfer" in lowered:
+        return "Bank Transfer"
+
+    return value
+
+
+def _ensure_payment_mode_exists(mode: Optional[str]) -> None:
+    """Create the Mode of Payment row if it is missing."""
+
+    if not mode or not frappe.db.table_exists("Mode of Payment"):
+        return
+
+    if frappe.db.exists("Mode of Payment", mode):
+        return
+
+    mode_type = "Bank" if "bank" in mode.casefold() or "transfer" in mode.casefold() else "Cash"
+
+    try:
+        doc = frappe.new_doc("Mode of Payment")
+        doc.mode_of_payment = mode
+        doc.type = mode_type
+        doc.enabled = 1
+        doc.insert(ignore_permissions=True)
+        frappe.logger().info(
+            "Created missing Mode of Payment from portal payload",
+            extra={"mode_of_payment": mode, "mode_type": mode_type},
+        )
+    except Exception:
+        frappe.logger().warning(
+            "Failed to auto-create Mode of Payment from portal payload",
+            extra={"mode_of_payment": mode},
+        )
+
+
 def _create_payment_entry(payload: Mapping[str, Any]) -> frappe.Document:
     """Create an ERPNext Payment Entry tied to Sales Invoice allocations."""
 
@@ -2039,7 +2095,7 @@ def _create_payment_entry(payload: Mapping[str, Any]) -> frappe.Document:
 
     payment_date = _coerce_date_value(payload.get("payment_date"), date_only=True) or nowdate()
     reference_date = _coerce_date_value(payload.get("reference_date"), date_only=True)
-    mode_of_payment = payload.get("mode_of_payment") or pe.mode_of_payment
+    mode_of_payment = _normalize_payment_mode(payload.get("mode_of_payment") or pe.mode_of_payment)
 
     pe.party_type = party_type
     pe.party = party
@@ -2049,6 +2105,7 @@ def _create_payment_entry(payload: Mapping[str, Any]) -> frappe.Document:
     if payload.get("reference_no"):
         pe.reference_no = payload.get("reference_no")
     if mode_of_payment:
+        _ensure_payment_mode_exists(mode_of_payment)
         pe.mode_of_payment = mode_of_payment
 
     if _doctype_has_field("Payment Entry", "branch"):

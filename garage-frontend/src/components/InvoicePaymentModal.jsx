@@ -6,11 +6,31 @@ import { frappeClient } from '../lib/frappeClient';
 
 const paymentOptions = [
   { id: 'Cash', label: 'Cash' },
-  { id: 'Transfer', label: 'Bank Transfer' },
+  { id: 'Bank Transfer', label: 'Bank Transfer' },
+  { id: 'Credit', label: 'Credit' },
   { id: 'Credit Card', label: 'Credit Card' },
   { id: 'Debit Card', label: 'Debit Card' },
   { id: 'QRIS', label: 'QRIS' },
 ];
+
+const normalizePaymentMethod = (method) => {
+  if (!method) return 'Cash';
+
+  const value = method.toString().trim();
+  const lowered = value.toLowerCase();
+
+  if (
+    lowered === 'transfer' ||
+    lowered === 'bank' ||
+    lowered === 'bank transfer' ||
+    lowered === 'bank-transfer' ||
+    (lowered.includes('bank') && lowered.includes('transfer'))
+  ) {
+    return 'Bank Transfer';
+  }
+
+  return value;
+};
 
 export function InvoicePaymentModal({ isOpen, invoice, onClose, onPaymentSuccess }) {
   const [paymentMethod, setPaymentMethod] = useState(paymentOptions[0].id);
@@ -38,13 +58,14 @@ export function InvoicePaymentModal({ isOpen, invoice, onClose, onPaymentSuccess
     }
 
     setIsSubmitting(true);
+    const normalizedPaymentMethod = normalizePaymentMethod(paymentMethod);
     try {
       const response = await frappeClient.request('/api/method/garage.api.portal.create_payment_entry', {
         method: 'POST',
         body: JSON.stringify({
           entry: {  // ✅ TAMBAHKAN INI
             payment_date: paymentDate,
-            mode_of_payment: paymentMethod,
+            mode_of_payment: normalizedPaymentMethod,
             reference_no: referenceNo || undefined,
             party: invoice.customer,
             party_type: 'Customer',
@@ -69,7 +90,7 @@ export function InvoicePaymentModal({ isOpen, invoice, onClose, onPaymentSuccess
       }
       onPaymentSuccess?.({
         paymentEntry: paymentEntryName,
-        paymentMethod,
+        paymentMethod: normalizedPaymentMethod,
         paymentDate,
         amount: totalAmount,
         status: paymentStatus,
