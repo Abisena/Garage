@@ -47,6 +47,7 @@ app_include_js = "/assets/garage/js/route_aliases.js"
 doctype_list_js = {
     "Garage Vehicle": "public/js/garage_vehicle_list.js",
     "Garage Customer": "public/js/garage_customer_list.js",
+    "BCA Bank Statement Import": "public/js/bca_bank_statement_import_list.js",
 }
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -183,6 +184,11 @@ jinja = {
 # 		"on_trash": "method"
 # 	}
 # }
+doc_events = {
+    "BCA Bank Statement Import": {
+        "autoname": "garage.utils.bca_bank_statement_import.set_import_naming",
+    }
+}
 
 # Scheduled Tasks
 # ---------------
