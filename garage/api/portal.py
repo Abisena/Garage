@@ -5374,6 +5374,176 @@ def list_spare_parts(
     }
 
 
+# JUGA TAMBAHKAN FUNGSI INI UNTUK MENDAPATKAN DAFTAR SPARE PART REQUEST
+
+@frappe.whitelist()
+def list_spare_part_requests(branch: Optional[str] = None) -> Dict[str, Any]:
+    """List spare part requests with item details for the portal."""
+
+    _require_login()
+
+    requested_branch = cstr(branch or frappe.form_dict.get("branch") or "").strip()
+
+    user = frappe.session.user
+    allowed = _allowed_branches(user)
+    allowed_set: Set[str] = {value for value in (allowed or []) if value}
+
+    if allowed is not None and requested_branch and requested_branch not in allowed_set:
+        requested_branch = ""
+
+    branch_filter = requested_branch or None
+
+    request_rows = _list_dicts(
+        "Spare Part Request",
+        [
+            "name",
+            "request_title",
+            "request_date",
+            "status",
+            "service_order",
+            "customer",
+            "vehicle",
+            "remarks",
+            "creation",
+            "modified",
+        ],
+        filters=[["docstatus", "!=", 2]],
+        order_by="modified desc",
+        limit=200,
+    )
+
+    if not request_rows:
+        return {"requests": [], "total_count": 0}
+
+    service_order_names = sorted(
+        {row.get("service_order") for row in request_rows if row.get("service_order")}
+    )
+
+    service_order_fields = [
+        "name",
+        "customer",
+        "customer_display",
+        "vehicle",
+        "vehicle_display",
+        "branch",
+        "service_advisor",
+    ]
+    if _doctype_has_field("Garage Service Order", "assigned_mechanic_name"):
+        service_order_fields.append("assigned_mechanic_name")
+    if _doctype_has_field("Garage Service Order", "mechanic_in_charge_name"):
+        service_order_fields.append("mechanic_in_charge_name")
+
+    service_order_rows = []
+    if service_order_names:
+        service_order_rows = _list_dicts(
+            "Garage Service Order",
+            service_order_fields,
+            filters=[["name", "in", service_order_names]],
+            branch=branch_filter,
+            limit=len(service_order_names),
+        )
+
+    service_order_map = {
+        row.get("name"): row for row in service_order_rows if row.get("name")
+    }
+
+    if branch_filter:
+        request_rows = [
+            row
+            for row in request_rows
+            if not row.get("service_order")
+            or row.get("service_order") in service_order_map
+        ]
+
+    vehicle_names = sorted(
+        {
+            row.get("vehicle")
+            for row in service_order_rows
+            if row.get("vehicle")
+        }
+        | {row.get("vehicle") for row in request_rows if row.get("vehicle")}
+    )
+
+    vehicle_map: Dict[str, Dict[str, Any]] = {}
+    if vehicle_names:
+        vehicle_rows = _list_dicts(
+            "Garage Vehicle",
+            ["name", "license_plate", "brand", "model"],
+            filters=[["name", "in", vehicle_names]],
+            branch=branch_filter,
+            limit=len(vehicle_names),
+        )
+        vehicle_map = {row.get("name"): row for row in vehicle_rows if row.get("name")}
+
+    request_names = [row.get("name") for row in request_rows if row.get("name")]
+    item_rows: List[Dict[str, Any]] = []
+    if request_names:
+        item_rows = _list_dicts(
+            "Spare Part Request Item",
+            [
+                "name",
+                "parent",
+                "idx",
+                "item_code",
+                "item_name",
+                "description",
+                "qty",
+                "uom",
+                "source_warehouse",
+                "approval_status",
+                "stock_movement",
+                "service_order_part",
+            ],
+            filters=[["parent", "in", request_names]],
+            order_by="idx asc",
+            limit=1000,
+        )
+
+    items_by_request: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for item in item_rows:
+        parent = item.get("parent")
+        if parent:
+            items_by_request[parent].append(item)
+
+    requests: List[Dict[str, Any]] = []
+    for row in request_rows:
+        service_order = row.get("service_order")
+        service_data = service_order_map.get(service_order, {})
+        vehicle_name = service_data.get("vehicle") or row.get("vehicle")
+        vehicle = vehicle_map.get(vehicle_name, {})
+        creation_time = row.get("creation")
+        request_time = ""
+        if creation_time:
+            request_dt = get_datetime(creation_time)
+            request_time = request_dt.strftime("%H.%M")
+
+        requests.append(
+            {
+                "name": row.get("name"),
+                "request_title": row.get("request_title"),
+                "request_date": row.get("request_date"),
+                "request_time": request_time,
+                "status": row.get("status"),
+                "service_order": service_order,
+                "customer": service_data.get("customer") or row.get("customer"),
+                "customer_name": service_data.get("customer_display")
+                or service_data.get("customer")
+                or row.get("customer"),
+                "vehicle": vehicle_name,
+                "vehicle_display": service_data.get("vehicle_display"),
+                "vehicle_brand": vehicle.get("brand"),
+                "vehicle_model": vehicle.get("model"),
+                "license_plate": vehicle.get("license_plate"),
+                "branch": service_data.get("branch"),
+                "mechanic_name": service_data.get("assigned_mechanic_name")
+                or service_data.get("mechanic_in_charge_name"),
+                "items": items_by_request.get(row.get("name"), []),
+            }
+        )
+
+    return {"requests": requests, "total_count": len(requests)}
+
+
 # JUGA TAMBAHKAN FUNGSI INI UNTUK MENDAPATKAN STATISTIK SPARE PART
 
 @frappe.whitelist()

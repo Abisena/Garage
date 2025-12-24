@@ -13,13 +13,13 @@ export function SparePartsRequest({ currentUser }) {
   const [requests, setRequests] = useState([]);
 
   useEffect(() => {
-    loadRequests();
-  }, []);
+    void loadRequests();
+  }, [currentUser]);
 
   // Reload data when storage changes
   useEffect(() => {
     const handleStorageChange = () => {
-      loadRequests();
+      void loadRequests();
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -31,10 +31,163 @@ export function SparePartsRequest({ currentUser }) {
     };
   }, []);
 
-  const loadRequests = () => {
+  const mapFrappeRequestStatus = (status) => {
+    const normalized = (status || '').trim().toLowerCase();
+    if (normalized === 'approved') {
+      return 'READY';
+    }
+    if (normalized === 'rejected') {
+      return 'COMPLETED';
+    }
+    if (normalized === 'partial approve' || normalized === 'partial reject') {
+      return 'PARTIAL';
+    }
+    return 'PENDING';
+  };
+
+  const mapFrappeItemStatus = (status) => {
+    const normalized = (status || '').trim().toLowerCase();
+    if (normalized === 'approved') {
+      return 'PREPARED';
+    }
+    if (normalized === 'rejected') {
+      return 'REJECTED';
+    }
+    return 'REQUESTED';
+  };
+
+  const mapFrappeRequests = (frappeRequests, masterParts) => {
+    return (frappeRequests || []).map((request) => {
+      const parts = (request.items || []).map((item) => {
+        const masterPart = masterParts.find((part) => part.partNumber === item.item_code);
+        return {
+          partCode: item.item_code,
+          partName: item.item_name || item.item_code,
+          requestedQty: item.qty,
+          stockAvailable: typeof masterPart?.stock === 'number' ? masterPart.stock : 0,
+          unit: item.uom || 'pcs',
+          location: item.source_warehouse || 'Workshop',
+          status: mapFrappeItemStatus(item.approval_status),
+        };
+      });
+
+      return {
+        orderId: request.service_order || request.name,
+        requestName: request.name,
+        customerId: request.customer || '',
+        customerName: request.customer_name || request.customer || '-',
+        vehicleId: request.vehicle || '',
+        vehicleBrand: request.vehicle_brand || '',
+        vehicleModel: request.vehicle_model || '',
+        plateNumber: request.license_plate || '',
+        requestDate: request.request_date || '',
+        requestTime: request.request_time || '',
+        status: mapFrappeRequestStatus(request.status),
+        branch: request.branch || '',
+        mechanicName: request.mechanic_name || '',
+        parts,
+        source: 'frappe',
+      };
+    });
+  };
+
+  const mergeParts = (localParts, remoteParts) => {
+    const localMap = new Map(
+      (localParts || []).map((part) => [
+        `${part.partCode}-${part.requestedQty}-${part.partName}`,
+        part,
+      ])
+    );
+
+    const merged = (remoteParts || []).map((remotePart) => {
+      const key = `${remotePart.partCode}-${remotePart.requestedQty}-${remotePart.partName}`;
+      const localPart = localMap.get(key);
+
+      if (!localPart) {
+        return remotePart;
+      }
+
+      const mergedStatus = (() => {
+        if (remotePart.status === 'PREPARED' || remotePart.status === 'REJECTED') {
+          return remotePart.status;
+        }
+        if (localPart.status === 'ON_ORDER' && remotePart.status === 'REQUESTED') {
+          return 'ON_ORDER';
+        }
+        return remotePart.status;
+      })();
+
+      return {
+        ...remotePart,
+        status: mergedStatus,
+        stockAvailable:
+          typeof remotePart.stockAvailable === 'number' && remotePart.stockAvailable > 0
+            ? remotePart.stockAvailable
+            : localPart.stockAvailable,
+        location: remotePart.location || localPart.location,
+        unit: remotePart.unit || localPart.unit,
+      };
+    });
+
+    const remoteKeySet = new Set(
+      (remoteParts || []).map((part) => `${part.partCode}-${part.requestedQty}-${part.partName}`)
+    );
+    const localOnly = (localParts || []).filter(
+      (part) => !remoteKeySet.has(`${part.partCode}-${part.requestedQty}-${part.partName}`)
+    );
+
+    return [...merged, ...localOnly];
+  };
+
+  const mergeRequests = (localRequests, remoteRequests) => {
+    const localMap = new Map((localRequests || []).map((req) => [req.orderId, req]));
+
+    const merged = (remoteRequests || []).map((remoteRequest) => {
+      const localRequest = localMap.get(remoteRequest.orderId);
+      if (!localRequest) {
+        return remoteRequest;
+      }
+
+      const mergedParts = mergeParts(localRequest.parts || [], remoteRequest.parts || []);
+      const mergedStatus =
+        localRequest.status === 'COMPLETED' ? localRequest.status : remoteRequest.status;
+
+      return {
+        ...remoteRequest,
+        status: mergedStatus,
+        requestTime: remoteRequest.requestTime || localRequest.requestTime,
+        mechanicName: remoteRequest.mechanicName || localRequest.mechanicName,
+        deliveryDoc: localRequest.deliveryDoc || remoteRequest.deliveryDoc,
+        customerId: remoteRequest.customerId || localRequest.customerId,
+        vehicleId: remoteRequest.vehicleId || localRequest.vehicleId,
+        parts: mergedParts,
+      };
+    });
+
+    const remoteOrderIds = new Set((remoteRequests || []).map((req) => req.orderId));
+    const localOnly = (localRequests || []).filter((req) => !remoteOrderIds.has(req.orderId));
+
+    return [...merged, ...localOnly];
+  };
+
+  const loadRequests = async () => {
     const savedRequests = localStorage.getItem('sparePartsRequests');
-    if (savedRequests) {
-      setRequests(JSON.parse(savedRequests));
+    const localRequests = savedRequests ? JSON.parse(savedRequests) : [];
+    const savedMasterParts = localStorage.getItem('masterSpareParts');
+    const masterParts = savedMasterParts ? JSON.parse(savedMasterParts) : [];
+
+    try {
+      const branchFilter =
+        currentUser?.branch && currentUser.branch !== 'all' ? currentUser.branch : '';
+      const response = await frappeClient.listSparePartRequests(branchFilter);
+      const frappeRequests = mapFrappeRequests(response?.requests, masterParts);
+      const mergedRequests = mergeRequests(localRequests, frappeRequests);
+      saveRequests(mergedRequests);
+    } catch (error) {
+      console.error('Failed to load spare part requests from Frappe:', error);
+      if (localRequests.length > 0) {
+        setRequests(localRequests);
+      }
     }
   };
 
@@ -51,8 +204,8 @@ export function SparePartsRequest({ currentUser }) {
         service_order: request.orderId,
         request_title: `Spare Part Request ${request.orderId}`,
         request_date: request.requestDate,
-        customer: request.customerName,
-        vehicle: request.plateNumber,
+        customer: request.customerId || request.customerName,
+        vehicle: request.vehicleId || request.plateNumber,
         items: request.parts.map((part) => ({
           part_code: part.partCode,
           part_name: part.partName,
@@ -69,17 +222,17 @@ export function SparePartsRequest({ currentUser }) {
   };
 
   const filteredRequests = requests.filter(req => {
-    const shouldFilterByBranch = currentUser.branch && currentUser.branch !== 'all';
-    if (shouldFilterByBranch && req.branch !== currentUser.branch) {
+    const shouldFilterByBranch = currentUser?.branch && currentUser.branch !== 'all';
+    if (shouldFilterByBranch && req.branch !== currentUser?.branch) {
       return false;
     }
     
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
-        req.orderId.toLowerCase().includes(query) ||
-        req.customerName.toLowerCase().includes(query) ||
-        req.plateNumber.toLowerCase().includes(query)
+        String(req.orderId || '').toLowerCase().includes(query) ||
+        String(req.customerName || '').toLowerCase().includes(query) ||
+        String(req.plateNumber || '').toLowerCase().includes(query)
       );
     }
     return true;
