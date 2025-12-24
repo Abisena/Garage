@@ -3,6 +3,28 @@ const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || 'http://localhost:8008';
 const CSRF_HEADER = 'X-Frappe-CSRF-Token';
 const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
 
+const formatFrappeDateTime = (value) => {
+  if (!value) return value;
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
 function getCookie(name) {
   if (typeof document === 'undefined') return null;
 
@@ -259,11 +281,11 @@ class FrappeClient {
       }
 
       if (startDate) {
-        filters.push(['creation', '>=', startDate]);
+        filters.push(['creation', '>=', formatFrappeDateTime(startDate)]);
       }
 
       if (endDate) {
-        filters.push(['creation', '<=', endDate]);
+        filters.push(['creation', '<=', formatFrappeDateTime(endDate)]);
       }
 
       const url = this.buildListURL('Customer Registration', fields, filters, limit);
