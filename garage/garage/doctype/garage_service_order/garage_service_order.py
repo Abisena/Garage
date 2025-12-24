@@ -123,6 +123,9 @@ class GarageServiceOrder(Document):
     def _sync_spare_part_request(self) -> None:
         """Ensure a Spare Part Request document mirrors required part rows."""
 
+        if getattr(frappe.flags, "skip_service_order_spare_part_request_sync", False):
+            return
+
         required_parts = [row for row in getattr(self, "required_parts", []) if getattr(row, "item_code", None)]
         if not required_parts:
             return
@@ -158,7 +161,11 @@ class GarageServiceOrder(Document):
                 },
             )
 
-        request.save(ignore_permissions=True)
+        frappe.flags.skip_spare_part_request_service_order_sync = True
+        try:
+            request.save(ignore_permissions=True)
+        finally:
+            frappe.flags.skip_spare_part_request_service_order_sync = False
 
 
 def derive_part_charge_status(
