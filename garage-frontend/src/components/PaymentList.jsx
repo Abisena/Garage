@@ -583,11 +583,11 @@ export function PaymentList({ currentUser }) {
       allPayments = allPayments.filter(p => p.branch === currentUser.branch);
     }
 
-    // Sort by payment date (newest first)
+    // Sort by payment date (oldest first / FIFO)
     allPayments.sort((a, b) => {
       const dateA = new Date(a.paymentDate || a.date).getTime();
       const dateB = new Date(b.paymentDate || b.date).getTime();
-      return dateB - dateA;
+      return dateA - dateB;
     });
 
     setPayments(allPayments);
