@@ -7,10 +7,23 @@ import { frappeClient } from '../lib/frappeClient';
 
 export function Inspection({ currentUser }) {
   const todayDate = new Date().toLocaleDateString('id-ID');
+  const todayKey = new Date();
+  const formatDateKey = (value) => {
+    if (!value) return '';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const todayDateKey = formatDateKey(todayKey);
 
   const getTodayRegistrations = (branch) => {
     const storedRegistrations = loadFromStorage('registrations', []);
-    const todaysRegistrations = storedRegistrations.filter(reg => reg.date === todayDate);
+    const todaysRegistrations = storedRegistrations.filter((reg) =>
+      reg.dateKey === todayDateKey || reg.date === todayDate
+    );
 
     if (!branch || branch === 'all') return todaysRegistrations;
 
@@ -70,6 +83,7 @@ export function Inspection({ currentUser }) {
 
     const createdAt = record.creation ? new Date(record.creation) : new Date();
     const formattedDate = createdAt.toLocaleDateString('id-ID');
+    const dateKey = formatDateKey(createdAt);
     const formattedTime = createdAt.toLocaleTimeString('id-ID', {
       hour: '2-digit',
       minute: '2-digit'
@@ -95,6 +109,7 @@ export function Inspection({ currentUser }) {
       serviceBundleName: record.service_bundle_name || '',
       customerComplaint: record.service_notes || record.notes || '',
       date: formattedDate,
+      dateKey,
       estimatedCost: '0',
       estimatedDays: '1',
       branch: record.branch || currentUser?.branch || '',
@@ -356,8 +371,8 @@ export function Inspection({ currentUser }) {
 
         const frappeRegistrations = await frappeClient.listCustomerRegistrations({
           branch: currentUser?.branch,
-          startDate: startOfDay.toISOString(),
-          endDate: endOfDay.toISOString(),
+          startDate: startOfDay,
+          endDate: endOfDay,
           limit: 200,
         });
 
@@ -365,7 +380,8 @@ export function Inspection({ currentUser }) {
           .map(normalizeFrappeRegistration)
           .filter(Boolean)
           .filter((reg) => {
-            if (reg.date !== todayDate) return false;
+            if (reg.dateKey && reg.dateKey !== todayDateKey) return false;
+            if (!reg.dateKey && reg.date !== todayDate) return false;
             if (!currentUser?.branch || currentUser.branch === 'all') return true;
             return reg.branch === currentUser.branch;
           });

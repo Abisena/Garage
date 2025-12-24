@@ -122,6 +122,16 @@ export function Registration({ currentUser }) {
   const [selectedRegistration, setSelectedRegistration] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const todayDate = new Date().toLocaleDateString('id-ID');
+  const formatDateKey = (value) => {
+    if (!value) return '';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const todayDateKey = formatDateKey(new Date());
 
   useEffect(() => {
     const loadServiceBundles = async () => {
@@ -153,7 +163,9 @@ export function Registration({ currentUser }) {
 
   const registrationsUpdate = () => {
     const storedRegistrations = loadFromStorage('registrations', []);
-    return storedRegistrations.filter(reg => reg.date === todayDate);
+    return storedRegistrations.filter((reg) =>
+      reg.dateKey === todayDateKey || reg.date === todayDate
+    );
   };
 
   const [recentRegistrations, setRecentRegistrations] = useState(registrationsUpdate);
@@ -438,6 +450,7 @@ export function Registration({ currentUser }) {
           serviceBundleName: matchedBundle?.item_name || matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
           customerComplaint: formData.customerComplaint,
           date: new Date().toLocaleDateString('id-ID'),
+          dateKey: todayDateKey,
           estimatedCost: '0',
           estimatedDays: '1',
           branch: currentUser.branch,
@@ -511,6 +524,7 @@ export function Registration({ currentUser }) {
         serviceBundleName: matchedBundle?.item_name || matchedBundle?.bundle_name || matchedBundle?.name || formData.serviceBundleName || '',
         customerComplaint: formData.customerComplaint,
         date: new Date().toLocaleDateString('id-ID'),
+        dateKey: todayDateKey,
         estimatedCost: '0',
         estimatedDays: '1',
         branch: currentUser.branch,
