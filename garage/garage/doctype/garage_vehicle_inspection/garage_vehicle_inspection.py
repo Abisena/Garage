@@ -2,9 +2,38 @@ import frappe
 from frappe.exceptions import DoesNotExistError
 from frappe.model.document import Document
 
+DEFAULT_INSPECTION_ITEMS = (
+    "Engine - Oil Level",
+    "Engine - Coolant Level",
+    "Engine - Battery Condition",
+    "Engine - Belts & Hoses",
+    "Brakes - Brake Pads Front",
+    "Brakes - Brake Pads Rear",
+    "Brakes - Brake Fluid Level",
+    "Brakes - Brake Lines",
+    "Tires - Tire Pressure FL",
+    "Tires - Tire Pressure FR",
+    "Tires - Tire Pressure RL",
+    "Tires - Tire Pressure RR",
+    "Tires - Tread Depth",
+    "Tires - Wheel Alignment",
+    "Electrical - Headlights",
+    "Electrical - Tail Lights",
+    "Electrical - Turn Signals",
+    "Electrical - Wipers",
+    "Electrical - Horn",
+    "Electrical - AC System",
+    "Exterior - Body Condition",
+    "Exterior - Windshield",
+    "Exterior - Mirrors",
+)
+
 
 class GarageVehicleInspection(Document):
     """Standalone inspection document linked to a service order."""
+
+    def before_insert(self) -> None:  # pragma: no cover - default template
+        self._ensure_default_inspection_items()
 
     def validate(self) -> None:  # pragma: no cover - basic field sync
         self._sync_order_fields()
@@ -28,6 +57,15 @@ class GarageVehicleInspection(Document):
 
         if not self.vehicle:
             self.vehicle = getattr(order, "vehicle", None)
+
+    def _ensure_default_inspection_items(self) -> None:
+        """Populate default inspection template items on new documents."""
+
+        if getattr(self, "inspection_items", None):
+            return
+
+        for item in DEFAULT_INSPECTION_ITEMS:
+            self.append("inspection_items", {"item": item})
 
     def _update_service_order(self) -> None:
         """Ensure the service order references this inspection and mirrors details."""
