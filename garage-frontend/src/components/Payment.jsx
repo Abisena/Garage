@@ -1880,6 +1880,7 @@ import { ProcessPaymentModal } from './ProcessPaymentModal';
 import { ReceiptModal } from './ReceiptModal';
 import { DirectSalesNotaModal } from './DirectSalesNotaModal';
 import { DirectSalesInvoiceModal } from './DirectSalesInvoiceModal';
+import { frappeClient } from '../lib/frappeClient';
 
 export function Payment({ currentUser }) {
   const [activeTab, setActiveTab] = useState('service');
@@ -2080,6 +2081,17 @@ export function Payment({ currentUser }) {
   const calculatePOTotalWithPPN = (po) => {
     const ppn = po.totalAmount * 0.11; // PPN 11%
     return po.totalAmount + ppn;
+  };
+
+  const syncPaymentToERP = async (order) => {
+    if (!order) return;
+    try {
+      await frappeClient.syncWorkOrders([order]);
+      toast.success('Pembayaran berhasil disinkronkan ke ERP.');
+    } catch (error) {
+      console.error('Failed to sync payment to ERP', error);
+      toast.error('Gagal sinkronisasi pembayaran ke ERP. Silakan coba lagi.');
+    }
   };
 
   const handleNotaPrinted = (orderId) => {
@@ -2294,6 +2306,8 @@ export function Payment({ currentUser }) {
     
     // Show receipt modal
     setShowReceiptModal(true);
+
+    void syncPaymentToERP(updatedOrder);
   };
 
   const handleOpenNota = (order) => {

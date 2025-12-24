@@ -4315,12 +4315,43 @@ def _ensure_billing_placeholders(
                 get_payment_entry,
             )
 
-            pe = get_payment_entry("Sales Invoice", billing["sales_invoice"])
-            if _doctype_has_field("Payment Entry", "branch"):
-                pe.branch = getattr(doc, "branch", None)
+            payment_mode = _normalize_payment_mode(
+                order.get("paymentMethod")
+                or order.get("payment_method")
+                or order.get("payment_mode")
+                or order.get("mode_of_payment")
+            )
 
-            _insert_doc(pe)
-            billing["payment_entry"] = pe.name
+            existing_payment_entry = frappe.db.get_value(
+                "Payment Entry Reference",
+                {
+                    "reference_doctype": "Sales Invoice",
+                    "reference_name": billing["sales_invoice"],
+                },
+                "parent",
+            )
+
+            if existing_payment_entry:
+                billing["payment_entry"] = existing_payment_entry
+                if payment_mode:
+                    _ensure_payment_mode_exists(payment_mode)
+                    frappe.db.set_value(
+                        "Payment Entry",
+                        existing_payment_entry,
+                        "mode_of_payment",
+                        payment_mode,
+                        update_modified=False,
+                    )
+            else:
+                pe = get_payment_entry("Sales Invoice", billing["sales_invoice"])
+                if _doctype_has_field("Payment Entry", "branch"):
+                    pe.branch = getattr(doc, "branch", None)
+                if payment_mode:
+                    _ensure_payment_mode_exists(payment_mode)
+                    pe.mode_of_payment = payment_mode
+
+                _insert_doc(pe)
+                billing["payment_entry"] = pe.name
     except Exception:
         pass
 
