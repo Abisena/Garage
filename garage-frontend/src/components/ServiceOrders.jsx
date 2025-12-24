@@ -890,9 +890,11 @@ export function ServiceOrders({ currentUser }) {
         const partsRequest = {
           orderId: selectedWorkOrder.orderId,
           customerName: selectedWorkOrder.customerName,
+          customerId: selectedWorkOrder.customerId || '',
           vehicleBrand: selectedWorkOrder.vehicleBrand,
           vehicleModel: selectedWorkOrder.vehicleModel,
           plateNumber: selectedWorkOrder.plateNumber,
+          vehicleId: selectedWorkOrder.vehicleId || '',
           requestDate: currentTime.toISOString().split('T')[0],
           requestTime: currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
           status: 'PENDING',

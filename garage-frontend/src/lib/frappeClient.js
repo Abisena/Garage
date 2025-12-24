@@ -595,6 +595,19 @@ class FrappeClient {
 
     return response.message || response;
   }
+
+  async listSparePartRequests(branch) {
+    const params = new URLSearchParams();
+    if (branch) {
+      params.append('branch', branch);
+    }
+
+    const response = await this.request(
+      `/api/method/garage.api.portal.list_spare_part_requests${params.toString() ? `?${params.toString()}` : ''}`
+    );
+
+    return response.message || response;
+  }
 }
 
 export const frappeClient = new FrappeClient();
