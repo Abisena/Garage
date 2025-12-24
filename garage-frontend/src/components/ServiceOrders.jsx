@@ -75,6 +75,12 @@ export function ServiceOrders({ currentUser }) {
     );
   };
 
+  const shouldShowPackageButton = () => {
+    if (!selectedWorkOrder) return false;
+    const serviceType = selectedWorkOrder.serviceType || '';
+    return serviceType.toLowerCase().includes('paket') || Boolean(resolveServiceBundle());
+  };
+
   const resolveServiceBundle = () => {
     if (!selectedWorkOrder || serviceBundles.length === 0) return null;
 
@@ -641,8 +647,20 @@ export function ServiceOrders({ currentUser }) {
 
       return {
         id: `BUNDLE-${bundle.id || bundle.name}-${index}-${Date.now()}`,
-        name: item.partName || item.partCode || 'Bundle Item',
-        partNumber: item.partCode || item.partName || `PART-${index + 1}`,
+        name:
+          item.partName ||
+          item.item_name ||
+          item.itemName ||
+          item.partCode ||
+          item.item_code ||
+          'Bundle Item',
+        partNumber:
+          item.partCode ||
+          item.item_code ||
+          item.partNumber ||
+          item.partName ||
+          item.item_name ||
+          `PART-${index + 1}`,
         quantity,
         unitPrice,
         discount: 0,
@@ -1208,7 +1226,7 @@ export function ServiceOrders({ currentUser }) {
                 <p className="text-slate-600 text-xs mb-1">Service Type</p>
                 <div className="flex items-center gap-2">
                   <p className="text-slate-900 flex-1">{selectedWorkOrder.serviceType || '-'}</p>
-                  {selectedWorkOrder.serviceType?.startsWith('Paket Service') && (
+                  {shouldShowPackageButton() && (
                     <Button
                       onClick={handleAddPackageParts}
                       disabled={hasPackageParts()}
