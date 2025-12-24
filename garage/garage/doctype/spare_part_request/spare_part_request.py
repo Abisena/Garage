@@ -6,8 +6,11 @@ from typing import Iterable, Sequence
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import nowdate
+from frappe.utils import cstr, flt, nowdate
 
+from garage.garage.doctype.garage_service_order.garage_service_order import (
+    derive_part_charge_status,
+)
 
 ITEM_PENDING = "Pending"
 ITEM_APPROVED = "Approved"
@@ -17,6 +20,12 @@ ITEM_REJECTED = "Rejected"
 class SparePartRequest(Document):
     """Represent a collection of requested spare parts awaiting approval."""
 
+    status_map = {
+        ITEM_PENDING: "Pending Check",
+        ITEM_APPROVED: "Issued",
+        ITEM_REJECTED: "Rejected",
+    }
+
     def before_insert(self) -> None:  # pragma: no cover - frappe lifecycle hook
         if not self.request_date:
             self.request_date = nowdate()
@@ -25,6 +34,7 @@ class SparePartRequest(Document):
 
     def validate(self) -> None:  # pragma: no cover - frappe lifecycle hook
         self._sync_status_from_items()
+        self._sync_service_order_parts()
 
     def update_items_status(self, item_names: Sequence[str], status: str) -> None:
         """Update the approval status for specific items.
@@ -54,6 +64,79 @@ class SparePartRequest(Document):
     def _sync_status_from_items(self) -> None:
         statuses = [row.approval_status or ITEM_PENDING for row in self.items or []]
         self.status = derive_request_status(statuses, getattr(self, "status", None))
+
+    def _sync_service_order_parts(self) -> None:
+        if not self.service_order:
+            return
+
+        if getattr(frappe.flags, "skip_spare_part_request_service_order_sync", False):
+            return
+
+        try:
+            service_doc = frappe.get_doc("Garage Service Order", self.service_order)
+        except Exception:
+            return
+
+        existing_parts = {
+            cstr(row.item_code): row
+            for row in getattr(service_doc, "required_parts", []) or []
+            if getattr(row, "item_code", None)
+        }
+
+        updated = False
+
+        for item in self.items or []:
+            item_code = cstr(item.item_code or "").strip()
+            if not item_code:
+                continue
+
+            if not frappe.db.exists("Item", item_code):
+                continue
+
+            qty = flt(item.qty or 0)
+            status = self.status_map.get(item.approval_status or ITEM_PENDING, "Pending Check")
+            warehouse = cstr(item.source_warehouse or "").strip() or None
+
+            row = existing_parts.get(item_code)
+            if not row:
+                row = service_doc.append(
+                    "required_parts",
+                    {
+                        "item_code": item_code,
+                        "qty": qty or 1,
+                        "stock_status": status,
+                        "warehouse": warehouse,
+                    },
+                )
+                existing_parts[item_code] = row
+                updated = True
+                continue
+
+            if qty and flt(row.qty) != qty:
+                row.qty = qty
+                updated = True
+
+            if warehouse and cstr(row.warehouse or "") != warehouse:
+                row.warehouse = warehouse
+                updated = True
+
+            if status and cstr(row.stock_status or "") != status:
+                row.stock_status = status
+                updated = True
+
+        if not updated:
+            return
+
+        service_doc.part_charge_status = derive_part_charge_status(
+            [cstr(getattr(row, "stock_status", "")) for row in service_doc.required_parts or []],
+            getattr(service_doc, "part_charge_status", None),
+        )
+
+        frappe.flags.skip_service_order_spare_part_request_sync = True
+        try:
+            service_doc.save(ignore_permissions=True)
+        finally:
+            frappe.flags.skip_service_order_spare_part_request_sync = False
 
     def _apply_item_status(self, row: Document, status: str) -> bool:
         """Set the approval status and create stock issue when needed."""
