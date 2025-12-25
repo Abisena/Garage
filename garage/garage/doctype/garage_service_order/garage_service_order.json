@@ -19,20 +19,12 @@
     "cb_basic_1",
     "service_order_type",
     "row_basic_2",
-    "order_category",
-    "cb_basic_2",
     "intake_type",
-    "row_basic_3",
+    "cb_basic_2",
     "status",
-    "cb_basic_3",
+    "row_basic_3",
     "priority",
-    "row_basic_4",
-    "estimated_delivery_date",
-    "cb_basic_4",
-    "actual_delivery_date",
-    "row_basic_5",
-    "service_advisor",
-    "cb_basic_5",
+    "cb_basic_3",
     "primary_contact",
     "row_basic_5b",
     "assigned_mechanic",
@@ -89,17 +81,6 @@
       "fieldtype": "Section Break"
     },
     {
-      "fieldname": "order_category",
-      "fieldtype": "Select",
-      "label": "Order Category",
-      "options": "Workshop Service\nBody Repair\nQuick Service",
-      "default": "Workshop Service"
-    },
-    {
-      "fieldname": "cb_basic_2",
-      "fieldtype": "Column Break"
-    },
-    {
       "fieldname": "intake_type",
       "fieldtype": "Select",
       "label": "Registration Type",
@@ -109,8 +90,8 @@
       "in_list_view": 1
     },
     {
-      "fieldname": "row_basic_3",
-      "fieldtype": "Section Break"
+      "fieldname": "cb_basic_2",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "status",
@@ -121,8 +102,8 @@
       "in_list_view": 1
     },
     {
-      "fieldname": "cb_basic_3",
-      "fieldtype": "Column Break"
+      "fieldname": "row_basic_3",
+      "fieldtype": "Section Break"
     },
     {
       "fieldname": "priority",
@@ -132,35 +113,7 @@
       "default": "Normal"
     },
     {
-      "fieldname": "row_basic_4",
-      "fieldtype": "Section Break"
-    },
-    {
-      "fieldname": "estimated_delivery_date",
-      "fieldtype": "Date",
-      "label": "Estimated Delivery"
-    },
-    {
-      "fieldname": "cb_basic_4",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "actual_delivery_date",
-      "fieldtype": "Date",
-      "label": "Actual Delivery"
-    },
-    {
-      "fieldname": "row_basic_5",
-      "fieldtype": "Section Break"
-    },
-    {
-      "fieldname": "service_advisor",
-      "fieldtype": "Link",
-      "label": "Service Advisor",
-      "options": "User"
-    },
-    {
-      "fieldname": "cb_basic_5",
+      "fieldname": "cb_basic_3",
       "fieldtype": "Column Break"
     },
     {
