@@ -15,6 +15,9 @@
   "engine": "InnoDB",
   "field_order": [
     "service_order",
+    "service_advisor_section",
+    "service_advisor",
+    "parts_installation_approved",
     "qc_inspector",
     "inspection_date",
     "qc_instructions",
@@ -55,6 +58,24 @@
       "options": "Garage Service Order",
       "in_list_view": 1,
       "reqd": 1
+    },
+    {
+      "fieldname": "service_advisor_section",
+      "fieldtype": "Section Break",
+      "label": "Service Advisor Verification"
+    },
+    {
+      "fieldname": "service_advisor",
+      "fieldtype": "Link",
+      "label": "Service Advisor",
+      "options": "User",
+      "in_list_view": 1
+    },
+    {
+      "default": 0,
+      "fieldname": "parts_installation_approved",
+      "fieldtype": "Check",
+      "label": "Installed spare parts verified"
     },
     {
       "fieldname": "qc_inspector",
@@ -253,7 +274,7 @@
   "max_attachments": 0,
   "modified": "2024-06-02 00:00:00.000000",
   "module": "Garage",
-  "name": "Garage Quality Check",
+  "name": "Repair & QC",
   "naming_rule": "",
   "owner": "Administrator",
   "permissions": [
@@ -283,5 +304,5 @@
   "track_seen": 0,
   "translated_doctype": 0,
   "migration_hash": "",
-  "description": "Quality control checklist with predefined inspection items for manual QC approvals."
+  "description": "Repair and QC checklist with predefined inspection items for manual approvals."
 }
