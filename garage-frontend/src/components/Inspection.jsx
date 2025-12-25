@@ -263,6 +263,7 @@ export function Inspection({ currentUser }) {
       inspection_summary: buildInspectionSummary() || 'Inspection completed via portal.',
       service_notes: inspectionData.diagnosis || selectedVehicle?.customerComplaint || '',
       inspection_items: buildInspectionItemsPayload(),
+      status: 'Approved',
     };
 
     return frappeClient.updateServiceOrderInspection(selectedVehicle.orderId, payload);
@@ -331,8 +332,8 @@ export function Inspection({ currentUser }) {
       estimatedRepairTime: inspectionData.estimatedRepairTime,
       recommendedParts: inspectionData.recommendedParts,
       inspectionData: inspectionData,
-      status: 'pending',
-      repairStatus: 'waiting-parts',
+      status: 'approved',
+      repairStatus: 'approved',
       createdAt: new Date().toISOString(),
       date: selectedVehicle.date,
       branch: selectedVehicle.branch,

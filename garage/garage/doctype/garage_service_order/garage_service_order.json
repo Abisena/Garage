@@ -97,7 +97,7 @@
       "fieldname": "status",
       "fieldtype": "Select",
       "label": "Status",
-      "options": "Draft\nInspection\nPending Inspection\nEstimate\nPlanning\nAwaiting Approval\nApproved\nWork In Progress\nIn Progress\nAwaiting QC\nQuality Check\nCompleted\nCancelled",
+      "options": "Draft\nInspection\nPending Inspection\nEstimate\nPlanning\nAwaiting Approval\nApproved\nRequest Part\nWork In Progress\nIn Progress\nAwaiting QC\nQuality Check\nWaiting Payment\nCompleted\nCancelled",
       "default": "Draft",
       "in_list_view": 1
     },

@@ -2005,7 +2005,13 @@ export function Payment({ currentUser }) {
     if (savedWorkOrders) {
       const orders = JSON.parse(savedWorkOrders);
       let paymentOrders = orders.filter(order => 
-        order.status === 'ready-for-payment' || order.paymentStatus === 'pending' || order.paymentStatus === 'paid' || order.paymentStatus === 'cancelled' || order.paymentStatus === 'nota-printed'
+        order.status === 'waiting-payment' ||
+        order.status === 'ready-for-payment' ||
+        order.paymentStatus === 'pending' ||
+        order.paymentStatus === 'waiting-recon' ||
+        order.paymentStatus === 'paid' ||
+        order.paymentStatus === 'cancelled' ||
+        order.paymentStatus === 'nota-printed'
       );
       
       if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
@@ -2240,6 +2246,7 @@ export function Payment({ currentUser }) {
     const grandTotal = calculatePartsCost(selectedOrder.spareParts) + labor;
     
     let paidAmount = grandTotal;
+    const isTransfer = finalPaymentMethod === 'transfer';
 
     if (finalPaymentMethod === 'cash') {
       const received = parseFloat(finalCashReceived);
@@ -2251,13 +2258,15 @@ export function Payment({ currentUser }) {
     }
 
     const currentTime = new Date();
-    const paymentDate = currentTime.toLocaleString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const paymentDate = isTransfer
+      ? null
+      : currentTime.toLocaleString('id-ID', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
 
     // Generate invoice number with format: INV-{kode cabang}-{nomor urut}
     const branchCode = selectedOrder.branch.substring(0, 3).toUpperCase();
@@ -2281,15 +2290,15 @@ export function Payment({ currentUser }) {
     const updatedOrder = {
       ...selectedOrder,
       laborCost: labor,
-      paymentStatus: 'paid',
+      paymentStatus: isTransfer ? 'waiting-recon' : 'paid',
       paymentMethod: finalPaymentMethod,
       paidAmount,
-      paymentDate,
+      paymentDate: paymentDate || selectedOrder.paymentDate,
       invoiceNumber,
       notaFakturNumber,
       receiptNumber,
       notaNumber: notaFakturNumber,
-      status: 'paid'
+      status: isTransfer ? 'waiting-payment' : 'paid'
     };
 
     const updatedOrders = workOrders.map(o => 
@@ -2305,8 +2314,41 @@ export function Payment({ currentUser }) {
     setSelectedOrder(updatedOrder);
     
     // Show receipt modal
-    setShowReceiptModal(true);
+    if (!isTransfer) {
+      setShowReceiptModal(true);
+      void syncPaymentToERP(updatedOrder);
+    } else {
+      alert('✅ Transfer tercatat. Menunggu rekonsiliasi sebelum status menjadi Paid.');
+    }
+  };
 
+  const handleConfirmRecon = (order) => {
+    if (!order) return;
+
+    const currentTime = new Date();
+    const paymentDate = currentTime.toLocaleString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const updatedOrder = {
+      ...order,
+      paymentStatus: 'paid',
+      paymentDate,
+      status: 'paid'
+    };
+
+    const updatedOrders = workOrders.map(o => 
+      o.id === order.id ? updatedOrder : o
+    );
+
+    saveWorkOrders(updatedOrders);
+    loadWorkOrders();
+    setSelectedOrder(updatedOrder);
+    setShowReceiptModal(true);
     void syncPaymentToERP(updatedOrder);
   };
 
@@ -2399,7 +2441,7 @@ export function Payment({ currentUser }) {
     
     const matchesFilter = 
       filterStatus === 'all' ||
-      (filterStatus === 'pending' && (order.paymentStatus === 'pending' || order.paymentStatus === 'nota-printed' || !order.paymentStatus)) ||
+      (filterStatus === 'pending' && (order.paymentStatus === 'pending' || order.paymentStatus === 'waiting-recon' || order.paymentStatus === 'nota-printed' || !order.paymentStatus)) ||
       (filterStatus === 'paid' && order.paymentStatus === 'paid') ||
       (filterStatus === 'cancelled' && order.paymentStatus === 'cancelled');
     
@@ -2422,7 +2464,7 @@ export function Payment({ currentUser }) {
   });
 
   const stats = {
-    pending: workOrders.filter(o => !o.paymentStatus || o.paymentStatus === 'pending' || o.paymentStatus === 'nota-printed').length,
+    pending: workOrders.filter(o => !o.paymentStatus || o.paymentStatus === 'pending' || o.paymentStatus === 'waiting-recon' || o.paymentStatus === 'nota-printed').length,
     paid: workOrders.filter(o => o.paymentStatus === 'paid').length,
     cancelled: workOrders.filter(o => o.paymentStatus === 'cancelled').length,
     totalRevenue: workOrders
@@ -2478,7 +2520,7 @@ export function Payment({ currentUser }) {
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
             <div className="relative flex items-start justify-between">
               <div>
-                <p className="text-amber-100 mb-2 text-sm">Pending Payment</p>
+                <p className="text-amber-100 mb-2 text-sm">Waiting Payment</p>
                 <h3 className="text-white text-4xl mb-1">{activeTab === 'service' ? stats.pending : poStats.pending}</h3>
                 <p className="text-amber-100 text-sm">{activeTab === 'service' ? 'Orders waiting' : 'POs waiting'}</p>
               </div>
@@ -2611,7 +2653,7 @@ export function Payment({ currentUser }) {
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
-                  Pending ({activeTab === 'service' ? stats.pending : activeTab === 'spare-parts' ? poStats.pending : directSalesStats.pending})
+                  Waiting Payment ({activeTab === 'service' ? stats.pending : activeTab === 'spare-parts' ? poStats.pending : directSalesStats.pending})
                 </button>
                 <button
                   onClick={() => setFilterStatus('paid')}
@@ -2667,7 +2709,11 @@ export function Payment({ currentUser }) {
                     <tr
                       key={order.id}
                       className="hover:bg-blue-50 cursor-pointer transition-colors"
-                      onClick={() => handleOpenNota(order)}
+                      onClick={() => {
+                        if (order.paymentStatus !== 'waiting-recon') {
+                          handleOpenNota(order);
+                        }
+                      }}
                     >
                       <td className="px-4 py-3 font-mono text-sm text-slate-900">{order.orderId}</td>
                       <td className="px-4 py-3 text-sm text-slate-700">{order.customerName}</td>
@@ -2682,6 +2728,11 @@ export function Payment({ currentUser }) {
                           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-emerald-100 text-emerald-700">
                             <CheckCircle className="w-3 h-3" />
                             Paid
+                          </span>
+                        ) : order.paymentStatus === 'waiting-recon' ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
+                            <Clock className="w-3 h-3" />
+                            Waiting Recon
                           </span>
                         ) : order.invoiceNumber ? (
                           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-purple-100 text-purple-700">
@@ -2701,22 +2752,36 @@ export function Payment({ currentUser }) {
                         ) : (
                           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-amber-100 text-amber-700">
                             <Clock className="w-3 h-3" />
-                            Pending
+                            Waiting Payment
                           </span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-blue-600 hover:bg-blue-100"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenNota(order);
-                          }}
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </Button>
+                        {order.paymentStatus === 'waiting-recon' ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleConfirmRecon(order);
+                            }}
+                          >
+                            Confirm Recon
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-blue-600 hover:bg-blue-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenNota(order);
+                            }}
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   ))}
