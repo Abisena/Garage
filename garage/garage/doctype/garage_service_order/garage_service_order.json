@@ -46,26 +46,16 @@
     "service_booking_date",
     "cb_basic_7",
     "branch_code",
-    "row_basic_8",
-    "service_bundle",
     "customer_vehicle_section",
     "customer",
     "customer_display",
     "cb_cv_1",
     "vehicle",
     "vehicle_display",
-    "process_status_section",
-    "part_charge_status",
-    "cb_ps_2",
-    "invoice_status",
-    "row_fin_3",
-    "customer_confirmation",
     "notes_section",
-    "inspection_summary",
     "inspection_record",
     "service_notes",
     "operations_section",
-    "inspection_items",
     "required_parts",
     "progress_logs"
   ],
@@ -241,16 +231,6 @@
       "fetch_from": "branch.branch_code"
     },
     {
-      "fieldname": "row_basic_8",
-      "fieldtype": "Section Break"
-    },
-    {
-      "fieldname": "service_bundle",
-      "fieldtype": "Link",
-      "label": "Service Bundle",
-      "options": "Garage Service Bundle"
-    },
-    {
       "fieldname": "customer_vehicle_section",
       "fieldtype": "Section Break",
       "label": "Customer & Vehicle"
@@ -289,46 +269,9 @@
       "read_only": 1
     },
     {
-      "fieldname": "process_status_section",
-      "fieldtype": "Section Break",
-      "label": "Process Status"
-    },
-    {
-      "fieldname": "part_charge_status",
-      "fieldtype": "Select",
-      "label": "Status Pembebanan Sparepart & Bahan",
-      "options": "Not Started\nPending\nPartial Approve\nPartial Reject\nApproved\nRejected",
-      "default": "Not Started"
-    },
-    {
-      "fieldname": "cb_ps_2",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "invoice_status",
-      "fieldtype": "Select",
-      "label": "Status Invoice",
-      "options": "Not Started\nPending\nApproved\nCompleted\nCancelled",
-      "default": "Not Started"
-    },
-    {
-      "fieldname": "row_fin_3",
-      "fieldtype": "Section Break"
-    },
-    {
-      "fieldname": "customer_confirmation",
-      "fieldtype": "Check",
-      "label": "Customer Approved"
-    },
-    {
       "fieldname": "notes_section",
       "fieldtype": "Section Break",
       "label": "Notes"
-    },
-    {
-      "fieldname": "inspection_summary",
-      "fieldtype": "Small Text",
-      "label": "Inspection Summary"
     },
     {
       "fieldname": "inspection_record",
@@ -346,12 +289,6 @@
       "fieldname": "operations_section",
       "fieldtype": "Section Break",
       "label": "Operations"
-    },
-    {
-      "fieldname": "inspection_items",
-      "fieldtype": "Table",
-      "label": "Inspection Details",
-      "options": "Garage Service Order Inspection"
     },
     {
       "fieldname": "required_parts",
