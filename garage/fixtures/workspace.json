@@ -1,6 +1,6 @@
 {
   "charts": [],
-  "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Master Data\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Entry\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Customer\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Vehicle\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Brand\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Model\"}},{\"type\":\"spacer\",\"data\":{}},{\"type\":\"header\",\"data\":{\"text\":\"Operasional\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Registration\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Service Order\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Spare Part Request\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Vehicle Handover\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Inspection & Diagnosis\"}}]",
+  "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Master Data\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Entry\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Customer\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Vehicle\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Brand\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Model\"}},{\"type\":\"spacer\",\"data\":{}},{\"type\":\"header\",\"data\":{\"text\":\"Operasional\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Registration\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Service Order\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Spare Part Request\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Vehicle Handover\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Inspection & Diagnosis\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Repair QC\"}},{\"type\":\"spacer\",\"data\":{}},{\"type\":\"header\",\"data\":{\"text\":\"Finance/Accounting\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Invoice\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Payment Entry\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"BCA Bank Statement\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Transaction\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Reconciliation Tool\"}}]",
   "creation": "2024-07-02 00:00:00.000000",
   "docstatus": 0,
   "doctype": "Workspace",
@@ -100,6 +100,54 @@
       "idx": 9,
       "label": "Inspection & Diagnosis",
       "link_to": "Garage Vehicle Inspection",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 10,
+      "label": "Repair QC",
+      "link_to": "Repair QC",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 11,
+      "label": "Sales Invoice",
+      "link_to": "Sales Invoice",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 12,
+      "label": "Payment Entry",
+      "link_to": "Payment Entry",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 13,
+      "label": "BCA Bank Statement",
+      "link_to": "BCA Bank Statement",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 14,
+      "label": "Bank Transaction",
+      "link_to": "Bank Transaction",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 15,
+      "label": "Bank Reconciliation Tool",
+      "link_to": "Bank Reconciliation Tool",
       "type": "DocType"
     }
   ],
