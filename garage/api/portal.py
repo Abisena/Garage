@@ -6255,7 +6255,6 @@ def get_service_statistics() -> Dict[str, Any]:
         "Request Part",
         "Work In Progress",
         "Awaiting QC",
-        "Quality Check",
         "Waiting Payment",
         "Completed",
         "Cancelled",
@@ -6278,7 +6277,6 @@ def get_service_statistics() -> Dict[str, Any]:
         status_counts.get("Request Part", 0)
         + status_counts.get("Work In Progress", 0)
         + status_counts.get("Awaiting QC", 0)
-        + status_counts.get("Quality Check", 0)
         + status_counts.get("Waiting Payment", 0)
     )
     

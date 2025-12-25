@@ -2033,9 +2033,7 @@ body {
 
     const PROGRESS_STAGE_STATUSES = [
         'Work In Progress',
-        'Awaiting QC',
-        'In Progress',
-        'Quality Check'
+        'Awaiting QC'
     ];
     const PROGRESS_STAGE_STATUS_SET = new Set(
         PROGRESS_STAGE_STATUSES.map(status => status.toLowerCase())
@@ -2045,9 +2043,7 @@ body {
         'Inspection',
         'Estimate',
         'Awaiting Approval',
-        'Approved',
-        'Pending Inspection',
-        'Planning'
+        'Approved'
     ];
     const INSPECTION_STAGE_STATUS_SET = new Set(
         INSPECTION_STAGE_STATUSES.map(status => status.toLowerCase())
@@ -2390,15 +2386,11 @@ body {
         const statusMap = {
             'Draft': { class: 'new', label: 'Draft' },
             'Inspection': { class: 'inspection', label: 'Waiting' },
-            'Pending Inspection': { class: 'inspection', label: 'Waiting' },
             'Estimate': { class: 'estimate', label: 'Estimate' },
-            'Planning': { class: 'estimate', label: 'Planning' },
             'Awaiting Approval': { class: 'awaiting-approval', label: 'Awaiting Approval' },
             'Approved': { class: 'approved', label: 'Approved' },
             'Work In Progress': { class: 'in-progress', label: 'Work In Progress' },
-            'In Progress': { class: 'in-progress', label: 'In Progress' },
             'Awaiting QC': { class: 'awaiting-qc', label: 'Awaiting QC' },
-            'Quality Check': { class: 'awaiting-qc', label: 'Quality Check' },
             'Completed': { class: 'completed', label: 'SPK' },
             'Cancelled': { class: 'cancelled', label: 'Cancelled' }
         };
