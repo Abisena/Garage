@@ -897,7 +897,7 @@ export function ServiceOrders({ currentUser }) {
         return wo;
       });
       
-      persistWorkOrders(updatedWorkOrders);
+      await persistWorkOrders(updatedWorkOrders);
       setWorkOrders(updatedWorkOrders);
       
       // Send ONLY physical parts to Spare Parts Request queue (exclude LABOR)
