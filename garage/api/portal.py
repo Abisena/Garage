@@ -3983,6 +3983,9 @@ def _map_repair_status(status: str) -> Dict[str, Optional[str]]:
 
 
 def _sync_quality_check(service_order: str, payload: Optional[Any]) -> Optional[Dict[str, Any]]:
+    if payload in (None, ""):
+        return None
+
     data = _ensure_dict(payload)
     if not data:
         return None
@@ -4597,7 +4600,7 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
             if hasattr(doc, "invoice_status"):
                 frappe.db.set_value(doc.doctype, doc.name, "invoice_status", "Pending")
 
-        quality_payload = _ensure_dict(order.get("qualityCheck") or order.get("quality_check"))
+        quality_payload = order.get("qualityCheck") or order.get("quality_check")
         qc_result = _sync_quality_check(doc.name, quality_payload)
         if qc_result:
             applied["quality_check"] = qc_result
