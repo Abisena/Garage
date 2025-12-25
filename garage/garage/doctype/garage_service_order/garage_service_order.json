@@ -27,8 +27,6 @@
     "primary_contact",
     "assigned_mechanic",
     "assigned_mechanic_name",
-    "booking_channel",
-    "booking_reference",
     "service_booking_date",
     "service_bundle",
     "service_bundle_name",
@@ -42,7 +40,6 @@
     "part_charge_status",
     "note_status",
     "invoice_status",
-    "sikk_status",
     "financial_section",
     "total_estimated_amount",
     "total_approved_amount",
@@ -56,7 +53,6 @@
     "operations_section",
     "inspection_items",
     "service_tasks",
-    "progress_logs",
     "quality_checks",
     "payment_schedule"
   ],
@@ -145,17 +141,6 @@
       "label": "Mechanic Name",
       "fetch_from": "assigned_mechanic.employee_name",
       "read_only": 1
-    },
-    {
-      "fieldname": "booking_channel",
-      "fieldtype": "Select",
-      "label": "Booking Channel",
-      "options": "WhatsApp\nPhone Call\nAdmin Input\nWebsite\nOther"
-    },
-    {
-      "fieldname": "booking_reference",
-      "fieldtype": "Data",
-      "label": "Booking Reference"
     },
     {
       "fieldname": "service_booking_date",
@@ -316,12 +301,6 @@
       "fieldtype": "Table",
       "label": "Service Tasks",
       "options": "Garage Service Order Task"
-    },
-    {
-      "fieldname": "progress_logs",
-      "fieldtype": "Table",
-      "label": "Progress Logs",
-      "options": "Garage Service Order Progress"
     },
     {
       "fieldname": "quality_checks",
