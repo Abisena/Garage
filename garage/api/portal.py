@@ -3991,6 +3991,21 @@ def _sync_quality_check(service_order: str, payload: Optional[Any]) -> Optional[
         return None
 
     try:
+        def _resolve_user_link(value: Any) -> Optional[str]:
+            candidate = cstr(value or "").strip()
+            if not candidate:
+                return None
+
+            if frappe.db.exists("User", candidate):
+                return candidate
+
+            for lookup_field in ("email", "full_name"):
+                resolved = frappe.db.get_value("User", {lookup_field: candidate}, "name")
+                if resolved:
+                    return resolved
+
+            return None
+
         fieldnames = {
             df.fieldname for df in frappe.get_meta("Repair QC").fields
         }
@@ -4009,6 +4024,11 @@ def _sync_quality_check(service_order: str, payload: Optional[Any]) -> Optional[
         for fieldname, value in data.items():
             if fieldname not in fieldnames:
                 continue
+            if fieldname in {"service_advisor", "qc_inspector"}:
+                resolved_user = _resolve_user_link(value)
+                if not resolved_user:
+                    continue
+                value = resolved_user
             doc.set(fieldname, value)
             applied[fieldname] = value
 
