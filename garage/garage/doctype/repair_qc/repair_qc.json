@@ -4,7 +4,7 @@
   "allow_guest_to_view": 0,
   "allow_import": 1,
   "allow_rename": 0,
-  "autoname": "autoincrement",
+  "autoname": "format:QC-.#####",
   "beta": 0,
   "creation": "2024-06-02 00:00:00.000000",
   "default_view": "Form",
