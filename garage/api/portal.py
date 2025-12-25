@@ -37,8 +37,10 @@ SERVICE_ORDER_ACTIVE_STATUSES = {
     "Estimate",
     "Awaiting Approval",
     "Approved",
+    "Request Part",
     "Work In Progress",
     "Awaiting QC",
+    "Waiting Payment",
 }
 TECHNICIAN_ACTIVE_STATUS = {"Active"}
 TECHNICIAN_ROLE_NAMES = {"Technician", "Teknisi", "Mechanic", "Mekanik"}
@@ -3912,8 +3914,17 @@ def _ensure_erp_customer(
 def _map_repair_status(status: str) -> Dict[str, Optional[str]]:
     normalized = _normalize_status(status)
     mapping: Dict[str, Dict[str, Optional[str]]] = {
+        "approved": {
+            "status": "Approved",
+        },
         "waiting-parts": {
             "status": "Work In Progress",
+            "work_order_status": "Awaiting Parts",
+            "job_card_status": "Work In Progress",
+            "qc_status": "Pending",
+        },
+        "request-part": {
+            "status": "Request Part",
             "work_order_status": "Awaiting Parts",
             "job_card_status": "Work In Progress",
             "qc_status": "Pending",
@@ -3956,6 +3967,12 @@ def _map_repair_status(status: str) -> Dict[str, Optional[str]]:
         },
         "ready-for-payment": {
             "status": "Completed",
+            "work_order_status": "Completed",
+            "job_card_status": "Completed",
+            "qc_status": "Passed",
+        },
+        "waiting-payment": {
+            "status": "Waiting Payment",
             "work_order_status": "Completed",
             "job_card_status": "Completed",
             "qc_status": "Passed",
@@ -4448,7 +4465,10 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
         applied = {}
 
         # -------- Repair Status Sync --------
-        status_updates = _map_repair_status(order.get("repairStatus") or order.get("status"))
+        status_hint = order.get("repairStatus") or order.get("status")
+        if _normalize_status(order.get("status")) == "waiting-payment":
+            status_hint = order.get("status")
+        status_updates = _map_repair_status(status_hint)
         for field, value in (status_updates or {}).items():
             if value is None or not hasattr(doc, field):
                 continue
@@ -5927,8 +5947,10 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
             "Estimate",
             "Awaiting Approval",
             "Approved",
+            "Request Part",
             "Work In Progress",
             "Awaiting QC",
+            "Waiting Payment",
             "Completed",
             "Cancelled",
         }
@@ -6230,9 +6252,11 @@ def get_service_statistics() -> Dict[str, Any]:
         "Estimate",
         "Awaiting Approval",
         "Approved",
+        "Request Part",
         "Work In Progress",
         "Awaiting QC",
         "Quality Check",
+        "Waiting Payment",
         "Completed",
         "Cancelled",
     ]
@@ -6251,9 +6275,11 @@ def get_service_statistics() -> Dict[str, Any]:
     )
 
     progress_count = (
-        status_counts.get("Work In Progress", 0)
+        status_counts.get("Request Part", 0)
+        + status_counts.get("Work In Progress", 0)
         + status_counts.get("Awaiting QC", 0)
         + status_counts.get("Quality Check", 0)
+        + status_counts.get("Waiting Payment", 0)
     )
     
     completed_count = status_counts.get("Completed", 0)

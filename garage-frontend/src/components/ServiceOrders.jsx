@@ -892,7 +892,7 @@ export function ServiceOrders({ currentUser }) {
       // Save to work order
       const updatedWorkOrders = workOrders.map(wo => {
         if (wo.id === selectedWorkOrder.id) {
-          return { ...wo, spareParts: updatedSpareParts };
+          return { ...wo, spareParts: updatedSpareParts, repairStatus: 'request-part' };
         }
         return wo;
       });
@@ -1062,9 +1062,15 @@ export function ServiceOrders({ currentUser }) {
   const getStatusInfo = (repairStatus) => {
     switch (repairStatus) {
       case 'waiting-parts':
+      case 'request-part':
         return {
-          label: 'Waiting Parts',
+          label: 'Request Part',
           color: 'bg-amber-100 text-amber-700 border-amber-200'
+        };
+      case 'approved':
+        return {
+          label: 'Approved',
+          color: 'bg-emerald-100 text-emerald-700 border-emerald-200'
         };
       case 'parts-prepared':
         return {
@@ -1634,9 +1640,9 @@ export function ServiceOrders({ currentUser }) {
             <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-amber-700 text-sm mb-1">Waiting Parts</p>
+                  <p className="text-amber-700 text-sm mb-1">Request Part</p>
                   <p className="text-amber-900 text-2xl">
-                    {workOrders.filter(o => o.repairStatus === 'waiting-parts').length}
+                    {workOrders.filter(o => ['waiting-parts', 'request-part'].includes(o.repairStatus)).length}
                   </p>
                 </div>
                 <div className="bg-amber-200/50 rounded-lg p-3">
@@ -1719,14 +1725,14 @@ export function ServiceOrders({ currentUser }) {
               All Orders
             </button>
             <button
-              onClick={() => setFilterStatus('waiting')}
+              onClick={() => setFilterStatus('request part')}
               className={`px-4 py-2 rounded-lg transition-colors ${
-                filterStatus === 'waiting'
+                filterStatus === 'request part'
                   ? 'bg-amber-500 text-white'
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              Waiting Parts
+              Request Part
             </button>
             <button
               onClick={() => setFilterStatus('in progress')}

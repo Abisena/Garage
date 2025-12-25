@@ -111,6 +111,7 @@ export function Workshop({ currentUser }) {
     if (order.repairStatus === 'in-progress') return 'in-progress';
     if (order.repairStatus === 'quality-check') return 'quality-check';
     if (order.repairStatus === 'completed') return 'completed';
+    if (order.repairStatus === 'request-part') return 'request-part';
     
     if (arePartsPrepared(order)) {
       return 'parts-prepared';
@@ -509,7 +510,7 @@ export function Workshop({ currentUser }) {
     const updatedOrder = {
       ...selectedOrder,
       repairStatus: 'final-inspection',
-      status: 'ready-for-payment', // Update main status for Payment UI
+      status: 'waiting-payment', // Update main status for Payment UI
       paymentStatus: 'pending',
       invoiceStatus: 'draft',
       journalEntryStatus: 'draft',
@@ -689,6 +690,8 @@ export function Workshop({ currentUser }) {
         return <span className="px-2 py-1 rounded-full text-xs bg-emerald-100 text-emerald-700 border border-emerald-200">Part Prepared</span>;
       case 'parts-requested':
         return <span className="px-2 py-1 rounded-full text-xs bg-indigo-100 text-indigo-700 border border-indigo-200">Parts Requested</span>;
+      case 'request-part':
+        return <span className="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700 border border-amber-200">Request Part</span>;
       case 'waiting-parts':
         return <span className="px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700 border border-orange-200">Waiting Parts</span>;
       default:

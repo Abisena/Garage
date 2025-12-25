@@ -463,14 +463,16 @@ export function SparePartsRequest({ currentUser }) {
           const requestedParts = syncedSpareParts.filter((p) => p.requested);
           const allPartsPrepared = requestedParts.length > 0 && requestedParts.every((p) => p.status === 'prepared');
 
-          // Auto-update repair status to 'parts-prepared' if all parts are ready
+          // Auto-update repair status to 'in-progress' if all parts are ready
           let newRepairStatus = wo.repairStatus;
-          if (allPartsPrepared && wo.repairStatus === 'waiting-parts') {
-            newRepairStatus = 'parts-prepared';
-            console.log('✅ All parts prepared! Auto-updating work order status to: parts-prepared');
+          let repairStartTime = wo.repairStartTime;
+          if (allPartsPrepared && ['waiting-parts', 'request-part'].includes(wo.repairStatus)) {
+            newRepairStatus = 'in-progress';
+            repairStartTime = repairStartTime || new Date().toISOString();
+            console.log('✅ All parts prepared! Auto-updating work order status to: in-progress');
           }
 
-          return { ...wo, spareParts: syncedSpareParts, repairStatus: newRepairStatus };
+          return { ...wo, spareParts: syncedSpareParts, repairStatus: newRepairStatus, repairStartTime };
         }
         return wo;
       });
