@@ -3989,16 +3989,16 @@ def _sync_quality_check(service_order: str, payload: Optional[Any]) -> Optional[
 
     try:
         fieldnames = {
-            df.fieldname for df in frappe.get_meta("Garage Quality Check").fields
+            df.fieldname for df in frappe.get_meta("Repair & QC").fields
         }
 
         existing = frappe.db.get_value(
-            "Garage Quality Check", {"service_order": service_order}, "name"
+            "Repair & QC", {"service_order": service_order}, "name"
         )
         doc = (
-            frappe.get_doc("Garage Quality Check", existing)
+            frappe.get_doc("Repair & QC", existing)
             if existing
-            else frappe.new_doc("Garage Quality Check")
+            else frappe.new_doc("Repair & QC")
         )
         doc.service_order = service_order
 

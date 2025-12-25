@@ -49,6 +49,8 @@ export function Workshop({ currentUser }) {
   ]);
 
   const [qcNotes, setQcNotes] = useState('');
+  const currentUserLabel = currentUser?.displayName || currentUser?.name || currentUser?.username || '';
+  const currentUserId = currentUser?.username || currentUser?.name || currentUserLabel;
 
   useEffect(() => {
     loadWorkOrders();
@@ -292,12 +294,20 @@ export function Workshop({ currentUser }) {
       };
     });
 
+    const updatedQualityCheck = {
+      ...(selectedOrder.qualityCheck || {}),
+      service_order: selectedOrder.orderId || selectedOrder.id,
+      service_advisor: currentUserId,
+      parts_installation_approved: true,
+    };
+
     const updatedOrder = {
       ...selectedOrder,
       spareParts: updatedSpareParts,
       installedPartsApproved: true,
-      installedPartsApprovedBy: currentUser.name, // Auto-fill from logged in user
-      installedPartsApprovedDate: timestamp
+      installedPartsApprovedBy: currentUserLabel, // Auto-fill from logged in user
+      installedPartsApprovedDate: timestamp,
+      qualityCheck: updatedQualityCheck,
     };
 
     const updatedOrders = workOrders.map(o => 
@@ -307,7 +317,7 @@ export function Workshop({ currentUser }) {
     saveWorkOrders(updatedOrders);
     setSelectedOrder(updatedOrder);
 
-    alert(`✅ Parts installation approved by ${currentUser.name}`);
+    alert(`✅ Parts installation approved by ${currentUserLabel}`);
     
     // Move to QC tab
     setCurrentTab('qc');
@@ -336,7 +346,7 @@ export function Workshop({ currentUser }) {
     };
 
     const qcPayload = {
-      qc_inspector: currentUser?.name,
+      qc_inspector: currentUserId,
       qc_notes: qcNotes,
       inspection_date: new Date().toISOString().split('T')[0],
     };
@@ -382,25 +392,28 @@ export function Workshop({ currentUser }) {
     const historyItem = {
       timestamp: qcDate,
       progress: 97,
-      notes: `Quality Check finished by ${currentUser.name}`,
-      updatedBy: currentUser.name
+      notes: `Quality Check finished by ${currentUserLabel}`,
+      updatedBy: currentUserLabel
     };
 
     const updatedHistory = [...(selectedOrder.progressHistory || []), historyItem];
+
+    const updatedQualityCheck = {
+      ...(selectedOrder.qualityCheck || {}),
+      service_order: selectedOrder.orderId || selectedOrder.id,
+      ...buildQualityCheckPayload(),
+    };
 
     const updatedOrder = {
       ...selectedOrder,
       repairStatus: 'qc-finished',
       repairProgress: 97,
       qcApproved: true,
-      qcInspector: currentUser.name, // Auto-fill from logged in user
+      qcInspector: currentUserLabel, // Auto-fill from logged in user
       qcNotes,
       qcDate,
       progressHistory: updatedHistory,
-      qualityCheck: {
-        service_order: selectedOrder.orderId || selectedOrder.id,
-        ...buildQualityCheckPayload(),
-      },
+      qualityCheck: updatedQualityCheck,
     };
 
     const updatedOrders = workOrders.map(o => 
@@ -410,7 +423,7 @@ export function Workshop({ currentUser }) {
     saveWorkOrders(updatedOrders);
     setSelectedOrder(updatedOrder);
 
-    alert(`✅ QC FINISHED!\n\nQC Inspector: ${currentUser.name}\n\n➡️ Moving to Final Inspection...`);
+    alert(`✅ QC FINISHED!\n\nQC Inspector: ${currentUserLabel}\n\n➡️ Moving to Final Inspection...`);
     
     // Move to Final Inspection tab
     setCurrentTab('final');
@@ -487,8 +500,8 @@ export function Workshop({ currentUser }) {
     const historyItem = {
       timestamp,
       progress: 99,
-      notes: `Final Inspection completed by ${currentUser.name} - Ready for handover`,
-      updatedBy: currentUser.name
+      notes: `Final Inspection completed by ${currentUserLabel} - Ready for handover`,
+      updatedBy: currentUserLabel
     };
 
     const updatedHistory = [...(selectedOrder.progressHistory || []), historyItem];
@@ -517,7 +530,7 @@ export function Workshop({ currentUser }) {
     saveWorkOrders(updatedOrders);
     setShowUpdateModal(false);
 
-    alert(`✅ FINAL INSPECTION COMPLETED!\n\nWork Order: ${selectedOrder.orderId}\nVehicle: ${selectedOrder.vehicleBrand} ${selectedOrder.vehicleModel}\n\n✓ Status: Final Inspection (99%)\n✓ Inspector: ${currentUser.name}\n✓ Vehicle ready for payment\n\n➡️ Data sent to Payment\n➡️ Move to Step 7: Payment & Invoice`);
+    alert(`✅ FINAL INSPECTION COMPLETED!\n\nWork Order: ${selectedOrder.orderId}\nVehicle: ${selectedOrder.vehicleBrand} ${selectedOrder.vehicleModel}\n\n✓ Status: Final Inspection (99%)\n✓ Inspector: ${currentUserLabel}\n✓ Vehicle ready for payment\n\n➡️ Data sent to Payment\n➡️ Move to Step 7: Payment & Invoice`);
   };
 
   const handleStartRepair = (order) => {
@@ -1193,7 +1206,7 @@ export function Workshop({ currentUser }) {
                         <label className="text-slate-700 mb-2 block">Service Advisor</label>
                         <input
                           type="text"
-                          value={currentUser.name}
+                          value={currentUserLabel}
                           disabled
                           className="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-700"
                         />
@@ -1381,7 +1394,7 @@ export function Workshop({ currentUser }) {
                       <label className="text-slate-700 mb-2 block">QC Inspector</label>
                       <input
                         type="text"
-                        value={currentUser.name}
+                        value={currentUserLabel}
                         disabled
                         className="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-700"
                       />
