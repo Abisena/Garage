@@ -42,7 +42,7 @@
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
       "idx": 2,
-      "label": "Garage Brand",
+      "label": "Master Data Brand",
       "link_to": "Garage Brand",
       "type": "DocType"
     },
@@ -50,7 +50,7 @@
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
       "idx": 3,
-      "label": "Garage Model",
+      "label": "Master Data Model",
       "link_to": "Garage Model",
       "type": "DocType"
     },
