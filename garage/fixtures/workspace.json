@@ -1,6 +1,6 @@
 {
   "charts": [],
-  "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Master Data\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Entry\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Customer\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Vehicle\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Brand\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Model\"}},{\"type\":\"spacer\",\"data\":{}},{\"type\":\"header\",\"data\":{\"text\":\"Operasional\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Registration\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Service Order\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Spare Part Request\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Vehicle Handover\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Inspection & Diagnosis\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Repair QC\"}},{\"type\":\"spacer\",\"data\":{}},{\"type\":\"header\",\"data\":{\"text\":\"Finance/Accounting\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Invoice\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Payment Entry\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"BCA Bank Statement\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Transaction\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Reconciliation Tool\"}}]",
+  "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Master Data\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Entry\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Customer\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Vehicle\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Brand\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Model\"}},{\"type\":\"spacer\",\"data\":{}},{\"type\":\"header\",\"data\":{\"text\":\"Operasional\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Registration\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Service Order\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Spare Part Request\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Vehicle Handover\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Inspection & Diagnosis\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Repair QC\"}},{\"type\":\"spacer\",\"data\":{}},{\"type\":\"header\",\"data\":{\"text\":\"Finance/Accounting\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Invoice\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Payment Entry\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"BCA Bank Statement Import\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Transaction\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Reconciliation Tool\"}}]",
   "creation": "2024-07-02 00:00:00.000000",
   "docstatus": 0,
   "doctype": "Workspace",
@@ -130,8 +130,8 @@
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
       "idx": 13,
-      "label": "BCA Bank Statement",
-      "link_to": "BCA Bank Statement",
+      "label": "BCA Bank Statement Import",
+      "link_to": "BCA Bank Statement Import",
       "type": "DocType"
     },
     {
