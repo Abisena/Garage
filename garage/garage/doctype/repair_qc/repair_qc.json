@@ -18,7 +18,7 @@
     "service_order",
     "service_advisor_section",
     "service_advisor",
-    "parts_installation_approved",
+    "spare_parts_verification",
     "service_advisor_column_break",
     "qc_inspector",
     "inspection_date",
@@ -87,10 +87,10 @@
       "in_list_view": 1
     },
     {
-      "default": 0,
-      "fieldname": "parts_installation_approved",
-      "fieldtype": "Check",
-      "label": "Installed spare parts verified"
+      "fieldname": "spare_parts_verification",
+      "fieldtype": "Table",
+      "label": "Spare Parts Installation Verification",
+      "options": "Repair QC Spare Part"
     },
     {
       "fieldname": "service_advisor_column_break",
