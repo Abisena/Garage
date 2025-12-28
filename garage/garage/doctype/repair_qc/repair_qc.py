@@ -13,6 +13,7 @@ class RepairQC(Document):
 
     def validate(self):
         self._set_default_users()
+        self._ensure_sales_invoice()
         self._sync_invoice_summary()
         self._validate_final_status()
 
@@ -98,6 +99,102 @@ class RepairQC(Document):
                 "Sales Invoice untuk Service Order ini belum tersedia. "
                 "Mohon buat Sales Invoice terlebih dahulu."
             )
+
+    def _ensure_sales_invoice(self):
+        if self.status != "Finished":
+            return
+
+        if self._get_latest_invoice():
+            return
+
+        if not self.service_order:
+            return
+
+        try:
+            service_order = frappe.get_doc("Garage Service Order", self.service_order)
+        except Exception:
+            return
+
+        items = self._build_invoice_items(service_order)
+        if not items:
+            return
+
+        total_amount = sum(item.get("amount", 0) for item in items)
+
+        invoice_doc = frappe.get_doc(
+            {
+                "doctype": "Garage Sales Invoice",
+                "branch": getattr(service_order, "branch", None),
+                "invoice_date": nowdate(),
+                "due_date": nowdate(),
+                "customer": getattr(service_order, "customer", None),
+                "source_type": "Garage Service Order",
+                "source_name": service_order.name,
+                "total_amount": total_amount,
+                "outstanding_amount": total_amount,
+                "notes": f"Auto-generated from Repair QC {self.name}",
+                "items": items,
+            }
+        )
+        invoice_doc.insert(ignore_permissions=True)
+
+    def _build_invoice_items(self, service_order):
+        rows = list(getattr(self, "parts_used", None) or [])
+        if not rows:
+            rows = list(getattr(service_order, "required_parts", None) or [])
+
+        items = []
+        for row in rows:
+            item_code = getattr(row, "item_code", None)
+            if not item_code:
+                continue
+
+            qty = flt(getattr(row, "qty", None) or 0)
+            if qty <= 0:
+                continue
+
+            amount = flt(getattr(row, "amount", None) or 0)
+            rate = flt(getattr(row, "rate", None) or 0)
+            if not rate and amount:
+                rate = amount / qty
+
+            if not rate:
+                rate = flt(frappe.db.get_value("Item", item_code, "standard_rate") or 0)
+
+            if not amount:
+                amount = rate * qty
+
+            if amount <= 0:
+                continue
+
+            item_name = getattr(row, "item_name", None)
+            description = getattr(row, "description", None)
+            uom = getattr(row, "uom", None)
+
+            if not item_name or not uom:
+                item_defaults = frappe.db.get_value(
+                    "Item",
+                    item_code,
+                    ["item_name", "stock_uom", "description"],
+                    as_dict=True,
+                ) or {}
+                item_name = item_name or item_defaults.get("item_name")
+                uom = uom or item_defaults.get("stock_uom")
+                description = description or item_defaults.get("description")
+
+            items.append(
+                {
+                    "item_code": item_code,
+                    "item_name": item_name,
+                    "description": description or item_code,
+                    "qty": qty,
+                    "uom": uom or "Unit",
+                    "rate": rate,
+                    "amount": amount,
+                }
+            )
+
+        return items
 
     def _create_payment_entry_if_finished(self):
         if self.status != "Finished":
