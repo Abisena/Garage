@@ -48,7 +48,7 @@ export function Report({ currentUser }) {
         },
         {
           id: 'RPT-003',
-          name: 'Laporan Garage Service Order (SPK)',
+          name: 'Laporan Service Order (SPK)',
           description: 'Daftar Surat Perintah Kerja yang telah dibuat dan ditandatangani',
           category: 'Transaction'
         },

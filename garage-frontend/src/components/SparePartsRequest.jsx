@@ -330,7 +330,7 @@ export function SparePartsRequest({ currentUser }) {
           // Check if workOrder has spareParts
           if (!wo.spareParts || wo.spareParts.length === 0) {
             console.error('❌ Work order has NO spare parts!');
-            alert(`⚠️ ERROR: Work Order ${orderId} tidak memiliki spare parts!\\n\\nSilakan refresh halaman Garage Service Order dan pastikan parts sudah di-save.`);
+            alert(`⚠️ ERROR: Work Order ${orderId} tidak memiliki spare parts!\\n\\nSilakan refresh halaman Service Order dan pastikan parts sudah di-save.`);
             return wo;
           }
           
@@ -404,7 +404,7 @@ export function SparePartsRequest({ currentUser }) {
               
               alert(`⚠️ Part tidak ditemukan persis, tapi ada yang mirip!\n\nMencari: ${partCode} (${requestedPartName})\nMirip dengan: ${closeMatches.map((p) => `${p.partNumber} - ${p.name}`).join(', ')}\n\n💡 Data sudah di-update otomatis jika hanya 1 match ditemukan.`);
             } else {
-              alert(`❌ Part tidak ditemukan!\n\nMencari: ${partCode} (${requestedPartName})\nYang tersedia: ${wo.spareParts.map((p) => `${p.partNumber} - ${p.name}`).join(', ')}\n\n💡 Pastikan part number di Garage Service Order sama dengan yang di request.`);
+              alert(`❌ Part tidak ditemukan!\n\nMencari: ${partCode} (${requestedPartName})\nYang tersedia: ${wo.spareParts.map((p) => `${p.partNumber} - ${p.name}`).join(', ')}\n\n💡 Pastikan part number di Service Order sama dengan yang di request.`);
             }
           }
           
@@ -1046,7 +1046,7 @@ export function SparePartsRequest({ currentUser }) {
             <div className="bg-white rounded-lg border border-slate-200 p-12 text-center">
               <Package className="w-12 h-12 mx-auto mb-3 text-slate-400" />
               <p className="text-slate-600">No parts requests found</p>
-              <p className="text-slate-500 text-sm mt-1">Requests from Garage Service Order will appear here</p>
+              <p className="text-slate-500 text-sm mt-1">Requests from Service Order will appear here</p>
             </div>
           ) : (
             filteredRequests.map((request, index) => (
