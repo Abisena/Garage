@@ -107,13 +107,13 @@ export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onM
     },
     { 
       id: 'inspection', 
-      label: 'Garage Vehicle Inspection', 
+      label: 'Inspection & Diagnosis', 
       icon: Search,
       step: '2'
     },
     { 
       id: 'orders', 
-      label: 'Garage Service Order', 
+      label: 'Repair Orders', 
       icon: FileText,
       step: '3'
     },
