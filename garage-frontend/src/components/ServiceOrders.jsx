@@ -1624,7 +1624,7 @@ export function ServiceOrders({ currentUser }) {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-slate-800 mb-1">Garage Service Order</h1>
+            <h1 className="text-slate-800 mb-1">Service Order</h1>
             <p className="text-slate-600">Manage and track all repair orders from inspection</p>
           </div>
           <div className="flex items-center gap-3">

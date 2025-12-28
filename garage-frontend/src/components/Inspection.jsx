@@ -459,7 +459,7 @@ export function Inspection({ currentUser }) {
                   <Search className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold text-slate-800">Garage Vehicle Inspection</h1>
+                  <h1 className="text-3xl font-bold text-slate-800">Vehicle Inspection</h1>
                   <p className="text-slate-600">Step 2: Select vehicle and perform inspection</p>
                 </div>
               </div>
