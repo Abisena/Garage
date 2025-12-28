@@ -2369,6 +2369,45 @@ def _employee_display_map(employee_ids: Iterable[str]) -> Dict[str, str]:
     return display_map
 
 
+def _resolve_employee_id(candidate: str) -> Optional[str]:
+    value = cstr(candidate).strip()
+    if not value:
+        return None
+
+    try:
+        if frappe.db.exists("Employee", value):
+            return value
+    except Exception:
+        return None
+
+    or_filters = []
+    if _doctype_has_field("Employee", "user_id"):
+        or_filters.append(["user_id", "=", value])
+    if _doctype_has_field("Employee", "personal_email"):
+        or_filters.append(["personal_email", "=", value])
+    if _doctype_has_field("Employee", "company_email"):
+        or_filters.append(["company_email", "=", value])
+
+    if not or_filters:
+        return None
+
+    try:
+        with _ignoring_permissions():
+            rows = frappe.db.get_all(
+                "Employee",
+                fields=["name"],
+                or_filters=or_filters,
+                limit=1,
+            )
+    except Exception:
+        return None
+
+    if rows:
+        return rows[0].get("name")
+
+    return None
+
+
 def _employee_branch_map(employee_ids: Iterable[str]) -> Dict[str, Optional[str]]:
     unique_ids = sorted({emp for emp in employee_ids if emp})
     if not unique_ids or not _doctype_has_field("Employee", "branch"):
@@ -4493,13 +4532,14 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
                 mechanic_value = candidate
                 break
 
-        if mechanic_value and hasattr(doc, "assigned_mechanic"):
-            applied["assigned_mechanic"] = mechanic_value
-            doc.assigned_mechanic = mechanic_value
+        resolved_mechanic = _resolve_employee_id(mechanic_value) if mechanic_value else None
+        if resolved_mechanic and hasattr(doc, "assigned_mechanic"):
+            applied["assigned_mechanic"] = resolved_mechanic
+            doc.assigned_mechanic = resolved_mechanic
 
             if hasattr(doc, "assigned_mechanic_name"):
-                display_map = _employee_display_map([mechanic_value]) or {}
-                mechanic_name = display_map.get(mechanic_value) or mechanic_value
+                display_map = _employee_display_map([resolved_mechanic]) or {}
+                mechanic_name = display_map.get(resolved_mechanic) or resolved_mechanic
                 applied["assigned_mechanic_name"] = mechanic_name
                 doc.assigned_mechanic_name = mechanic_name
 
