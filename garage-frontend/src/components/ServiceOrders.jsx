@@ -238,10 +238,10 @@ export function ServiceOrders({ currentUser }) {
 
   const normalizeMechanicNames = (entries = []) => entries
     .map((mechanic) =>
+      mechanic?.employee_name ||
       mechanic?.employee ||
       mechanic?.name ||
       mechanic?.user_id ||
-      mechanic?.employee_name ||
       mechanic?.full_name
     )
     .map((name) => (name ? String(name).trim() : ''))
