@@ -150,6 +150,9 @@ class GarageServiceOrder(Document):
         if getattr(frappe.flags, "skip_service_order_spare_part_request_sync", False):
             return
 
+        if self.is_new():
+            return
+
         required_parts = [row for row in getattr(self, "required_parts", []) if getattr(row, "item_code", None)]
         if not required_parts:
             return
