@@ -73,6 +73,8 @@
     "summary_invoice",
     "summary_total_amount",
     "summary_outstanding_amount",
+    "parts_used_section",
+    "parts_used",
     "final_payment_section",
     "status",
     "payment_entry"
@@ -426,6 +428,18 @@
       "fieldname": "summary_outstanding_amount",
       "fieldtype": "Currency",
       "label": "Outstanding Amount",
+      "read_only": 1
+    },
+    {
+      "fieldname": "parts_used_section",
+      "fieldtype": "Section Break",
+      "label": "Part Used"
+    },
+    {
+      "fieldname": "parts_used",
+      "fieldtype": "Table",
+      "label": "Part Used",
+      "options": "Garage Service Order Part",
       "read_only": 1
     },
     {
