@@ -185,9 +185,11 @@ class GarageServiceOrder(Document):
                 },
             )
 
+        ignore_links = not frappe.db.exists("Garage Service Order", self.name)
+
         frappe.flags.skip_spare_part_request_service_order_sync = True
         try:
-            request.save(ignore_permissions=True)
+            request.save(ignore_permissions=True, ignore_links=ignore_links)
         finally:
             frappe.flags.skip_spare_part_request_service_order_sync = False
 
