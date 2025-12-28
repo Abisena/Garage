@@ -16,6 +16,7 @@ ITEM_PENDING = "Pending"
 ITEM_PREPARED = "Prepared"
 ITEM_REJECTED = "Rejected"
 ITEM_APPROVED_LEGACY = "Approved"
+ITEM_APPROVED = ITEM_PREPARED
 
 
 class SparePartRequest(Document):
