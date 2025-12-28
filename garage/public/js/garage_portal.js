@@ -3097,7 +3097,7 @@ function cloneBrandModelMap(map) {
                         noteCell.textContent = '-';
                     }
                     return [
-                        this.renderLink('Garage Service Order', row.name),
+                        this.renderLink('Repair Orders', row.name),
                         row.customer || '-',
                         noteCell,
                         row.status || '-',
@@ -3249,7 +3249,7 @@ function cloneBrandModelMap(map) {
                 const primaryOrderName = orderName || group.requests[0]?.name || group.key;
                 if (orderName) {
                     orderCell.appendChild(
-                        this.renderLink('Garage Service Order', orderName, primaryOrderName || '-')
+                        this.renderLink('Repair Orders', orderName, primaryOrderName || '-')
                     );
                 } else {
                     const label = document.createElement('span');
@@ -3533,7 +3533,7 @@ function cloneBrandModelMap(map) {
                 const orderCell = document.createElement('td');
                 if (row.service_order) {
                     orderCell.appendChild(
-                        this.renderLink('Garage Service Order', row.service_order, row.service_order)
+                        this.renderLink('Repair Orders', row.service_order, row.service_order)
                     );
                 } else {
                     orderCell.textContent = '-';
@@ -4747,7 +4747,7 @@ function cloneBrandModelMap(map) {
                 matching.forEach((order) => {
                     const row = document.createElement('tr');
                     const cells = [
-                        this.renderLink('Garage Service Order', order.name),
+                        this.renderLink('Repair Orders', order.name),
                         order.customer || '-',
                         order.vehicle || '-',
                         order.priority || '-',

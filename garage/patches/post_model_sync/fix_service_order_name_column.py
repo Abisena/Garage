@@ -1,4 +1,4 @@
-"""Ensure Garage Service Order name column supports branch-prefixed naming."""
+"""Ensure Repair Orders name column supports branch-prefixed naming."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import frappe
 
 
 def execute() -> None:
-    """Alter the Garage Service Order name column to VARCHAR when needed."""
+    """Alter the Repair Orders name column to VARCHAR when needed."""
 
     if frappe.db.db_type != "mariadb":
         return
@@ -14,7 +14,7 @@ def execute() -> None:
     db_name = getattr(frappe.conf, "db_name", None)
     if not db_name:
         return
-    table_name = "tabGarage Service Order"
+    table_name = "tabRepair Orders"
 
     column_info = frappe.db.sql(
         """

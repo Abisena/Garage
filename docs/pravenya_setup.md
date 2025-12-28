@@ -10,10 +10,10 @@ awal sehingga Anda dapat menguji proses end-to-end langsung dari Desk.
 | Langkah Flow | DocType | Keterangan |
 | --- | --- | --- |
 | Customer Datang | **Garage Customer**, **Garage Vehicle** | Mencatat identitas pelanggan dan kendaraan. |
-| Create Service Booking | **Garage Service Order** | Menentukan tipe layanan, prioritas, dan asesor. |
-| Vehicle Inspection | **Garage Vehicle Inspection** (link ke service order, memuat child table **Garage Service Order Inspection**) | Merekam temuan inspeksi dan severity tanpa menambah field di service order. |
-| Create Job Card / Work Order | Field status pada **Garage Service Order** | Status `job_card_status` dan `work_order_status` melacak progres. |
-| Estimate Biaya & Approval | Field nilai dan jadwal pembayaran di **Garage Service Order** | Menyimpan estimasi biaya, persetujuan, dan termin. |
+| Create Service Booking | **Repair Orders** | Menentukan tipe layanan, prioritas, dan asesor. |
+| Vehicle Inspection | **Inspection & Diagnosis** (link ke service order, memuat child table **Garage Service Order Inspection**) | Merekam temuan inspeksi dan severity tanpa menambah field di service order. |
+| Create Job Card / Work Order | Field status pada **Repair Orders** | Status `job_card_status` dan `work_order_status` melacak progres. |
+| Estimate Biaya & Approval | Field nilai dan jadwal pembayaran di **Repair Orders** | Menyimpan estimasi biaya, persetujuan, dan termin. |
 | Work Order & Pengambilan Material | **Garage Procurement Order**, **Garage Stock Movement** | Mencatat pengadaan dan pergerakan stok. |
 | Proses Pengerjaan | Tabel anak **Garage Service Order Progress** | Mencatat log pengerjaan teknisi. |
 | Quality Check | Tabel anak **Garage Service Order Quality** | Checklist QC dan hasilnya. |
@@ -71,7 +71,7 @@ yang tampil di portal sesuai cabang masing-masing.
 Lakukan langkah berikut untuk menguji alur layanan bengkel secara manual:
 
 1. **Customer & Kendaraan** – buat record `Garage Customer` kemudian `Garage Vehicle`.
-2. **Service Order** – buka DocType `Garage Service Order`, pilih customer, kendaraan,
+2. **Service Order** – buka DocType `Repair Orders`, pilih customer, kendaraan,
    service advisor, dan isi tabel inspeksi + parts yang dibutuhkan.
 3. **Estimasi & Approval** – masukkan nilai estimasi, tandai `Customer Approved`
    bila setuju, dan isi tabel Payment Schedule jika menggunakan termin.
@@ -98,7 +98,7 @@ Selain via Desk, admin dapat mengaktifkan halaman website `/garage` untuk tim
 front-office. Portal ini memakai API `garage.api.portal` sehingga seluruh data
 yang dimasukkan tetap muncul di Desk. Pastikan user yang mengakses portal
 memiliki permission yang sama seperti ketika bekerja di Desk (mis. Service
-Advisor dapat membuat `Garage Service Order`, Cashier dapat membuat `Garage
+Advisor dapat membuat `Repair Orders`, Cashier dapat membuat `Garage
 Payment Entry`, dan seterusnya).
 
 ## 6. Integrasi dengan Engine Python

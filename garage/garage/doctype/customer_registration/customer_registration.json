@@ -416,7 +416,7 @@
       "fieldname": "service_order",
       "fieldtype": "Link",
       "label": "Service Order",
-      "options": "Garage Service Order",
+      "options": "Repair Orders",
       "read_only": 1
     }
   ],
