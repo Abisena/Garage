@@ -44,7 +44,7 @@
       "fieldname": "status",
       "fieldtype": "Select",
       "label": "Status",
-      "options": "Pending\nPartial Approve\nPartial Reject\nApproved\nRejected",
+      "options": "Pending\nPartial Approve\nPartial Reject\nPrepared\nRejected",
       "default": "Pending",
       "in_list_view": 1
     },

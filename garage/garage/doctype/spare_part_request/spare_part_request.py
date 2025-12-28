@@ -13,17 +13,19 @@ from garage.garage.doctype.garage_service_order.garage_service_order import (
 )
 
 ITEM_PENDING = "Pending"
-ITEM_APPROVED = "Approved"
+ITEM_PREPARED = "Prepared"
 ITEM_REJECTED = "Rejected"
+ITEM_APPROVED_LEGACY = "Approved"
 
 
 class SparePartRequest(Document):
     """Represent a collection of requested spare parts awaiting approval."""
 
     status_map = {
-        ITEM_PENDING: "Pending Check",
-        ITEM_APPROVED: "Issued",
+        ITEM_PENDING: "Request Spare Part",
+        ITEM_PREPARED: "Prepared",
         ITEM_REJECTED: "Rejected",
+        ITEM_APPROVED_LEGACY: "Prepared",
     }
 
     def before_insert(self) -> None:  # pragma: no cover - frappe lifecycle hook
@@ -40,12 +42,12 @@ class SparePartRequest(Document):
         """Update the approval status for specific items.
 
         Creating a stock issue is handled automatically when items move to
-        "Approved" status. Existing issue documents are left untouched to avoid
+        "Prepared" status. Existing issue documents are left untouched to avoid
         double counting.
         """
 
-        normalized_status = status.strip().title()
-        if normalized_status not in {ITEM_APPROVED, ITEM_REJECTED}:
+        normalized_status = normalize_approval_status(status)
+        if normalized_status not in {ITEM_PREPARED, ITEM_REJECTED}:
             frappe.throw(_("Status {0} tidak diizinkan.").format(status))
 
         changed = False
@@ -62,7 +64,10 @@ class SparePartRequest(Document):
 
     # internal helpers
     def _sync_status_from_items(self) -> None:
-        statuses = [row.approval_status or ITEM_PENDING for row in self.items or []]
+        statuses = [
+            normalize_approval_status(row.approval_status or ITEM_PENDING)
+            for row in self.items or []
+        ]
         self.status = derive_request_status(statuses, getattr(self, "status", None))
 
     def _sync_service_order_parts(self) -> None:
@@ -94,7 +99,8 @@ class SparePartRequest(Document):
                 continue
 
             qty = flt(item.qty or 0)
-            status = self.status_map.get(item.approval_status or ITEM_PENDING, "Pending Check")
+            normalized_status = normalize_approval_status(item.approval_status or ITEM_PENDING)
+            status = self.status_map.get(normalized_status, "Request Spare Part")
             warehouse = cstr(item.source_warehouse or "").strip() or None
 
             row = existing_parts.get(item_code)
@@ -145,7 +151,7 @@ class SparePartRequest(Document):
             return False
 
         row.approval_status = status
-        if status == ITEM_APPROVED and not row.stock_movement:
+        if status == ITEM_PREPARED and not row.stock_movement:
             row.stock_movement = self._issue_stock(row)
         return True
 
@@ -177,27 +183,34 @@ class SparePartRequest(Document):
         return movement.name
 
 
+def normalize_approval_status(status: str) -> str:
+    normalized = status.strip().title()
+    if normalized == ITEM_APPROVED_LEGACY:
+        return ITEM_PREPARED
+    return normalized
+
+
 def derive_request_status(statuses: Iterable[str], base_status: str | None = None) -> str:
-    collected = [status.strip() for status in statuses if status]
+    collected = [normalize_approval_status(status) for status in statuses if status]
     if not collected:
         return base_status or ITEM_PENDING
 
     normalized = [status.lower() for status in collected]
 
     has_rejected = any(status == ITEM_REJECTED.lower() for status in normalized)
-    has_approved = any(status == ITEM_APPROVED.lower() for status in normalized)
-    has_pending = any(status not in {ITEM_REJECTED.lower(), ITEM_APPROVED.lower()} for status in normalized)
+    has_prepared = any(status == ITEM_PREPARED.lower() for status in normalized)
+    has_pending = any(status not in {ITEM_REJECTED.lower(), ITEM_PREPARED.lower()} for status in normalized)
 
-    if has_rejected and (has_approved or has_pending):
+    if has_rejected and (has_prepared or has_pending):
         return "Partial Reject"
-    if has_rejected and not (has_approved or has_pending):
+    if has_rejected and not (has_prepared or has_pending):
         return "Rejected"
-    if has_approved and has_pending:
+    if has_prepared and has_pending:
         return "Partial Approve"
     if has_pending:
         return ITEM_PENDING
-    if has_approved:
-        return ITEM_APPROVED
+    if has_prepared:
+        return ITEM_PREPARED
 
     return base_status or ITEM_PENDING
 
