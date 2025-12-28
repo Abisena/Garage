@@ -23,7 +23,7 @@ frappe.ui.form.on('Spare Part Request', {
       });
     };
 
-    frm.add_custom_button(__('Approve Selected'), () => updateSelected('Approved'));
+    frm.add_custom_button(__('Prepare Selected'), () => updateSelected('Prepared'));
     frm.add_custom_button(__('Reject Selected'), () => updateSelected('Rejected'));
   },
 });

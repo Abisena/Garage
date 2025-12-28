@@ -23,8 +23,9 @@ PART_PENDING_STATUSES = {
     "in transit",
     "backordered",
     "re-request",
+    "request spare part",
 }
-PART_COMPLETED_STATUSES = {"received", "issued", "approved"}
+PART_COMPLETED_STATUSES = {"received", "issued", "prepared", "approved"}
 PART_REJECTED_STATUSES = {"rejected"}
 PART_CANCELLED_STATUSES = {"cancelled"}
 
@@ -37,6 +38,7 @@ class GarageServiceOrder(Document):
 
     def validate(self) -> None:
         self._update_display_fields()
+        self._apply_bundle_items()
         self._update_part_charge_status()
         self._sync_spare_part_request()
 
@@ -76,6 +78,28 @@ class GarageServiceOrder(Document):
 
         display_value = " • ".join(vehicle_bits) if vehicle_bits else None
         self.vehicle_display = display_value or self.vehicle
+
+    def _apply_bundle_items(self) -> None:
+        if not getattr(self, "service_order_type", None):
+            return
+
+        required_parts = list(getattr(self, "required_parts", []) or [])
+        if required_parts:
+            return
+
+        bundle_items = get_bundle_items_for_service_type(self.service_order_type)
+        if not bundle_items:
+            return
+
+        for item in bundle_items:
+            self.append(
+                "required_parts",
+                {
+                    "item_code": item.get("item_code"),
+                    "qty": item.get("qty") or 1,
+                    "stock_status": "Request Spare Part",
+                },
+            )
 
     def _update_part_charge_status(self) -> None:
         """Derive the aggregated sparepart/material charge status."""
@@ -198,3 +222,52 @@ def derive_part_charge_status(
     if has_active:
         return "Pending"
     return base_status or "Not Started"
+
+
+def get_bundle_items_for_service_type(service_order_type: str) -> list[dict[str, object]]:
+    if not service_order_type:
+        return []
+
+    try:
+        service_type = frappe.get_doc("Garage Service Type", service_order_type)
+    except Exception:
+        return []
+
+    bundle_name = getattr(service_type, "product_bundle", None)
+    if not bundle_name:
+        return []
+
+    try:
+        bundle = frappe.get_doc("Product Bundle", bundle_name)
+    except Exception:
+        return []
+
+    items = []
+    for row in getattr(bundle, "items", []) or []:
+        item_code = getattr(row, "item_code", None)
+        if not item_code:
+            continue
+        items.append(
+            {
+                "item_code": item_code,
+                "qty": getattr(row, "qty", None) or 1,
+            }
+        )
+    return items
+
+
+@frappe.whitelist()
+def get_bundle_items(service_order_type: str | None = None) -> dict[str, object]:
+    items = get_bundle_items_for_service_type(service_order_type or "")
+    bundle_name = None
+    if service_order_type:
+        try:
+            service_type = frappe.get_doc("Garage Service Type", service_order_type)
+            bundle_name = getattr(service_type, "product_bundle", None)
+        except Exception:
+            bundle_name = None
+
+    return {
+        "bundle": bundle_name,
+        "items": items,
+    }
