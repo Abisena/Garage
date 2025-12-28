@@ -101,6 +101,8 @@ class SparePartRequest(Document):
 
             qty = flt(item.qty or 0)
             normalized_status = normalize_approval_status(item.approval_status or ITEM_PENDING)
+            if normalized_status == ITEM_PENDING and self.status == ITEM_PREPARED:
+                normalized_status = ITEM_PREPARED
             status = self.status_map.get(normalized_status, "Request Spare Part")
             warehouse = cstr(item.source_warehouse or "").strip() or None
 
