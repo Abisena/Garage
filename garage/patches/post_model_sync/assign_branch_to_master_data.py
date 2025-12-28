@@ -55,7 +55,7 @@ def execute() -> None:
         branch = None
         try:
             branch = frappe.db.get_value(
-                "Repair Orders",
+                "Garage Service Order",
                 {"customer": name, "branch": ("!=", "")},
                 "branch",
                 order_by="modified desc",
@@ -86,7 +86,7 @@ def execute() -> None:
         branch = None
         try:
             branch = frappe.db.get_value(
-                "Repair Orders",
+                "Garage Service Order",
                 {"vehicle": vehicle.get("name"), "branch": ("!=", "")},
                 "branch",
                 order_by="modified desc",
@@ -130,7 +130,7 @@ def execute() -> None:
         if approval.get("service_order"):
             try:
                 branch = frappe.db.get_value(
-                    "Repair Orders",
+                    "Garage Service Order",
                     approval["service_order"],
                     "branch",
                 )

@@ -36,7 +36,7 @@ export function ProcessFlow() {
     },
     {
       number: 2,
-      title: 'Inspection & Diagnosis',
+      title: 'Garage Vehicle Inspection',
       department: 'Mekanik',
       icon: Search,
       color: 'bg-slate-600',
@@ -55,7 +55,7 @@ export function ProcessFlow() {
     },
     {
       number: 3,
-      title: 'Repair Orders',
+      title: 'Garage Service Order',
       department: 'Front Office',
       icon: FileText,
       color: 'bg-blue-500',
@@ -401,7 +401,7 @@ export function ProcessFlow() {
             <div className="flex items-center gap-4 bg-white rounded-lg p-4 border border-slate-200">
               <div className="bg-slate-600 text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">2</div>
               <div className="flex-1">
-                <h4 className="text-slate-800">Inspection & Diagnosis</h4>
+                <h4 className="text-slate-800">Garage Vehicle Inspection</h4>
                 <p className="text-slate-600">30-60 menit</p>
               </div>
               <ArrowRight className="text-slate-400" />
@@ -410,7 +410,7 @@ export function ProcessFlow() {
             <div className="flex items-center gap-4 bg-white rounded-lg p-4 border border-slate-200">
               <div className="bg-blue-500 text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">3</div>
               <div className="flex-1">
-                <h4 className="text-slate-800">Repair Orders + SPK</h4>
+                <h4 className="text-slate-800">Garage Service Order + SPK</h4>
                 <p className="text-slate-600">15-30 menit</p>
               </div>
               <ArrowRight className="text-slate-400" />

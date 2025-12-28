@@ -1,1 +1,1 @@
-"""DocType module for Repair Orders."""
+"""DocType module for Garage Service Order."""

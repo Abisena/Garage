@@ -24,7 +24,7 @@ const DEFAULT_INSPECTION_ITEMS = [
   "Exterior - Mirrors",
 ];
 
-frappe.ui.form.on("Inspection & Diagnosis", {
+frappe.ui.form.on("Garage Vehicle Inspection", {
   refresh(frm) {
     if (!frm.is_new() || (frm.doc.inspection_items || []).length > 0) {
       return;

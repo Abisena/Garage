@@ -52,7 +52,7 @@ class GarageDivisionRequest(Document):
                 base = f"{base} - {self.reference_name}"
             self.request_title = base
 
-        if not self.request_purpose and self.reference_type == "Repair Orders" and self.reference_name:
+        if not self.request_purpose and self.reference_type == "Garage Service Order" and self.reference_name:
             self.request_purpose = _(
                 "Pemenuhan kebutuhan sparepart untuk service order {0}."
             ).format(self.reference_name)

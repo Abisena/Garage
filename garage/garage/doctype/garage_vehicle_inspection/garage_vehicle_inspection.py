@@ -48,7 +48,7 @@ class GarageVehicleInspection(Document):
             return
 
         try:
-            order = frappe.get_doc("Repair Orders", self.service_order)
+            order = frappe.get_doc("Garage Service Order", self.service_order)
         except DoesNotExistError:
             return
 
@@ -74,7 +74,7 @@ class GarageVehicleInspection(Document):
             return
 
         try:
-            order = frappe.get_doc("Repair Orders", self.service_order)
+            order = frappe.get_doc("Garage Service Order", self.service_order)
         except DoesNotExistError:
             return
 

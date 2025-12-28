@@ -53,7 +53,7 @@
       "fieldname": "reference_type",
       "fieldtype": "Select",
       "label": "Dokumen Referensi",
-      "options": "Repair Orders\nGarage Spare Part Order\nGarage Procurement Order\nGarage Stock Movement\nGarage Sales Invoice"
+      "options": "Garage Service Order\nGarage Spare Part Order\nGarage Procurement Order\nGarage Stock Movement\nGarage Sales Invoice"
     },
     {
       "fieldname": "reference_name",

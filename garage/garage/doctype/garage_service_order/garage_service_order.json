@@ -230,7 +230,7 @@
       "fieldname": "inspection_record",
       "fieldtype": "Link",
       "label": "Inspection Document",
-      "options": "Inspection & Diagnosis",
+      "options": "Garage Vehicle Inspection",
       "read_only": 1
     },
     {
@@ -271,7 +271,7 @@
   "max_attachments": 0,
   "modified": "2024-06-02 00:00:00.000000",
   "module": "Garage",
-  "name": "Repair Orders",
+  "name": "Garage Service Order",
   "naming_rule": "",
   "owner": "Administrator",
   "permissions": [

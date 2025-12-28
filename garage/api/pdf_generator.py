@@ -13,7 +13,7 @@ def generate_service_estimate_pdf(order_id):
     
     try:
         # Get order data
-        order = frappe.get_doc("Repair Orders", order_id)
+        order = frappe.get_doc("Garage Service Order", order_id)
         
         # Format currency helper
         def format_currency(value):
@@ -261,7 +261,7 @@ def generate_service_estimate_pdf(order_id):
                 'is_private': 0,
                 'content': html_content,
                 'folder': 'Home',
-                'attached_to_doctype': 'Repair Orders',
+                'attached_to_doctype': 'Garage Service Order',
                 'attached_to_name': order.name
             })
             file_doc.save(ignore_permissions=True)
@@ -281,7 +281,7 @@ def generate_service_estimate_pdf(order_id):
             'is_private': 0,
             'content': pdf_content,
             'folder': 'Home',
-            'attached_to_doctype': 'Repair Orders',
+            'attached_to_doctype': 'Garage Service Order',
             'attached_to_name': order.name
         })
         file_doc.save(ignore_permissions=True)

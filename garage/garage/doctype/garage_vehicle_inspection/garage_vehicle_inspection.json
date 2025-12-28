@@ -26,7 +26,7 @@
       "fieldname": "service_order",
       "fieldtype": "Link",
       "label": "Service Order",
-      "options": "Repair Orders",
+      "options": "Garage Service Order",
       "reqd": 1,
       "in_list_view": 1
     },
@@ -79,7 +79,7 @@
   "max_attachments": 0,
   "modified": "2024-06-02 00:00:00.000000",
   "module": "Garage",
-  "name": "Inspection & Diagnosis",
+  "name": "Garage Vehicle Inspection",
   "naming_rule": "",
   "owner": "Administrator",
   "permissions": [
