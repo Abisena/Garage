@@ -19,14 +19,17 @@
     "service_advisor_section",
     "service_advisor",
     "parts_installation_approved",
+    "service_advisor_column_break",
     "qc_inspector",
     "inspection_date",
+    "service_advisor_instructions_section",
     "qc_instructions",
     "mechanical_section",
     "brakes_functioning_properly",
     "engine_starts_smoothly",
     "no_fluid_leaks_detected",
     "lights_and_signals_functional",
+    "mechanical_column_break",
     "battery_holding_charge",
     "power_steering_responsive",
     "suspension_normal",
@@ -35,17 +38,20 @@
     "windows_and_mirrors_cleaned",
     "exterior_washed_and_dried",
     "interior_vacuumed_and_wiped",
+    "aesthetics_column_break",
     "interior_disinfected",
     "interior_reconditioned",
     "interior_air_freshener",
     "documentation_section",
     "all_work_order_documented",
     "spare_parts_installation_verified",
+    "documentation_column_break",
     "photos_before_after_taken",
     "test_drive_section",
     "acceleration_smooth_responsive",
     "braking_effective_without_pulling",
     "no_unusual_noise_during_drive",
+    "test_drive_column_break",
     "dry_and_wet_brakes_tested",
     "dashboard_indicators_normal",
     "qc_notes_section",
@@ -87,6 +93,10 @@
       "label": "Installed spare parts verified"
     },
     {
+      "fieldname": "service_advisor_column_break",
+      "fieldtype": "Column Break"
+    },
+    {
       "fieldname": "qc_inspector",
       "fieldtype": "Link",
       "label": "QC Inspector",
@@ -98,6 +108,10 @@
       "fieldtype": "Date",
       "label": "Inspection Date",
       "default": "Today"
+    },
+    {
+      "fieldname": "service_advisor_instructions_section",
+      "fieldtype": "Section Break"
     },
     {
       "fieldname": "qc_instructions",
@@ -133,6 +147,10 @@
       "fieldname": "lights_and_signals_functional",
       "fieldtype": "Check",
       "label": "All lights and signals functional"
+    },
+    {
+      "fieldname": "mechanical_column_break",
+      "fieldtype": "Column Break"
     },
     {
       "default": 0,
@@ -182,6 +200,10 @@
       "label": "Interior vacuumed and wiped"
     },
     {
+      "fieldname": "aesthetics_column_break",
+      "fieldtype": "Column Break"
+    },
+    {
       "default": 0,
       "fieldname": "interior_disinfected",
       "fieldtype": "Check",
@@ -217,6 +239,10 @@
       "label": "Spare parts installation verified"
     },
     {
+      "fieldname": "documentation_column_break",
+      "fieldtype": "Column Break"
+    },
+    {
       "default": 0,
       "fieldname": "photos_before_after_taken",
       "fieldtype": "Check",
@@ -244,6 +270,10 @@
       "fieldname": "no_unusual_noise_during_drive",
       "fieldtype": "Check",
       "label": "No unusual noise during drive"
+    },
+    {
+      "fieldname": "test_drive_column_break",
+      "fieldtype": "Column Break"
     },
     {
       "default": 0,
