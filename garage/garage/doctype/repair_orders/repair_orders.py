@@ -1,4 +1,4 @@
-"""Repair Orders DocType controller wrapper."""
+"""Garage Service Order DocType controller wrapper."""
 
 from __future__ import annotations
 
@@ -11,5 +11,5 @@ from garage.garage.doctype.garage_service_order.garage_service_order import (
 
 
 class RepairOrders(GarageServiceOrder):
-    """Expose the Repair Orders controller using the expected module path."""
+    """Expose the Garage Service Order controller using the expected module path."""
 

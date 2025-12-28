@@ -1,4 +1,4 @@
-"""Garage DocType controller for Repair Orders."""
+"""Garage DocType controller for Garage Service Order."""
 
 from __future__ import annotations
 
@@ -157,7 +157,7 @@ class GarageServiceOrder(Document):
         if not required_parts:
             return
 
-        if not frappe.db.exists("Repair Orders", self.name):
+        if not frappe.db.exists("Garage Service Order", self.name):
             return
 
         request_name = frappe.db.get_value("Spare Part Request", {"service_order": self.name}, "name")

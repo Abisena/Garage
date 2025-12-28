@@ -47,7 +47,7 @@ TECHNICIAN_ROLE_NAMES = {"Technician", "Teknisi", "Mechanic", "Mekanik"}
 DEFAULT_TECHNICIAN_CAPACITY = 3
 
 BRANCH_FILTER_FIELDS: Mapping[str, str] = {
-    "Repair Orders": "branch",
+    "Garage Service Order": "branch",
     "Garage Spare Part Order": "branch",
     "Garage Spare Part Approval": "branch",
     "Garage Sales Invoice": "branch",
@@ -66,7 +66,7 @@ BRANCH_FILTER_FIELDS: Mapping[str, str] = {
 BRANCH_ADMIN_ROLES = {"System Manager", "Head Manager Bengkel"}
 
 DATE_FILTER_FIELDS: Mapping[str, str] = {
-    "Repair Orders": "service_booking_date",
+    "Garage Service Order": "service_booking_date",
     "Garage Spare Part Order": "order_date",
     "Garage Procurement Order": "order_date",
     "Garage Stock Movement": "posting_date",
@@ -407,7 +407,7 @@ def _all_spare_requests_issued(service_order: str) -> bool:
                 fields=["stock_status"],
                 filters=[
                     ["parent", "=", service_order],
-                    ["parenttype", "=", "Repair Orders"],
+                    ["parenttype", "=", "Garage Service Order"],
                     ["docstatus", "<", 2],
                 ],
             )
@@ -571,7 +571,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "notes",
         },
     },
-    "Repair Orders": {
+    "Garage Service Order": {
         "fields": {
             "branch",
             "service_order_type",
@@ -1929,7 +1929,7 @@ def _apply_defaults(doctype: str, doc: frappe.Document) -> None:
         if default_branch:
             doc.branch = default_branch
 
-    if doctype == "Repair Orders":
+    if doctype == "Garage Service Order":
         if not doc.service_booking_date:
             doc.service_booking_date = now_datetime()
         if not doc.status or doc.status in {"", "Draft"}:
@@ -2541,7 +2541,7 @@ def _technician_load_map(
     order_placeholders = ", ".join(["%s"] * len(order_statuses)) if order_statuses else ""
 
     conditions = [
-        "task.parenttype = 'Repair Orders'",
+        "task.parenttype = 'Garage Service Order'",
         "COALESCE(task.technician, '') != ''",
         f"COALESCE(task.status, '') in ({status_placeholders})",
     ]
@@ -2556,14 +2556,14 @@ def _technician_load_map(
         params.append(exclude_order)
 
     branch_value = (branch or "").strip()
-    if branch_value and _doctype_has_field("Repair Orders", "branch"):
+    if branch_value and _doctype_has_field("Garage Service Order", "branch"):
         conditions.append("COALESCE(so.branch, '') = %s")
         params.append(branch_value)
 
     query = f"""
         select task.technician, count(*) as total
         from `tabGarage Service Order Task` task
-        inner join `tabRepair Orders` so on so.name = task.parent
+        inner join `tabGarage Service Order` so on so.name = task.parent
         where {' and '.join(conditions)}
         group by task.technician
     """
@@ -3147,7 +3147,7 @@ def portal_bootstrap(
         branch=branch_filter,
     )
     service_orders = _list_dicts(
-        "Repair Orders",
+        "Garage Service Order",
         [
             "name",
             "status",
@@ -3172,7 +3172,7 @@ def portal_bootstrap(
         date_field="service_booking_date",
     )
     open_service_orders = _list_dicts(
-        "Repair Orders",
+        "Garage Service Order",
         [
             "name",
             "status",
@@ -3223,7 +3223,7 @@ def portal_bootstrap(
             "source",
         ],
         filters=[
-            ["parenttype", "=", "Repair Orders"],
+            ["parenttype", "=", "Garage Service Order"],
             ["stock_status", "in", SPARE_REQUEST_ACTIVE_STATUSES],
         ],
         limit=200,
@@ -3233,7 +3233,7 @@ def portal_bootstrap(
     service_tasks = _list_dicts(
         "Garage Service Order Task",
         ["name", "parent", "task", "status", "technician"],
-        filters=[["parenttype", "=", "Repair Orders"]],
+        filters=[["parenttype", "=", "Garage Service Order"]],
         limit=500,
         branch=branch_filter,
         date_range=date_range,
@@ -3474,7 +3474,7 @@ def portal_bootstrap(
 
     status_summary = {
         "service_orders": _group_status(
-            "Repair Orders",
+            "Garage Service Order",
             branch=branch_filter,
             date_range=date_range,
             date_field="service_booking_date",
@@ -4269,7 +4269,7 @@ def _ensure_billing_placeholders(
         invoice_doc.posting_date = nowdate()
         invoice_doc.set_posting_time = 1
         invoice_doc.po_no = doc.name
-        invoice_doc.remarks = _("Auto-generated from Repair Orders {0}").format(doc.name)
+        invoice_doc.remarks = _("Auto-generated from Garage Service Order {0}").format(doc.name)
 
         # Safe due date handling
         due = _sanitize_iso_date(getattr(doc, "estimated_delivery_date", None)) or nowdate()
@@ -4429,7 +4429,7 @@ def _ensure_billing_placeholders(
 
 @frappe.whitelist()
 def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, Any]:
-    """Persist portal/localStorage work order state into Repair Orders
+    """Persist portal/localStorage work order state into Garage Service Order
     without triggering timestamp conflicts, workflow validation, or heavy save().
     """
 
@@ -4457,7 +4457,7 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
             continue
 
         try:
-            doc = _get_doc("Repair Orders", identifier)
+            doc = _get_doc("Garage Service Order", identifier)
         except Exception:
             results.append({"status": "missing", "order_id": identifier})
             continue
@@ -4731,7 +4731,7 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
     
     # Fetch service orders
     orders = _list_dicts(
-        "Repair Orders",
+        "Garage Service Order",
         fields,
         filters=db_filters,
         limit=100,
@@ -4752,7 +4752,7 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
             "Garage Service Order Part",
             ["parent", "stock_status"],
             filters=[
-                ["parenttype", "=", "Repair Orders"],
+                ["parenttype", "=", "Garage Service Order"],
                 ["parent", "in", order_names],
             ],
             limit=max(500, len(order_names) * 25),
@@ -4850,7 +4850,7 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
             if frappe.db.table_exists("Garage Service Task"):
                 order["tasks_count"] = frappe.db.count(
                     "Garage Service Task",
-                    {"parent": order["name"], "parenttype": "Repair Orders"}
+                    {"parent": order["name"], "parenttype": "Garage Service Order"}
                 )
         except Exception:
             pass
@@ -4860,7 +4860,7 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
             if frappe.db.table_exists("Garage Required Part"):
                 order["parts_count"] = frappe.db.count(
                     "Garage Required Part",
-                    {"parent": order["name"], "parenttype": "Repair Orders"}
+                    {"parent": order["name"], "parenttype": "Garage Service Order"}
                 )
         except Exception:
             pass
@@ -4879,7 +4879,7 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
                     SELECT COUNT(DISTINCT technician) 
                     FROM `tabGarage Service Task` 
                     WHERE parent = %s 
-                    AND parenttype = 'Repair Orders'
+                    AND parenttype = 'Garage Service Order'
                     AND technician IS NOT NULL
                     AND technician != ''
                 """, (order["name"],))
@@ -4927,7 +4927,7 @@ def get_spare_part_detail(name: str) -> Dict[str, Any]:
     spare_part = spare_parts[0]
 
     request_filters: List[List[Any]] = [
-        ["parenttype", "=", "Repair Orders"],
+        ["parenttype", "=", "Garage Service Order"],
         ["stock_status", "in", SPARE_REQUEST_ACTIVE_STATUSES],
     ]
 
@@ -4963,7 +4963,7 @@ def get_spare_part_detail(name: str) -> Dict[str, Any]:
         parent_names = sorted({req.get("parent") for req in open_requests if req.get("parent")})
         if parent_names:
             service_orders = _list_dicts(
-                "Repair Orders",
+                "Garage Service Order",
                 [
                     "name",
                     "customer",
@@ -4982,7 +4982,7 @@ def get_spare_part_detail(name: str) -> Dict[str, Any]:
                 "Garage Service Order Part",
                 ["parent", "stock_status"],
                 filters=[
-                    ["parenttype", "=", "Repair Orders"],
+                    ["parenttype", "=", "Garage Service Order"],
                     ["parent", "in", parent_names],
                 ],
                 limit=max(200, len(parent_names) * 25),
@@ -5077,7 +5077,7 @@ def list_spare_parts(
             "creation",
         ],
         filters=[
-            ["parenttype", "=", "Repair Orders"],
+            ["parenttype", "=", "Garage Service Order"],
             ["stock_status", "in", SPARE_REQUEST_ACTIVE_STATUSES],
         ],
         order_by="creation asc",
@@ -5106,17 +5106,17 @@ def list_spare_parts(
             "service_advisor",
             "branch",
         ]
-        if _doctype_has_field("Repair Orders", "assigned_mechanic"):
+        if _doctype_has_field("Garage Service Order", "assigned_mechanic"):
             service_order_fields.append("assigned_mechanic")
-        if _doctype_has_field("Repair Orders", "assigned_mechanic_name"):
+        if _doctype_has_field("Garage Service Order", "assigned_mechanic_name"):
             service_order_fields.append("assigned_mechanic_name")
-        if _doctype_has_field("Repair Orders", "mechanic_in_charge"):
+        if _doctype_has_field("Garage Service Order", "mechanic_in_charge"):
             service_order_fields.append("mechanic_in_charge")
-        if _doctype_has_field("Repair Orders", "mechanic_in_charge_name"):
+        if _doctype_has_field("Garage Service Order", "mechanic_in_charge_name"):
             service_order_fields.append("mechanic_in_charge_name")
 
         service_orders = _list_dicts(
-            "Repair Orders",
+            "Garage Service Order",
             service_order_fields,
             filters=[["name", "in", parent_order_names]],
             limit=len(parent_order_names),
@@ -5203,7 +5203,7 @@ def list_spare_parts(
                 "Garage Service Order Task",
                 ["name", "parent", "task", "status", "technician"],
                 filters=[
-                    ["parenttype", "=", "Repair Orders"],
+                    ["parenttype", "=", "Garage Service Order"],
                     ["parent", "in", list(allowed_parents)],
                 ],
                 limit=500,
@@ -5502,15 +5502,15 @@ def list_spare_part_requests(branch: Optional[str] = None) -> Dict[str, Any]:
         "branch",
         "service_advisor",
     ]
-    if _doctype_has_field("Repair Orders", "assigned_mechanic_name"):
+    if _doctype_has_field("Garage Service Order", "assigned_mechanic_name"):
         service_order_fields.append("assigned_mechanic_name")
-    if _doctype_has_field("Repair Orders", "mechanic_in_charge_name"):
+    if _doctype_has_field("Garage Service Order", "mechanic_in_charge_name"):
         service_order_fields.append("mechanic_in_charge_name")
 
     service_order_rows = []
     if service_order_names:
         service_order_rows = _list_dicts(
-            "Repair Orders",
+            "Garage Service Order",
             service_order_fields,
             filters=[["name", "in", service_order_names]],
             branch=branch_filter,
@@ -5686,7 +5686,7 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
         frappe.throw(_("Service Order ID diperlukan."))
     
     # Get service order document
-    doc = _get_doc("Repair Orders", order_id)
+    doc = _get_doc("Garage Service Order", order_id)
     
     # Build result
     result = {
@@ -5721,12 +5721,12 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
     }
 
     inspection_name = getattr(doc, "inspection_record", None) or frappe.db.exists(
-        "Inspection & Diagnosis", {"service_order": doc.name}
+        "Garage Vehicle Inspection", {"service_order": doc.name}
     )
 
     if inspection_name:
         try:
-            inspection_doc = frappe.get_doc("Inspection & Diagnosis", inspection_name)
+            inspection_doc = frappe.get_doc("Garage Vehicle Inspection", inspection_name)
             result["inspection_record"] = inspection_doc.name
 
             if getattr(doc, "inspection_record", None) != inspection_doc.name:
@@ -5911,7 +5911,7 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
     auto_assignments: List[Dict[str, Any]] = []
 
     # Get the document
-    doc = _get_doc("Repair Orders", order_id)
+    doc = _get_doc("Garage Service Order", order_id)
 
     # Update main fields
     allowed_fields = {
@@ -5967,13 +5967,13 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
     
     def _get_or_create_inspection(order: frappe.Document) -> frappe.Document:
         existing_name = frappe.db.exists(
-            "Inspection & Diagnosis", {"service_order": order.name}
+            "Garage Vehicle Inspection", {"service_order": order.name}
         )
 
         if existing_name:
-            return frappe.get_doc("Inspection & Diagnosis", existing_name)
+            return frappe.get_doc("Garage Vehicle Inspection", existing_name)
 
-        inspection_doc = frappe.new_doc("Inspection & Diagnosis")
+        inspection_doc = frappe.new_doc("Garage Vehicle Inspection")
         inspection_doc.service_order = order.name
         inspection_doc.branch = getattr(order, "branch", None)
         inspection_doc.vehicle = getattr(order, "vehicle", None)
@@ -5996,7 +5996,7 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
         if inspection_payload["inspection_items"] is not None:
             try:
                 inspection_doc.inspection_items = []
-                child_config = ALLOWED_DOCS["Repair Orders"]["children"]["inspection_items"]
+                child_config = ALLOWED_DOCS["Garage Service Order"]["children"]["inspection_items"]
                 inspection_items = _sanitize_child_rows(
                     "inspection_items",
                     inspection_payload["inspection_items"],
@@ -6027,7 +6027,7 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
         try:
             if hasattr(doc, "service_tasks"):
                 doc.service_tasks = []
-                child_config = ALLOWED_DOCS["Repair Orders"]["children"]["service_tasks"]
+                child_config = ALLOWED_DOCS["Garage Service Order"]["children"]["service_tasks"]
                 tasks = _sanitize_child_rows("service_tasks", data["service_tasks"], child_config)
                 tasks, auto_assignments = _auto_assign_technicians(
                     tasks,
@@ -6043,7 +6043,7 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
         try:
             if hasattr(doc, "required_parts"):
                 doc.required_parts = []
-                child_config = ALLOWED_DOCS["Repair Orders"]["children"]["required_parts"]
+                child_config = ALLOWED_DOCS["Garage Service Order"]["children"]["required_parts"]
                 parts = _sanitize_child_rows("required_parts", data["required_parts"], child_config)
                 for part in parts:
                     status = cstr(part.get("stock_status") or "").strip().lower()
@@ -6121,7 +6121,7 @@ def move_to_in_progress(order_id: str) -> Dict[str, Any]:
     if not order_id:
         frappe.throw(_("Service Order ID diperlukan."))
     
-    doc = _get_doc("Repair Orders", order_id)
+    doc = _get_doc("Garage Service Order", order_id)
     
     # Validate current status
     if doc.status not in ["Inspection", "Estimate", "Awaiting Approval", "Approved"]:
@@ -6154,7 +6154,7 @@ def cancel_service_order(order_id: str, reason: Optional[str] = None) -> Dict[st
     if not order_id:
         frappe.throw(_("Service Order ID diperlukan."))
 
-    doc = _get_doc("Repair Orders", order_id)
+    doc = _get_doc("Garage Service Order", order_id)
 
     # If already cancelled, return current state to avoid duplicate writes
     if cstr(doc.status) == "Cancelled":
@@ -6201,7 +6201,7 @@ def complete_service_order(order_id: str, completion_data: Optional[Any] = None)
     
     data = _ensure_dict(completion_data or {})
     
-    doc = _get_doc("Repair Orders", order_id)
+    doc = _get_doc("Garage Service Order", order_id)
     
     # Validate current status
     if doc.status != "Awaiting QC":
@@ -6262,7 +6262,7 @@ def get_service_statistics() -> Dict[str, Any]:
     
     for status in statuses:
         try:
-            count = frappe.db.count("Repair Orders", {"status": status})
+            count = frappe.db.count("Garage Service Order", {"status": status})
             status_counts[status] = count
         except Exception:
             status_counts[status] = 0
@@ -6285,7 +6285,7 @@ def get_service_statistics() -> Dict[str, Any]:
     # Get today's orders
     try:
         today_orders = frappe.db.count(
-            "Repair Orders",
+            "Garage Service Order",
             {"creation": [">=", nowdate()]}
         )
     except Exception:
@@ -6294,7 +6294,7 @@ def get_service_statistics() -> Dict[str, Any]:
     # Get orders needing attention (overdue)
     try:
         overdue_orders = frappe.db.count(
-            "Repair Orders",
+            "Garage Service Order",
             {
                 "status": ["in", ["Work In Progress", "Awaiting QC"]],
                 "estimated_delivery_date": ["<", nowdate()]
@@ -6783,7 +6783,7 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
             fallback_service = bundle_label if bundle_name else None
             service_payload["service_order_type"] = fallback_service or "Service/Repair"
 
-        service_doc = _insert_document("Repair Orders", service_payload)
+        service_doc = _insert_document("Garage Service Order", service_payload)
         created["service_order"] = service_doc.name
         created["service_order_status"] = service_doc.status
 
@@ -6923,7 +6923,7 @@ def build_master_data_snapshot(
         service_orders: List[Mapping[str, Any]] = []
     else:
         service_orders = frappe.get_all(
-            "Repair Orders",
+            "Garage Service Order",
             filters=service_filters,
             fields=[
                 "name",
@@ -6966,7 +6966,7 @@ def build_master_data_snapshot(
         invoice_lookup = {
             row.get("name"): row
             for row in invoices
-            if row.get("source_type") == "Repair Orders"
+            if row.get("source_type") == "Garage Service Order"
             and row.get("source_name") in service_order_names
         }
         relevant_invoices = list(invoice_lookup.values())
@@ -7025,7 +7025,7 @@ def get_master_data(
 
     The payload mirrors the web mockup: it exposes core customer/vehicle fields,
     total visits, cumulative spend, member since date, and a recent service
-    history derived from Repair Orders and Garage Sales Invoices.
+    history derived from Garage Service Order and Garage Sales Invoices.
     """
 
     return build_master_data_snapshot(
@@ -7047,7 +7047,7 @@ def get_master_data(
 
     The payload mirrors the web mockup: it exposes core customer/vehicle fields,
     total visits, cumulative spend, member since date, and a recent service
-    history derived from Repair Orders and Garage Sales Invoices.
+    history derived from Garage Service Order and Garage Sales Invoices.
     """
 
     _require_login()
@@ -7150,7 +7150,7 @@ def get_master_data(
         service_orders: List[Mapping[str, Any]] = []
     else:
         service_orders = frappe.get_all(
-            "Repair Orders",
+            "Garage Service Order",
             filters=service_filters,
             fields=[
                 "name",
@@ -7193,7 +7193,7 @@ def get_master_data(
         invoice_lookup = {
             row.get("name"): row
             for row in invoices
-            if row.get("source_type") == "Repair Orders"
+            if row.get("source_type") == "Garage Service Order"
             and row.get("source_name") in service_order_names
         }
         relevant_invoices = list(invoice_lookup.values())
@@ -7323,7 +7323,7 @@ def generate_service_estimate_document(service_order: str) -> Dict[str, Any]:
     if not order_name:
         frappe.throw(_("Order servis wajib dipilih."))
 
-    service_doc = _get_doc("Repair Orders", order_name)
+    service_doc = _get_doc("Garage Service Order", order_name)
 
     pdf_payload = service_estimate.create_service_estimate_pdf(service_doc.name)
     if not pdf_payload or not pdf_payload.get("content"):
@@ -7356,7 +7356,7 @@ def generate_service_order_spk(service_order: str) -> Dict[str, Any]:
     if not order_name:
         frappe.throw(_("Order servis wajib dipilih."))
 
-    service_doc = _get_doc("Repair Orders", order_name)
+    service_doc = _get_doc("Garage Service Order", order_name)
 
     pdf_payload = service_estimate.create_spk_pdf(service_doc.name)
     if not pdf_payload or not pdf_payload.get("content"):
@@ -7374,7 +7374,7 @@ def generate_service_order_spk(service_order: str) -> Dict[str, Any]:
 def create_service_order(order: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
     data = _ensure_dict(order or {})
-    doc = _insert_document("Repair Orders", data)
+    doc = _insert_document("Garage Service Order", data)
     return {"name": doc.name, "status": doc.status}
 
 
@@ -7382,7 +7382,7 @@ def create_service_order(order: Optional[Any] = None) -> Dict[str, Any]:
 def update_service_order(name: str, updates: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
     data = _ensure_dict(updates or {})
-    doc = _update_document("Repair Orders", name, data)
+    doc = _update_document("Garage Service Order", name, data)
     return {"name": doc.name, "status": doc.status, "job_card_status": doc.job_card_status, "qc_status": doc.qc_status}
 
 
@@ -7390,11 +7390,11 @@ def update_service_order(name: str, updates: Optional[Any] = None) -> Dict[str, 
 def append_service_progress(name: str, log_entry: Optional[Any] = None) -> Dict[str, Any]:
     _require_login()
     data = _ensure_dict(log_entry or {})
-    progress_config = ALLOWED_DOCS["Repair Orders"]["children"]["progress_logs"]
+    progress_config = ALLOWED_DOCS["Garage Service Order"]["children"]["progress_logs"]
     row = _sanitize_child_rows("progress_logs", [data], progress_config)
     if not row:
         frappe.throw(_("Data progres tidak boleh kosong."))
-    doc = _get_doc("Repair Orders", name)
+    doc = _get_doc("Garage Service Order", name)
     doc.append("progress_logs", row[0])
     _save_doc(doc)
     return {"name": doc.name, "progress_count": len(doc.progress_logs)}
@@ -7835,7 +7835,7 @@ def _issue_spare_part_via_stock_movement(request: Mapping[str, Any]) -> Optional
     stock_entry = _insert_doc(stock_entry)
     stock_entry.submit()
     stock_entry.add_comment(
-        "Comment", _("Linked to Repair Orders {0}").format(parent_order)
+        "Comment", _("Linked to Garage Service Order {0}").format(parent_order)
     )
     return stock_entry
 
@@ -7853,7 +7853,7 @@ def generate_spare_part_approval_document(
 
     service_order = service_order.strip()
     request_name = cstr(request_name).strip() if request_name is not None else ""
-    service_doc = _get_doc("Repair Orders", service_order)
+    service_doc = _get_doc("Garage Service Order", service_order)
 
     assigned_mechanic = (
         cstr(getattr(service_doc, "assigned_mechanic", ""))
@@ -7900,7 +7900,7 @@ def generate_spare_part_approval_document(
     existing = frappe.db.get_all(
         "Garage Division Request",
         filters=[
-            ["Garage Division Request", "reference_type", "=", "Repair Orders"],
+            ["Garage Division Request", "reference_type", "=", "Garage Service Order"],
             ["Garage Division Request", "reference_name", "=", service_order],
             ["Garage Division Request", "docstatus", "!=", 2],
         ],
@@ -7919,7 +7919,7 @@ def generate_spare_part_approval_document(
         division_doc.set("items", [])
     else:
         division_doc = frappe.new_doc("Garage Division Request")
-        division_doc.reference_type = "Repair Orders"
+        division_doc.reference_type = "Garage Service Order"
         division_doc.reference_name = service_order
         division_doc.requesting_division = division_doc.requesting_division or "Service"
         division_doc.target_division = division_doc.target_division or "Spare Part"
@@ -8224,7 +8224,7 @@ def create_service_intake(data):
         # 3. Create Service Order
         customer_doc = _get_doc('Garage Customer', customer_name)
         service_order = frappe.get_doc({
-            'doctype': 'Repair Orders',
+            'doctype': 'Garage Service Order',
             'customer': customer_name,
             'customer_name': customer_doc.customer_name,
             'vehicle': vehicle_name,
@@ -8300,7 +8300,7 @@ def create_service_intake(data):
                     break
             
             if not child_table_added:
-                frappe.logger().warning(f"No child table found in Repair Orders. Parts not added.")
+                frappe.logger().warning(f"No child table found in Garage Service Order. Parts not added.")
         
         service_order.insert(ignore_permissions=True)
         frappe.db.commit()
