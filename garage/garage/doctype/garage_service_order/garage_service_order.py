@@ -157,6 +157,9 @@ class GarageServiceOrder(Document):
         if not required_parts:
             return
 
+        if not frappe.db.exists("Garage Service Order", self.name):
+            return
+
         request_name = frappe.db.get_value("Spare Part Request", {"service_order": self.name}, "name")
         if request_name:
             request = frappe.get_doc("Spare Part Request", request_name)
@@ -188,11 +191,9 @@ class GarageServiceOrder(Document):
                 },
             )
 
-        ignore_links = not frappe.db.exists("Garage Service Order", self.name)
-
         frappe.flags.skip_spare_part_request_service_order_sync = True
         try:
-            request.save(ignore_permissions=True, ignore_links=ignore_links)
+            request.save(ignore_permissions=True)
         finally:
             frappe.flags.skip_spare_part_request_service_order_sync = False
 
