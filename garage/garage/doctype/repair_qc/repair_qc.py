@@ -94,7 +94,7 @@ class RepairQC(Document):
         if not self.service_order:
             frappe.throw("Service order belum diisi untuk menyelesaikan Repair QC.")
 
-        if not self._get_latest_invoice():
+        if not self._get_latest_invoice() and self._has_billable_items():
             frappe.throw(
                 "Sales Invoice untuk Service Order ini belum tersedia. "
                 "Mohon buat Sales Invoice terlebih dahulu."
@@ -137,6 +137,14 @@ class RepairQC(Document):
             }
         )
         invoice_doc.insert(ignore_permissions=True)
+
+    def _has_billable_items(self):
+        try:
+            service_order = frappe.get_doc("Garage Service Order", self.service_order)
+        except Exception:
+            return False
+
+        return bool(self._build_invoice_items(service_order))
 
     def _build_invoice_items(self, service_order):
         rows = list(getattr(self, "parts_used", None) or [])
