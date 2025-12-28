@@ -237,13 +237,19 @@ export function ServiceOrders({ currentUser }) {
   };
 
   const normalizeMechanicNames = (entries = []) => entries
-    .map((mechanic) =>
-      mechanic?.employee_name ||
-      mechanic?.employee ||
-      mechanic?.name ||
-      mechanic?.user_id ||
-      mechanic?.full_name
-    )
+    .map((mechanic) => {
+      if (typeof mechanic === 'string') {
+        return mechanic;
+      }
+
+      return (
+        mechanic?.employee_name ||
+        mechanic?.employee ||
+        mechanic?.name ||
+        mechanic?.user_id ||
+        mechanic?.full_name
+      );
+    })
     .map((name) => (name ? String(name).trim() : ''))
     .filter(Boolean);
 
@@ -264,7 +270,21 @@ export function ServiceOrders({ currentUser }) {
         ...normalizeMechanicNames(employees),
         ...normalizeMechanicNames(users),
       ];
-      mergeMechanicNames(normalized);
+      if (normalized.length > 0) {
+        mergeMechanicNames(normalized);
+        return;
+      }
+
+      if (branchFilter) {
+        const fallbackRoster = await frappeClient.listMechanics('');
+        const fallbackNames = [
+          ...normalizeMechanicNames(fallbackRoster.technicians),
+          ...normalizeMechanicNames(fallbackRoster.employees),
+          ...normalizeMechanicNames(fallbackRoster.users),
+        ];
+
+        mergeMechanicNames(fallbackNames);
+      }
     } catch (error) {
       console.error('Failed to load mechanic roster:', error);
     }
