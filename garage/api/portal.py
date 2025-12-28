@@ -2727,10 +2727,100 @@ def _merge_technicians_with_role_assignments(
         branch=branch,
     )
 
-    if not fallback_profiles:
+    fallback_employee_ids = {
+        entry.get("employee") or entry.get("name")
+        for entry in fallback_profiles
+        if entry.get("employee") or entry.get("name")
+    }
+
+    designation_profiles = _technician_profiles_from_designations(
+        exclude_employees=employees_in_roster.union(fallback_employee_ids),
+        only_active=only_active,
+        branch=branch,
+    )
+
+    if not fallback_profiles and not designation_profiles:
         return roster
 
-    return roster + fallback_profiles
+    return roster + fallback_profiles + designation_profiles
+
+
+def _technician_profiles_from_designations(
+    *, exclude_employees: Set[str], only_active: bool, branch: Optional[str]
+) -> List[Dict[str, Any]]:
+    if not _doctype_has_field("Employee", "designation"):
+        return []
+
+    designation_filters = []
+    for role_name in sorted(TECHNICIAN_ROLE_NAMES):
+        keyword = cstr(role_name).strip()
+        if keyword:
+            designation_filters.append(["designation", "like", f"%{keyword}%"])
+
+    if not designation_filters:
+        return []
+
+    try:
+        with _ignoring_permissions():
+            employee_filters: Dict[str, Any] = {}
+            if only_active and _doctype_has_field("Employee", "status"):
+                employee_filters["status"] = "Active"
+
+            branch_value = (branch or "").strip()
+            if branch_value and _doctype_has_field("Employee", "branch"):
+                employee_filters["branch"] = branch_value
+
+            employees = frappe.db.get_all(
+                "Employee",
+                fields=[
+                    "name",
+                    "employee_name",
+                    "user_id",
+                    "status",
+                    "cell_number",
+                    "company_email",
+                    "branch",
+                    "designation",
+                ],
+                filters=employee_filters or None,
+                or_filters=designation_filters,
+                limit=200,
+            )
+    except Exception:
+        return []
+
+    fallback: List[Dict[str, Any]] = []
+    for employee in employees:
+        identifier = employee.get("name")
+        if not identifier or identifier in exclude_employees:
+            continue
+
+        raw_status = (employee.get("status") or "").strip()
+        normalized_status = (
+            raw_status
+            if raw_status in {"Active", "On Leave", "Inactive"}
+            else ("Active" if raw_status.lower() == "active" else "Inactive")
+        )
+
+        user_id = cstr(employee.get("user_id") or "").strip()
+
+        fallback.append(
+            {
+                "name": identifier,
+                "employee": identifier,
+                "employee_name": employee.get("employee_name") or identifier,
+                "user_id": user_id or None,
+                "status": normalized_status or "Active",
+                "max_active_jobs": DEFAULT_TECHNICIAN_CAPACITY,
+                "skill_tags": "",
+                "phone": employee.get("cell_number"),
+                "email": employee.get("company_email"),
+                "notes": employee.get("designation") or "",
+                "branch": employee.get("branch"),
+            }
+        )
+
+    return fallback
 
 
 def _technician_profiles_from_roles(
