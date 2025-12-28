@@ -2,6 +2,20 @@
 // For license information, please see license.txt
 
 const REQUEST_STATUS = 'Request Spare Part';
+const STATUS_INDICATORS = {
+  'Request Spare Part': 'orange',
+  Prepared: 'green',
+  Rejected: 'red',
+};
+
+const formatStockStatus = (value) => {
+  if (!value) {
+    return '';
+  }
+
+  const indicator = STATUS_INDICATORS[value] || 'gray';
+  return `<span class="indicator-pill ${indicator}">${value}</span>`;
+};
 
 const fetchBundleItems = (serviceOrderType) =>
   frappe.call({
@@ -61,6 +75,11 @@ const autoApplyBundle = (frm) => {
 
 frappe.ui.form.on('Garage Service Order', {
   refresh(frm) {
+    const statusField = frm.fields_dict.required_parts?.grid?.get_field('stock_status');
+    if (statusField) {
+      statusField.formatter = formatStockStatus;
+      frm.refresh_field('required_parts');
+    }
     frm.add_custom_button(__('Add Bundle Items'), () => {
       if (!frm.doc.service_order_type) {
         frappe.msgprint(__('Pilih service type terlebih dahulu.'));
