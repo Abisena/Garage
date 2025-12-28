@@ -73,7 +73,7 @@ const autoApplyBundle = (frm) => {
   });
 };
 
-frappe.ui.form.on('Garage Service Order', {
+frappe.ui.form.on('Repair Orders', {
   refresh(frm) {
     const statusField = frm.fields_dict.required_parts?.grid?.get_field('stock_status');
     if (statusField) {

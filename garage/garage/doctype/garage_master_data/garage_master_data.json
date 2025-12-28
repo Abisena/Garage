@@ -253,7 +253,7 @@
       "fieldname": "last_service_order",
       "fieldtype": "Link",
       "label": "Last Service Order",
-      "options": "Garage Service Order",
+      "options": "Repair Orders",
       "read_only": 1
     },
     {

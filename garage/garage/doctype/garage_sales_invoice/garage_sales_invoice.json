@@ -64,7 +64,7 @@
       "fieldname": "source_type",
       "fieldtype": "Select",
       "label": "Source Type",
-      "options": "Garage Service Order\nGarage Spare Part Order"
+      "options": "Repair Orders\nGarage Spare Part Order"
     },
     {
       "fieldname": "source_name",

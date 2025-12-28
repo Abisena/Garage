@@ -742,7 +742,7 @@ def create_service_estimate_pdf(service_order_name: str) -> Optional[Dict[str, s
     # Load service order
     try:
         with _ignore_permissions():
-            service_order = frappe.get_doc("Garage Service Order", service_order_name)
+            service_order = frappe.get_doc("Repair Orders", service_order_name)
     except Exception as e:
         frappe.log_error(
             title="Service estimate PDF - Load failed",
@@ -814,7 +814,7 @@ def create_spk_pdf(service_order_name: str) -> Optional[Dict[str, str]]:
 
     try:
         with _ignore_permissions():
-            service_order = frappe.get_doc("Garage Service Order", service_order_name)
+            service_order = frappe.get_doc("Repair Orders", service_order_name)
     except Exception:
         frappe.log_error(
             title="SPK PDF - Load failed",
@@ -870,7 +870,7 @@ def persist_service_estimate_pdf(
     """Attach the generated estimate PDF to the service order.
 
     Args:
-        service_order_name: The ``Garage Service Order`` identifier.
+        service_order_name: The ``Repair Orders`` identifier.
         pdf_payload: The dictionary produced by :func:`create_service_estimate_pdf`.
         replace_existing: Whether to remove files with the same name beforehand.
 
@@ -887,7 +887,7 @@ def persist_service_estimate_pdf(
 
     filename = (pdf_payload.get("filename") or "").strip()
     if not filename:
-        service_order = _safe_get_doc("Garage Service Order", service_order_name)
+        service_order = _safe_get_doc("Repair Orders", service_order_name)
         if service_order:
             filename = _compose_document_filename(service_order, suffix="SPK")
         else:
@@ -911,7 +911,7 @@ def persist_service_estimate_pdf(
             existing_files = frappe.get_all(
                 "File",
                 filters={
-                    "attached_to_doctype": "Garage Service Order",
+                    "attached_to_doctype": "Repair Orders",
                     "attached_to_name": service_order_name,
                     "file_name": filename,
                     "is_folder": 0,
@@ -942,7 +942,7 @@ def persist_service_estimate_pdf(
         file_doc = save_file(
             filename,
             content,
-            "Garage Service Order",
+            "Repair Orders",
             service_order_name,
             decode=True,
             is_private=1,

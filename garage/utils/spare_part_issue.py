@@ -21,11 +21,11 @@ def _safe_get_service_order(name: str) -> Optional[frappe.Document]:
         return None
     try:
         with service_estimate._ignore_permissions():  # type: ignore[attr-defined]
-            return frappe.get_doc("Garage Service Order", name)
+            return frappe.get_doc("Repair Orders", name)
     except Exception:
         frappe.log_error(
             title="Spare part issue - load failed",
-            message=f"Could not load Garage Service Order {name}\n{frappe.get_traceback()}",
+            message=f"Could not load Repair Orders {name}\n{frappe.get_traceback()}",
         )
         return None
 
@@ -288,7 +288,7 @@ def persist_spare_part_issue_pdf(
             existing = frappe.get_all(
                 "File",
                 filters={
-                    "attached_to_doctype": "Garage Service Order",
+                    "attached_to_doctype": "Repair Orders",
                     "attached_to_name": service_order_name,
                     "file_name": filename,
                     "is_folder": 0,
@@ -301,7 +301,7 @@ def persist_spare_part_issue_pdf(
         file_doc = save_file(
             filename,
             content,
-            "Garage Service Order",
+            "Repair Orders",
             service_order_name,
             decode=True,
             is_private=1,

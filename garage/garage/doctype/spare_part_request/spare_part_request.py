@@ -79,7 +79,7 @@ class SparePartRequest(Document):
             return
 
         try:
-            service_doc = frappe.get_doc("Garage Service Order", self.service_order)
+            service_doc = frappe.get_doc("Repair Orders", self.service_order)
         except Exception:
             return
 

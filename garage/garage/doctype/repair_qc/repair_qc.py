@@ -32,7 +32,7 @@ class RepairQC(Document):
             return
 
         try:
-            service_order = frappe.get_doc("Garage Service Order", self.service_order)
+            service_order = frappe.get_doc("Repair Orders", self.service_order)
         except Exception:
             return
 

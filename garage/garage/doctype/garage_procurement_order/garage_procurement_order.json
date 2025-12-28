@@ -31,7 +31,7 @@
       "fieldname": "reference_type",
       "fieldtype": "Select",
       "label": "Reference Type",
-      "options": "Garage Service Order\nGarage Spare Part Order",
+      "options": "Repair Orders\nGarage Spare Part Order",
       "reqd": 1
     },
     {

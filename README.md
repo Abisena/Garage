@@ -36,7 +36,7 @@ Folder `garage/garage/doctype` sekarang memuat DocType resmi yang memetakan
 setiap langkah pada diagram workflow:
 
 - `Garage Customer` & `Garage Vehicle` untuk data master pelanggan.
-- `Garage Service Order` beserta tabel anak inspeksi, task, parts, progress,
+- `Repair Orders` beserta tabel anak inspeksi, task, parts, progress,
   dan QC guna menangani jalur servis/repair.
 - `Garage Spare Part Order` untuk transaksi pembelian sparepart langsung.
 - `Garage Procurement Order` dan `Garage Stock Movement` untuk pengadaan serta

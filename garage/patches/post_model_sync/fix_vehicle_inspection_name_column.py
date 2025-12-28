@@ -1,4 +1,4 @@
-"""Ensure Garage Vehicle Inspection name column supports formatted naming."""
+"""Ensure Inspection & Diagnosis name column supports formatted naming."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import frappe
 
 
 def execute() -> None:
-    """Alter the Garage Vehicle Inspection name column to VARCHAR when needed."""
+    """Alter the Inspection & Diagnosis name column to VARCHAR when needed."""
 
     if frappe.db.db_type != "mariadb":
         return
@@ -15,7 +15,7 @@ def execute() -> None:
     if not db_name:
         return
 
-    table_name = "tabGarage Vehicle Inspection"
+    table_name = "tabInspection & Diagnosis"
 
     column_info = frappe.db.sql(
         """

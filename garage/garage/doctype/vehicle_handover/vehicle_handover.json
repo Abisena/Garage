@@ -59,7 +59,7 @@
       "fieldname": "service_order",
       "fieldtype": "Link",
       "label": "Service Order",
-      "options": "Garage Service Order",
+      "options": "Repair Orders",
       "in_list_view": 1
     },
     {
