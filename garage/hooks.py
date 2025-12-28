@@ -289,4 +289,8 @@ doc_events = {
 
 fixtures = [
     "Workspace",
+    {
+        "doctype": "Print Format",
+        "filters": [["name", "in", ["Garage Vehicle Inspection Report"]]],
+    },
 ]
