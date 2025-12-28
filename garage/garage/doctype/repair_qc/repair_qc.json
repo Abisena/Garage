@@ -55,7 +55,27 @@
     "dry_and_wet_brakes_tested",
     "dashboard_indicators_normal",
     "qc_notes_section",
-    "qc_notes"
+    "qc_notes",
+    "final_tab",
+    "final_summary_section",
+    "summary_service_order",
+    "summary_customer",
+    "summary_customer_name",
+    "final_summary_column_break",
+    "summary_vehicle",
+    "summary_license_plate",
+    "summary_vehicle_year",
+    "final_service_section",
+    "summary_service_type",
+    "summary_assigned_mechanic",
+    "final_service_column_break",
+    "summary_branch",
+    "summary_invoice",
+    "summary_total_amount",
+    "summary_outstanding_amount",
+    "final_payment_section",
+    "status",
+    "payment_entry"
   ],
   "fields": [
     {
@@ -296,6 +316,137 @@
       "fieldname": "qc_notes",
       "fieldtype": "Small Text",
       "label": "QC Notes"
+    },
+    {
+      "fieldname": "final_tab",
+      "fieldtype": "Tab Break",
+      "label": "Final"
+    },
+    {
+      "fieldname": "final_summary_section",
+      "fieldtype": "Section Break",
+      "label": "Final Inspection Summary"
+    },
+    {
+      "fieldname": "summary_service_order",
+      "fieldtype": "Link",
+      "label": "Service Order",
+      "options": "Garage Service Order",
+      "fetch_from": "service_order",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_customer",
+      "fieldtype": "Link",
+      "label": "Customer",
+      "options": "Garage Customer",
+      "fetch_from": "service_order.customer",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_customer_name",
+      "fieldtype": "Data",
+      "label": "Customer Name",
+      "fetch_from": "summary_customer.customer_name",
+      "read_only": 1
+    },
+    {
+      "fieldname": "final_summary_column_break",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "summary_vehicle",
+      "fieldtype": "Link",
+      "label": "Vehicle",
+      "options": "Garage Vehicle",
+      "fetch_from": "service_order.vehicle",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_license_plate",
+      "fieldtype": "Data",
+      "label": "License Plate",
+      "fetch_from": "summary_vehicle.license_plate",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_vehicle_year",
+      "fieldtype": "Int",
+      "label": "Vehicle Year",
+      "fetch_from": "summary_vehicle.vehicle_year",
+      "read_only": 1
+    },
+    {
+      "fieldname": "final_service_section",
+      "fieldtype": "Section Break",
+      "label": "Service Summary"
+    },
+    {
+      "fieldname": "summary_service_type",
+      "fieldtype": "Link",
+      "label": "Service Type",
+      "options": "Garage Service Type",
+      "fetch_from": "service_order.service_order_type",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_assigned_mechanic",
+      "fieldtype": "Link",
+      "label": "Assigned Mechanic",
+      "options": "Employee",
+      "fetch_from": "service_order.assigned_mechanic",
+      "read_only": 1
+    },
+    {
+      "fieldname": "final_service_column_break",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "summary_branch",
+      "fieldtype": "Link",
+      "label": "Branch",
+      "options": "Garage Branch",
+      "fetch_from": "service_order.branch",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_invoice",
+      "fieldtype": "Link",
+      "label": "Sales Invoice",
+      "options": "Garage Sales Invoice",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_total_amount",
+      "fieldtype": "Currency",
+      "label": "Invoice Total",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_outstanding_amount",
+      "fieldtype": "Currency",
+      "label": "Outstanding Amount",
+      "read_only": 1
+    },
+    {
+      "fieldname": "final_payment_section",
+      "fieldtype": "Section Break",
+      "label": "Finalization"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Draft\nFinished",
+      "default": "Draft",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "payment_entry",
+      "fieldtype": "Link",
+      "label": "Payment Entry",
+      "options": "Garage Payment Entry",
+      "read_only": 1
     }
   ],
   "has_web_view": 0,

@@ -2,6 +2,7 @@
 
 import frappe
 from frappe.model.document import Document
+from frappe.utils import flt, nowdate
 
 
 class RepairQC(Document):
@@ -12,9 +13,12 @@ class RepairQC(Document):
 
     def validate(self):
         self._set_default_users()
+        self._sync_invoice_summary()
+        self._validate_final_status()
 
     def on_update(self):
         self._sync_service_order_status()
+        self._create_payment_entry_if_finished()
 
     def _set_default_users(self):
         current_user = frappe.session.user if frappe.session else None
@@ -47,3 +51,93 @@ class RepairQC(Document):
 
         if updates:
             frappe.db.set_value(service_order.doctype, service_order.name, updates)
+
+    def _get_latest_invoice(self):
+        if not self.service_order:
+            return None
+
+        invoices = frappe.get_all(
+            "Garage Sales Invoice",
+            filters={
+                "source_type": "Garage Service Order",
+                "source_name": self.service_order,
+            },
+            fields=[
+                "name",
+                "total_amount",
+                "outstanding_amount",
+                "branch",
+                "customer",
+            ],
+            order_by="modified desc",
+            limit=1,
+        )
+        return invoices[0] if invoices else None
+
+    def _sync_invoice_summary(self):
+        invoice = self._get_latest_invoice()
+        if not invoice:
+            self.summary_invoice = None
+            self.summary_total_amount = None
+            self.summary_outstanding_amount = None
+            return
+
+        self.summary_invoice = invoice.get("name")
+        self.summary_total_amount = invoice.get("total_amount")
+        self.summary_outstanding_amount = invoice.get("outstanding_amount")
+
+    def _validate_final_status(self):
+        if self.status != "Finished":
+            return
+
+        if not self.service_order:
+            frappe.throw("Service order belum diisi untuk menyelesaikan Repair QC.")
+
+        if not self._get_latest_invoice():
+            frappe.throw(
+                "Sales Invoice untuk Service Order ini belum tersedia. "
+                "Mohon buat Sales Invoice terlebih dahulu."
+            )
+
+    def _create_payment_entry_if_finished(self):
+        if self.status != "Finished":
+            return
+
+        if self.payment_entry:
+            return
+
+        invoice = self._get_latest_invoice()
+        if not invoice:
+            return
+
+        outstanding_amount = flt(invoice.get("outstanding_amount") or invoice.get("total_amount"))
+        if outstanding_amount <= 0:
+            return
+
+        payment_entry = frappe.get_doc(
+            {
+                "doctype": "Garage Payment Entry",
+                "branch": invoice.get("branch"),
+                "payment_date": nowdate(),
+                "customer": invoice.get("customer"),
+                "paid_amount": outstanding_amount,
+                "received_amount": outstanding_amount,
+                "notes": f"Auto-generated from Repair QC {self.name}",
+                "allocations": [
+                    {
+                        "invoice": invoice.get("name"),
+                        "allocated_amount": outstanding_amount,
+                        "outstanding_before": outstanding_amount,
+                        "outstanding_after": 0,
+                    }
+                ],
+            }
+        )
+        payment_entry.insert(ignore_permissions=True)
+        frappe.db.set_value(
+            self.doctype,
+            self.name,
+            "payment_entry",
+            payment_entry.name,
+            update_modified=False,
+        )
