@@ -43,12 +43,19 @@ class RepairQC(Document):
 
         updates = {}
 
-        if hasattr(service_order, "qc_status"):
-            updates["qc_status"] = "Passed"
-        if hasattr(service_order, "job_card_status"):
-            updates["job_card_status"] = "Completed"
-        if hasattr(service_order, "work_order_status"):
-            updates["work_order_status"] = "Completed"
+        if self.status == "Finished":
+            if hasattr(service_order, "qc_status"):
+                updates["qc_status"] = "Passed"
+            if hasattr(service_order, "job_card_status"):
+                updates["job_card_status"] = "Completed"
+            if hasattr(service_order, "work_order_status"):
+                updates["work_order_status"] = "Completed"
+            if hasattr(service_order, "status") and service_order.status not in {
+                "Waiting Payment",
+                "Completed",
+                "Cancelled",
+            }:
+                updates["status"] = "Awaiting QC"
 
         if updates:
             frappe.db.set_value(service_order.doctype, service_order.name, updates)

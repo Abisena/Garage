@@ -22,6 +22,7 @@ import { Report } from './components/Report'
 import { TransferStock } from './components/TransferStock'
 import BusinessProcessFlowDiagram from './components/Businessprocessflowdiagram'
 import { ProcessFlow } from './components/Processflow'
+import { refreshWorkOrdersFromBackend } from './lib/workOrdersStorage'
 
 const PAGE_ROLES = {
   dashboard: ['admin', 'sparepart', 'serviceAdvisor', 'foreman', 'mechanic', 'cashier', 'receptionist', 'qualityManager', 'finance'],
@@ -241,6 +242,32 @@ function App() {
       clearTimeout(timer)
     }
   }, [currentUser?.username])
+
+  useEffect(() => {
+    if (!currentUser?.username) return
+
+    let cancelled = false
+
+    const refreshWorkOrders = async () => {
+      const branchValue =
+        currentUser?.branch && currentUser.branch !== 'all'
+          ? currentUser.branch
+          : undefined
+      try {
+        await refreshWorkOrdersFromBackend({ branch: branchValue })
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to refresh work orders from backend:', error)
+        }
+      }
+    }
+
+    refreshWorkOrders()
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentUser?.username, currentUser?.branch])
 
   // Resolve default branch
   useEffect(() => {
