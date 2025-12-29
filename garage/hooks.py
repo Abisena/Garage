@@ -184,11 +184,7 @@ jinja = {
 # 		"on_trash": "method"
 # 	}
 # }
-doc_events = {
-    "BCA Bank Statement Import": {
-        "autoname": "garage.utils.bca_bank_statement_import.set_import_naming",
-    }
-}
+
 
 # Scheduled Tasks
 # ---------------
@@ -291,6 +287,23 @@ fixtures = [
     "Workspace",
     {
         "doctype": "Print Format",
-        "filters": [["name", "in", ["Garage Vehicle Inspection Report", "Garage Service Order Print"]]],
+        "filters": [[
+            "name",
+            "in",
+            [
+                "Garage Vehicle Inspection Report",
+                "Garage Service Order Print",
+                "Garage Sales Invoice Print",
+            ],
+        ]],
     },
 ]
+
+doc_events = {
+    "BCA Bank Statement Import": {
+        "autoname": "garage.utils.bca_bank_statement_import.set_import_naming",
+    },
+    "Garage Sales Invoice": {
+        "on_update": "garage.utils.vehicle_handover.handle_paid_sales_invoice",
+    },
+}

@@ -6146,6 +6146,21 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
                     doc.part_charge_status = derived_status
         except Exception as e:
             frappe.log_error(f"Error updating required_parts: {str(e)}")
+
+    should_request_part = False
+    if inspection_doc or "required_parts" in data:
+        current_status = cstr(getattr(doc, "status", "")).strip()
+        if current_status in {
+            "Draft",
+            "Inspection",
+            "Estimate",
+            "Awaiting Approval",
+            "Approved",
+        }:
+            should_request_part = True
+
+    if should_request_part:
+        doc.status = "Request Part"
     
     if "payment_schedule" in data:
         try:

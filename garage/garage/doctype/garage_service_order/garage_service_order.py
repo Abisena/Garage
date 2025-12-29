@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Iterable, Optional
 
 import frappe
-from frappe.utils import nowdate
+from frappe.utils import cstr, nowdate
 
 from frappe.model.document import Document
 
@@ -172,10 +172,24 @@ class GarageServiceOrder(Document):
         request.vehicle = self.vehicle
 
         existing_rows = {row.service_order_part: row for row in getattr(request, "items", [])}
+        prepared_by_code = {}
+        for row in getattr(request, "items", []) or []:
+            item_code = cstr(getattr(row, "item_code", "")).strip().lower()
+            if not item_code:
+                continue
+            status = cstr(getattr(row, "approval_status", "")).strip().lower()
+            if status == "prepared":
+                prepared_by_code[item_code] = row
         request.set("items", [])
 
         for part in required_parts:
             preserved = existing_rows.get(part.name)
+            part_code_key = cstr(getattr(part, "item_code", "")).strip().lower()
+            approval_status = getattr(preserved, "approval_status", None)
+            if not approval_status and part_code_key:
+                prepared_row = prepared_by_code.get(part_code_key)
+                if prepared_row:
+                    approval_status = getattr(prepared_row, "approval_status", None)
             request.append(
                 "items",
                 {
@@ -186,7 +200,7 @@ class GarageServiceOrder(Document):
                     "qty": getattr(part, "qty", None),
                     "uom": getattr(part, "uom", None),
                     "source_warehouse": getattr(part, "warehouse", None),
-                    "approval_status": getattr(preserved, "approval_status", None) or "Pending",
+                    "approval_status": approval_status or "Pending",
                     "stock_movement": getattr(preserved, "stock_movement", None),
                 },
             )
