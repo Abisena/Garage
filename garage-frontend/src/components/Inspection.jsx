@@ -78,7 +78,34 @@ export function Inspection({ currentUser }) {
     photos: []
   });
 
-  const normalizeFrappeRegistration = (record) => {
+  const INSPECTION_STATUS_PRIORITY = {
+    waiting: 0,
+    'in-progress': 1,
+    completed: 2
+  };
+
+  const resolveInspectionStatus = (...values) => {
+    const normalizedValues = values
+      .map((value) => (value || '').toString().trim().toLowerCase())
+      .filter(Boolean);
+
+    let resolved = 'waiting';
+    let bestScore = INSPECTION_STATUS_PRIORITY.waiting;
+
+    normalizedValues.forEach((value) => {
+      if (Object.prototype.hasOwnProperty.call(INSPECTION_STATUS_PRIORITY, value)) {
+        const score = INSPECTION_STATUS_PRIORITY[value];
+        if (score > bestScore) {
+          bestScore = score;
+          resolved = value;
+        }
+      }
+    });
+
+    return resolved;
+  };
+
+  const normalizeFrappeRegistration = (record, serviceOrderMap) => {
     if (!record) return null;
 
     const createdAt = record.creation ? new Date(record.creation) : new Date();
@@ -89,10 +116,16 @@ export function Inspection({ currentUser }) {
       minute: '2-digit'
     });
 
+    const orderId = record.service_order || record.name;
+    const serviceOrderInfo = serviceOrderMap?.get(orderId);
+    const derivedInspectionStatus = serviceOrderInfo?.inspection_record
+      ? 'completed'
+      : undefined;
+
     return {
       id: record.name,
       time: formattedTime,
-      orderId: record.service_order || record.name,
+      orderId,
       customerName: record.customer_name || 'Customer',
       customer: record.customer,
       phone: record.phone || '',
@@ -114,7 +147,7 @@ export function Inspection({ currentUser }) {
       estimatedDays: '1',
       branch: record.branch || currentUser?.branch || '',
       status: 'Inspection',
-      inspectionStatus: 'waiting'
+      inspectionStatus: resolveInspectionStatus(derivedInspectionStatus, 'waiting')
     };
   };
 
@@ -133,7 +166,7 @@ export function Inspection({ currentUser }) {
         merged.set(reg.id, {
           ...existing,
           ...reg,
-          inspectionStatus: reg.inspectionStatus || existing.inspectionStatus || 'waiting'
+          inspectionStatus: resolveInspectionStatus(reg.inspectionStatus, existing.inspectionStatus, 'waiting')
         });
       } else {
         merged.set(reg.id, reg);
@@ -377,8 +410,24 @@ export function Inspection({ currentUser }) {
           limit: 200,
         });
 
+        const serviceOrderIds = [
+          ...new Set(
+            frappeRegistrations
+              .map((record) => record?.service_order)
+              .filter(Boolean)
+          )
+        ];
+        const serviceOrders = serviceOrderIds.length
+          ? await frappeClient.listServiceOrdersByNames(serviceOrderIds)
+          : [];
+        const serviceOrderMap = new Map(
+          serviceOrders
+            .filter((order) => order?.name)
+            .map((order) => [order.name, order])
+        );
+
         const normalizedRegistrations = frappeRegistrations
-          .map(normalizeFrappeRegistration)
+          .map((record) => normalizeFrappeRegistration(record, serviceOrderMap))
           .filter(Boolean)
           .filter((reg) => {
             if (reg.dateKey && reg.dateKey !== todayDateKey) return false;
