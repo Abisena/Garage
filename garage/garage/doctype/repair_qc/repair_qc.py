@@ -82,6 +82,29 @@ class RepairQC(Document):
         )
         return invoices[0] if invoices else None
 
+    def _calculate_invoice_totals(self, invoice_name, fallback_total, fallback_outstanding):
+        total_amount = flt(fallback_total or 0)
+        outstanding_amount = flt(fallback_outstanding or 0)
+
+        if total_amount and outstanding_amount:
+            return total_amount, outstanding_amount
+
+        try:
+            invoice_doc = frappe.get_doc("Garage Sales Invoice", invoice_name)
+        except Exception:
+            return total_amount, outstanding_amount
+
+        if not total_amount:
+            total_amount = sum(
+                flt(item.amount or (flt(item.rate or 0) * flt(item.qty or 0)))
+                for item in (invoice_doc.items or [])
+            )
+
+        if not outstanding_amount:
+            outstanding_amount = total_amount
+
+        return total_amount, outstanding_amount
+
     def _sync_invoice_summary(self):
         invoice = self._get_latest_invoice()
         if not invoice:
@@ -90,9 +113,14 @@ class RepairQC(Document):
             self.summary_outstanding_amount = None
             return
 
+        total_amount, outstanding_amount = self._calculate_invoice_totals(
+            invoice.get("name"),
+            invoice.get("total_amount"),
+            invoice.get("outstanding_amount"),
+        )
         self.summary_invoice = invoice.get("name")
-        self.summary_total_amount = invoice.get("total_amount")
-        self.summary_outstanding_amount = invoice.get("outstanding_amount")
+        self.summary_total_amount = total_amount
+        self.summary_outstanding_amount = outstanding_amount
 
     def _validate_final_status(self):
         if self.status != "Finished":
