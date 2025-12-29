@@ -7322,6 +7322,16 @@ def create_customer_registration(payload: Optional[Any] = None) -> Dict[str, Any
         if key in allowed_fields and value not in (None, "")
     }
 
+    bundle_name = cstr(registration_data.get("service_bundle") or "").strip()
+    if bundle_name:
+        bundle_doc, bundle_label = _load_service_bundle(bundle_name)
+        if bundle_doc:
+            registration_data["service_bundle"] = bundle_doc.name
+        else:
+            registration_data.pop("service_bundle", None)
+        if bundle_label:
+            registration_data["service_bundle_name"] = bundle_label
+
     branch_name = cstr(registration_data.get("branch") or "").strip()
     if not branch_name:
         branch_name = _default_branch(frappe.session.user) or ""
