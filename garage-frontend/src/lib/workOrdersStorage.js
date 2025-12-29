@@ -15,6 +15,33 @@ const isDemoOrder = (order) => {
   return id.startsWith('demo') || orderId.startsWith('demo');
 };
 
+const normalizeStatusValue = (value) => {
+  if (!value) return '';
+  return value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+};
+
+const mapRepairStatusFromServiceOrder = (serviceOrder) => {
+  const status = normalizeStatusValue(serviceOrder?.status);
+  const qcStatus = normalizeStatusValue(serviceOrder?.qc_status);
+
+  if (status === 'cancelled') return 'cancelled';
+  if (status === 'completed') return 'completed';
+  if (status === 'waiting-payment') return 'final-inspection';
+  if (status === 'awaiting-qc') {
+    return qcStatus === 'passed' ? 'qc-finished' : 'quality-check';
+  }
+  if (status === 'work-in-progress') return 'in-progress';
+  if (status === 'request-part') return 'request-part';
+  if (status === 'approved') return 'approved';
+
+  return '';
+};
+
 const dedupeWorkOrders = (orders) => {
   const seen = new Set();
   const deduped = [];
@@ -87,4 +114,71 @@ export const persistWorkOrders = async (orders, { skipSync = false } = {}) => {
   }
 
   return sanitized;
+};
+
+export const refreshWorkOrdersFromBackend = async ({ branch } = {}) => {
+  if (!hasStorage()) return [];
+
+  const storedOrders = getStoredWorkOrders();
+  if (storedOrders.length === 0) return [];
+
+  try {
+    const bootstrap = await frappeClient.getPortalBootstrap({ branch });
+    const serviceOrders = Array.isArray(bootstrap?.service_orders) ? bootstrap.service_orders : [];
+    if (serviceOrders.length === 0) return storedOrders;
+
+    const serviceMap = new Map(
+      serviceOrders
+        .filter((order) => order?.name)
+        .map((order) => [order.name, order])
+    );
+
+    let changed = false;
+    const updatedOrders = storedOrders.map((order) => {
+      const orderKey = order.orderId || order.id;
+      if (!orderKey || !serviceMap.has(orderKey)) {
+        return order;
+      }
+
+      const serviceOrder = serviceMap.get(orderKey);
+      const normalizedStatus = normalizeStatusValue(serviceOrder?.status);
+      const mappedRepairStatus = mapRepairStatusFromServiceOrder(serviceOrder);
+      const qcStatus = normalizeStatusValue(serviceOrder?.qc_status);
+
+      const updated = { ...order };
+      let updatedRow = false;
+
+      if (normalizedStatus && normalizedStatus !== order.status) {
+        updated.status = normalizedStatus;
+        updatedRow = true;
+      }
+
+      if (mappedRepairStatus && mappedRepairStatus !== order.repairStatus) {
+        updated.repairStatus = mappedRepairStatus;
+        updatedRow = true;
+      }
+
+      if (qcStatus === 'passed' && !order.qcApproved) {
+        updated.qcApproved = true;
+        updatedRow = true;
+      }
+
+      if (updatedRow) {
+        changed = true;
+        return updated;
+      }
+
+      return order;
+    });
+
+    if (changed) {
+      await persistWorkOrders(updatedOrders, { skipSync: true });
+      return updatedOrders;
+    }
+
+    return storedOrders;
+  } catch (error) {
+    console.error('Failed to refresh work orders from backend:', error);
+    return storedOrders;
+  }
 };
