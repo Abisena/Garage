@@ -298,6 +298,32 @@ class FrappeClient {
     }
   }
 
+  async listServiceOrdersByNames(orderNames = [], fields = null) {
+    const names = Array.isArray(orderNames)
+      ? orderNames.filter((name) => typeof name === 'string' && name.trim())
+      : [];
+
+    if (names.length === 0) {
+      return [];
+    }
+
+    const serviceOrderFields = Array.isArray(fields) && fields.length > 0
+      ? fields
+      : ['name', 'status', 'inspection_record', 'inspection_summary'];
+
+    const filters = [['name', 'in', names]];
+
+    try {
+      const url = this.buildListURL('Garage Service Order', serviceOrderFields, filters, names.length);
+      const response = await this.request(url);
+
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to list service orders:', error);
+      return [];
+    }
+  }
+
   async listGarageBrands(limit = 200) {
     try {
       const fields = ['name', 'brand_name'];
