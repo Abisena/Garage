@@ -4059,7 +4059,11 @@ def _map_repair_status(status: str) -> Dict[str, Optional[str]]:
     return mapping.get(normalized, {})
 
 
-def _sync_quality_check(service_order: str, payload: Optional[Any]) -> Optional[Dict[str, Any]]:
+def _sync_quality_check(
+    service_order: str,
+    payload: Optional[Any],
+    order: Optional[Mapping[str, Any]] = None,
+) -> Optional[Dict[str, Any]]:
     if payload in (None, ""):
         return None
 
@@ -4098,6 +4102,22 @@ def _sync_quality_check(service_order: str, payload: Optional[Any]) -> Optional[
         doc.service_order = service_order
 
         applied: Dict[str, Any] = {}
+        order_data = _ensure_dict(order or {})
+        status_hint = _normalize_status(
+            order_data.get("status") or order_data.get("repairStatus")
+        )
+        qc_approved = order_data.get("qcApproved") or order_data.get("qc_approved")
+        progress = _extract_repair_progress(order_data, doc) if order_data else 0
+        finished_states = {
+            "qc-finished",
+            "final-inspection",
+            "ready-for-payment",
+            "waiting-payment",
+            "payment",
+            "completed",
+        }
+        should_finish = bool(qc_approved) or status_hint in finished_states or progress >= 97
+
         for fieldname, value in data.items():
             if fieldname not in fieldnames:
                 continue
@@ -4108,6 +4128,10 @@ def _sync_quality_check(service_order: str, payload: Optional[Any]) -> Optional[
                 value = resolved_user
             doc.set(fieldname, value)
             applied[fieldname] = value
+
+        if should_finish and "status" in fieldnames and doc.status != "Finished":
+            doc.status = "Finished"
+            applied["status"] = "Finished"
 
         if not applied and existing:
             return {"name": existing}
@@ -4702,7 +4726,7 @@ def sync_frontend_work_orders(work_orders: Optional[Any] = None) -> Dict[str, An
                 frappe.db.set_value(doc.doctype, doc.name, "invoice_status", "Pending")
 
         quality_payload = order.get("qualityCheck") or order.get("quality_check")
-        qc_result = _sync_quality_check(doc.name, quality_payload)
+        qc_result = _sync_quality_check(doc.name, quality_payload, order)
         if qc_result:
             applied["quality_check"] = qc_result
 
