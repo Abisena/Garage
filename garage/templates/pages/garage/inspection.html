@@ -249,6 +249,11 @@ a:hover {
     color: var(--status-pending);
 }
 
+.status-request-part {
+    background: var(--status-pending-light);
+    color: var(--status-pending);
+}
+
 .status-approved {
     background: var(--status-progress-light);
     color: var(--status-progress);
@@ -2571,6 +2576,10 @@ body.parts-detail-mode .parts-table td.actions {
         let latestOrder = null;
         let baseServiceFee = 0;
         let serviceSummaryItems = [];
+        let isInitializing = true;
+        let autoSaveTimer = null;
+        let autoSaveInFlight = false;
+        let autoSaveQueued = false;
         const LOCKED_PART_MESSAGE = 'Item ini tidak dapat diubah karena sudah diproses oleh tim sparepart. Tambahkan part baru bila diperlukan.';
         const EDITABLE_PART_STATUSES = new Set(['', 'draft', 'planned', 'request', 'pending', 'pending check', 'available', 'to order', 'ordered', 'in transit', 'backordered', 're-request']);
         const EDITABLE_PART_STATUSES_PARTIAL_REJECT = new Set(['', 'draft', 'planned', 'request', 'pending', 'pending check', 'available', 'to order', 'ordered', 'in transit', 'backordered', 're-request', 'rejected']);
@@ -3137,6 +3146,93 @@ body.parts-detail-mode .parts-table td.actions {
             return Math.max(0, subtotal - discount);
         }
 
+        function buildInspectionPayload({ includeStatus = false } = {}) {
+            recalculateTotals();
+            const sanitizedParts = requiredParts.map((part) => {
+                const qty = Number(part.qty) || 0;
+                const rate = Number(part.rate) || 0;
+                const discountAmount = normalizeDiscount({ qty, rate }, part.discount_amount || part.discount || 0);
+                const amount = Math.max(0, qty * rate - discountAmount);
+                return {
+                    item_code: part.item_code,
+                    item_name: part.item_name,
+                    description: part.description,
+                    qty,
+                    rate,
+                    discount_amount: discountAmount,
+                    amount,
+                    uom: part.uom || 'Unit',
+                    stock_status: normalizeStockStatus(part.stock_status),
+                    source: part.source || 'On Hand',
+                    warehouse: part.warehouse || ''
+                };
+            });
+
+            const assignedMechanicInput = document.getElementById('assigned_mechanic');
+
+            const payload = {
+                order_id: orderId,
+                priority: priorityInput ? priorityInput.value : (latestOrder?.priority || null),
+                estimated_delivery_date: estimatedDateInput ? estimatedDateInput.value : (latestOrder?.estimated_delivery_date || null),
+                total_estimated_amount: totalEstimatedAmount,
+                inspection_summary: summaryInput ? summaryInput.value : (latestOrder?.inspection_summary || ''),
+                service_notes: notesInput ? notesInput.value : (latestOrder?.service_notes || ''),
+                assigned_mechanic: assignedMechanicInput ? assignedMechanicInput.value.trim() : (latestOrder?.assigned_mechanic || ''),
+                required_parts: sanitizedParts
+            };
+
+            if (includeStatus) {
+                payload.status = 'Request Part';
+            }
+
+            return payload;
+        }
+
+        function scheduleAutoSave() {
+            if (isPartsDetailMode || isInitializing) {
+                return;
+            }
+            if (autoSaveTimer) {
+                clearTimeout(autoSaveTimer);
+            }
+            autoSaveTimer = setTimeout(() => {
+                autoSaveInspection();
+            }, 1200);
+        }
+
+        async function autoSaveInspection() {
+            if (isPartsDetailMode || isInitializing) {
+                return;
+            }
+            if (autoSaveInFlight) {
+                autoSaveQueued = true;
+                return;
+            }
+            autoSaveInFlight = true;
+            try {
+                const payload = buildInspectionPayload();
+                await ensureCSRFToken();
+                const response = await frappe.call(withCSRF({
+                    method: 'garage.api.portal.update_service_order_inspection',
+                    args: { order_id: orderId, inspection_data: payload },
+                    type: 'POST'
+                }));
+                const updated = response?.message || {};
+                if (updated.status) {
+                    applyStatusBadge(updated.status);
+                    latestOrder = Object.assign({}, latestOrder || {}, { status: updated.status });
+                }
+            } catch (error) {
+                console.error('Auto save error:', error);
+            } finally {
+                autoSaveInFlight = false;
+                if (autoSaveQueued) {
+                    autoSaveQueued = false;
+                    scheduleAutoSave();
+                }
+            }
+        }
+
         function renderRequiredParts() {
             const container = document.getElementById('requiredPartsList');
             if (!container) {
@@ -3336,6 +3432,7 @@ body.parts-detail-mode .parts-table td.actions {
                 amount: 0
             });
             renderRequiredParts();
+            scheduleAutoSave();
         };
 
         window.removeRequiredPart = function(index) {
@@ -3352,6 +3449,7 @@ body.parts-detail-mode .parts-table td.actions {
             }
             requiredParts.splice(index, 1);
             renderRequiredParts();
+            scheduleAutoSave();
         };
 
         window.selectRequiredPart = function(index, value) {
@@ -3393,6 +3491,7 @@ body.parts-detail-mode .parts-table td.actions {
                 requiredParts[index].description = catalog.part_name || requiredParts[index].description;
             }
             renderRequiredParts();
+            scheduleAutoSave();
         };
 
         window.updateRequiredPartQty = function(index, value) {
@@ -3412,6 +3511,7 @@ body.parts-detail-mode .parts-table td.actions {
             requiredParts[index].discount_amount = normalizeDiscount(requiredParts[index], requiredParts[index].discount_amount || 0);
             requiredParts[index].amount = computePartAmount(requiredParts[index]);
             renderRequiredParts();
+            scheduleAutoSave();
         };
 
         window.updateRequiredPartRate = function(index, value) {
@@ -3431,6 +3531,7 @@ body.parts-detail-mode .parts-table td.actions {
             requiredParts[index].discount_amount = normalizeDiscount(requiredParts[index], requiredParts[index].discount_amount || 0);
             requiredParts[index].amount = computePartAmount(requiredParts[index]);
             renderRequiredParts();
+            scheduleAutoSave();
         };
 
         window.updateRequiredPartDiscount = function(index, value) {
@@ -3449,6 +3550,7 @@ body.parts-detail-mode .parts-table td.actions {
             requiredParts[index].discount_amount = normalizeDiscount(requiredParts[index], discount);
             requiredParts[index].amount = computePartAmount(requiredParts[index]);
             renderRequiredParts();
+            scheduleAutoSave();
         };
 
         window.updateRequiredPartDescription = function(index, value) {
@@ -3473,6 +3575,7 @@ body.parts-detail-mode .parts-table td.actions {
                 }
             }
             renderRequiredParts();
+            scheduleAutoSave();
         };
 
         window.updateRequiredPartUom = function(index, value) {
@@ -3488,6 +3591,7 @@ body.parts-detail-mode .parts-table td.actions {
                 return;
             }
             requiredParts[index].uom = value;
+            scheduleAutoSave();
         };
 
         async function fetchSparePartCatalog() {
@@ -3812,6 +3916,7 @@ body.parts-detail-mode .parts-table td.actions {
             refreshIntakeSummary(baseServiceFee);
             renderRequiredParts();
             recalculateTotals();
+            isInitializing = false;
         }
 
         window.submitInspection = async function() {
@@ -3833,28 +3938,6 @@ body.parts-detail-mode .parts-table td.actions {
                 return;
             }
 
-            recalculateTotals();
-
-            const sanitizedParts = requiredParts.map((part) => {
-                const qty = Number(part.qty) || 0;
-                const rate = Number(part.rate) || 0;
-                const discountAmount = normalizeDiscount({ qty, rate }, part.discount_amount || part.discount || 0);
-                const amount = Math.max(0, qty * rate - discountAmount);
-                return {
-                    item_code: part.item_code,
-                    item_name: part.item_name,
-                    description: part.description,
-                    qty,
-                    rate,
-                    discount_amount: discountAmount,
-                    amount,
-                    uom: part.uom || 'Unit',
-                    stock_status: normalizeStockStatus(part.stock_status),
-                    source: part.source || 'On Hand',
-                    warehouse: part.warehouse || ''
-                };
-            });
-
             const priorityInput = document.getElementById('priority');
             const estimatedDateInput = document.getElementById('estimated_delivery_date');
             const summaryInput = document.getElementById('inspection_summary');
@@ -3871,17 +3954,7 @@ body.parts-detail-mode .parts-table td.actions {
                 assignedMechanicInput.setCustomValidity('');
             }
 
-            const data = {
-                order_id: orderId,
-                priority: priorityInput ? priorityInput.value : (latestOrder?.priority || null),
-                estimated_delivery_date: estimatedDateInput ? estimatedDateInput.value : (latestOrder?.estimated_delivery_date || null),
-                total_estimated_amount: totalEstimatedAmount,
-                inspection_summary: summaryInput ? summaryInput.value : (latestOrder?.inspection_summary || ''),
-                service_notes: notesInput ? notesInput.value : (latestOrder?.service_notes || ''),
-                assigned_mechanic: assignedMechanicInput ? assignedMechanicInput.value.trim() : (latestOrder?.assigned_mechanic || ''),
-                required_parts: sanitizedParts,
-                status: 'Work In Progress'
-            };
+            const data = buildInspectionPayload({ includeStatus: true });
 
             try {
                 await ensureCSRFToken();
@@ -3891,10 +3964,10 @@ body.parts-detail-mode .parts-table td.actions {
                     type: 'POST'
                 }));
 
-                frappe.show_alert({ message: '✅ Inspeksi berhasil! Silakan cetak SPK.', indicator: 'green' }, 5);
-                applyStatusBadge('Work In Progress');
-                latestOrder = Object.assign({}, latestOrder || {}, { status: 'Work In Progress' });
-                setSpkButtonState(true);
+                frappe.show_alert({ message: '✅ Permintaan part berhasil disimpan.', indicator: 'green' }, 5);
+                applyStatusBadge('Request Part');
+                latestOrder = Object.assign({}, latestOrder || {}, { status: 'Request Part' });
+                setSpkButtonState(false);
 
                 if (!shouldStayOnPageAfterSave) {
                     setTimeout(() => window.location.reload(), 1200);
@@ -3962,6 +4035,25 @@ body.parts-detail-mode .parts-table td.actions {
             }
         };
 
+        function bindAutoSaveControls() {
+            const inputs = [
+                document.getElementById('inspection_summary'),
+                document.getElementById('service_notes'),
+                document.getElementById('priority'),
+                document.getElementById('estimated_delivery_date'),
+                document.getElementById('assigned_mechanic')
+            ];
+
+            inputs.forEach((input) => {
+                if (!input) {
+                    return;
+                }
+                input.addEventListener('input', scheduleAutoSave);
+                input.addEventListener('change', scheduleAutoSave);
+            });
+        }
+
+        bindAutoSaveControls();
         loadOrderData();
         recalculateTotals();
 
