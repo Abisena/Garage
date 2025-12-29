@@ -291,6 +291,6 @@ fixtures = [
     "Workspace",
     {
         "doctype": "Print Format",
-        "filters": [["name", "in", ["Garage Vehicle Inspection Report"]]],
+        "filters": [["name", "in", ["Garage Vehicle Inspection Report", "Garage Service Order Print"]]],
     },
 ]
