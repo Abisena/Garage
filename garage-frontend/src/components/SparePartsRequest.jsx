@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Package, Search, CheckCircle, Clock, AlertCircle, Truck, Eye, FileText, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { PartsDeliveryModal } from './PartsDeliveryModal';
@@ -11,10 +11,29 @@ export function SparePartsRequest({ currentUser }) {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [detailView, setDetailView] = useState(false);
   const [requests, setRequests] = useState([]);
+  const refreshTimeoutRef = useRef(null);
 
   useEffect(() => {
     void loadRequests();
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser?.username) return undefined;
+
+    const intervalId = setInterval(() => {
+      void loadRequests();
+    }, 30000);
+
+    return () => clearInterval(intervalId);
+  }, [currentUser?.username, currentUser?.branch]);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Reload data when storage changes
   useEffect(() => {
@@ -194,6 +213,16 @@ export function SparePartsRequest({ currentUser }) {
   const saveRequests = (updatedRequests) => {
     setRequests(updatedRequests);
     localStorage.setItem('sparePartsRequests', JSON.stringify(updatedRequests));
+  };
+
+  const scheduleAutoRefresh = (delay = 1200) => {
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+    refreshTimeoutRef.current = setTimeout(() => {
+      refreshTimeoutRef.current = null;
+      void loadRequests();
+    }, delay);
   };
 
   const syncRequestToFrappe = async (request) => {
@@ -491,6 +520,7 @@ export function SparePartsRequest({ currentUser }) {
 
     if (updatedRequest) {
       await syncRequestToFrappe(updatedRequest);
+      scheduleAutoRefresh();
     }
   };
 
@@ -524,6 +554,7 @@ export function SparePartsRequest({ currentUser }) {
 
     if (updated) {
       await syncRequestToFrappe(updated);
+      scheduleAutoRefresh();
     }
   };
 
@@ -596,6 +627,7 @@ export function SparePartsRequest({ currentUser }) {
 
     if (updatedRequest) {
       await syncRequestToFrappe(updatedRequest);
+      scheduleAutoRefresh();
     }
   };
 
