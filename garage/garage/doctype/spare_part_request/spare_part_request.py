@@ -144,6 +144,13 @@ class SparePartRequest(Document):
         frappe.flags.skip_service_order_spare_part_request_sync = True
         try:
             service_doc.save(ignore_permissions=True)
+            self._publish_service_order_update(
+                service_doc.name,
+                {
+                    "required_parts": True,
+                    "part_charge_status": service_doc.part_charge_status,
+                },
+            )
         finally:
             frappe.flags.skip_service_order_spare_part_request_sync = False
 
@@ -184,6 +191,18 @@ class SparePartRequest(Document):
         movement.insert(ignore_permissions=True)
         movement.submit()
         return movement.name
+
+    def _publish_service_order_update(self, service_order_name: str, fields: dict | None = None) -> None:
+        try:
+            frappe.publish_realtime(
+                "garage_service_order_updated",
+                {"name": service_order_name, "fields": fields or {}},
+            )
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                "Failed to publish Garage Service Order update",
+            )
 
 
 def normalize_approval_status(status: str) -> str:
