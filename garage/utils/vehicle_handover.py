@@ -6,6 +6,7 @@ import frappe
 
 PAID_INVOICE_STATUSES = {"Paid", "Submitted"}
 PAID_PAYMENT_ENTRY_STATUSES = {"Submitted", "Cleared"}
+PAYMENT_ENTRY_REFERENCE_DOCTYPES = {"Garage Sales Invoice", "Sales Invoice"}
 
 
 def _get_service_order(service_order_name: str):
@@ -18,9 +19,45 @@ def _get_service_order(service_order_name: str):
 def _resolve_service_order_from_invoice(invoice) -> str | None:
     source_type = getattr(invoice, "source_type", None)
     source_name = getattr(invoice, "source_name", None)
-    if source_type != "Garage Service Order" or not source_name:
-        return None
-    return source_name
+    if source_type == "Garage Service Order" and source_name:
+        return source_name
+
+    service_order = getattr(invoice, "service_order", None) or getattr(
+        invoice, "garage_service_order", None
+    )
+    if service_order:
+        return service_order
+
+    return None
+
+
+def _is_paid_sales_invoice(invoice) -> bool:
+    return getattr(invoice, "status", None) in PAID_INVOICE_STATUSES or getattr(
+        invoice, "docstatus", None
+    ) == 1
+
+
+def _extract_invoice_names_from_payment_entry(doc) -> list[str]:
+    allocations = getattr(doc, "allocations", None) or []
+    invoice_names = [
+        getattr(allocation, "invoice", None)
+        for allocation in allocations
+        if getattr(allocation, "invoice", None)
+    ]
+    if invoice_names:
+        return invoice_names
+
+    references = getattr(doc, "references", None) or []
+    for reference in references:
+        if (
+            getattr(reference, "reference_doctype", None)
+            in PAYMENT_ENTRY_REFERENCE_DOCTYPES
+        ):
+            invoice_name = getattr(reference, "reference_name", None)
+            if invoice_name:
+                invoice_names.append(invoice_name)
+
+    return invoice_names
 
 
 def _handover_exists(service_order_name: str) -> bool:
@@ -55,7 +92,7 @@ def _create_handover(
 def handle_paid_sales_invoice(doc, method=None) -> None:  # pragma: no cover - frappe hook
     """Auto-create Vehicle Handover when a sales invoice is paid."""
 
-    if getattr(doc, "status", None) not in PAID_INVOICE_STATUSES:
+    if not _is_paid_sales_invoice(doc):
         return
 
     service_order_name = _resolve_service_order_from_invoice(doc)
@@ -83,20 +120,19 @@ def handle_paid_payment_entry(doc, method=None) -> None:  # pragma: no cover - f
     if getattr(doc, "status", None) not in PAID_PAYMENT_ENTRY_STATUSES:
         return
 
-    allocations = getattr(doc, "allocations", None) or []
-    if not allocations:
+    invoice_names = _extract_invoice_names_from_payment_entry(doc)
+    if not invoice_names:
         return
 
     created_for = set()
-    for allocation in allocations:
-        invoice_name = getattr(allocation, "invoice", None)
-        if not invoice_name:
-            continue
-
+    for invoice_name in invoice_names:
         try:
             invoice = frappe.get_doc("Garage Sales Invoice", invoice_name)
         except Exception:
-            continue
+            try:
+                invoice = frappe.get_doc("Sales Invoice", invoice_name)
+            except Exception:
+                continue
 
         service_order_name = _resolve_service_order_from_invoice(invoice)
         if not service_order_name or service_order_name in created_for:

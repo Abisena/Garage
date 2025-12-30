@@ -306,7 +306,13 @@ doc_events = {
     "Garage Sales Invoice": {
         "on_update": "garage.utils.vehicle_handover.handle_paid_sales_invoice",
     },
+    "Sales Invoice": {
+        "on_update": "garage.utils.vehicle_handover.handle_paid_sales_invoice",
+    },
     "Garage Payment Entry": {
+        "on_update": "garage.utils.vehicle_handover.handle_paid_payment_entry",
+    },
+    "Payment Entry": {
         "on_update": "garage.utils.vehicle_handover.handle_paid_payment_entry",
     },
 }
