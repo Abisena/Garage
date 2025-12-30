@@ -83,10 +83,10 @@ def _get_sales_invoice(invoice_name: str, link_field: str) -> Optional[dict]:
 
 
 def _get_outstanding_amount(reference, invoice: dict) -> Optional[float]:
-    outstanding_amount = getattr(reference, "outstanding_amount", None)
-    if outstanding_amount is None:
-        outstanding_amount = invoice.get("outstanding_amount")
-    return outstanding_amount
+    invoice_outstanding = invoice.get("outstanding_amount")
+    if invoice_outstanding is not None:
+        return invoice_outstanding
+    return getattr(reference, "outstanding_amount", None)
 
 
 def _complete_service_order(service_order_name: str) -> None:
