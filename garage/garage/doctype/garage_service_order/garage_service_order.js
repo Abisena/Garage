@@ -54,6 +54,28 @@ const applyBundleItems = (frm, items, { replace = false } = {}) => {
   frm.refresh_field('required_parts');
 };
 
+const subscribeToUpdates = (frm) => {
+  if (frm._garageServiceOrderRealtimeBound) {
+    return;
+  }
+
+  frm._garageServiceOrderRealtimeBound = true;
+  frappe.realtime.on('garage_service_order_updated', (payload) => {
+    if (!payload || payload.name !== frm.doc.name) {
+      return;
+    }
+
+    if (frm._garageServiceOrderReloading) {
+      return;
+    }
+
+    frm._garageServiceOrderReloading = true;
+    frm.reload_doc().finally(() => {
+      frm._garageServiceOrderReloading = false;
+    });
+  });
+};
+
 const autoApplyBundle = (frm) => {
   if (!frm.doc.service_order_type) {
     return;
@@ -75,6 +97,7 @@ const autoApplyBundle = (frm) => {
 
 frappe.ui.form.on('Garage Service Order', {
   refresh(frm) {
+    subscribeToUpdates(frm);
     const statusField = frm.fields_dict.required_parts?.grid?.get_field('stock_status');
     if (statusField) {
       statusField.formatter = formatStockStatus;

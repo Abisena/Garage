@@ -51,6 +51,20 @@ def _set_service_order_status(service_order, target_status: str) -> None:
     if not _should_advance(getattr(service_order, "status", None), target_status):
         return
     frappe.db.set_value(service_order.doctype, service_order.name, {"status": target_status})
+    _publish_service_order_update(service_order.name, {"status": target_status})
+
+
+def _publish_service_order_update(service_order_name: str, updated_fields: dict | None = None) -> None:
+    try:
+        frappe.publish_realtime(
+            "garage_service_order_updated",
+            {"name": service_order_name, "fields": updated_fields or {}},
+        )
+    except Exception:
+        frappe.log_error(
+            frappe.get_traceback(),
+            "Failed to publish Garage Service Order update",
+        )
 
 
 def _has_required_parts(service_order) -> bool:
