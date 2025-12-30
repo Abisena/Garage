@@ -301,6 +301,15 @@ doc_events = {
     "BCA Bank Statement Import": {
         "autoname": "garage.utils.bca_bank_statement_import.set_import_naming",
     },
+    "Garage Vehicle Inspection": {
+        "on_update": "garage.utils.service_order_status.sync_from_inspection",
+    },
+    "Spare Part Request": {
+        "on_update": "garage.utils.service_order_status.sync_from_spare_part_request",
+    },
+    "Repair QC": {
+        "on_update": "garage.utils.service_order_status.sync_from_repair_qc",
+    },
     "Garage Sales Invoice": {
         "on_update": "garage.utils.vehicle_handover.handle_paid_sales_invoice",
     },
