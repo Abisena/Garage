@@ -64,6 +64,11 @@ class RepairQC(Document):
         if not self.service_order:
             return None
 
+        sales_invoice = self._get_latest_sales_invoice()
+        if sales_invoice:
+            sales_invoice["doctype"] = "Sales Invoice"
+            return sales_invoice
+
         invoices = frappe.get_all(
             "Garage Sales Invoice",
             filters={
@@ -80,9 +85,53 @@ class RepairQC(Document):
             order_by="modified desc",
             limit=1,
         )
+        if not invoices:
+            return None
+
+        invoices[0]["doctype"] = "Garage Sales Invoice"
+        return invoices[0]
+
+    def _get_latest_sales_invoice(self):
+        if not frappe.db.table_exists("tabSales Invoice"):
+            return None
+
+        meta = frappe.get_meta("Sales Invoice")
+        link_field = None
+        for fieldname in (
+            "service_order",
+            "service_order_ref",
+            "garage_service_order",
+            "garage_service_order_ref",
+        ):
+            if meta.has_field(fieldname):
+                link_field = fieldname
+                break
+
+        if not link_field:
+            return None
+
+        invoices = frappe.get_all(
+            "Sales Invoice",
+            filters={
+                link_field: self.service_order,
+                "docstatus": ["!=", 2],
+            },
+            fields=[
+                "name",
+                "grand_total",
+                "rounded_total",
+                "outstanding_amount",
+                "customer",
+                "company",
+            ],
+            order_by="modified desc",
+            limit=1,
+        )
         return invoices[0] if invoices else None
 
-    def _calculate_invoice_totals(self, invoice_name, fallback_total, fallback_outstanding):
+    def _calculate_invoice_totals(
+        self, invoice_doctype, invoice_name, fallback_total, fallback_outstanding
+    ):
         total_amount = flt(fallback_total or 0)
         outstanding_amount = flt(fallback_outstanding or 0)
 
@@ -90,8 +139,19 @@ class RepairQC(Document):
             return total_amount, outstanding_amount
 
         try:
-            invoice_doc = frappe.get_doc("Garage Sales Invoice", invoice_name)
+            invoice_doc = frappe.get_doc(invoice_doctype, invoice_name)
         except Exception:
+            return total_amount, outstanding_amount
+
+        if invoice_doctype == "Sales Invoice":
+            if not total_amount:
+                total_amount = flt(
+                    invoice_doc.get("rounded_total") or invoice_doc.get("grand_total") or 0
+                )
+            if not outstanding_amount:
+                outstanding_amount = flt(
+                    invoice_doc.get("outstanding_amount") or total_amount
+                )
             return total_amount, outstanding_amount
 
         if not total_amount:
@@ -114,8 +174,9 @@ class RepairQC(Document):
             return
 
         total_amount, outstanding_amount = self._calculate_invoice_totals(
+            invoice.get("doctype") or "Garage Sales Invoice",
             invoice.get("name"),
-            invoice.get("total_amount"),
+            invoice.get("total_amount") or invoice.get("rounded_total") or invoice.get("grand_total"),
             invoice.get("outstanding_amount"),
         )
         self.summary_invoice = invoice.get("name")
@@ -248,6 +309,8 @@ class RepairQC(Document):
 
         invoice = self._get_latest_invoice()
         if not invoice:
+            return
+        if invoice.get("doctype") == "Sales Invoice":
             return
 
         outstanding_amount = flt(invoice.get("outstanding_amount") or invoice.get("total_amount"))
