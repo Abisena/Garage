@@ -47,7 +47,7 @@ export function SparePartsRequest({ currentUser }) {
 
   const mapFrappeItemStatus = (status) => {
     const normalized = (status || '').trim().toLowerCase();
-    if (normalized === 'approved') {
+    if (['approved', 'prepared', 'ready'].includes(normalized)) {
       return 'PREPARED';
     }
     if (normalized === 'rejected') {
