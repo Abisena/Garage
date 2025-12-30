@@ -4012,19 +4012,19 @@ def _map_repair_status(status: str) -> Dict[str, Optional[str]]:
             "qc_status": "Pending",
         },
         "quality-check": {
-            "status": "Work In Progress",
+            "status": "Waiting Payment",
             "work_order_status": "Completed",
             "job_card_status": "Completed",
             "qc_status": "Pending",
         },
         "repair-nqc": {
-            "status": "Work In Progress",
+            "status": "Waiting Payment",
             "work_order_status": "Completed",
             "job_card_status": "Completed",
             "qc_status": "Pending",
         },
         "final-inspection": {
-            "status": "Work In Progress",
+            "status": "Waiting Payment",
             "work_order_status": "Completed",
             "job_card_status": "Completed",
             "qc_status": "Pending",
