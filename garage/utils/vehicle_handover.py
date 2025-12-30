@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import frappe
+from frappe.utils import nowdate
 
 PAID_INVOICE_STATUSES = {"Paid", "Submitted"}
 PAID_PAYMENT_ENTRY_STATUSES = {"Submitted", "Cleared"}
@@ -89,6 +90,30 @@ def _create_handover(
     handover.save(ignore_permissions=True)
 
 
+def _mark_service_order_completed(service_order) -> None:
+    updates = {}
+
+    if getattr(service_order, "status", None) not in {"Completed", "Cancelled"}:
+        updates["status"] = "Completed"
+
+    if hasattr(service_order, "job_card_status"):
+        updates["job_card_status"] = "Completed"
+
+    if hasattr(service_order, "work_order_status"):
+        updates["work_order_status"] = "Completed"
+
+    if hasattr(service_order, "qc_status"):
+        updates["qc_status"] = "Passed"
+
+    if hasattr(service_order, "actual_delivery_date") and not getattr(
+        service_order, "actual_delivery_date", None
+    ):
+        updates["actual_delivery_date"] = nowdate()
+
+    if updates:
+        frappe.db.set_value(service_order.doctype, service_order.name, updates)
+
+
 def handle_paid_sales_invoice(doc, method=None) -> None:  # pragma: no cover - frappe hook
     """Auto-create Vehicle Handover when a sales invoice is paid."""
 
@@ -102,6 +127,8 @@ def handle_paid_sales_invoice(doc, method=None) -> None:  # pragma: no cover - f
     service_order = _get_service_order(service_order_name)
     if not service_order:
         return
+
+    _mark_service_order_completed(service_order)
 
     branch = getattr(doc, "branch", None) or getattr(service_order, "branch", None)
     if not branch:
@@ -141,6 +168,8 @@ def handle_paid_payment_entry(doc, method=None) -> None:  # pragma: no cover - f
         service_order = _get_service_order(service_order_name)
         if not service_order:
             continue
+
+        _mark_service_order_completed(service_order)
 
         branch = (
             getattr(doc, "branch", None)
