@@ -6,7 +6,7 @@ import frappe
 from frappe.utils import nowdate
 
 PAID_INVOICE_STATUSES = {"Paid", "Submitted"}
-PAID_PAYMENT_ENTRY_STATUSES = {"Submitted", "Cleared"}
+PAID_PAYMENT_ENTRY_STATUSES = {"Submitted", "Cleared", "Paid"}
 PAYMENT_ENTRY_REFERENCE_DOCTYPES = {"Garage Sales Invoice", "Sales Invoice"}
 
 
@@ -59,6 +59,13 @@ def _extract_invoice_names_from_payment_entry(doc) -> list[str]:
                 invoice_names.append(invoice_name)
 
     return invoice_names
+
+
+def _is_paid_payment_entry(doc) -> bool:
+    status = getattr(doc, "status", None)
+    if status in PAID_PAYMENT_ENTRY_STATUSES:
+        return True
+    return getattr(doc, "docstatus", None) == 1
 
 
 def _handover_exists(service_order_name: str) -> bool:
@@ -144,7 +151,7 @@ def handle_paid_sales_invoice(doc, method=None) -> None:  # pragma: no cover - f
 def handle_paid_payment_entry(doc, method=None) -> None:  # pragma: no cover - frappe hook
     """Auto-create Vehicle Handover when a payment entry is submitted/cleared."""
 
-    if getattr(doc, "status", None) not in PAID_PAYMENT_ENTRY_STATUSES:
+    if not _is_paid_payment_entry(doc):
         return
 
     invoice_names = _extract_invoice_names_from_payment_entry(doc)
