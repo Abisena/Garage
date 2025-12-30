@@ -39,7 +39,6 @@ SERVICE_ORDER_ACTIVE_STATUSES = {
     "Approved",
     "Request Part",
     "Work In Progress",
-    "Awaiting QC",
     "Waiting Payment",
 }
 TECHNICIAN_ACTIVE_STATUS = {"Active"}
@@ -4013,31 +4012,31 @@ def _map_repair_status(status: str) -> Dict[str, Optional[str]]:
             "qc_status": "Pending",
         },
         "quality-check": {
-            "status": "Awaiting QC",
+            "status": "Waiting Payment",
             "work_order_status": "Completed",
             "job_card_status": "Completed",
             "qc_status": "Pending",
         },
         "repair-nqc": {
-            "status": "Awaiting QC",
+            "status": "Waiting Payment",
             "work_order_status": "Completed",
             "job_card_status": "Completed",
             "qc_status": "Pending",
         },
         "final-inspection": {
-            "status": "Awaiting QC",
+            "status": "Waiting Payment",
             "work_order_status": "Completed",
             "job_card_status": "Completed",
             "qc_status": "Pending",
         },
         "qc-finished": {
-            "status": "Awaiting QC",
+            "status": "Waiting Payment",
             "work_order_status": "Completed",
             "job_card_status": "Completed",
             "qc_status": "Passed",
         },
         "ready-for-payment": {
-            "status": "Completed",
+            "status": "Waiting Payment",
             "work_order_status": "Completed",
             "job_card_status": "Completed",
             "qc_status": "Passed",
@@ -6062,7 +6061,6 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
             "Approved",
             "Request Part",
             "Work In Progress",
-            "Awaiting QC",
             "Waiting Payment",
             "Completed",
             "Cancelled",
@@ -6075,8 +6073,8 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
         if status_update == "Work In Progress" and hasattr(doc, "job_card_status"):
             doc.job_card_status = "Work In Progress"
 
-        if status_update == "Awaiting QC" and hasattr(doc, "qc_status"):
-            doc.qc_status = "Pending"
+        if status_update == "Waiting Payment" and hasattr(doc, "qc_status"):
+            doc.qc_status = "Passed"
     
     def _get_or_create_inspection(order: frappe.Document) -> frappe.Document:
         existing_name = frappe.db.exists(
@@ -6332,8 +6330,8 @@ def complete_service_order(order_id: str, completion_data: Optional[Any] = None)
     doc = _get_doc("Garage Service Order", order_id)
     
     # Validate current status
-    if doc.status != "Awaiting QC":
-        frappe.throw(_("Service order harus dalam status Awaiting QC sebelum diselesaikan."))
+    if doc.status not in {"Awaiting QC", "Waiting Payment"}:
+        frappe.throw(_("Service order harus dalam status Waiting Payment sebelum diselesaikan."))
     
     # Update status
     doc.status = "Completed"
@@ -6382,7 +6380,6 @@ def get_service_statistics() -> Dict[str, Any]:
         "Approved",
         "Request Part",
         "Work In Progress",
-        "Awaiting QC",
         "Waiting Payment",
         "Completed",
         "Cancelled",
@@ -6404,7 +6401,6 @@ def get_service_statistics() -> Dict[str, Any]:
     progress_count = (
         status_counts.get("Request Part", 0)
         + status_counts.get("Work In Progress", 0)
-        + status_counts.get("Awaiting QC", 0)
         + status_counts.get("Waiting Payment", 0)
     )
     
@@ -6424,7 +6420,7 @@ def get_service_statistics() -> Dict[str, Any]:
         overdue_orders = frappe.db.count(
             "Garage Service Order",
             {
-                "status": ["in", ["Work In Progress", "Awaiting QC"]],
+                "status": ["in", ["Work In Progress", "Waiting Payment"]],
                 "estimated_delivery_date": ["<", nowdate()]
             }
         )

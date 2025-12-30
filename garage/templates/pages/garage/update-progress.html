@@ -101,11 +101,11 @@ body {
     border-color: rgba(15, 157, 88, 0.24);
 }
 
-.status-pill.qc {
-    background: rgba(255, 176, 32, 0.18);
-    color: var(--warning);
-    border-color: rgba(255, 176, 32, 0.32);
-}
+    .status-pill.waiting-payment {
+        background: rgba(255, 176, 32, 0.18);
+        color: var(--warning);
+        border-color: rgba(255, 176, 32, 0.32);
+    }
 
 .content-grid {
     display: grid;
@@ -555,7 +555,7 @@ body {
 
     const STATUS_OPTIONS = [
         { value: 'Work In Progress', label: 'Work In Progress' },
-        { value: 'Awaiting QC', label: 'Awaiting QC' },
+        { value: 'Waiting Payment', label: 'Waiting Payment' },
         { value: 'Completed', label: 'Completed' },
         { value: 'Cancelled', label: 'Cancelled' }
     ];
@@ -684,12 +684,12 @@ body {
 
         const pill = ui.statusPill;
         pill.textContent = status ? `Status: ${status}` : 'Status Tidak Diketahui';
-        pill.classList.remove('progress', 'completed', 'qc');
+        pill.classList.remove('progress', 'completed', 'waiting-payment');
 
         if (status === 'Work In Progress') {
             pill.classList.add('progress');
-        } else if (status === 'Awaiting QC') {
-            pill.classList.add('qc');
+        } else if (status === 'Waiting Payment') {
+            pill.classList.add('waiting-payment');
         } else if (status === 'Completed') {
             pill.classList.add('completed');
         }

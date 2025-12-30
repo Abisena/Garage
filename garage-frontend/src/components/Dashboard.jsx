@@ -147,7 +147,7 @@ export function Dashboard() {
     { name: 'Awaiting Approval', value: orders.filter(o => (o.status || '').toLowerCase() === 'awaiting approval').length, color: '#f59e0b' },
     { name: 'Approved', value: orders.filter(o => (o.status || '').toLowerCase() === 'approved').length, color: '#10b981' },
     { name: 'Work In Progress', value: orders.filter(o => (o.status || '').toLowerCase() === 'work in progress').length, color: '#06b6d4' },
-    { name: 'Awaiting QC', value: orders.filter(o => (o.status || '').toLowerCase() === 'awaiting qc').length, color: '#0ea5e9' },
+    { name: 'Waiting Payment', value: orders.filter(o => (o.status || '').toLowerCase() === 'waiting payment').length, color: '#f97316' },
     { name: 'Quality Check', value: orders.filter(o => (o.status || '').toLowerCase() === 'quality check').length, color: '#14b8a6' },
     { name: 'Completed', value: orders.filter(o => (o.status || '').toLowerCase() === 'completed').length, color: '#22c55e' },
   ].filter(item => item.value > 0);
