@@ -4450,6 +4450,11 @@ def _ensure_billing_placeholders(
                 get_payment_entry,
             )
 
+            payment_status = _normalize_status(
+                order.get("paymentStatus") or order.get("payment_status")
+            )
+            should_submit_payment = payment_status == "paid" or status_hint == "paid"
+
             payment_mode = _normalize_payment_mode(
                 order.get("paymentMethod")
                 or order.get("payment_method")
@@ -4477,6 +4482,10 @@ def _ensure_billing_placeholders(
                         payment_mode,
                         update_modified=False,
                     )
+                if should_submit_payment:
+                    pe = _get_doc("Payment Entry", existing_payment_entry)
+                    if pe.docstatus < 1:
+                        _submit_doc(pe)
             else:
                 pe = get_payment_entry("Sales Invoice", billing["sales_invoice"])
                 if _doctype_has_field("Payment Entry", "branch"):
@@ -4486,6 +4495,8 @@ def _ensure_billing_placeholders(
                     pe.mode_of_payment = payment_mode
 
                 _insert_doc(pe)
+                if should_submit_payment:
+                    pe = _submit_doc(pe)
                 billing["payment_entry"] = pe.name
     except Exception:
         pass
