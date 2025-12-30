@@ -1340,9 +1340,9 @@ body {
     color: #1565C0;
 }
 
-.status-badge.awaiting-qc {
-    background: #F3E5F5;
-    color: #7B1FA2;
+.status-badge.waiting-payment {
+    background: #FFF3E0;
+    color: #E65100;
 }
 
 .status-badge.completed {
@@ -2033,7 +2033,7 @@ body {
 
     const PROGRESS_STAGE_STATUSES = [
         'Work In Progress',
-        'Awaiting QC'
+        'Waiting Payment'
     ];
     const PROGRESS_STAGE_STATUS_SET = new Set(
         PROGRESS_STAGE_STATUSES.map(status => status.toLowerCase())
@@ -2390,7 +2390,7 @@ body {
             'Awaiting Approval': { class: 'awaiting-approval', label: 'Awaiting Approval' },
             'Approved': { class: 'approved', label: 'Approved' },
             'Work In Progress': { class: 'in-progress', label: 'Work In Progress' },
-            'Awaiting QC': { class: 'awaiting-qc', label: 'Awaiting QC' },
+            'Waiting Payment': { class: 'waiting-payment', label: 'Waiting Payment' },
             'Completed': { class: 'completed', label: 'SPK' },
             'Cancelled': { class: 'cancelled', label: 'Cancelled' }
         };

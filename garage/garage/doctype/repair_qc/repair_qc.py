@@ -55,7 +55,7 @@ class RepairQC(Document):
                 "Completed",
                 "Cancelled",
             }:
-                updates["status"] = "Awaiting QC"
+                updates["status"] = "Waiting Payment"
 
         if updates:
             frappe.db.set_value(service_order.doctype, service_order.name, updates)

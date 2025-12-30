@@ -269,7 +269,7 @@ a:hover {
     color: var(--status-progress);
 }
 
-.status-awaiting-qc {
+.status-waiting-payment {
     background: var(--status-pending-light);
     color: var(--status-pending);
 }
@@ -3687,7 +3687,7 @@ body.parts-detail-mode .parts-table td.actions {
             const statusValue = order.status || order.workflow_state || order.job_card_status || 'Draft';
             applyStatusBadge(statusValue);
 
-            const spkReadyStatuses = ['Work In Progress', 'Awaiting QC', 'Completed'];
+            const spkReadyStatuses = ['Work In Progress', 'Waiting Payment', 'Completed'];
             if (isPartsDetailMode) {
                 setSpkButtonState(false);
             } else {
