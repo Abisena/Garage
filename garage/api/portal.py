@@ -2156,11 +2156,22 @@ def _create_payment_entry(payload: Mapping[str, Any]) -> frappe.Document:
     else:
         pe.paid_amount = total_allocated
 
+    if _doctype_has_field("Payment Entry", "title") and not getattr(pe, "title", None):
+        pe.title = payload.get("title") or payload.get("payment_title") or seed_invoice
+
     pe.set_missing_values()
     _ensure_branch_allowed(pe)
 
-    # Keep the new payment entry as Draft so finance can review/submit manually
-    return _insert_doc(pe)
+    pe = _insert_doc(pe)
+
+    auto_submit = payload.get("auto_submit")
+    if auto_submit is None:
+        auto_submit = True
+
+    if auto_submit:
+        pe = _submit_doc(pe)
+
+    return pe
 
 
 def _new_document(doctype: str, data: Mapping[str, Any]) -> frappe.Document:
