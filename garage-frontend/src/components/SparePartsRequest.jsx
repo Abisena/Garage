@@ -33,7 +33,7 @@ export function SparePartsRequest({ currentUser }) {
 
   const mapFrappeRequestStatus = (status) => {
     const normalized = (status || '').trim().toLowerCase();
-    if (normalized === 'approved') {
+    if (['approved', 'prepared', 'ready'].includes(normalized)) {
       return 'READY';
     }
     if (normalized === 'rejected') {
@@ -67,7 +67,7 @@ export function SparePartsRequest({ currentUser }) {
           stockAvailable: typeof masterPart?.stock === 'number' ? masterPart.stock : 0,
           unit: item.uom || 'pcs',
           location: item.source_warehouse || 'Workshop',
-          status: mapFrappeItemStatus(item.approval_status),
+          status: mapFrappeItemStatus(item.approval_status || item.status),
         };
       });
 
