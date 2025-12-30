@@ -3108,6 +3108,45 @@ def _desk_route(doctype: str) -> Dict[str, str]:
     }
 
 
+def _ensure_service_order_inspection(
+    service_doc: Optional[frappe.Document],
+    *,
+    service_notes: Optional[str] = None,
+    inspection_summary: Optional[str] = None,
+) -> Optional[frappe.Document]:
+    if not service_doc:
+        return None
+
+    existing_name = frappe.db.exists(
+        "Garage Vehicle Inspection", {"service_order": service_doc.name}
+    )
+
+    inspection_doc = (
+        frappe.get_doc("Garage Vehicle Inspection", existing_name)
+        if existing_name
+        else frappe.new_doc("Garage Vehicle Inspection")
+    )
+    inspection_doc.service_order = service_doc.name
+    inspection_doc.branch = getattr(service_doc, "branch", None) or inspection_doc.branch
+    inspection_doc.vehicle = getattr(service_doc, "vehicle", None) or inspection_doc.vehicle
+
+    if service_notes and not inspection_doc.service_notes:
+        inspection_doc.service_notes = service_notes
+
+    if inspection_summary and not inspection_doc.inspection_summary:
+        inspection_doc.inspection_summary = inspection_summary
+
+    _save_doc(inspection_doc)
+
+    if hasattr(service_doc, "inspection_record") and (
+        service_doc.inspection_record != inspection_doc.name
+    ):
+        service_doc.inspection_record = inspection_doc.name
+        _save_doc(service_doc)
+
+    return inspection_doc
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -6910,6 +6949,11 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         service_doc = _insert_document("Garage Service Order", service_payload)
         created["service_order"] = service_doc.name
         created["service_order_status"] = service_doc.status
+        _ensure_service_order_inspection(
+            service_doc,
+            service_notes=intake_notes or None,
+            inspection_summary=intake_notes or None,
+        )
 
     pdf_payload = None
     pdf_attachment: Optional[Dict[str, Any]] = None
