@@ -99,6 +99,7 @@
       "label": "Status",
       "options": "Draft\nInspection\nEstimate\nAwaiting Approval\nApproved\nRequest Part\nWork In Progress\nAwaiting QC\nWaiting Payment\nCompleted\nCancelled",
       "default": "Draft",
+      "read_only": 1,
       "in_list_view": 1
     },
     {

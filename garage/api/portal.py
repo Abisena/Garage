@@ -4054,6 +4054,12 @@ def _map_repair_status(status: str) -> Dict[str, Optional[str]]:
             "job_card_status": "Completed",
             "qc_status": "Passed",
         },
+        "paid": {
+            "status": "Completed",
+            "work_order_status": "Completed",
+            "job_card_status": "Completed",
+            "qc_status": "Passed",
+        },
         "completed": {
             "status": "Completed",
             "work_order_status": "Completed",
