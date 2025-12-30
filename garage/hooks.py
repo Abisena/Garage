@@ -177,13 +177,6 @@ jinja = {
 # ---------------
 # Hook on document methods and events
 
-doc_events = {
-	"Payment Entry": {
-		"on_submit": "garage.utils.payment_hooks.handle_payment_entry_submit",
-	},
-}
-
-
 # Scheduled Tasks
 # ---------------
 
@@ -321,5 +314,6 @@ doc_events = {
     },
     "Payment Entry": {
         "on_update": "garage.utils.vehicle_handover.handle_paid_payment_entry",
+        "on_submit": "garage.utils.payment_hooks.handle_payment_entry_submit",
     },
 }
