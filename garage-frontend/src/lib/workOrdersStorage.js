@@ -42,6 +42,91 @@ const mapRepairStatusFromServiceOrder = (serviceOrder) => {
   return '';
 };
 
+const mapFrappePartStatus = (status) => {
+  const normalized = normalizeStatusValue(status);
+  if (['prepared', 'ready', 'available', 'approved'].includes(normalized)) {
+    return 'prepared';
+  }
+  if (['installed', 'issued', 'received'].includes(normalized)) {
+    return 'installed';
+  }
+  if (['rejected', 'cancelled'].includes(normalized)) {
+    return 'rejected';
+  }
+  return 'requested';
+};
+
+const normalizeFrappeSparePartRow = (row, index) => {
+  if (!row) return null;
+
+  const partNumber = row.item_code || row.part_code || row.partNumber || row.item_name || '';
+  const name = row.item_name || row.part_name || row.partName || row.description || partNumber;
+
+  if (!partNumber && !name) {
+    return null;
+  }
+
+  const quantity = Number(row.qty ?? row.quantity ?? 0);
+  const unitPrice = Number(row.rate ?? row.unit_price ?? row.unitPrice ?? 0);
+  const totalPrice = Number(row.amount ?? quantity * unitPrice);
+
+  return {
+    id: row.name || `PART-${Date.now()}-${index}`,
+    name,
+    partNumber: partNumber || name,
+    quantity,
+    unitPrice,
+    discount: Number(row.discount_amount ?? row.discount ?? 0),
+    discountType: row.discount_type || row.discountType || 'percent',
+    totalPrice: Number.isFinite(totalPrice) ? totalPrice : 0,
+    requested: true,
+    status: mapFrappePartStatus(row.stock_status || row.status),
+  };
+};
+
+const mergeSpareParts = (existingParts, incomingParts) => {
+  const normalizedExisting = Array.isArray(existingParts) ? [...existingParts] : [];
+  const incoming = Array.isArray(incomingParts) ? incomingParts : [];
+
+  if (incoming.length === 0) {
+    return normalizedExisting;
+  }
+
+  const lookup = new Map(
+    normalizedExisting.map((part, index) => {
+      const key = normalizeStatusValue(part.partNumber || part.name || String(index));
+      return [key, index];
+    })
+  );
+
+  incoming.forEach((incomingPart) => {
+    if (!incomingPart) return;
+
+    const key = normalizeStatusValue(incomingPart.partNumber || incomingPart.name || '');
+    const existingIndex = key ? lookup.get(key) : undefined;
+
+    if (existingIndex === undefined) {
+      normalizedExisting.push(incomingPart);
+      if (key) {
+        lookup.set(key, normalizedExisting.length - 1);
+      }
+      return;
+    }
+
+    const existing = normalizedExisting[existingIndex];
+    const keepStatus = ['installed', 'rejected'].includes(existing.status);
+
+    normalizedExisting[existingIndex] = {
+      ...existing,
+      ...incomingPart,
+      status: keepStatus ? existing.status : incomingPart.status || existing.status,
+      approved: existing.approved,
+    };
+  });
+
+  return normalizedExisting;
+};
+
 const dedupeWorkOrders = (orders) => {
   const seen = new Set();
   const deduped = [];
@@ -125,6 +210,9 @@ export const refreshWorkOrdersFromBackend = async ({ branch } = {}) => {
   try {
     const bootstrap = await frappeClient.getPortalBootstrap({ branch });
     const serviceOrders = Array.isArray(bootstrap?.service_orders) ? bootstrap.service_orders : [];
+    const sparePartRequests = Array.isArray(bootstrap?.spare_part_requests)
+      ? bootstrap.spare_part_requests
+      : [];
     if (serviceOrders.length === 0) return storedOrders;
 
     const serviceMap = new Map(
@@ -132,6 +220,19 @@ export const refreshWorkOrdersFromBackend = async ({ branch } = {}) => {
         .filter((order) => order?.name)
         .map((order) => [order.name, order])
     );
+
+    const sparePartsByOrder = new Map();
+    sparePartRequests.forEach((row, index) => {
+      const orderId = row?.parent;
+      if (!orderId) return;
+
+      const normalized = normalizeFrappeSparePartRow(row, index);
+      if (!normalized) return;
+
+      const existing = sparePartsByOrder.get(orderId) || [];
+      existing.push(normalized);
+      sparePartsByOrder.set(orderId, existing);
+    });
 
     let changed = false;
     const updatedOrders = storedOrders.map((order) => {
@@ -161,6 +262,16 @@ export const refreshWorkOrdersFromBackend = async ({ branch } = {}) => {
       if (qcStatus === 'passed' && !order.qcApproved) {
         updated.qcApproved = true;
         updatedRow = true;
+      }
+
+      const incomingSpareParts = sparePartsByOrder.get(orderKey) || [];
+      if (incomingSpareParts.length > 0) {
+        const mergedSpareParts = mergeSpareParts(order.spareParts, incomingSpareParts);
+
+        if (mergedSpareParts.length > 0 && mergedSpareParts !== order.spareParts) {
+          updated.spareParts = mergedSpareParts;
+          updatedRow = true;
+        }
       }
 
       if (updatedRow) {
