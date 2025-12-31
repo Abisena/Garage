@@ -129,10 +129,12 @@ class RepairQC(Document):
         if not self.service_order:
             return None
 
-        sales_invoice = self._get_latest_sales_invoice()
-        if sales_invoice:
-            sales_invoice["doctype"] = "Sales Invoice"
-            return sales_invoice
+        if frappe.db.table_exists("tabSales Invoice"):
+            sales_invoice = self._get_latest_sales_invoice()
+            if sales_invoice:
+                sales_invoice["doctype"] = "Sales Invoice"
+                return sales_invoice
+            return None
 
         invoices = frappe.get_all(
             "Garage Sales Invoice",
@@ -306,70 +308,54 @@ class RepairQC(Document):
 
         total_amount = sum(item.get("amount", 0) for item in items)
 
-        if frappe.db.table_exists("tabSales Invoice"):
-            link_field = self._get_sales_invoice_link_field()
-            from garage.api.portal import _ensure_erp_customer
-
-            invoice_customer = _ensure_erp_customer(
-                getattr(service_order, "customer", None),
-                getattr(service_order, "branch", None),
-            )
-            if not invoice_customer:
-                return
-
-            company = (
-                frappe.defaults.get_user_default("company")
-                or frappe.defaults.get_global_default("company")
-            )
-            invoice_doc = frappe.new_doc("Sales Invoice")
-            invoice_doc.company = company
-            invoice_doc.customer = invoice_customer
-            invoice_doc.posting_date = nowdate()
-            invoice_doc.set_posting_time = 1
-            invoice_doc.due_date = nowdate()
-            invoice_doc.remarks = (
-                f"Auto-generated from Repair QC {self.name} "
-                f"(Service Order {service_order.name})"
-            )
-            if self._doctype_has_field("Sales Invoice", "branch"):
-                invoice_doc.branch = getattr(service_order, "branch", None)
-
-            if link_field:
-                setattr(invoice_doc, link_field, service_order.name)
-
-            for row in items:
-                invoice_doc.append("items", row)
-
-            invoice_doc.run_method("set_missing_values")
-            invoice_doc.calculate_taxes_and_totals()
-            invoice_doc.base_write_off_amount = flt(invoice_doc.base_write_off_amount)
-            invoice_doc.write_off_amount = flt(invoice_doc.write_off_amount)
-            invoice_doc.insert(ignore_permissions=True)
-            try:
-                invoice_doc.submit()
-            except Exception:
-                frappe.log_error(
-                    frappe.get_traceback(),
-                    "Failed to submit auto-generated Sales Invoice from Repair QC",
-                )
+        if not frappe.db.table_exists("tabSales Invoice"):
             return
 
-        invoice_doc = frappe.get_doc(
-            {
-                "doctype": "Garage Sales Invoice",
-                "branch": getattr(service_order, "branch", None),
-                "invoice_date": nowdate(),
-                "due_date": nowdate(),
-                "customer": getattr(service_order, "customer", None),
-                "source_type": "Garage Service Order",
-                "source_name": service_order.name,
-                "total_amount": total_amount,
-                "outstanding_amount": total_amount,
-                "notes": f"Auto-generated from Repair QC {self.name}",
-                "items": items,
-            }
+        link_field = self._get_sales_invoice_link_field()
+        from garage.api.portal import _ensure_erp_customer
+
+        invoice_customer = _ensure_erp_customer(
+            getattr(service_order, "customer", None),
+            getattr(service_order, "branch", None),
         )
+        if not invoice_customer:
+            return
+
+        company = (
+            frappe.defaults.get_user_default("company")
+            or frappe.defaults.get_global_default("company")
+        )
+        invoice_doc = frappe.new_doc("Sales Invoice")
+        invoice_doc.company = company
+        invoice_doc.customer = invoice_customer
+        invoice_doc.posting_date = nowdate()
+        invoice_doc.set_posting_time = 1
+        invoice_doc.due_date = nowdate()
+        invoice_doc.remarks = (
+            f"Auto-generated from Repair QC {self.name} "
+            f"(Service Order {service_order.name})"
+        )
+        if self._doctype_has_field("Sales Invoice", "branch"):
+            invoice_doc.branch = getattr(service_order, "branch", None)
+
+        if link_field:
+            setattr(invoice_doc, link_field, service_order.name)
+
+        for row in items:
+            invoice_doc.append("items", row)
+
+        invoice_doc.run_method("set_missing_values")
+        invoice_doc.calculate_taxes_and_totals()
+        invoice_doc.base_write_off_amount = flt(invoice_doc.base_write_off_amount)
+        invoice_doc.write_off_amount = flt(invoice_doc.write_off_amount)
         invoice_doc.insert(ignore_permissions=True)
+        try:
+            invoice_doc.submit()
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                "Failed to submit auto-generated Sales Invoice from Repair QC",
+            )
 
     def _sync_parts_used_pricing(self):
         if not self.service_order:
