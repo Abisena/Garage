@@ -3096,7 +3096,8 @@ def _save_doc(doc: frappe.Document) -> frappe.Document:
     _normalize_doc_before_save(doc)
     _ensure_branch_allowed(doc)
     with _ignoring_permissions():
-        doc.save(ignore_permissions=True)
+        doc.flags.ignore_version = True
+        doc.save(ignore_permissions=True, ignore_version=True)
     return doc
 
 
