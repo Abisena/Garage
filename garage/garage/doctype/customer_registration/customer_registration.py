@@ -63,6 +63,8 @@ class CustomerRegistration(Document):
 
     def before_save(self):
         self.flags.ignore_version = True
+        if not getattr(self, "_action", None):
+            self._action = "save"
 
     def before_insert(self):
         self._apply_branch_default()
