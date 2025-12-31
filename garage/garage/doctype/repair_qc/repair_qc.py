@@ -72,23 +72,12 @@ class RepairQC(Document):
             "dry_and_wet_brakes_tested",
             "dashboard_indicators_normal",
         ]
-        final_required_fields = [
-            "summary_service_order",
-            "summary_customer",
-            "summary_vehicle",
-            "summary_service_type",
-            "summary_branch",
-        ]
 
         for fieldname in required_fields:
             if not self.get(fieldname):
                 missing_fields.append(meta.get_label(fieldname))
 
         for fieldname in checklist_fields:
-            if not self.get(fieldname):
-                missing_fields.append(meta.get_label(fieldname))
-
-        for fieldname in final_required_fields:
             if not self.get(fieldname):
                 missing_fields.append(meta.get_label(fieldname))
 
