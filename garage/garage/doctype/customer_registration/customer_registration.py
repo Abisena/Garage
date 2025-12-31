@@ -66,7 +66,7 @@ class CustomerRegistration(Document):
 
     def check_if_latest(self):
         """Skip Frappe's modified-timestamp guard for this intake flow."""
-        return
+        return True  # Always consider it as latest to skip concurrent edit check
 
     def before_save(self):
         self.flags.ignore_version = True
