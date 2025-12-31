@@ -57,6 +57,10 @@ SERVICE_FIELDS = (
 class CustomerRegistration(Document):
     """Combined vehicle + customer intake form for the desk/portal flows."""
 
+    def check_if_latest(self):
+        """Skip Frappe's modified-timestamp guard for this intake flow."""
+        return
+
     def before_save(self):
         self.flags.ignore_version = True
 
