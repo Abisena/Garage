@@ -461,7 +461,7 @@
       "fieldname": "payment_entry",
       "fieldtype": "Link",
       "label": "Payment Entry",
-      "options": "Garage Payment Entry",
+      "options": "Payment Entry",
       "read_only": 1
     }
   ],

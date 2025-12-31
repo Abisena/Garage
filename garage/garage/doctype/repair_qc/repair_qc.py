@@ -158,18 +158,7 @@ class RepairQC(Document):
         if not frappe.db.table_exists("tabSales Invoice"):
             return None
 
-        meta = frappe.get_meta("Sales Invoice")
-        link_field = None
-        for fieldname in (
-            "service_order",
-            "service_order_ref",
-            "garage_service_order",
-            "garage_service_order_ref",
-        ):
-            if meta.has_field(fieldname):
-                link_field = fieldname
-                break
-
+        link_field = self._get_sales_invoice_link_field()
         if not link_field:
             return None
 
@@ -191,6 +180,27 @@ class RepairQC(Document):
             limit=1,
         )
         return invoices[0] if invoices else None
+
+    def _get_sales_invoice_link_field(self):
+        if not frappe.db.table_exists("tabSales Invoice"):
+            return None
+
+        meta = frappe.get_meta("Sales Invoice")
+        for fieldname in (
+            "service_order",
+            "service_order_ref",
+            "garage_service_order",
+            "garage_service_order_ref",
+        ):
+            if meta.has_field(fieldname):
+                return fieldname
+        return None
+
+    def _doctype_has_field(self, doctype: str, fieldname: str) -> bool:
+        try:
+            return frappe.get_meta(doctype).has_field(fieldname)
+        except Exception:
+            return False
 
     def _calculate_invoice_totals(
         self, invoice_doctype, invoice_name, fallback_total, fallback_outstanding
@@ -289,6 +299,50 @@ class RepairQC(Document):
 
         total_amount = sum(item.get("amount", 0) for item in items)
 
+        link_field = self._get_sales_invoice_link_field()
+        if link_field:
+            from garage.api.portal import _ensure_erp_customer
+
+            invoice_customer = _ensure_erp_customer(
+                getattr(service_order, "customer", None),
+                getattr(service_order, "branch", None),
+            )
+            if not invoice_customer:
+                return
+
+            company = (
+                frappe.defaults.get_user_default("company")
+                or frappe.defaults.get_global_default("company")
+            )
+            invoice_doc = frappe.new_doc("Sales Invoice")
+            invoice_doc.company = company
+            invoice_doc.customer = invoice_customer
+            invoice_doc.posting_date = nowdate()
+            invoice_doc.set_posting_time = 1
+            invoice_doc.due_date = nowdate()
+            invoice_doc.remarks = f"Auto-generated from Repair QC {self.name}"
+            if self._doctype_has_field("Sales Invoice", "branch"):
+                invoice_doc.branch = getattr(service_order, "branch", None)
+
+            setattr(invoice_doc, link_field, service_order.name)
+
+            for row in items:
+                invoice_doc.append("items", row)
+
+            invoice_doc.run_method("set_missing_values")
+            invoice_doc.calculate_taxes_and_totals()
+            invoice_doc.base_write_off_amount = flt(invoice_doc.base_write_off_amount)
+            invoice_doc.write_off_amount = flt(invoice_doc.write_off_amount)
+            invoice_doc.insert(ignore_permissions=True)
+            try:
+                invoice_doc.submit()
+            except Exception:
+                frappe.log_error(
+                    frappe.get_traceback(),
+                    "Failed to submit auto-generated Sales Invoice from Repair QC",
+                )
+            return
+
         invoice_doc = frappe.get_doc(
             {
                 "doctype": "Garage Sales Invoice",
@@ -370,10 +424,45 @@ class RepairQC(Document):
         if not rows:
             rows = list(getattr(service_order, "required_parts", None) or [])
 
+        bundle_items = self._get_bundle_items(service_order)
         items = []
+        seen_codes = set()
+        for row in bundle_items:
+            item_code = (row.get("item_code") or "").strip()
+            if not item_code:
+                continue
+            qty = flt(row.get("qty") or 0)
+            if qty <= 0:
+                continue
+            rate = self._get_item_rate(item_code)
+            amount = rate * qty
+            if amount <= 0:
+                continue
+
+            item_defaults = frappe.db.get_value(
+                "Item",
+                item_code,
+                ["item_name", "stock_uom", "description"],
+                as_dict=True,
+            ) or {}
+            items.append(
+                {
+                    "item_code": item_code,
+                    "item_name": item_defaults.get("item_name") or item_code,
+                    "description": item_defaults.get("description") or item_code,
+                    "qty": qty,
+                    "uom": item_defaults.get("stock_uom") or "Unit",
+                    "rate": rate,
+                    "amount": amount,
+                }
+            )
+            seen_codes.add(item_code)
+
         for row in rows:
             item_code = getattr(row, "item_code", None)
             if not item_code:
+                continue
+            if item_code in seen_codes:
                 continue
 
             qty = flt(getattr(row, "qty", None) or 0)
@@ -423,6 +512,20 @@ class RepairQC(Document):
 
         return items
 
+    def _get_bundle_items(self, service_order):
+        service_order_type = getattr(service_order, "service_order_type", None)
+        if not service_order_type:
+            return []
+
+        try:
+            from garage.garage.doctype.garage_service_order.garage_service_order import (
+                get_bundle_items_for_service_type,
+            )
+        except Exception:
+            return []
+
+        return get_bundle_items_for_service_type(service_order_type)
+
     def _get_item_rate(self, item_code: str) -> float:
         if not item_code:
             return 0
@@ -458,7 +561,40 @@ class RepairQC(Document):
         invoice = self._get_latest_invoice()
         if not invoice:
             return
+
         if invoice.get("doctype") == "Sales Invoice":
+            try:
+                from erpnext.accounts.doctype.payment_entry.payment_entry import (
+                    get_payment_entry,
+                )
+            except Exception:
+                return
+
+            outstanding_amount = flt(
+                invoice.get("outstanding_amount") or invoice.get("grand_total") or 0
+            )
+            if outstanding_amount <= 0:
+                return
+
+            try:
+                invoice_doc = frappe.get_doc("Sales Invoice", invoice.get("name"))
+            except Exception:
+                return
+
+            payment_entry = get_payment_entry("Sales Invoice", invoice_doc.name)
+            if self._doctype_has_field("Payment Entry", "branch") and getattr(
+                invoice_doc, "branch", None
+            ):
+                payment_entry.branch = invoice_doc.branch
+            payment_entry.posting_date = nowdate()
+            payment_entry.insert(ignore_permissions=True)
+            frappe.db.set_value(
+                self.doctype,
+                self.name,
+                "payment_entry",
+                payment_entry.name,
+                update_modified=False,
+            )
             return
 
         outstanding_amount = flt(invoice.get("outstanding_amount") or invoice.get("total_amount"))
