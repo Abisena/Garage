@@ -57,6 +57,9 @@ SERVICE_FIELDS = (
 class CustomerRegistration(Document):
     """Combined vehicle + customer intake form for the desk/portal flows."""
 
+    def before_save(self):
+        self.flags.ignore_version = True
+
     def before_insert(self):
         self._apply_branch_default()
         self._sync_master_records()
