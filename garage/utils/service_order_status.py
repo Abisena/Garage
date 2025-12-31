@@ -5,6 +5,12 @@ from __future__ import annotations
 from typing import Iterable
 
 import frappe
+from frappe.utils import cstr, flt
+
+from garage.garage.doctype.garage_service_order.garage_service_order import (
+    PART_CANCELLED_STATUSES,
+    PART_REJECTED_STATUSES,
+)
 
 TERMINAL_STATUSES = {"Completed", "Cancelled"}
 STATUS_FLOW = [
@@ -94,6 +100,7 @@ def sync_from_spare_part_request(doc, method=None) -> None:  # pragma: no cover 
     status = (getattr(doc, "status", None) or "").strip()
     if status.lower() == "prepared":
         target_status = "Work In Progress"
+        _ensure_repair_qc(service_order)
     else:
         target_status = "Request Part"
     _set_service_order_status(service_order, target_status)
@@ -124,3 +131,93 @@ def sync_from_status_fields(
     else:
         target_status = default_status
     _set_service_order_status(service_order, target_status)
+
+
+def _ensure_repair_qc(service_order) -> None:
+    if not service_order:
+        return
+    if getattr(service_order, "status", None) in TERMINAL_STATUSES:
+        return
+
+    required_parts = list(getattr(service_order, "required_parts", []) or [])
+    if not required_parts:
+        return
+
+    existing = frappe.get_all(
+        "Repair QC",
+        filters={"service_order": service_order.name, "status": ("!=", "Finished")},
+        fields=["name"],
+        order_by="modified desc",
+        limit=1,
+    )
+    repair_qc = (
+        frappe.get_doc("Repair QC", existing[0].name)
+        if existing
+        else frappe.new_doc("Repair QC")
+    )
+    repair_qc.service_order = service_order.name
+
+    _sync_repair_qc_spare_parts(repair_qc, required_parts)
+    _sync_repair_qc_parts_used(repair_qc, required_parts)
+
+    if repair_qc.is_new():
+        repair_qc.insert(ignore_permissions=True)
+    else:
+        repair_qc.save(ignore_permissions=True)
+
+
+def _sync_repair_qc_spare_parts(repair_qc, required_parts: Iterable[object]) -> None:
+    existing_rows = {}
+    for row in getattr(repair_qc, "spare_parts_verification", []) or []:
+        item_code = cstr(getattr(row, "item_code", "")).strip().lower()
+        if item_code:
+            existing_rows[item_code] = row
+
+    repair_qc.set("spare_parts_verification", [])
+
+    for part in required_parts:
+        item_code = cstr(getattr(part, "item_code", "")).strip()
+        if not item_code:
+            continue
+
+        status = cstr(getattr(part, "stock_status", "")).strip().lower()
+        if status in PART_REJECTED_STATUSES or status in PART_CANCELLED_STATUSES:
+            continue
+
+        existing = existing_rows.get(item_code.lower())
+        verified = int(getattr(existing, "verified", 0)) if existing else 0
+        repair_qc.append(
+            "spare_parts_verification",
+            {
+                "item_code": item_code,
+                "item_name": getattr(part, "item_name", None),
+                "qty": flt(getattr(part, "qty", None) or 0) or 1,
+                "uom": getattr(part, "uom", None),
+                "verified": verified,
+            },
+        )
+
+
+def _sync_repair_qc_parts_used(repair_qc, required_parts: Iterable[object]) -> None:
+    repair_qc.set("parts_used", [])
+
+    for part in required_parts:
+        item_code = cstr(getattr(part, "item_code", "")).strip()
+        if not item_code:
+            continue
+        repair_qc.append(
+            "parts_used",
+            {
+                "item_code": item_code,
+                "item_name": getattr(part, "item_name", None),
+                "description": getattr(part, "description", None),
+                "qty": getattr(part, "qty", None),
+                "uom": getattr(part, "uom", None),
+                "source": getattr(part, "source", None),
+                "stock_status": getattr(part, "stock_status", None),
+                "linked_procurement": getattr(part, "linked_procurement", None),
+                "warehouse": getattr(part, "warehouse", None),
+                "rate": getattr(part, "rate", None),
+                "amount": getattr(part, "amount", None),
+            },
+        )
