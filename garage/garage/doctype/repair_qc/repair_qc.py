@@ -14,8 +14,10 @@ class RepairQC(Document):
     def validate(self):
         self._set_default_users()
         self._sync_parts_used_pricing()
-        self._validate_completion_fields()
-        self._set_auto_status()
+        if not getattr(self.flags, "ignore_completion_validation", False):
+            self._validate_completion_fields()
+        if not getattr(self.flags, "ignore_auto_status", False):
+            self._set_auto_status()
         self._ensure_sales_invoice()
         self._sync_invoice_summary()
         self._validate_final_status()

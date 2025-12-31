@@ -156,6 +156,8 @@ def _ensure_repair_qc(service_order) -> None:
         else frappe.new_doc("Repair QC")
     )
     repair_qc.service_order = service_order.name
+    repair_qc.flags.ignore_completion_validation = True
+    repair_qc.flags.ignore_auto_status = True
 
     _sync_repair_qc_spare_parts(repair_qc, required_parts)
     _sync_repair_qc_parts_used(repair_qc, required_parts)
