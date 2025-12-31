@@ -161,15 +161,20 @@ class RepairQC(Document):
             return None
 
         link_field = self._get_sales_invoice_link_field()
-        if not link_field:
-            return None
+        if link_field:
+            filters = {
+                link_field: self.service_order,
+                "docstatus": ["!=", 2],
+            }
+        else:
+            filters = {
+                "remarks": ["like", f"%{self.service_order}%"],
+                "docstatus": ["!=", 2],
+            }
 
         invoices = frappe.get_all(
             "Sales Invoice",
-            filters={
-                link_field: self.service_order,
-                "docstatus": ["!=", 2],
-            },
+            filters=filters,
             fields=[
                 "name",
                 "grand_total",
@@ -301,8 +306,8 @@ class RepairQC(Document):
 
         total_amount = sum(item.get("amount", 0) for item in items)
 
-        link_field = self._get_sales_invoice_link_field()
-        if link_field:
+        if frappe.db.table_exists("tabSales Invoice"):
+            link_field = self._get_sales_invoice_link_field()
             from garage.api.portal import _ensure_erp_customer
 
             invoice_customer = _ensure_erp_customer(
@@ -322,11 +327,15 @@ class RepairQC(Document):
             invoice_doc.posting_date = nowdate()
             invoice_doc.set_posting_time = 1
             invoice_doc.due_date = nowdate()
-            invoice_doc.remarks = f"Auto-generated from Repair QC {self.name}"
+            invoice_doc.remarks = (
+                f"Auto-generated from Repair QC {self.name} "
+                f"(Service Order {service_order.name})"
+            )
             if self._doctype_has_field("Sales Invoice", "branch"):
                 invoice_doc.branch = getattr(service_order, "branch", None)
 
-            setattr(invoice_doc, link_field, service_order.name)
+            if link_field:
+                setattr(invoice_doc, link_field, service_order.name)
 
             for row in items:
                 invoice_doc.append("items", row)
