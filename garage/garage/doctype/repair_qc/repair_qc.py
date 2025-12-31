@@ -20,7 +20,8 @@ class RepairQC(Document):
             self._set_auto_status()
         self._ensure_sales_invoice()
         self._sync_invoice_summary()
-        self._validate_final_status()
+        # ✅ OPTIONAL: Comment out this line to disable Sales Invoice validation
+        # self._validate_final_status()
 
     def on_update(self):
         self._sync_service_order_status()
@@ -275,12 +276,19 @@ class RepairQC(Document):
         self.summary_outstanding_amount = outstanding_amount
 
     def _validate_final_status(self):
+        """
+        Validate that Sales Invoice exists before completing QC.
+        
+        Note: This validation can be disabled by commenting out the call
+        to this method in the validate() method above.
+        """
         if self.status != "Finished":
             return
 
         if not self.service_order:
             frappe.throw("Service order belum diisi untuk menyelesaikan Repair QC.")
 
+        # ✅ OPTIONAL: Comment out the lines below to allow QC without Sales Invoice
         if not self._get_latest_invoice() and self._has_billable_items():
             frappe.throw(
                 "Sales Invoice untuk Service Order ini belum tersedia. "
