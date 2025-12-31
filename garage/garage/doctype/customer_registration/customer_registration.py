@@ -50,6 +50,7 @@ SERVICE_FIELDS = (
     "priority",
     "intake_type",
     "notes",
+    "complaint",  # Added complaint field
     "service_notes",
 )
 
@@ -57,13 +58,20 @@ SERVICE_FIELDS = (
 class CustomerRegistration(Document):
     """Combined vehicle + customer intake form for the desk/portal flows."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Initialize _action early to avoid AttributeError
+        if not hasattr(self, '_action'):
+            self._action = "save"
+
     def check_if_latest(self):
         """Skip Frappe's modified-timestamp guard for this intake flow."""
         return
 
     def before_save(self):
         self.flags.ignore_version = True
-        if not getattr(self, "_action", None):
+        # Ensure _action is set (backup in case __init__ didn't run)
+        if not hasattr(self, '_action'):
             self._action = "save"
 
     def before_insert(self):
