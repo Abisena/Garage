@@ -14,6 +14,8 @@ class RepairQC(Document):
     def validate(self):
         self._set_default_users()
         self._sync_parts_used_pricing()
+        self._validate_completion_fields()
+        self._set_auto_status()
         self._ensure_sales_invoice()
         self._sync_invoice_summary()
         self._validate_final_status()
@@ -32,6 +34,77 @@ class RepairQC(Document):
 
         if not self.qc_inspector:
             self.qc_inspector = current_user
+
+    def _set_auto_status(self):
+        self.status = "Finished"
+
+    def _validate_completion_fields(self):
+        meta = self.meta
+        missing_fields = []
+
+        required_fields = [
+            "service_order",
+            "service_advisor",
+            "qc_inspector",
+            "inspection_date",
+        ]
+        checklist_fields = [
+            "brakes_functioning_properly",
+            "engine_starts_smoothly",
+            "no_fluid_leaks_detected",
+            "lights_and_signals_functional",
+            "battery_holding_charge",
+            "power_steering_responsive",
+            "suspension_normal",
+            "steering_alignment_normal",
+            "windows_and_mirrors_cleaned",
+            "exterior_washed_and_dried",
+            "interior_vacuumed_and_wiped",
+            "interior_disinfected",
+            "interior_reconditioned",
+            "interior_air_freshener",
+            "all_work_order_documented",
+            "spare_parts_installation_verified",
+            "photos_before_after_taken",
+            "acceleration_smooth_responsive",
+            "braking_effective_without_pulling",
+            "no_unusual_noise_during_drive",
+            "dry_and_wet_brakes_tested",
+            "dashboard_indicators_normal",
+        ]
+        final_required_fields = [
+            "summary_service_order",
+            "summary_customer",
+            "summary_vehicle",
+            "summary_service_type",
+            "summary_branch",
+        ]
+
+        for fieldname in required_fields:
+            if not self.get(fieldname):
+                missing_fields.append(meta.get_label(fieldname))
+
+        for fieldname in checklist_fields:
+            if not self.get(fieldname):
+                missing_fields.append(meta.get_label(fieldname))
+
+        for fieldname in final_required_fields:
+            if not self.get(fieldname):
+                missing_fields.append(meta.get_label(fieldname))
+
+        for row in self.spare_parts_verification or []:
+            if not row.verified:
+                item_label = row.item_code or row.item_name or f"Baris {row.idx}"
+                missing_fields.append(
+                    f"{meta.get_label('spare_parts_verification')}: {item_label}"
+                )
+
+        if missing_fields:
+            missing_items = "".join(f"<li>{item}</li>" for item in missing_fields)
+            frappe.throw(
+                f"<p>Lengkapi data berikut sebelum disimpan:</p><ul>{missing_items}</ul>",
+                title="Data Belum Lengkap",
+            )
 
     def _sync_service_order_status(self):
         if not self.service_order:

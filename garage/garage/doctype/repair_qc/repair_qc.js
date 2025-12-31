@@ -2,6 +2,7 @@ frappe.ui.form.on('Repair QC', {
   refresh(frm) {
     frm.set_df_property('summary_total_amount', 'hidden', 1);
     frm.set_df_property('summary_outstanding_amount', 'hidden', 1);
+    frm.set_df_property('status', 'hidden', 1);
 
     const partsGrid = frm.fields_dict.parts_used?.grid;
     if (partsGrid) {
@@ -68,5 +69,8 @@ frappe.ui.form.on('Repair QC', {
 
       frm.refresh_field('parts_used');
     }
+  },
+  before_save(frm) {
+    frm.set_value('status', 'Finished');
   }
 });
