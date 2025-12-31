@@ -285,7 +285,7 @@ class RepairQC(Document):
                 rate = amount / qty
 
             if not rate:
-                rate = flt(frappe.db.get_value("Item", item_code, "standard_rate") or 0)
+                rate = self._get_item_rate(item_code)
 
             if not amount and rate and qty:
                 amount = rate * qty
@@ -324,7 +324,7 @@ class RepairQC(Document):
                 rate = amount / qty
 
             if not rate:
-                rate = flt(frappe.db.get_value("Item", item_code, "standard_rate") or 0)
+                rate = self._get_item_rate(item_code)
 
             if not amount:
                 amount = rate * qty
@@ -360,6 +360,31 @@ class RepairQC(Document):
             )
 
         return items
+
+    def _get_item_rate(self, item_code: str) -> float:
+        if not item_code:
+            return 0
+
+        standard_rate = flt(frappe.db.get_value("Item", item_code, "standard_rate") or 0)
+        if standard_rate:
+            return standard_rate
+
+        prices = frappe.get_all(
+            "Item Price",
+            filters={"item_code": item_code, "selling": 1},
+            fields=["price_list_rate"],
+            order_by="modified desc",
+            limit=1,
+        )
+        if prices:
+            return flt(prices[0].get("price_list_rate") or 0)
+
+        standard_selling = frappe.db.get_value(
+            "Item Price",
+            {"item_code": item_code, "price_list": "Standard Selling"},
+            "price_list_rate",
+        )
+        return flt(standard_selling or 0)
 
     def _create_payment_entry_if_finished(self):
         if self.status != "Finished":
