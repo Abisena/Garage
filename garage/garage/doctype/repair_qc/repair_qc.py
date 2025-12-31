@@ -45,9 +45,22 @@ class RepairQC(Document):
             self.qc_inspector = current_user
 
     def _set_auto_status(self):
-        self.status = "Finished"
+        missing_fields = self._get_missing_completion_fields()
+        self.status = "Finished" if not missing_fields else "Draft"
 
     def _validate_completion_fields(self):
+        if self.status != "Finished":
+            return
+
+        missing_fields = self._get_missing_completion_fields()
+        if missing_fields:
+            missing_items = "".join(f"<li>{item}</li>" for item in missing_fields)
+            frappe.throw(
+                f"<p>Lengkapi data berikut sebelum disimpan:</p><ul>{missing_items}</ul>",
+                title="Data Belum Lengkap",
+            )
+
+    def _get_missing_completion_fields(self):
         meta = self.meta
         missing_fields = []
 
@@ -97,12 +110,7 @@ class RepairQC(Document):
                     f"{meta.get_label('spare_parts_verification')}: {item_label}"
                 )
 
-        if missing_fields:
-            missing_items = "".join(f"<li>{item}</li>" for item in missing_fields)
-            frappe.throw(
-                f"<p>Lengkapi data berikut sebelum disimpan:</p><ul>{missing_items}</ul>",
-                title="Data Belum Lengkap",
-            )
+        return missing_fields
 
     def _sync_service_order_status(self):
         if not self.service_order:
