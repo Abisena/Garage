@@ -1,6 +1,7 @@
 """DocType for capturing repair and quality control inspections."""
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt, nowdate
 
@@ -18,14 +19,19 @@ class RepairQC(Document):
             self._validate_completion_fields()
         if not getattr(self.flags, "ignore_auto_status", False):
             self._set_auto_status()
-        self._ensure_sales_invoice()
+        
+        # ✅ Auto-create Sales Invoice when status is Finished
+        if self.status == "Finished" and not self.get("__islocal"):
+            self._ensure_sales_invoice()
+        
         self._sync_invoice_summary()
-        # ✅ OPTIONAL: Comment out this line to disable Sales Invoice validation
-        # self._validate_final_status()
 
     def on_update(self):
         self._sync_service_order_status()
-        self._create_payment_entry_if_finished()
+        
+        # ✅ Auto-create Payment Entry draft when Sales Invoice exists
+        if self.status == "Finished":
+            self._create_payment_entry_if_finished()
 
     def _set_default_users(self):
         current_user = frappe.session.user if frappe.session else None
@@ -275,50 +281,50 @@ class RepairQC(Document):
         self.summary_total_amount = total_amount
         self.summary_outstanding_amount = outstanding_amount
 
-    def _validate_final_status(self):
-        """
-        Validate that Sales Invoice exists before completing QC.
-        
-        Note: This validation can be disabled by commenting out the call
-        to this method in the validate() method above.
-        """
-        if self.status != "Finished":
-            return
-
-        if not self.service_order:
-            frappe.throw("Service order belum diisi untuk menyelesaikan Repair QC.")
-
-        # ✅ OPTIONAL: Comment out the lines below to allow QC without Sales Invoice
-        if not self._get_latest_invoice() and self._has_billable_items():
-            frappe.throw(
-                "Sales Invoice untuk Service Order ini belum tersedia. "
-                "Mohon buat Sales Invoice terlebih dahulu."
-            )
-
     def _ensure_sales_invoice(self):
-        if self.status != "Finished":
-            return
-
+        """
+        ✅ AUTO-CREATE SALES INVOICE when status is Finished
+        """
+        # Skip if invoice already exists
         if self._get_latest_invoice():
+            frappe.msgprint(
+                _("Sales Invoice already exists: {0}").format(self.summary_invoice),
+                indicator="blue",
+                alert=True
+            )
             return
 
+        # Skip if no service order
         if not self.service_order:
             return
 
+        # Get service order
         try:
             service_order = frappe.get_doc("Garage Service Order", self.service_order)
-        except Exception:
+        except Exception as e:
+            frappe.log_error(f"Failed to get Service Order: {str(e)}")
             return
 
+        # Build invoice items
         items = self._build_invoice_items(service_order)
         if not items:
+            frappe.msgprint(
+                _("No billable items found. Sales Invoice not created."),
+                indicator="orange",
+                alert=True
+            )
             return
 
-        total_amount = sum(item.get("amount", 0) for item in items)
-
+        # Check if Sales Invoice doctype exists
         if not frappe.db.table_exists("tabSales Invoice"):
+            frappe.msgprint(
+                _("Sales Invoice module not installed. Cannot create invoice."),
+                indicator="red",
+                alert=True
+            )
             return
 
+        # Get customer for invoice
         link_field = self._get_sales_invoice_link_field()
         from garage.api.portal import _ensure_erp_customer
 
@@ -326,43 +332,96 @@ class RepairQC(Document):
             getattr(service_order, "customer", None),
             getattr(service_order, "branch", None),
         )
+        
         if not invoice_customer:
+            frappe.msgprint(
+                _("Could not determine customer for Sales Invoice."),
+                indicator="red",
+                alert=True
+            )
             return
 
+        # Get company
         company = (
             frappe.defaults.get_user_default("company")
             or frappe.defaults.get_global_default("company")
         )
-        invoice_doc = frappe.new_doc("Sales Invoice")
-        invoice_doc.company = company
-        invoice_doc.customer = invoice_customer
-        invoice_doc.posting_date = nowdate()
-        invoice_doc.set_posting_time = 1
-        invoice_doc.due_date = nowdate()
-        invoice_doc.remarks = (
-            f"Auto-generated from Repair QC {self.name} "
-            f"(Service Order {service_order.name})"
-        )
-        if self._doctype_has_field("Sales Invoice", "branch"):
-            invoice_doc.branch = getattr(service_order, "branch", None)
+        
+        if not company:
+            frappe.throw(_("Please set default company in User Defaults or Global Defaults"))
 
-        if link_field:
-            setattr(invoice_doc, link_field, service_order.name)
-
-        for row in items:
-            invoice_doc.append("items", row)
-
-        invoice_doc.run_method("set_missing_values")
-        invoice_doc.calculate_taxes_and_totals()
-        invoice_doc.base_write_off_amount = flt(invoice_doc.base_write_off_amount)
-        invoice_doc.write_off_amount = flt(invoice_doc.write_off_amount)
-        invoice_doc.insert(ignore_permissions=True)
+        # Create Sales Invoice
         try:
-            invoice_doc.submit()
-        except Exception:
+            invoice_doc = frappe.new_doc("Sales Invoice")
+            invoice_doc.company = company
+            invoice_doc.customer = invoice_customer
+            invoice_doc.posting_date = nowdate()
+            invoice_doc.set_posting_time = 1
+            invoice_doc.due_date = nowdate()
+            invoice_doc.remarks = (
+                f"Auto-generated from Repair QC {self.name} "
+                f"(Service Order {service_order.name})"
+            )
+            
+            # Set branch if field exists
+            if self._doctype_has_field("Sales Invoice", "branch"):
+                invoice_doc.branch = getattr(service_order, "branch", None)
+
+            # Link to service order if field exists
+            if link_field:
+                setattr(invoice_doc, link_field, service_order.name)
+
+            # Add items
+            for row in items:
+                invoice_doc.append("items", row)
+
+            # Calculate totals
+            invoice_doc.run_method("set_missing_values")
+            invoice_doc.calculate_taxes_and_totals()
+            
+            # Fix write-off amounts
+            invoice_doc.base_write_off_amount = flt(invoice_doc.base_write_off_amount)
+            invoice_doc.write_off_amount = flt(invoice_doc.write_off_amount)
+            
+            # Insert invoice (DRAFT)
+            invoice_doc.insert(ignore_permissions=True)
+            
+            # ✅ SUBMIT INVOICE AUTOMATICALLY
+            try:
+                invoice_doc.submit()
+                frappe.msgprint(
+                    _("✅ Sales Invoice {0} created and submitted successfully!").format(
+                        f"<a href='/app/sales-invoice/{invoice_doc.name}'>{invoice_doc.name}</a>"
+                    ),
+                    indicator="green",
+                    alert=True
+                )
+            except Exception as submit_error:
+                frappe.log_error(
+                    frappe.get_traceback(),
+                    "Failed to submit auto-generated Sales Invoice from Repair QC"
+                )
+                frappe.msgprint(
+                    _("⚠️ Sales Invoice {0} created but NOT submitted. Please submit manually.").format(
+                        f"<a href='/app/sales-invoice/{invoice_doc.name}'>{invoice_doc.name}</a>"
+                    ),
+                    indicator="orange",
+                    alert=True
+                )
+            
+            # Update summary fields
+            self.db_set("summary_invoice", invoice_doc.name, update_modified=False)
+            self.reload()
+            
+        except Exception as e:
             frappe.log_error(
                 frappe.get_traceback(),
-                "Failed to submit auto-generated Sales Invoice from Repair QC",
+                "Failed to create Sales Invoice from Repair QC"
+            )
+            frappe.msgprint(
+                _("❌ Failed to create Sales Invoice: {0}").format(str(e)),
+                indicator="red",
+                alert=True
             )
 
     def _sync_parts_used_pricing(self):
@@ -432,6 +491,7 @@ class RepairQC(Document):
         bundle_items = self._get_bundle_items(service_order)
         items = []
         seen_codes = set()
+        
         for row in bundle_items:
             item_code = (row.get("item_code") or "").strip()
             if not item_code:
@@ -557,28 +617,42 @@ class RepairQC(Document):
         return flt(standard_selling or 0)
 
     def _create_payment_entry_if_finished(self):
-        if self.status != "Finished":
-            return
-
+        """
+        ✅ AUTO-CREATE PAYMENT ENTRY DRAFT when Sales Invoice exists
+        """
+        # Skip if payment entry already exists
         if self.payment_entry:
             return
 
+        # Get invoice
         invoice = self._get_latest_invoice()
         if not invoice:
             return
 
+        # Handle ERPNext Sales Invoice
         if invoice.get("doctype") == "Sales Invoice":
             try:
                 from erpnext.accounts.doctype.payment_entry.payment_entry import (
                     get_payment_entry,
                 )
             except Exception:
+                frappe.msgprint(
+                    _("Payment Entry module not available"),
+                    indicator="orange",
+                    alert=True
+                )
                 return
 
             outstanding_amount = flt(
                 invoice.get("outstanding_amount") or invoice.get("grand_total") or 0
             )
+            
             if outstanding_amount <= 0:
+                frappe.msgprint(
+                    _("Invoice already fully paid. No payment entry needed."),
+                    indicator="blue",
+                    alert=True
+                )
                 return
 
             try:
@@ -586,12 +660,79 @@ class RepairQC(Document):
             except Exception:
                 return
 
-            payment_entry = get_payment_entry("Sales Invoice", invoice_doc.name)
-            if self._doctype_has_field("Payment Entry", "branch") and getattr(
-                invoice_doc, "branch", None
-            ):
-                payment_entry.branch = invoice_doc.branch
-            payment_entry.posting_date = nowdate()
+            # Create Payment Entry draft
+            try:
+                payment_entry = get_payment_entry("Sales Invoice", invoice_doc.name)
+                
+                # Set branch if field exists
+                if self._doctype_has_field("Payment Entry", "branch") and getattr(
+                    invoice_doc, "branch", None
+                ):
+                    payment_entry.branch = invoice_doc.branch
+                
+                payment_entry.posting_date = nowdate()
+                payment_entry.reference_no = f"QC-{self.name}"
+                payment_entry.reference_date = nowdate()
+                payment_entry.remarks = f"Auto-generated from Repair QC {self.name}"
+                
+                # ✅ INSERT AS DRAFT (don't submit)
+                payment_entry.insert(ignore_permissions=True)
+                
+                # Update Repair QC with payment entry link
+                frappe.db.set_value(
+                    self.doctype,
+                    self.name,
+                    "payment_entry",
+                    payment_entry.name,
+                    update_modified=False,
+                )
+                
+                frappe.msgprint(
+                    _("✅ Payment Entry {0} created as DRAFT. Please review and submit.").format(
+                        f"<a href='/app/payment-entry/{payment_entry.name}'>{payment_entry.name}</a>"
+                    ),
+                    indicator="green",
+                    alert=True
+                )
+                
+            except Exception as e:
+                frappe.log_error(
+                    frappe.get_traceback(),
+                    "Failed to create Payment Entry from Repair QC"
+                )
+                frappe.msgprint(
+                    _("❌ Failed to create Payment Entry: {0}").format(str(e)),
+                    indicator="red",
+                    alert=True
+                )
+            
+            return
+
+        # Handle Garage Payment Entry (if using custom module)
+        outstanding_amount = flt(invoice.get("outstanding_amount") or invoice.get("total_amount"))
+        if outstanding_amount <= 0:
+            return
+
+        try:
+            payment_entry = frappe.get_doc(
+                {
+                    "doctype": "Garage Payment Entry",
+                    "branch": invoice.get("branch"),
+                    "payment_date": nowdate(),
+                    "customer": invoice.get("customer"),
+                    "paid_amount": outstanding_amount,
+                    "received_amount": outstanding_amount,
+                    "notes": f"Auto-generated from Repair QC {self.name}",
+                    "allocations": [
+                        {
+                            "invoice": invoice.get("name"),
+                            "allocated_amount": outstanding_amount,
+                            "outstanding_before": outstanding_amount,
+                            "outstanding_after": 0,
+                        }
+                    ],
+                }
+            )
             payment_entry.insert(ignore_permissions=True)
             frappe.db.set_value(
                 self.doctype,
@@ -600,36 +741,15 @@ class RepairQC(Document):
                 payment_entry.name,
                 update_modified=False,
             )
-            return
-
-        outstanding_amount = flt(invoice.get("outstanding_amount") or invoice.get("total_amount"))
-        if outstanding_amount <= 0:
-            return
-
-        payment_entry = frappe.get_doc(
-            {
-                "doctype": "Garage Payment Entry",
-                "branch": invoice.get("branch"),
-                "payment_date": nowdate(),
-                "customer": invoice.get("customer"),
-                "paid_amount": outstanding_amount,
-                "received_amount": outstanding_amount,
-                "notes": f"Auto-generated from Repair QC {self.name}",
-                "allocations": [
-                    {
-                        "invoice": invoice.get("name"),
-                        "allocated_amount": outstanding_amount,
-                        "outstanding_before": outstanding_amount,
-                        "outstanding_after": 0,
-                    }
-                ],
-            }
-        )
-        payment_entry.insert(ignore_permissions=True)
-        frappe.db.set_value(
-            self.doctype,
-            self.name,
-            "payment_entry",
-            payment_entry.name,
-            update_modified=False,
-        )
+            
+            frappe.msgprint(
+                _("✅ Garage Payment Entry {0} created successfully!").format(payment_entry.name),
+                indicator="green",
+                alert=True
+            )
+            
+        except Exception as e:
+            frappe.log_error(
+                frappe.get_traceback(),
+                "Failed to create Garage Payment Entry from Repair QC"
+            )
