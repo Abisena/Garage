@@ -13,6 +13,7 @@ class RepairQC(Document):
 
     def validate(self):
         self._set_default_users()
+        self._sync_parts_used_pricing()
         self._ensure_sales_invoice()
         self._sync_invoice_summary()
         self._validate_final_status()
@@ -179,6 +180,15 @@ class RepairQC(Document):
             invoice.get("total_amount") or invoice.get("rounded_total") or invoice.get("grand_total"),
             invoice.get("outstanding_amount"),
         )
+        if total_amount <= 0:
+            parts_total = sum(
+                flt(row.amount or (flt(row.rate or 0) * flt(row.qty or 0)))
+                for row in (self.parts_used or [])
+            )
+            if parts_total > 0:
+                total_amount = parts_total
+                if outstanding_amount <= 0:
+                    outstanding_amount = parts_total
         self.summary_invoice = invoice.get("name")
         self.summary_total_amount = total_amount
         self.summary_outstanding_amount = outstanding_amount
@@ -233,6 +243,57 @@ class RepairQC(Document):
             }
         )
         invoice_doc.insert(ignore_permissions=True)
+
+    def _sync_parts_used_pricing(self):
+        if not self.service_order:
+            return
+
+        rows = list(getattr(self, "parts_used", None) or [])
+        if not rows:
+            return
+
+        try:
+            service_order = frappe.get_doc("Garage Service Order", self.service_order)
+        except Exception:
+            service_order = None
+
+        required_map = {}
+        for part in getattr(service_order, "required_parts", []) or []:
+            item_code = (getattr(part, "item_code", "") or "").strip()
+            if item_code:
+                required_map[item_code] = part
+
+        for row in rows:
+            item_code = (getattr(row, "item_code", "") or "").strip()
+            if not item_code:
+                continue
+
+            reference = required_map.get(item_code)
+            qty = flt(getattr(row, "qty", None) or 0)
+            if qty <= 0 and reference:
+                qty = flt(getattr(reference, "qty", None) or 0)
+                if qty > 0:
+                    row.qty = qty
+
+            rate = flt(getattr(row, "rate", None) or 0)
+            amount = flt(getattr(row, "amount", None) or 0)
+            if reference:
+                rate = rate or flt(getattr(reference, "rate", None) or 0)
+                amount = amount or flt(getattr(reference, "amount", None) or 0)
+
+            if not rate and amount and qty:
+                rate = amount / qty
+
+            if not rate:
+                rate = flt(frappe.db.get_value("Item", item_code, "standard_rate") or 0)
+
+            if not amount and rate and qty:
+                amount = rate * qty
+
+            if rate and not flt(getattr(row, "rate", None) or 0):
+                row.rate = rate
+            if amount and not flt(getattr(row, "amount", None) or 0):
+                row.amount = amount
 
     def _has_billable_items(self):
         try:
