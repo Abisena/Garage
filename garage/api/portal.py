@@ -11,7 +11,12 @@ import re
 from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Set, Tuple
 import frappe
 from frappe import _
-from frappe.exceptions import DoesNotExistError, PermissionError, ValidationError
+from frappe.exceptions import (
+    DoesNotExistError,
+    PermissionError,
+    TimestampMismatchError,
+    ValidationError,
+)
 from frappe.utils import cint, cstr, flt, get_datetime, get_url, getdate, now_datetime, nowdate
 from frappe.defaults import get_user_default
 
@@ -3092,12 +3097,44 @@ def _submit_doc(doc: frappe.Document) -> frappe.Document:
     return doc
 
 
+_RESAVE_SKIP_FIELDS = {
+    "name",
+    "doctype",
+    "owner",
+    "creation",
+    "modified",
+    "modified_by",
+    "idx",
+    "docstatus",
+    "parent",
+    "parenttype",
+    "parentfield",
+}
+
+
+def _refresh_for_retry(doc: frappe.Document) -> frappe.Document:
+    values = doc.get_valid_dict()
+    for field in _RESAVE_SKIP_FIELDS:
+        values.pop(field, None)
+
+    doc.reload()
+    doc.update(values)
+    return doc
+
+
 def _save_doc(doc: frappe.Document) -> frappe.Document:
     _normalize_doc_before_save(doc)
     _ensure_branch_allowed(doc)
     with _ignoring_permissions():
         doc.flags.ignore_version = True
-        doc.save(ignore_permissions=True, ignore_version=True)
+        try:
+            doc.save(ignore_permissions=True, ignore_version=True)
+        except TimestampMismatchError:
+            if getattr(doc, "is_new", None) and doc.is_new():
+                raise
+            doc = _refresh_for_retry(doc)
+            doc.flags.ignore_version = True
+            doc.save(ignore_permissions=True, ignore_version=True)
     return doc
 
 
