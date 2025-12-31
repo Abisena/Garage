@@ -1,4 +1,4 @@
-"""DocType for capturing repair and quality control inspections - COMPLETE VERSION"""
+"""DocType for capturing repair and quality control inspections - SYNCHRONOUS VERSION"""
 
 import frappe
 from frappe import _
@@ -26,16 +26,30 @@ class RepairQC(Document):
         self._sync_invoice_summary()
 
     def on_update(self):
+        """Called after document is saved"""
         self._sync_service_order_status()
         
-        # ✅ Create Sales Invoice & Payment Entry
-        if self.status == "Finished":
-            frappe.enqueue(
-                method="_create_documents_async",
-                queue='short',
-                timeout=300,
-                qc_name=self.name
-            )
+        # ✅ CREATE IMMEDIATELY (not async)
+        if self.status == "Finished" and not self.flags.get("skip_auto_create"):
+            self._create_sales_invoice_and_payment()
+
+    def _create_sales_invoice_and_payment(self):
+        """Create Sales Invoice and Payment Entry immediately"""
+        try:
+            # Create Sales Invoice
+            invoice_name = self._ensure_sales_invoice()
+            
+            if invoice_name:
+                frappe.db.commit()
+                
+                # Create Payment Entry
+                payment_name = self._create_payment_entry_if_finished()
+                
+                if payment_name:
+                    frappe.db.commit()
+                    
+        except Exception as e:
+            frappe.log_error(f"Error creating documents: {str(e)}\n{frappe.get_traceback()}", "Repair QC - Document Creation")
 
     def _set_default_users(self):
         current_user = frappe.session.user if frappe.session else None
@@ -52,7 +66,7 @@ class RepairQC(Document):
         self.status = "Finished"
 
     def _validate_completion_fields(self):
-        """DISABLED - Checkbox validation turned off"""
+        """DISABLED - Not used"""
         pass
 
     def _sync_service_order_status(self):
@@ -111,35 +125,11 @@ class RepairQC(Document):
                 return invoices[0]
         except Exception:
             pass
-        
-        # Fallback to Garage Sales Invoice
-        try:
-            invoices = frappe.get_all(
-                "Garage Sales Invoice",
-                filters={
-                    "source_type": "Garage Service Order",
-                    "source_name": self.service_order,
-                },
-                fields=[
-                    "name",
-                    "total_amount",
-                    "outstanding_amount",
-                    "branch",
-                    "customer",
-                ],
-                order_by="modified desc",
-                limit=1,
-            )
-            if invoices:
-                invoices[0]["doctype"] = "Garage Sales Invoice"
-                return invoices[0]
-        except Exception:
-            pass
 
         return None
 
     def _get_latest_sales_invoice(self):
-        """Get latest Sales Invoice - wrapper method"""
+        """Wrapper for _get_latest_invoice"""
         return self._get_latest_invoice()
 
     def _get_sales_invoice_link_field(self):
@@ -219,17 +209,21 @@ class RepairQC(Document):
         self.summary_outstanding_amount = outstanding_amount
 
     def _validate_final_status(self):
-        """DISABLED - No validation for Sales Invoice requirement"""
+        """DISABLED"""
         pass
 
     def _ensure_sales_invoice(self):
         """
-        ✅ AUTO-CREATE SALES INVOICE
-        This method is called from async job
+        ✅ CREATE SALES INVOICE IMMEDIATELY (SYNCHRONOUS)
         """
         # Check if already exists
         existing = self._get_latest_invoice()
         if existing:
+            frappe.msgprint(
+                _("Sales Invoice sudah ada: {0}").format(existing.get("name")),
+                indicator="blue",
+                alert=True
+            )
             return existing.get("name")
         
         if not self.service_order:
@@ -240,18 +234,31 @@ class RepairQC(Document):
             service_order = frappe.get_doc("Garage Service Order", self.service_order)
         except Exception as e:
             frappe.log_error(f"Get Service Order failed: {str(e)}", "Repair QC - Sales Invoice")
+            frappe.msgprint(
+                _("Error: Tidak dapat mengambil Service Order"),
+                indicator="red",
+                alert=True
+            )
             return None
 
         # Build items
         items = self._build_invoice_items(service_order)
         if not items:
-            frappe.log_error("No billable items found", "Repair QC - Sales Invoice")
+            frappe.msgprint(
+                _("Tidak ada item untuk di-invoice"),
+                indicator="orange",
+                alert=True
+            )
             return None
 
         # Get customer
         customer_name = service_order.get("customer")
         if not customer_name:
-            frappe.log_error("No customer found", "Repair QC - Sales Invoice")
+            frappe.msgprint(
+                _("Customer tidak ditemukan"),
+                indicator="red",
+                alert=True
+            )
             return None
 
         # Get company
@@ -261,7 +268,11 @@ class RepairQC(Document):
             company = companies[0].name if companies else None
             
         if not company:
-            frappe.log_error("No company found", "Repair QC - Sales Invoice")
+            frappe.msgprint(
+                _("Company tidak ditemukan"),
+                indicator="red",
+                alert=True
+            )
             return None
 
         # Create Sales Invoice
@@ -296,24 +307,35 @@ class RepairQC(Document):
             # Submit
             try:
                 si.submit()
+                frappe.msgprint(
+                    _("✅ Sales Invoice {0} berhasil dibuat dan di-submit!").format(
+                        f'<a href="/app/sales-invoice/{si.name}" target="_blank">{si.name}</a>'
+                    ),
+                    indicator="green",
+                    alert=True
+                )
             except Exception as e:
                 frappe.log_error(f"Submit failed: {str(e)}", "Repair QC - Sales Invoice Submit")
+                frappe.msgprint(
+                    _("⚠️ Sales Invoice {0} dibuat tapi tidak bisa di-submit").format(
+                        f'<a href="/app/sales-invoice/{si.name}" target="_blank">{si.name}</a>'
+                    ),
+                    indicator="orange",
+                    alert=True
+                )
             
             # Update QC
             frappe.db.set_value("Repair QC", self.name, "summary_invoice", si.name, update_modified=False)
-            frappe.db.commit()
-            
-            # Show alert
-            frappe.publish_realtime(
-                event='msgprint',
-                message=f'✅ Sales Invoice {si.name} created!',
-                user=frappe.session.user
-            )
             
             return si.name
             
         except Exception as e:
             frappe.log_error(f"Create Sales Invoice failed: {str(e)}\n{frappe.get_traceback()}", "Repair QC - Sales Invoice")
+            frappe.msgprint(
+                _("❌ Gagal membuat Sales Invoice: {0}").format(str(e)),
+                indicator="red",
+                alert=True
+            )
             return None
 
     def _sync_parts_used_pricing(self):
@@ -327,9 +349,6 @@ class RepairQC(Document):
         try:
             service_order = frappe.get_doc("Garage Service Order", self.service_order)
         except Exception:
-            service_order = None
-
-        if not service_order:
             return
 
         required_map = {}
@@ -523,26 +542,14 @@ class RepairQC(Document):
         except Exception:
             pass
 
-        try:
-            standard_selling = frappe.db.get_value(
-                "Item Price",
-                {"item_code": item_code, "price_list": "Standard Selling"},
-                "price_list_rate",
-            )
-            if standard_selling:
-                return flt(standard_selling)
-        except Exception:
-            pass
-
         return 0
 
     def _create_payment_entry_if_finished(self):
         """
-        ✅ AUTO-CREATE PAYMENT ENTRY DRAFT
-        This method is called from async job
+        ✅ CREATE PAYMENT ENTRY IMMEDIATELY (SYNCHRONOUS)
         """
         if self.payment_entry:
-            return None
+            return self.payment_entry
             
         invoice = self._get_latest_invoice()
         if not invoice:
@@ -553,6 +560,11 @@ class RepairQC(Document):
 
         outstanding = flt(invoice.get("outstanding_amount") or 0)
         if outstanding <= 0:
+            frappe.msgprint(
+                _("Invoice sudah lunas, tidak perlu Payment Entry"),
+                indicator="blue",
+                alert=True
+            )
             return None
 
         try:
@@ -571,39 +583,22 @@ class RepairQC(Document):
             pe.insert(ignore_permissions=True)
             
             frappe.db.set_value("Repair QC", self.name, "payment_entry", pe.name, update_modified=False)
-            frappe.db.commit()
             
-            # Show alert
-            frappe.publish_realtime(
-                event='msgprint',
-                message=f'✅ Payment Entry {pe.name} created as DRAFT!',
-                user=frappe.session.user
+            frappe.msgprint(
+                _("✅ Payment Entry {0} berhasil dibuat sebagai DRAFT!").format(
+                    f'<a href="/app/payment-entry/{pe.name}" target="_blank">{pe.name}</a>'
+                ),
+                indicator="green",
+                alert=True
             )
             
             return pe.name
             
         except Exception as e:
             frappe.log_error(f"Create Payment Entry failed: {str(e)}\n{frappe.get_traceback()}", "Repair QC - Payment Entry")
+            frappe.msgprint(
+                _("❌ Gagal membuat Payment Entry: {0}").format(str(e)),
+                indicator="red",
+                alert=True
+            )
             return None
-
-
-# ✅ Async function to create documents in background
-def _create_documents_async(qc_name):
-    """Background job to create Sales Invoice and Payment Entry"""
-    try:
-        qc = frappe.get_doc("Repair QC", qc_name)
-        
-        # Create Sales Invoice
-        invoice_name = qc._ensure_sales_invoice()
-        
-        # Wait a bit
-        frappe.db.commit()
-        
-        # Create Payment Entry
-        if invoice_name:
-            qc._create_payment_entry_if_finished()
-        
-        frappe.db.commit()
-        
-    except Exception as e:
-        frappe.log_error(f"Async job failed: {str(e)}\n{frappe.get_traceback()}", "Repair QC - Async Job")
