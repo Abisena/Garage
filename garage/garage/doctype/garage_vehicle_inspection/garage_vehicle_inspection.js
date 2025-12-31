@@ -26,6 +26,17 @@ const DEFAULT_INSPECTION_ITEMS = [
 
 frappe.ui.form.on("Garage Vehicle Inspection", {
   refresh(frm) {
+    const grid = frm.fields_dict?.inspection_items?.grid;
+    if (grid) {
+      grid.update_docfield_property(
+        "severity",
+        "options",
+        "OK\nNeed Attention\nReplace"
+      );
+      grid.update_docfield_property("severity", "default", "OK");
+      grid.refresh();
+    }
+
     if (!frm.is_new() || (frm.doc.inspection_items || []).length > 0) {
       return;
     }
