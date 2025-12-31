@@ -205,19 +205,28 @@ def _sync_repair_qc_parts_used(repair_qc, required_parts: Iterable[object]) -> N
         item_code = cstr(getattr(part, "item_code", "")).strip()
         if not item_code:
             continue
+        qty = flt(getattr(part, "qty", None) or 0)
+        rate = flt(getattr(part, "rate", None) or 0)
+        amount = flt(getattr(part, "amount", None) or 0)
+        if not rate and amount and qty:
+            rate = amount / qty
+        if not rate:
+            rate = flt(frappe.db.get_value("Item", item_code, "standard_rate") or 0)
+        if not amount and rate and qty:
+            amount = rate * qty
         repair_qc.append(
             "parts_used",
             {
                 "item_code": item_code,
                 "item_name": getattr(part, "item_name", None),
                 "description": getattr(part, "description", None),
-                "qty": getattr(part, "qty", None),
+                "qty": qty,
                 "uom": getattr(part, "uom", None),
                 "source": getattr(part, "source", None),
                 "stock_status": getattr(part, "stock_status", None),
                 "linked_procurement": getattr(part, "linked_procurement", None),
                 "warehouse": getattr(part, "warehouse", None),
-                "rate": getattr(part, "rate", None),
-                "amount": getattr(part, "amount", None),
+                "rate": rate,
+                "amount": amount,
             },
         )
