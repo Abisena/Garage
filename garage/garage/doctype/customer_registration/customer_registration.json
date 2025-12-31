@@ -5,88 +5,56 @@
   "autoname": "format:CR-{#####}",
   "allow_import": 1,
   "track_changes": 1,
-  "editable_grid": 0,
   "title_field": "license_plate",
-  "description": "Combined customer + vehicle registration aligned with the portal intake flow.",
+  "description": "Quick customer and vehicle registration for service intake",
 
   "field_order": [
-    "main_info_section",
+    "info_section",
     "branch",
-    "column_break_main",
     "intake_type",
-    "registration_date",
-
+    
     "vehicle_section",
-    "vehicle_header_html",
     "license_plate",
-    "vin",
     "column_break_v1",
     "brand",
     "model",
     
-    "vehicle_details_section",
+    "vehicle_info",
     "vehicle_type",
     "vehicle_year",
     "column_break_v2",
-    "transmission",
-    "fuel_type",
-    
-    "vehicle_specs_section",
-    "engine_number",
-    "assembly_type",
-    "column_break_v3",
     "mileage",
     
     "complaint_section",
-    "notes",
+    "complaint",
 
     "customer_section",
-    "customer_header_html",
     "customer_name",
     "phone",
     "column_break_c1",
     "email",
-    "customer_type",
-    
-    "customer_details_section",
-    "id_number",
-    "preferred_contact_method",
-    "column_break_c2",
-    "marketing_source",
     "is_vip",
-    
-    "address_section",
-    "address_line1",
-    "address_line2",
-    "column_break_addr",
-    "city",
-    "state",
-    "postal_code",
-    "country",
 
     "service_section",
-    "service_header_html",
     "service_order_type",
-    "priority",
     "column_break_s1",
-    "service_bundle",
-    "service_bundle_name",
+    "priority",
     
-    "service_notes_section",
+    "notes_section",
     "service_notes",
 
-    "links_section",
+    "system_section",
     "vehicle",
     "customer",
-    "column_break_links",
+    "column_break_sys",
     "service_order"
   ],
 
   "fields": [
     {
-      "fieldname": "main_info_section",
+      "fieldname": "info_section",
       "fieldtype": "Section Break",
-      "label": "📋 Registration Information"
+      "label": "📋 Basic Information"
     },
     {
       "fieldname": "branch",
@@ -94,56 +62,34 @@
       "label": "Branch",
       "options": "Garage Branch",
       "in_list_view": 1,
-      "in_standard_filter": 1,
-      "reqd": 1
-    },
-    {
-      "fieldname": "column_break_main",
-      "fieldtype": "Column Break"
+      "reqd": 1,
+      "description": "Which branch is handling this?"
     },
     {
       "fieldname": "intake_type",
       "fieldtype": "Select",
-      "label": "Intake Type",
+      "label": "Customer came by",
       "options": "Walk-In\nBooking",
       "default": "Walk-In",
       "in_list_view": 1,
-      "in_standard_filter": 1
+      "description": "Did they walk in or book an appointment?"
     },
-    {
-      "fieldname": "registration_date",
-      "fieldtype": "Datetime",
-      "label": "Registration Date",
-      "default": "Now",
-      "read_only": 1
-    },
-
+    
     {
       "fieldname": "vehicle_section",
       "fieldtype": "Section Break",
-      "label": "🚗 Vehicle Information",
-      "collapsible": 0
-    },
-    {
-      "fieldname": "vehicle_header_html",
-      "fieldtype": "HTML",
-      "options": "<div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;'><h4 style='margin: 0; font-weight: 600;'>🚗 Vehicle Details</h4><p style='margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;'>Enter vehicle identification and specifications</p></div>"
+      "label": "🚗 Vehicle Details",
+      "description": "Tell us about the vehicle"
     },
     {
       "fieldname": "license_plate",
       "fieldtype": "Data",
-      "label": "Plate Number",
-      "description": "e.g., B 1234 XYZ",
+      "label": "License Plate",
       "in_list_view": 1,
       "in_global_search": 1,
       "bold": 1,
-      "reqd": 1
-    },
-    {
-      "fieldname": "vin",
-      "fieldtype": "Data",
-      "label": "Chassis Number (VIN)",
-      "description": "Vehicle Identification Number"
+      "reqd": 1,
+      "description": "e.g., B 1234 ABC"
     },
     {
       "fieldname": "column_break_v1",
@@ -152,112 +98,77 @@
     {
       "fieldname": "brand",
       "fieldtype": "Link",
-      "label": "Brand",
+      "label": "Car Brand",
       "options": "Garage Brand",
       "in_standard_filter": 1,
-      "bold": 1
+      "description": "e.g., Toyota, Honda"
     },
     {
       "fieldname": "model",
       "fieldtype": "Link",
-      "label": "Model",
+      "label": "Car Model",
       "options": "Garage Model",
-      "in_standard_filter": 1
+      "description": "e.g., Avanza, Jazz"
     },
     
     {
-      "fieldname": "vehicle_details_section",
+      "fieldname": "vehicle_info",
       "fieldtype": "Section Break",
-      "label": "Vehicle Specifications"
+      "label": "Additional Vehicle Info",
+      "collapsible": 1,
+      "collapsible_depends_on": "eval:!doc.__islocal"
     },
     {
       "fieldname": "vehicle_type",
       "fieldtype": "Select",
       "label": "Vehicle Type",
       "options": "\nSedan\nHatchback\nSUV\nMPV\nTruck\nVan\nCoupe\nWagon",
-      "in_standard_filter": 1
+      "description": "What type of vehicle?"
     },
     {
       "fieldname": "vehicle_year",
       "fieldtype": "Int",
       "label": "Year",
-      "description": "Manufacturing year"
+      "description": "What year was it made?"
     },
     {
       "fieldname": "column_break_v2",
       "fieldtype": "Column Break"
     },
     {
-      "fieldname": "transmission",
-      "fieldtype": "Select",
-      "label": "Transmission",
-      "options": "\nManual\nAutomatic\nCVT\nOther"
-    },
-    {
-      "fieldname": "fuel_type",
-      "fieldtype": "Select",
-      "label": "Fuel Type",
-      "options": "\nPetrol\nDiesel\nHybrid\nElectric\nOther"
-    },
-    
-    {
-      "fieldname": "vehicle_specs_section",
-      "fieldtype": "Section Break",
-      "label": "Additional Specs"
-    },
-    {
-      "fieldname": "engine_number",
-      "fieldtype": "Data",
-      "label": "Engine Number"
-    },
-    {
-      "fieldname": "assembly_type",
-      "fieldtype": "Select",
-      "label": "Assembly Type",
-      "options": "\nCKD\nCBU"
-    },
-    {
-      "fieldname": "column_break_v3",
-      "fieldtype": "Column Break"
-    },
-    {
       "fieldname": "mileage",
       "fieldtype": "Int",
-      "label": "Current Mileage (KM)",
-      "description": "Odometer reading"
+      "label": "Mileage (KM)",
+      "description": "Current odometer reading"
     },
     
     {
       "fieldname": "complaint_section",
       "fieldtype": "Section Break",
-      "label": "💬 Customer Complaint"
+      "label": "💬 What's the problem?"
     },
     {
-      "fieldname": "notes",
+      "fieldname": "complaint",
       "fieldtype": "Text Editor",
-      "label": "Customer Complaint / Issues",
-      "description": "Describe the problem or service request"
+      "label": "Customer's Complaint",
+      "description": "What issue is the customer experiencing? What service do they need?"
     },
 
     {
       "fieldname": "customer_section",
       "fieldtype": "Section Break",
       "label": "👤 Customer Information",
-      "collapsible": 0
-    },
-    {
-      "fieldname": "customer_header_html",
-      "fieldtype": "HTML",
-      "options": "<div style='background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;'><h4 style='margin: 0; font-weight: 600;'>👤 Customer Details</h4><p style='margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;'>Customer contact and personal information</p></div>"
+      "description": "Who owns this vehicle?"
     },
     {
       "fieldname": "customer_name",
       "fieldtype": "Data",
-      "label": "Full Name",
+      "label": "Customer Name",
       "in_list_view": 1,
       "in_global_search": 1,
       "bold": 1,
-      "reqd": 1
+      "reqd": 1,
+      "description": "Full name of the vehicle owner"
     },
     {
       "fieldname": "phone",
@@ -265,7 +176,8 @@
       "label": "Phone Number",
       "options": "Phone",
       "in_list_view": 1,
-      "description": "Primary contact number"
+      "reqd": 1,
+      "description": "Primary contact number (required)"
     },
     {
       "fieldname": "column_break_c1",
@@ -274,109 +186,22 @@
     {
       "fieldname": "email",
       "fieldtype": "Data",
-      "label": "Email Address",
+      "label": "Email (Optional)",
       "options": "Email",
-      "description": "Customer email"
-    },
-    {
-      "fieldname": "customer_type",
-      "fieldtype": "Select",
-      "label": "Customer Type",
-      "options": "Individual\nCorporate",
-      "default": "Individual",
-      "in_standard_filter": 1
-    },
-    
-    {
-      "fieldname": "customer_details_section",
-      "fieldtype": "Section Break",
-      "label": "Additional Customer Info"
-    },
-    {
-      "fieldname": "id_number",
-      "fieldtype": "Data",
-      "label": "ID Number (KTP/SIM)",
-      "description": "National ID or Driver's License"
-    },
-    {
-      "fieldname": "preferred_contact_method",
-      "fieldtype": "Select",
-      "label": "Preferred Contact",
-      "options": "\nPhone\nEmail\nWhatsApp",
-      "default": "Phone"
-    },
-    {
-      "fieldname": "column_break_c2",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "marketing_source",
-      "fieldtype": "Select",
-      "label": "How Did You Hear About Us?",
-      "options": "\nWalk In\nReferral\nOnline\nSocial Media\nOther",
-      "in_standard_filter": 1
+      "description": "Customer's email address"
     },
     {
       "fieldname": "is_vip",
       "fieldtype": "Check",
-      "label": "VIP Customer",
-      "description": "Mark as VIP for priority service"
-    },
-    
-    {
-      "fieldname": "address_section",
-      "fieldtype": "Section Break",
-      "label": "📍 Address Information",
-      "collapsible": 1
-    },
-    {
-      "fieldname": "address_line1",
-      "fieldtype": "Data",
-      "label": "Address Line 1",
-      "description": "Street address"
-    },
-    {
-      "fieldname": "address_line2",
-      "fieldtype": "Data",
-      "label": "Address Line 2",
-      "description": "Apartment, suite, etc."
-    },
-    {
-      "fieldname": "column_break_addr",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "city",
-      "fieldtype": "Data",
-      "label": "City"
-    },
-    {
-      "fieldname": "state",
-      "fieldtype": "Data",
-      "label": "Province/State"
-    },
-    {
-      "fieldname": "postal_code",
-      "fieldtype": "Data",
-      "label": "Postal Code"
-    },
-    {
-      "fieldname": "country",
-      "fieldtype": "Data",
-      "label": "Country",
-      "default": "Indonesia"
+      "label": "⭐ VIP Customer",
+      "description": "Check if this is a VIP customer"
     },
 
     {
       "fieldname": "service_section",
       "fieldtype": "Section Break",
-      "label": "🔧 Service Information",
-      "collapsible": 0
-    },
-    {
-      "fieldname": "service_header_html",
-      "fieldtype": "HTML",
-      "options": "<div style='background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;'><h4 style='margin: 0; font-weight: 600;'>🔧 Service Details</h4><p style='margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;'>Select service type and requirements</p></div>"
+      "label": "🔧 Service Request",
+      "description": "What service do they need?"
     },
     {
       "fieldname": "service_order_type",
@@ -384,97 +209,74 @@
       "label": "Service Type",
       "options": "Garage Service Type",
       "in_list_view": 1,
-      "in_standard_filter": 1,
       "bold": 1,
-      "reqd": 1
-    },
-    {
-      "fieldname": "priority",
-      "fieldtype": "Select",
-      "label": "Priority",
-      "options": "Normal\nHigh\nUrgent\nCritical",
-      "default": "Normal",
-      "in_list_view": 1
+      "reqd": 1,
+      "description": "What kind of service? (e.g., Oil Change, Repair)"
     },
     {
       "fieldname": "column_break_s1",
       "fieldtype": "Column Break"
     },
     {
-      "fieldname": "service_bundle",
-      "fieldtype": "Link",
-      "label": "Service Bundle",
-      "options": "Garage Service Bundle",
-      "description": "Pre-defined service package"
-    },
-    {
-      "fieldname": "service_bundle_name",
-      "fieldtype": "Data",
-      "label": "Bundle Description",
-      "read_only": 1
+      "fieldname": "priority",
+      "fieldtype": "Select",
+      "label": "How urgent?",
+      "options": "Normal\nHigh\nUrgent\nCritical",
+      "default": "Normal",
+      "in_list_view": 1,
+      "description": "How quickly does this need to be done?"
     },
     
     {
-      "fieldname": "service_notes_section",
+      "fieldname": "notes_section",
       "fieldtype": "Section Break",
-      "label": "Service Advisor Notes"
+      "label": "📝 Internal Notes (Optional)",
+      "collapsible": 1
     },
     {
       "fieldname": "service_notes",
       "fieldtype": "Text Editor",
-      "label": "Internal Notes",
-      "description": "Notes for service advisors and technicians"
+      "label": "Staff Notes",
+      "description": "Internal notes for service advisors (customer won't see this)"
     },
 
     {
-      "fieldname": "links_section",
+      "fieldname": "system_section",
       "fieldtype": "Section Break",
-      "label": "🔗 Linked Records",
-      "collapsible": 1
+      "label": "🔗 System Records (Auto-Generated)",
+      "collapsible": 1,
+      "collapsible_depends_on": "eval:doc.vehicle || doc.customer || doc.service_order"
     },
     {
       "fieldname": "vehicle",
       "fieldtype": "Link",
-      "label": "🚗 Vehicle Record",
+      "label": "Vehicle Record",
       "options": "Garage Vehicle",
-      "read_only": 1
+      "read_only": 1,
+      "description": "Linked vehicle master record"
     },
     {
       "fieldname": "customer",
       "fieldtype": "Link",
-      "label": "👤 Customer Record",
+      "label": "Customer Record",
       "options": "Garage Customer",
-      "read_only": 1
+      "read_only": 1,
+      "description": "Linked customer master record"
     },
     {
-      "fieldname": "column_break_links",
+      "fieldname": "column_break_sys",
       "fieldtype": "Column Break"
     },
     {
       "fieldname": "service_order",
       "fieldtype": "Link",
-      "label": "🔧 Service Order",
+      "label": "Service Order",
       "options": "Garage Service Order",
-      "read_only": 1
+      "read_only": 1,
+      "description": "Generated service order"
     }
   ],
 
-  "has_web_view": 0,
-  "hide_heading": 0,
-  "hide_toolbar": 0,
-  "idx": 0,
-  "image_field": "",
-  "in_create": 0,
-  "info_fields": [],
-  "is_submittable": 0,
-  "issingle": 0,
-  "istable": 0,
-  "links": [],
-  "make_attachments_public": 0,
-  "max_attachments": 0,
-  "modified": "2024-12-31 00:00:00.000000",
-  "naming_rule": "",
-  "owner": "Administrator",
   "permissions": [
     {
       "role": "System Manager",
@@ -497,16 +299,9 @@
       "share": 1
     }
   ],
-  "quick_entry": 0,
-  "read_only": 0,
-  "read_only_onload": 0,
-  "show_name_in_global_search": 1,
-  "show_preview_popup": 0,
+  
   "sort_field": "modified",
   "sort_order": "DESC",
-  "states": [],
-  "subject": "",
   "track_seen": 1,
-  "translated_doctype": 0,
-  "migration_hash": ""
+  "show_name_in_global_search": 1
 }
