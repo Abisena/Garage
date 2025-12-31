@@ -422,13 +422,15 @@
       "fieldname": "summary_total_amount",
       "fieldtype": "Currency",
       "label": "Invoice Total",
-      "read_only": 1
+      "read_only": 1,
+      "hidden": 1
     },
     {
       "fieldname": "summary_outstanding_amount",
       "fieldtype": "Currency",
       "label": "Outstanding Amount",
-      "read_only": 1
+      "read_only": 1,
+      "hidden": 1
     },
     {
       "fieldname": "parts_used_section",

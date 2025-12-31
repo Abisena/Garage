@@ -1,4 +1,15 @@
 frappe.ui.form.on('Repair QC', {
+  refresh(frm) {
+    frm.set_df_property('summary_total_amount', 'hidden', 1);
+    frm.set_df_property('summary_outstanding_amount', 'hidden', 1);
+
+    const partsGrid = frm.fields_dict.parts_used?.grid;
+    if (partsGrid) {
+      partsGrid.update_docfield_property('rate', 'hidden', 1);
+      partsGrid.update_docfield_property('amount', 'hidden', 1);
+      partsGrid.refresh();
+    }
+  },
   async service_order(frm) {
     if (!frm.doc.service_order) {
       frm.clear_table('spare_parts_verification');
