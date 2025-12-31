@@ -33,6 +33,7 @@
       "fieldtype": "Select",
       "label": "Severity",
       "options": "OK\nNeed Attention\nReplace",
+      "default": "OK",
       "in_list_view": 1
     },
     {
