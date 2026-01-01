@@ -11,24 +11,43 @@
   "disable_prepared_report": 0,
   "docstatus": 0,
   "doctype": "DocType",
-  "editable_grid": 0,
+  "editable_grid": 1,
   "engine": "InnoDB",
   "field_order": [
+    "section_break_basic",
     "service_order",
     "branch",
+    "column_break_1",
     "vehicle",
+    "inspection_date",
+    "section_break_summary",
     "inspection_summary",
+    "column_break_2",
+    "overall_condition",
+    "section_break_details",
+    "inspection_items",
+    "section_break_notes",
     "service_notes",
-    "inspection_items"
+    "section_break_attachments",
+    "inspection_photos"
   ],
   "fields": [
+    {
+      "fieldname": "section_break_basic",
+      "fieldtype": "Section Break",
+      "label": "🚗 Basic Information",
+      "collapsible": 0
+    },
     {
       "fieldname": "service_order",
       "fieldtype": "Link",
       "label": "Service Order",
       "options": "Garage Service Order",
       "reqd": 1,
-      "in_list_view": 1
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "bold": 1,
+      "description": "Select the service order for this inspection"
     },
     {
       "fieldname": "branch",
@@ -37,7 +56,12 @@
       "options": "Garage Branch",
       "fetch_from": "service_order.branch",
       "read_only": 1,
-      "in_list_view": 1
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "column_break_1",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "vehicle",
@@ -45,30 +69,88 @@
       "label": "Vehicle",
       "options": "Garage Vehicle",
       "fetch_from": "service_order.vehicle",
-      "read_only": 1
+      "read_only": 1,
+      "in_list_view": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "inspection_date",
+      "fieldtype": "Date",
+      "label": "Inspection Date",
+      "default": "Today",
+      "reqd": 1,
+      "in_list_view": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "section_break_summary",
+      "fieldtype": "Section Break",
+      "label": "📋 Inspection Summary",
+      "collapsible": 0
     },
     {
       "fieldname": "inspection_summary",
       "fieldtype": "Small Text",
-      "label": "Inspection Summary"
+      "label": "Summary",
+      "description": "Brief overview of the inspection findings"
     },
     {
-      "fieldname": "service_notes",
-      "fieldtype": "Text",
-      "label": "Service Notes"
+      "fieldname": "column_break_2",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "overall_condition",
+      "fieldtype": "Select",
+      "label": "Overall Condition",
+      "options": "\nExcellent\nGood\nFair\nPoor\nCritical",
+      "default": "Good",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "section_break_details",
+      "fieldtype": "Section Break",
+      "label": "🔍 Detailed Inspection Items",
+      "collapsible": 0,
+      "description": "Add individual inspection points below"
     },
     {
       "fieldname": "inspection_items",
       "fieldtype": "Table",
       "label": "Inspection Items",
-      "options": "Garage Service Order Inspection"
+      "options": "Garage Service Order Inspection",
+      "reqd": 1
+    },
+    {
+      "fieldname": "section_break_notes",
+      "fieldtype": "Section Break",
+      "label": "📝 Additional Notes",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "service_notes",
+      "fieldtype": "Text Editor",
+      "label": "Service Notes",
+      "description": "Additional observations, recommendations, or comments"
+    },
+    {
+      "fieldname": "section_break_attachments",
+      "fieldtype": "Section Break",
+      "label": "📷 Inspection Photos",
+      "collapsible": 1,
+      "description": "Attach photos of inspection findings"
+    },
+    {
+      "fieldname": "inspection_photos",
+      "fieldtype": "Attach Image",
+      "label": "Photos"
     }
   ],
   "has_web_view": 0,
   "hide_heading": 0,
   "hide_toolbar": 0,
   "idx": 0,
-  "image_field": "",
+  "image_field": "inspection_photos",
   "in_create": 0,
   "info_fields": [],
   "is_submittable": 0,
@@ -76,11 +158,11 @@
   "istable": 0,
   "links": [],
   "make_attachments_public": 0,
-  "max_attachments": 0,
+  "max_attachments": 10,
   "modified": "2024-06-02 00:00:00.000000",
   "module": "Garage",
   "name": "Garage Vehicle Inspection",
-  "naming_rule": "",
+  "naming_rule": "By \"Naming Series\" field",
   "owner": "Administrator",
   "permissions": [
     {
@@ -92,21 +174,47 @@
       "email": 1,
       "print": 1,
       "share": 1,
+      "export": 1,
+      "submit": 0,
+      "cancel": 0,
+      "amend": 0
+    },
+    {
+      "role": "Garage Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1,
       "export": 1
+    },
+    {
+      "role": "Garage User",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 0,
+      "email": 1,
+      "print": 1,
+      "share": 0,
+      "export": 0
     }
   ],
   "quick_entry": 0,
   "read_only": 0,
   "read_only_onload": 0,
   "show_name_in_global_search": 1,
-  "show_preview_popup": 0,
+  "show_preview_popup": 1,
   "sort_field": "modified",
   "sort_order": "DESC",
   "states": [],
   "subject": "",
+  "title_field": "service_order",
   "track_changes": 1,
   "track_seen": 0,
   "translated_doctype": 0,
   "migration_hash": "",
-  "description": "Standalone inspection document linked to a repair order."
+  "description": "Vehicle inspection form with detailed checklist and photo documentation"
 }
