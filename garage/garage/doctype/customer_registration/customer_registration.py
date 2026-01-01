@@ -63,6 +63,9 @@ class CustomerRegistration(Document):
         # Initialize _action early to avoid AttributeError
         if not hasattr(self, '_action'):
             self._action = "save"
+        # Ensure _doc_before_save exists for validation paths
+        if not hasattr(self, "_doc_before_save"):
+            self._doc_before_save = None
 
     def check_if_latest(self):
         """Skip Frappe's modified-timestamp guard for this intake flow."""
