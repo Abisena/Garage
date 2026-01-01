@@ -11,85 +11,227 @@
   "disable_prepared_report": 0,
   "docstatus": 0,
   "doctype": "DocType",
-  "editable_grid": 0,
+  "editable_grid": 1,
   "engine": "InnoDB",
   "field_order": [
+    "header_section",
     "request_title",
     "request_date",
+    "column_break_header",
     "status",
+    "priority",
+    "section_break_quick_info",
+    "quick_info_html",
     "reference_section",
     "service_order",
+    "column_break_ref",
     "customer",
     "vehicle",
-    "remarks",
+    "section_break_approval",
+    "requested_by",
+    "column_break_approval",
+    "approved_by",
+    "approval_date",
     "items_section",
-    "items"
+    "items_helper_html",
+    "items",
+    "section_break_totals",
+    "totals_html",
+    "section_break_remarks",
+    "remarks",
+    "section_break_timeline",
+    "timeline_html"
   ],
   "fields": [
     {
+      "fieldname": "header_section",
+      "fieldtype": "Section Break",
+      "label": "📦 Spare Part Request Details",
+      "collapsible": 0
+    },
+    {
       "fieldname": "request_title",
       "fieldtype": "Data",
-      "label": "Title",
+      "label": "Request Title",
       "in_list_view": 1,
-      "default": "Spare Part Request"
+      "in_standard_filter": 1,
+      "bold": 1,
+      "default": "Spare Part Request",
+      "description": "Brief description of this request"
     },
     {
       "fieldname": "request_date",
       "fieldtype": "Date",
       "label": "Request Date",
       "reqd": 1,
-      "in_list_view": 1
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "bold": 1,
+      "default": "Today",
+      "description": "Date when request was created"
+    },
+    {
+      "fieldname": "column_break_header",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "status",
       "fieldtype": "Select",
-      "label": "Status",
+      "label": "Request Status",
       "options": "Pending\nPartial Approve\nPartial Reject\nPrepared\nRejected",
       "default": "Pending",
-      "in_list_view": 1
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "bold": 1,
+      "description": "Current status of this request"
+    },
+    {
+      "fieldname": "priority",
+      "fieldtype": "Select",
+      "label": "Priority",
+      "options": "Normal\nHigh\nUrgent",
+      "default": "Normal",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "description": "Request urgency level"
+    },
+    {
+      "fieldname": "section_break_quick_info",
+      "fieldtype": "Section Break",
+      "label": "",
+      "collapsible": 0
+    },
+    {
+      "fieldname": "quick_info_html",
+      "fieldtype": "HTML",
+      "label": "Quick Info",
+      "options": "<div id='spare-part-request-quick-info'></div>"
     },
     {
       "fieldname": "reference_section",
       "fieldtype": "Section Break",
-      "label": "Reference"
+      "label": "🔗 Reference Information",
+      "collapsible": 0
     },
     {
       "fieldname": "service_order",
       "fieldtype": "Link",
       "label": "Service Order",
       "options": "Garage Service Order",
-      "in_list_view": 1
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "bold": 1,
+      "description": "Link to related service order"
+    },
+    {
+      "fieldname": "column_break_ref",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "customer",
       "fieldtype": "Link",
       "label": "Customer",
       "options": "Garage Customer",
-      "read_only": 1
+      "read_only": 1,
+      "fetch_from": "service_order.customer",
+      "bold": 1
     },
     {
       "fieldname": "vehicle",
       "fieldtype": "Link",
       "label": "Vehicle",
       "options": "Garage Vehicle",
+      "read_only": 1,
+      "fetch_from": "service_order.vehicle",
+      "bold": 1
+    },
+    {
+      "fieldname": "section_break_approval",
+      "fieldtype": "Section Break",
+      "label": "👥 Request & Approval Info",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "requested_by",
+      "fieldtype": "Link",
+      "label": "Requested By",
+      "options": "User",
+      "default": "__current_user__",
       "read_only": 1
     },
     {
-      "fieldname": "remarks",
-      "fieldtype": "Small Text",
-      "label": "Remarks"
+      "fieldname": "column_break_approval",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "approved_by",
+      "fieldtype": "Link",
+      "label": "Approved By",
+      "options": "User",
+      "read_only": 1
+    },
+    {
+      "fieldname": "approval_date",
+      "fieldtype": "Datetime",
+      "label": "Approval Date",
+      "read_only": 1
     },
     {
       "fieldname": "items_section",
       "fieldtype": "Section Break",
-      "label": "Requested Parts"
+      "label": "📋 Requested Spare Parts",
+      "collapsible": 0,
+      "description": "List of parts requested for approval"
+    },
+    {
+      "fieldname": "items_helper_html",
+      "fieldtype": "HTML",
+      "label": "",
+      "options": "<div class='items-helper'><p style='color: #666; font-size: 13px; margin-bottom: 10px;'>💡 Tip: Add parts needed. Approval status can be set per item.</p></div>"
     },
     {
       "fieldname": "items",
       "fieldtype": "Table",
       "label": "Items",
       "options": "Spare Part Request Item",
-      "reqd": 1
+      "reqd": 1,
+      "description": "Parts to be approved"
+    },
+    {
+      "fieldname": "section_break_totals",
+      "fieldtype": "Section Break",
+      "label": "💰 Summary & Totals",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "totals_html",
+      "fieldtype": "HTML",
+      "label": "",
+      "options": "<div id='spare-part-totals'></div>"
+    },
+    {
+      "fieldname": "section_break_remarks",
+      "fieldtype": "Section Break",
+      "label": "📝 Remarks & Notes",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "remarks",
+      "fieldtype": "Text Editor",
+      "label": "Remarks",
+      "description": "Additional notes, reasons for rejection, or special instructions"
+    },
+    {
+      "fieldname": "section_break_timeline",
+      "fieldtype": "Section Break",
+      "label": "⏱️ Request Timeline",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "timeline_html",
+      "fieldtype": "HTML",
+      "label": "",
+      "options": "<div id='request-timeline'></div>"
     }
   ],
   "has_web_view": 0,
@@ -102,13 +244,18 @@
   "is_submittable": 0,
   "issingle": 0,
   "istable": 0,
-  "links": [],
+  "links": [
+    {
+      "link_doctype": "Garage Service Order",
+      "link_fieldname": "name"
+    }
+  ],
   "make_attachments_public": 0,
-  "max_attachments": 0,
+  "max_attachments": 5,
   "modified": "2024-07-09 00:00:00.000000",
   "module": "Garage",
   "name": "Spare Part Request",
-  "naming_rule": "",
+  "naming_rule": "By \"Naming Series\" field",
   "owner": "Administrator",
   "permissions": [
     {
@@ -121,20 +268,40 @@
       "print": 1,
       "share": 1,
       "export": 1
+    },
+    {
+      "role": "Garage Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "approve": 1
+    },
+    {
+      "role": "Garage User",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 0,
+      "email": 1,
+      "print": 1
     }
   ],
   "quick_entry": 0,
   "read_only": 0,
   "read_only_onload": 0,
   "show_name_in_global_search": 1,
-  "show_preview_popup": 0,
+  "show_preview_popup": 1,
   "sort_field": "modified",
   "sort_order": "DESC",
   "states": [],
   "subject": "",
+  "title_field": "request_title",
   "track_changes": 1,
-  "track_seen": 0,
+  "track_seen": 1,
   "translated_doctype": 0,
   "migration_hash": "",
-  "description": "Approval container for requested spare parts originating from a service order."
+  "description": "Spare parts request and approval workflow from service orders"
 }
