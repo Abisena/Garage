@@ -152,23 +152,9 @@ frappe.ui.form.on('Spare Part Request', {
     );
     
     // ========================================
-    // SHOW QUICK STATS IN DASHBOARD
+    // SHOW QUICK STATS IN DASHBOARD (REMOVED - Already in Quick Info Card)
     // ========================================
-    if (!frm.is_new() && frm.doc.items) {
-      const totalItems = (frm.doc.items || []).length;
-      const preparedItems = (frm.doc.items || []).filter(i => 
-        i.approval_status === 'Prepared' || i.approval_status === 'Approved'
-      ).length;
-      const rejectedItems = (frm.doc.items || []).filter(i => 
-        i.approval_status === 'Rejected'
-      ).length;
-      const pendingItems = totalItems - preparedItems - rejectedItems;
-      
-      const statsMsg = `📊 Items: ${totalItems} Total | ✅ ${preparedItems} Prepared | ❌ ${rejectedItems} Rejected | ⏳ ${pendingItems} Pending`;
-      
-      // Add to dashboard
-      frm.dashboard.add_comment(statsMsg, 'blue', true);
-    }
+    // Stats are now shown in the Quick Info Card above, no need for duplicate dashboard comments
   },
 });
 
