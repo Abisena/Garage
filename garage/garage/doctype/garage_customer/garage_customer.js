@@ -33,18 +33,7 @@ const lockIfNeeded = (frm) => {
   }
 };
 
-frappe.ui.form.on('Garage Vehicle', {
-  setup(frm) {
-    frm.set_query('model', () => {
-      const filters = {};
-      if (frm.doc.brand) {
-        filters.brand = frm.doc.brand;
-      }
-
-      return { filters };
-    });
-  },
-
+frappe.ui.form.on('Garage Customer', {
   refresh(frm) {
     if (!frm.is_new() && !frm.__is_update_mode) {
       frm.add_custom_button('Update', () => {
@@ -59,11 +48,5 @@ frappe.ui.form.on('Garage Vehicle', {
   after_save(frm) {
     frm.__is_update_mode = false;
     lockIfNeeded(frm);
-  },
-
-  brand(frm) {
-    if (frm.is_dirty() && frm.doc.model) {
-      frm.set_value('model', null);
-    }
   },
 });
