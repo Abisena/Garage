@@ -11,19 +11,24 @@
   "disable_prepared_report": 0,
   "docstatus": 0,
   "doctype": "DocType",
-  "editable_grid": 0,
+  "editable_grid": 1,
   "engine": "InnoDB",
   "field_order": [
+    "header_section",
     "naming_series",
     "service_order",
-    "service_advisor_section",
-    "service_advisor",
-    "spare_parts_verification",
-    "service_advisor_column_break",
-    "qc_inspector",
+    "column_break_header",
+    "status",
     "inspection_date",
-    "service_advisor_instructions_section",
+    "section_break_quick_info",
+    "quick_info_html",
+    "inspectors_section",
+    "service_advisor",
+    "column_break_inspectors",
+    "qc_inspector",
+    "section_break_instructions",
     "qc_instructions",
+    "tab_break_checklist",
     "mechanical_section",
     "brakes_functioning_properly",
     "engine_starts_smoothly",
@@ -54,9 +59,11 @@
     "test_drive_column_break",
     "dry_and_wet_brakes_tested",
     "dashboard_indicators_normal",
+    "parts_verification_section",
+    "spare_parts_verification",
     "qc_notes_section",
     "qc_notes",
-    "final_tab",
+    "tab_break_summary",
     "final_summary_section",
     "summary_service_order",
     "summary_customer",
@@ -70,23 +77,34 @@
     "summary_assigned_mechanic",
     "final_service_column_break",
     "summary_branch",
-    "summary_invoice",
-    "summary_total_amount",
-    "summary_outstanding_amount",
     "parts_used_section",
     "parts_used",
-    "final_payment_section",
-    "status",
-    "payment_entry"
+    "tab_break_financial",
+    "invoice_section",
+    "summary_invoice",
+    "summary_total_amount",
+    "column_break_invoice",
+    "summary_outstanding_amount",
+    "payment_section",
+    "payment_entry",
+    "section_break_completion",
+    "completion_progress_html"
   ],
   "fields": [
+    {
+      "fieldname": "header_section",
+      "fieldtype": "Section Break",
+      "label": "✅ Quality Control Inspection",
+      "collapsible": 0
+    },
     {
       "fieldname": "naming_series",
       "fieldtype": "Select",
       "label": "Series",
       "options": "QC-.#####",
       "reqd": 1,
-      "default": "QC-.#####"
+      "default": "QC-.#####",
+      "hidden": 1
     },
     {
       "fieldname": "service_order",
@@ -94,28 +112,63 @@
       "label": "Service Order",
       "options": "Garage Service Order",
       "in_list_view": 1,
-      "reqd": 1
+      "in_standard_filter": 1,
+      "reqd": 1,
+      "bold": 1,
+      "description": "Link to the service order being inspected"
     },
     {
-      "fieldname": "service_advisor_section",
+      "fieldname": "column_break_header",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "QC Status",
+      "options": "Draft\nFinished\nReopened",
+      "default": "Draft",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "bold": 1,
+      "description": "Current inspection status"
+    },
+    {
+      "fieldname": "inspection_date",
+      "fieldtype": "Date",
+      "label": "Inspection Date",
+      "default": "Today",
+      "reqd": 1,
+      "in_list_view": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "section_break_quick_info",
       "fieldtype": "Section Break",
-      "label": "Service Advisor Verification"
+      "label": "",
+      "collapsible": 0
+    },
+    {
+      "fieldname": "quick_info_html",
+      "fieldtype": "HTML",
+      "label": "Quick Info",
+      "options": "<div id='repair-qc-quick-info'></div>"
+    },
+    {
+      "fieldname": "inspectors_section",
+      "fieldtype": "Section Break",
+      "label": "👥 Inspection Team",
+      "collapsible": 1
     },
     {
       "fieldname": "service_advisor",
       "fieldtype": "Link",
       "label": "Service Advisor",
       "options": "User",
-      "in_list_view": 1
+      "in_standard_filter": 1,
+      "description": "Service advisor responsible"
     },
     {
-      "fieldname": "spare_parts_verification",
-      "fieldtype": "Table",
-      "label": "Spare Parts Installation Verification",
-      "options": "Repair QC Spare Part"
-    },
-    {
-      "fieldname": "service_advisor_column_break",
+      "fieldname": "column_break_inspectors",
       "fieldtype": "Column Break"
     },
     {
@@ -123,52 +176,55 @@
       "fieldtype": "Link",
       "label": "QC Inspector",
       "options": "User",
-      "in_list_view": 1
+      "in_standard_filter": 1,
+      "description": "Quality control inspector"
     },
     {
-      "fieldname": "inspection_date",
-      "fieldtype": "Date",
-      "label": "Inspection Date",
-      "default": "Today"
-    },
-    {
-      "fieldname": "service_advisor_instructions_section",
-      "fieldtype": "Section Break"
+      "fieldname": "section_break_instructions",
+      "fieldtype": "Section Break",
+      "label": "",
+      "collapsible": 0
     },
     {
       "fieldname": "qc_instructions",
       "fieldtype": "HTML",
-      "options": "<div class=\"text-muted\">QC Inspector: Complete comprehensive quality check before final approval.</div>",
+      "options": "<div class='qc-instructions'><p style='color: #667eea; font-weight: 600; font-size: 14px; margin: 10px 0;'>💡 QC Inspector: Complete comprehensive quality check before final approval. Check all items below.</p></div>",
       "label": "Instructions"
+    },
+    {
+      "fieldname": "tab_break_checklist",
+      "fieldtype": "Tab Break",
+      "label": "Inspection Checklist"
     },
     {
       "fieldname": "mechanical_section",
       "fieldtype": "Section Break",
-      "label": "Mechanical Inspection"
+      "label": "🔧 Mechanical Inspection",
+      "collapsible": 0
     },
     {
       "default": 0,
       "fieldname": "brakes_functioning_properly",
       "fieldtype": "Check",
-      "label": "Brakes functioning properly and responsively"
+      "label": "✓ Brakes functioning properly and responsively"
     },
     {
       "default": 0,
       "fieldname": "engine_starts_smoothly",
       "fieldtype": "Check",
-      "label": "Engine starts smoothly without unusual sounds"
+      "label": "✓ Engine starts smoothly without unusual sounds"
     },
     {
       "default": 0,
       "fieldname": "no_fluid_leaks_detected",
       "fieldtype": "Check",
-      "label": "No fluid leaks detected"
+      "label": "✓ No fluid leaks detected"
     },
     {
       "default": 0,
       "fieldname": "lights_and_signals_functional",
       "fieldtype": "Check",
-      "label": "All lights and signals functional"
+      "label": "✓ All lights and signals functional"
     },
     {
       "fieldname": "mechanical_column_break",
@@ -178,48 +234,49 @@
       "default": 0,
       "fieldname": "battery_holding_charge",
       "fieldtype": "Check",
-      "label": "Battery holding charge; terminals clean"
+      "label": "✓ Battery holding charge; terminals clean"
     },
     {
       "default": 0,
       "fieldname": "power_steering_responsive",
       "fieldtype": "Check",
-      "label": "Power steering functioning properly and responsively"
+      "label": "✓ Power steering functioning properly and responsively"
     },
     {
       "default": 0,
       "fieldname": "suspension_normal",
       "fieldtype": "Check",
-      "label": "Suspension feels normal without noise"
+      "label": "✓ Suspension feels normal without noise"
     },
     {
       "default": 0,
       "fieldname": "steering_alignment_normal",
       "fieldtype": "Check",
-      "label": "Steering wheel alignment normal"
+      "label": "✓ Steering wheel alignment normal"
     },
     {
       "fieldname": "aesthetics_section",
       "fieldtype": "Section Break",
-      "label": "Aesthetics & Cleanliness"
+      "label": "✨ Aesthetics & Cleanliness",
+      "collapsible": 0
     },
     {
       "default": 0,
       "fieldname": "windows_and_mirrors_cleaned",
       "fieldtype": "Check",
-      "label": "Windows and mirrors cleaned"
+      "label": "✓ Windows and mirrors cleaned"
     },
     {
       "default": 0,
       "fieldname": "exterior_washed_and_dried",
       "fieldtype": "Check",
-      "label": "Exterior washed and dried"
+      "label": "✓ Exterior washed and dried"
     },
     {
       "default": 0,
       "fieldname": "interior_vacuumed_and_wiped",
       "fieldtype": "Check",
-      "label": "Interior vacuumed and wiped"
+      "label": "✓ Interior vacuumed and wiped"
     },
     {
       "fieldname": "aesthetics_column_break",
@@ -229,36 +286,37 @@
       "default": 0,
       "fieldname": "interior_disinfected",
       "fieldtype": "Check",
-      "label": "Interior disinfected and console cleaned"
+      "label": "✓ Interior disinfected and console cleaned"
     },
     {
       "default": 0,
       "fieldname": "interior_reconditioned",
       "fieldtype": "Check",
-      "label": "Interior reconditioned and cleaned"
+      "label": "✓ Interior reconditioned and cleaned"
     },
     {
       "default": 0,
       "fieldname": "interior_air_freshener",
       "fieldtype": "Check",
-      "label": "Interior air freshener added"
+      "label": "✓ Interior air freshener added"
     },
     {
       "fieldname": "documentation_section",
       "fieldtype": "Section Break",
-      "label": "Documentation"
+      "label": "📄 Documentation",
+      "collapsible": 0
     },
     {
       "default": 0,
       "fieldname": "all_work_order_documented",
       "fieldtype": "Check",
-      "label": "All work order documented"
+      "label": "✓ All work order documented"
     },
     {
       "default": 0,
       "fieldname": "spare_parts_installation_verified",
       "fieldtype": "Check",
-      "label": "Spare parts installation verified"
+      "label": "✓ Spare parts installation verified"
     },
     {
       "fieldname": "documentation_column_break",
@@ -268,30 +326,31 @@
       "default": 0,
       "fieldname": "photos_before_after_taken",
       "fieldtype": "Check",
-      "label": "Photos before/after taken (if required)"
+      "label": "✓ Photos before/after taken (if required)"
     },
     {
       "fieldname": "test_drive_section",
       "fieldtype": "Section Break",
-      "label": "Test Drive Verification"
+      "label": "🚗 Test Drive Verification",
+      "collapsible": 0
     },
     {
       "default": 0,
       "fieldname": "acceleration_smooth_responsive",
       "fieldtype": "Check",
-      "label": "Acceleration smooth and responsive"
+      "label": "✓ Acceleration smooth and responsive"
     },
     {
       "default": 0,
       "fieldname": "braking_effective_without_pulling",
       "fieldtype": "Check",
-      "label": "Braking effective without pulling"
+      "label": "✓ Braking effective without pulling"
     },
     {
       "default": 0,
       "fieldname": "no_unusual_noise_during_drive",
       "fieldtype": "Check",
-      "label": "No unusual noise during drive"
+      "label": "✓ No unusual noise during drive"
     },
     {
       "fieldname": "test_drive_column_break",
@@ -301,33 +360,49 @@
       "default": 0,
       "fieldname": "dry_and_wet_brakes_tested",
       "fieldtype": "Check",
-      "label": "Dry and wet brakes test (if applicable)"
+      "label": "✓ Dry and wet brakes test (if applicable)"
     },
     {
       "default": 0,
       "fieldname": "dashboard_indicators_normal",
       "fieldtype": "Check",
-      "label": "Dashboard indicators normal"
+      "label": "✓ Dashboard indicators normal"
+    },
+    {
+      "fieldname": "parts_verification_section",
+      "fieldtype": "Section Break",
+      "label": "🔩 Parts Installation Verification",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "spare_parts_verification",
+      "fieldtype": "Table",
+      "label": "Spare Parts Verification",
+      "options": "Repair QC Spare Part",
+      "description": "Verify installed spare parts"
     },
     {
       "fieldname": "qc_notes_section",
       "fieldtype": "Section Break",
-      "label": "QC Notes (Optional)"
+      "label": "📝 QC Notes & Observations",
+      "collapsible": 1
     },
     {
       "fieldname": "qc_notes",
-      "fieldtype": "Small Text",
-      "label": "QC Notes"
+      "fieldtype": "Text Editor",
+      "label": "QC Notes",
+      "description": "Additional observations, issues found, or recommendations"
     },
     {
-      "fieldname": "final_tab",
+      "fieldname": "tab_break_summary",
       "fieldtype": "Tab Break",
-      "label": "Final"
+      "label": "Service Summary"
     },
     {
       "fieldname": "final_summary_section",
       "fieldtype": "Section Break",
-      "label": "Final Inspection Summary"
+      "label": "👤 Customer & Vehicle Info",
+      "collapsible": 0
     },
     {
       "fieldname": "summary_service_order",
@@ -335,7 +410,8 @@
       "label": "Service Order",
       "options": "Garage Service Order",
       "fetch_from": "service_order",
-      "read_only": 1
+      "read_only": 1,
+      "bold": 1
     },
     {
       "fieldname": "summary_customer",
@@ -343,7 +419,8 @@
       "label": "Customer",
       "options": "Garage Customer",
       "fetch_from": "service_order.customer",
-      "read_only": 1
+      "read_only": 1,
+      "bold": 1
     },
     {
       "fieldname": "summary_customer_name",
@@ -362,14 +439,16 @@
       "label": "Vehicle",
       "options": "Garage Vehicle",
       "fetch_from": "service_order.vehicle",
-      "read_only": 1
+      "read_only": 1,
+      "bold": 1
     },
     {
       "fieldname": "summary_license_plate",
       "fieldtype": "Data",
       "label": "License Plate",
       "fetch_from": "summary_vehicle.license_plate",
-      "read_only": 1
+      "read_only": 1,
+      "bold": 1
     },
     {
       "fieldname": "summary_vehicle_year",
@@ -381,7 +460,8 @@
     {
       "fieldname": "final_service_section",
       "fieldtype": "Section Break",
-      "label": "Service Summary"
+      "label": "🔧 Service Details",
+      "collapsible": 0
     },
     {
       "fieldname": "summary_service_type",
@@ -389,7 +469,8 @@
       "label": "Service Type",
       "options": "Garage Service Type",
       "fetch_from": "service_order.service_order_type",
-      "read_only": 1
+      "read_only": 1,
+      "bold": 1
     },
     {
       "fieldname": "summary_assigned_mechanic",
@@ -412,57 +493,83 @@
       "read_only": 1
     },
     {
+      "fieldname": "parts_used_section",
+      "fieldtype": "Section Break",
+      "label": "🔩 Parts Used in Service",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "parts_used",
+      "fieldtype": "Table",
+      "label": "Parts Used",
+      "options": "Garage Service Order Part",
+      "read_only": 1,
+      "description": "Parts used during service"
+    },
+    {
+      "fieldname": "tab_break_financial",
+      "fieldtype": "Tab Break",
+      "label": "Financial"
+    },
+    {
+      "fieldname": "invoice_section",
+      "fieldtype": "Section Break",
+      "label": "💰 Invoice Information",
+      "collapsible": 0
+    },
+    {
       "fieldname": "summary_invoice",
       "fieldtype": "Link",
       "label": "Sales Invoice",
       "options": "Sales Invoice",
-      "read_only": 1
+      "read_only": 1,
+      "bold": 1,
+      "description": "Auto-created invoice"
     },
     {
       "fieldname": "summary_total_amount",
       "fieldtype": "Currency",
       "label": "Invoice Total",
       "read_only": 1,
-      "hidden": 1
+      "bold": 1
+    },
+    {
+      "fieldname": "column_break_invoice",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "summary_outstanding_amount",
       "fieldtype": "Currency",
       "label": "Outstanding Amount",
       "read_only": 1,
-      "hidden": 1
+      "bold": 1
     },
     {
-      "fieldname": "parts_used_section",
+      "fieldname": "payment_section",
       "fieldtype": "Section Break",
-      "label": "Part Used"
-    },
-    {
-      "fieldname": "parts_used",
-      "fieldtype": "Table",
-      "label": "Part Used",
-      "options": "Garage Service Order Part",
-      "read_only": 1
-    },
-    {
-      "fieldname": "final_payment_section",
-      "fieldtype": "Section Break",
-      "label": "Finalization"
-    },
-    {
-      "fieldname": "status",
-      "fieldtype": "Select",
-      "label": "Status",
-      "options": "Draft\nFinished\nReopened",
-      "default": "Draft",
-      "in_list_view": 1
+      "label": "💳 Payment Information",
+      "collapsible": 0
     },
     {
       "fieldname": "payment_entry",
       "fieldtype": "Link",
       "label": "Payment Entry",
       "options": "Payment Entry",
-      "read_only": 1
+      "read_only": 1,
+      "bold": 1,
+      "description": "Auto-created payment entry"
+    },
+    {
+      "fieldname": "section_break_completion",
+      "fieldtype": "Section Break",
+      "label": "📊 Completion Progress",
+      "collapsible": 0
+    },
+    {
+      "fieldname": "completion_progress_html",
+      "fieldtype": "HTML",
+      "label": "",
+      "options": "<div id='qc-completion-progress'></div>"
     }
   ],
   "has_web_view": 0,
@@ -475,13 +582,26 @@
   "is_submittable": 0,
   "issingle": 0,
   "istable": 0,
-  "links": [],
+  "links": [
+    {
+      "link_doctype": "Garage Service Order",
+      "link_fieldname": "name"
+    },
+    {
+      "link_doctype": "Sales Invoice",
+      "link_fieldname": "name"
+    },
+    {
+      "link_doctype": "Payment Entry",
+      "link_fieldname": "name"
+    }
+  ],
   "make_attachments_public": 0,
-  "max_attachments": 0,
+  "max_attachments": 10,
   "modified": "2024-06-02 00:00:00.000000",
   "module": "Garage",
   "name": "Repair QC",
-  "naming_rule": "",
+  "naming_rule": "By \"Naming Series\" field",
   "owner": "Administrator",
   "permissions": [
     {
@@ -494,21 +614,39 @@
       "print": 1,
       "share": 1,
       "export": 1
+    },
+    {
+      "role": "Garage Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1
+    },
+    {
+      "role": "Garage User",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 0,
+      "email": 1,
+      "print": 1
     }
   ],
   "quick_entry": 0,
   "read_only": 0,
   "read_only_onload": 0,
   "show_name_in_global_search": 1,
-  "show_preview_popup": 0,
+  "show_preview_popup": 1,
   "sort_field": "creation",
   "sort_order": "ASC",
   "states": [],
   "subject": "",
   "title_field": "service_order",
   "track_changes": 1,
-  "track_seen": 0,
+  "track_seen": 1,
   "translated_doctype": 0,
   "migration_hash": "",
-  "description": "Repair and QC checklist with predefined inspection items for manual approvals."
+  "description": "Comprehensive quality control inspection with auto-invoice and payment creation"
 }
