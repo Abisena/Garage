@@ -5,14 +5,21 @@ frappe.ui.form.on('Repair QC', {
     frm.set_df_property('status', 'hidden', 1);
 
     if (!frm.is_new()) {
+      frm.clear_custom_buttons();
       if (frm.doc.status === 'Finished') {
-        frm.add_custom_button(__('Reopen'), () => {
+        frm.disable_save();
+        frm.page.set_primary_action(__('Reopen'), () => {
           frappe.confirm(__('Reopen this Repair QC to revise the checklist?'), () => {
+            frm.enable_save();
             frm.set_value('status', 'Reopened');
             frm.save();
           });
         });
       } else {
+        frm.enable_save();
+        if (frm.page.clear_primary_action) {
+          frm.page.clear_primary_action();
+        }
         frm.add_custom_button(__('Finish QC'), () => {
           frappe.confirm(__('Mark this Repair QC as finished?'), () => {
             frm.set_value('status', 'Finished');
