@@ -92,6 +92,7 @@
       "label": "Status",
       "options": "Draft\nInspection\nEstimate\nAwaiting Approval\nApproved\nRequest Part\nWork In Progress\nWaiting Payment\nCompleted\nCancelled",
       "default": "Draft",
+      "read_only": 1,
       "in_list_view": 1,
       "in_standard_filter": 1,
       "bold": 1,
