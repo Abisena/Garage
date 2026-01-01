@@ -156,7 +156,6 @@
       "fieldtype": "Link",
       "label": "Requested By",
       "options": "User",
-      "default": "__current_user__",
       "read_only": 1
     },
     {
