@@ -4,6 +4,24 @@ frappe.ui.form.on('Repair QC', {
     frm.set_df_property('summary_outstanding_amount', 'hidden', 1);
     frm.set_df_property('status', 'hidden', 1);
 
+    if (!frm.is_new()) {
+      if (frm.doc.status === 'Finished') {
+        frm.add_custom_button(__('Reopen'), () => {
+          frappe.confirm(__('Reopen this Repair QC to revise the checklist?'), () => {
+            frm.set_value('status', 'Reopened');
+            frm.save();
+          });
+        });
+      } else {
+        frm.add_custom_button(__('Finish QC'), () => {
+          frappe.confirm(__('Mark this Repair QC as finished?'), () => {
+            frm.set_value('status', 'Finished');
+            frm.save();
+          });
+        });
+      }
+    }
+
     const partsGrid = frm.fields_dict.parts_used?.grid;
     if (partsGrid) {
       partsGrid.update_docfield_property('rate', 'hidden', 1);
@@ -69,8 +87,5 @@ frappe.ui.form.on('Repair QC', {
 
       frm.refresh_field('parts_used');
     }
-  },
-  before_save(frm) {
-    frm.set_value('status', 'Finished');
   }
 });

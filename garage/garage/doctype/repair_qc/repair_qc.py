@@ -15,14 +15,11 @@ class RepairQC(Document):
     def validate(self):
         self._set_default_users()
         self._sync_parts_used_pricing()
-        
+
         # ✅ DISABLED - No checkbox validation
         # if not getattr(self.flags, "ignore_completion_validation", False):
         #     self._validate_completion_fields()
-        
-        if not getattr(self.flags, "ignore_auto_status", False):
-            self._set_auto_status()
-        
+
         self._sync_invoice_summary()
 
     def on_update(self):
@@ -61,9 +58,6 @@ class RepairQC(Document):
 
         if not self.qc_inspector:
             self.qc_inspector = current_user
-
-    def _set_auto_status(self):
-        self.status = "Finished"
 
     def _validate_completion_fields(self):
         """DISABLED - Not used"""
