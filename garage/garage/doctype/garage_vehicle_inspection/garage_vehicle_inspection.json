@@ -104,6 +104,7 @@
       "label": "Overall Condition",
       "options": "\nExcellent\nGood\nFair\nPoor\nCritical",
       "default": "Good",
+      "read_only": 1,
       "reqd": 1,
       "in_list_view": 1
     },
