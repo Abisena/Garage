@@ -91,6 +91,20 @@ frappe.ui.form.on('Spare Part Request', {
     
     frm.clear_custom_buttons();
 
+    const removeLegacyActions = () => {
+      ['Approve All (Legacy)', 'Reject All (Legacy)', 'Approve Selected (Legacy)'].forEach((label) => {
+        frm.remove_custom_button(__(label), __('Legacy Actions'));
+      });
+    };
+
+    const removeToolbarGroups = () => {
+      ['Selected Items', 'All Items', 'Quick Actions'].forEach((label) => {
+        frm.page.inner_toolbar
+          .find(`.btn-group[data-label="${label}"]`)
+          .remove();
+      });
+    };
+
     frm.add_custom_button(
       __('✅ Prepare All'), 
       () => updateAll('Prepared'), 
@@ -102,6 +116,14 @@ frappe.ui.form.on('Spare Part Request', {
       () => updateAll('Rejected'), 
       __('Legacy Actions')
     );
+
+    removeLegacyActions();
+    removeToolbarGroups();
+
+    setTimeout(() => {
+      removeLegacyActions();
+      removeToolbarGroups();
+    }, 0);
     
     // ========================================
     // SHOW QUICK STATS IN DASHBOARD (REMOVED - Already in Quick Info Card)
