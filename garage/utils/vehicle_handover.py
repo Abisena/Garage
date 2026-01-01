@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import frappe
-from frappe.utils import nowdate
+from frappe.utils import get_datetime, nowdate
 
 PAID_INVOICE_STATUSES = {"Paid", "Submitted"}
 PAID_PAYMENT_ENTRY_STATUSES = {"Submitted", "Cleared", "Paid"}
@@ -89,6 +89,74 @@ def _extract_permit_details(doc) -> tuple[str | None, str | None]:
     return permit_number, sikk_number
 
 
+def _get_payment_entry(payment_entry_name: str):
+    try:
+        return frappe.get_doc("Payment Entry", payment_entry_name)
+    except Exception:
+        return None
+
+
+def _resolve_payment_entry_for_invoice(invoice_name: str | None):
+    if not invoice_name:
+        return None
+
+    payment_entry_name = frappe.db.get_value(
+        "Payment Entry Reference",
+        {
+            "reference_name": invoice_name,
+            "reference_doctype": ("in", tuple(PAYMENT_ENTRY_REFERENCE_DOCTYPES)),
+        },
+        "parent",
+        order_by="modified desc",
+    )
+    if not payment_entry_name:
+        return None
+
+    payment_entry = _get_payment_entry(payment_entry_name)
+    if not payment_entry or not _is_paid_payment_entry(payment_entry):
+        return None
+
+    return payment_entry
+
+
+def _resolve_sales_invoice_from_service_order(service_order) -> str | None:
+    for field in (
+        "sales_invoice",
+        "sales_invoice_ref",
+        "invoice",
+        "invoice_ref",
+    ):
+        invoice_name = getattr(service_order, field, None)
+        if invoice_name:
+            return invoice_name
+    return None
+
+
+def _apply_payment_entry_details(handover, payment_entry) -> None:
+    if not payment_entry:
+        return
+
+    if not getattr(handover, "payment_entry", None):
+        handover.payment_entry = payment_entry.name
+
+    if not getattr(handover, "receipt_number", None):
+        handover.receipt_number = payment_entry.name
+
+    posting_date = getattr(payment_entry, "posting_date", None) or nowdate()
+    if not getattr(handover, "valid_from", None):
+        handover.valid_from = posting_date
+
+    if not getattr(handover, "submission_date", None):
+        handover.submission_date = posting_date
+
+    if not getattr(handover, "valid_until", None):
+        posting_time = getattr(payment_entry, "posting_time", None)
+        if posting_time:
+            handover.valid_until = get_datetime(f"{posting_date} {posting_time}")
+        else:
+            handover.valid_until = get_datetime(posting_date)
+
+
 def _create_handover(
     *,
     service_order_name: str,
@@ -97,6 +165,7 @@ def _create_handover(
     payment_entry: str | None = None,
     permit_number: str | None = None,
     sikk_number: str | None = None,
+    sales_invoice_name: str | None = None,
 ) -> None:
     if _handover_exists(service_order_name):
         return
@@ -117,6 +186,17 @@ def _create_handover(
         handover.permit_number = permit_number
     if sikk_number:
         handover.sikk_number = sikk_number
+
+    payment_entry_doc = None
+    if payment_entry:
+        payment_entry_doc = _get_payment_entry(payment_entry)
+    if not payment_entry_doc:
+        payment_entry_doc = _resolve_payment_entry_for_invoice(sales_invoice_name)
+    if not payment_entry_doc:
+        payment_entry_doc = _resolve_payment_entry_for_invoice(
+            _resolve_sales_invoice_from_service_order(service_order)
+        )
+    _apply_payment_entry_details(handover, payment_entry_doc)
     handover.save(ignore_permissions=True)
 
 
@@ -172,6 +252,7 @@ def handle_paid_sales_invoice(doc, method=None) -> None:  # pragma: no cover - f
         receipt_number=doc.name,
         permit_number=permit_number,
         sikk_number=sikk_number,
+        sales_invoice_name=doc.name,
     )
 
 
@@ -222,6 +303,7 @@ def handle_paid_payment_entry(doc, method=None) -> None:  # pragma: no cover - f
             payment_entry=doc.name,
             permit_number=permit_number,
             sikk_number=sikk_number,
+            sales_invoice_name=getattr(invoice, "name", None),
         )
         created_for.add(service_order_name)
 
@@ -246,4 +328,5 @@ def handle_completed_service_order(doc, method=None) -> None:  # pragma: no cove
         branch=branch,
         permit_number=permit_number,
         sikk_number=sikk_number,
+        sales_invoice_name=_resolve_sales_invoice_from_service_order(doc),
     )

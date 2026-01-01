@@ -5,6 +5,8 @@ from __future__ import annotations
 import frappe
 from frappe.utils import nowdate
 
+from garage.utils import vehicle_handover as handover_utils
+
 
 def handle_sales_invoice_paid(doc, method=None) -> None:
     """
@@ -116,48 +118,28 @@ def _complete_service_order(service_order, sales_invoice) -> None:
 
 def _create_vehicle_handover(service_order, sales_invoice) -> None:
     """Auto-create Vehicle Handover document."""
-    # Cek apakah sudah ada Vehicle Handover untuk Service Order ini
     existing = frappe.get_all(
         "Vehicle Handover",
         filters={"service_order": service_order.name},
         fields=["name"],
-        limit=1
+        limit=1,
     )
-    
     if existing:
-        # Sudah ada, skip
         return
-    
-    # Create new Vehicle Handover
-    try:
-        vehicle_handover = frappe.new_doc("Vehicle Handover")
-        vehicle_handover.service_order = service_order.name
-        
-        # Populate fields dari Service Order
-        if hasattr(service_order, "customer"):
-            vehicle_handover.customer = service_order.customer
-        
-        if hasattr(service_order, "vehicle"):
-            vehicle_handover.vehicle = service_order.vehicle
-        
-        if hasattr(service_order, "branch"):
-            vehicle_handover.branch = service_order.branch
-        
-        # Tambahkan field lain sesuai kebutuhan
-        vehicle_handover.handover_date = nowdate()
-        vehicle_handover.sales_invoice = sales_invoice.name
-        
-        # Insert document
-        vehicle_handover.insert(ignore_permissions=True)
-        
-        # Log creation
-        frappe.msgprint(
-            f"Vehicle Handover {vehicle_handover.name} created automatically",
-            alert=True
-        )
-        
-    except Exception as e:
-        frappe.log_error(
-            frappe.get_traceback(),
-            f"Failed to auto-create Vehicle Handover for {service_order.name}"
-        )
+
+    branch = getattr(service_order, "branch", None) or getattr(
+        sales_invoice, "branch", None
+    )
+    if not branch:
+        return
+
+    permit_number, sikk_number = handover_utils._extract_permit_details(service_order)
+
+    handover_utils._create_handover(
+        service_order_name=service_order.name,
+        branch=branch,
+        receipt_number=sales_invoice.name,
+        permit_number=permit_number,
+        sikk_number=sikk_number,
+        sales_invoice_name=sales_invoice.name,
+    )
