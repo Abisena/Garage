@@ -2,16 +2,17 @@
 // For license information, please see license.txt
 
 // ========================================
-// FORM VIEW SETTINGS
+// FORM VIEW SETTINGS - SIMPLIFIED
 // ========================================
 frappe.ui.form.on('Spare Part Request', {
   refresh(frm) {
     const status = (frm.doc.status || '').toLowerCase();
 
+    // Make status read-only
     frm.set_df_property('status', 'read_only', 1);
     
     // ========================================
-    // STATUS INDICATOR (FIXED!)
+    // STATUS INDICATOR
     // ========================================
     const statusColorMap = {
       prepared: 'green',
@@ -23,7 +24,6 @@ frappe.ui.form.on('Spare Part Request', {
     
     const indicatorColor = statusColorMap[status];
     if (indicatorColor && frm.doc.status) {
-      // ✅ CORRECT: Use frm.page.set_indicator()
       frm.page.set_indicator(frm.doc.status, indicatorColor);
     }
     
@@ -52,7 +52,6 @@ frappe.ui.form.on('Spare Part Request', {
       frappe.confirm(
         confirmMsg,
         () => {
-          // Show loading
           frappe.dom.freeze(__('Updating all items...'));
           
           frappe.call({
@@ -76,7 +75,6 @@ frappe.ui.form.on('Spare Part Request', {
           });
         },
         () => {
-          // Cancelled
           frappe.show_alert({
             message: __('Operation cancelled'),
             indicator: 'blue'
@@ -86,49 +84,25 @@ frappe.ui.form.on('Spare Part Request', {
     };
     
     // ========================================
-    // ADD CUSTOM BUTTONS
+    // ADD ONLY 2 BUTTONS IN ACTIONS DROPDOWN
     // ========================================
     
+    // Clear all custom buttons first
     frm.clear_custom_buttons();
-
-    const removeLegacyActions = () => {
-      ['Approve All (Legacy)', 'Reject All (Legacy)', 'Approve Selected (Legacy)'].forEach((label) => {
-        frm.remove_custom_button(__(label), __('Legacy Actions'));
-      });
-    };
-
-    const removeToolbarGroups = () => {
-      ['Selected Items', 'All Items', 'Quick Actions'].forEach((label) => {
-        frm.page.inner_toolbar
-          .find(`.btn-group[data-label="${label}"]`)
-          .remove();
-      });
-    };
-
+    
+    // Add ONLY Prepare All and Reject All in Actions dropdown
     frm.add_custom_button(
       __('✅ Prepare All'), 
       () => updateAll('Prepared'), 
-      __('Legacy Actions')
+      __('Actions')  // Under "Actions" dropdown
     );
     
     frm.add_custom_button(
       __('❌ Reject All'), 
       () => updateAll('Rejected'), 
-      __('Legacy Actions')
+      __('Actions')  // Under "Actions" dropdown
     );
-
-    removeLegacyActions();
-    removeToolbarGroups();
-
-    setTimeout(() => {
-      removeLegacyActions();
-      removeToolbarGroups();
-    }, 0);
     
-    // ========================================
-    // SHOW QUICK STATS IN DASHBOARD (REMOVED - Already in Quick Info Card)
-    // ========================================
-    // Stats are now shown in the Quick Info Card above, no need for duplicate dashboard comments
   },
 });
 
@@ -136,7 +110,6 @@ frappe.ui.form.on('Spare Part Request', {
 // LIST VIEW SETTINGS
 // ========================================
 frappe.listview_settings['Spare Part Request'] = {
-  // Status indicator dot (left side of row)
   get_indicator: function(doc) {
     const status_map = {
       'Pending': 'orange',
@@ -150,7 +123,6 @@ frappe.listview_settings['Spare Part Request'] = {
     return [doc.status, color, 'status,=,' + doc.status];
   },
   
-  // Format columns with colored badges
   formatters: {
     status: function(value) {
       if (!value) return value;
@@ -183,9 +155,7 @@ frappe.listview_settings['Spare Part Request'] = {
     }
   },
   
-  // Add custom buttons and styles
   onload: function(listview) {
-    // Add bulk action buttons
     listview.page.add_action_item(__('✅ Bulk Prepare'), function() {
       bulk_update_status(listview, 'Prepared');
     });
@@ -194,16 +164,13 @@ frappe.listview_settings['Spare Part Request'] = {
       bulk_update_status(listview, 'Rejected');
     });
     
-    // Add stats button
     listview.page.add_inner_button(__('📊 Show Stats'), function() {
       show_list_stats();
     });
     
-    // Inject custom styles
     inject_list_view_styles();
   },
   
-  // Refresh callback
   refresh: function(listview) {
     inject_list_view_styles();
   }
@@ -248,7 +215,6 @@ function bulk_update_status(listview, new_status) {
             completed++;
             if (r.exc) errors++;
             
-            // All done
             if (completed === selected.length) {
               frappe.dom.unfreeze();
               listview.refresh();
@@ -337,14 +303,12 @@ function show_list_stats() {
 
 // ========================================
 // INJECT CUSTOM STYLES FOR LIST VIEW
-// NO ALTERNATING COLORS - CLEAN LOOK
 // ========================================
 function inject_list_view_styles() {
-  if ($('#spare-part-request-list-styles').length) return; // Already added
+  if ($('#spare-part-request-list-styles').length) return;
   
   const css = `
     <style id="spare-part-request-list-styles">
-      /* Row hover effect */
       .list-row-container:hover {
         background: #f9fafb !important;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
@@ -352,19 +316,16 @@ function inject_list_view_styles() {
         transition: all 0.2s ease;
       }
       
-      /* Selected rows */
       .list-row-container:has(input:checked) {
         background: #eff6ff !important;
         border-left: 3px solid #3b82f6 !important;
       }
       
-      /* Request title bold */
       .list-row [data-field="request_title"] .ellipsis {
         font-weight: 600;
         color: #1f2937;
       }
       
-      /* Service order link */
       .list-row [data-field="service_order"] a {
         color: #667eea;
         font-weight: 600;
@@ -376,13 +337,10 @@ function inject_list_view_styles() {
         text-decoration: underline;
       }
       
-      /* Make status and priority stand out */
       .list-row [data-field="status"],
       .list-row [data-field="priority"] {
         font-weight: 700;
       }
-      
-      /* NO alternating row colors - clean white background */
     </style>
   `;
   
