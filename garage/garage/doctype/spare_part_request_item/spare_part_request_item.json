@@ -70,7 +70,7 @@
       "fieldname": "approval_status",
       "fieldtype": "Select",
       "label": "Approval Status",
-      "options": "Pending\nPrepared\nRejected",
+      "options": "Pending\nPrepared\nApproved\nRejected",
       "default": "Pending",
       "in_list_view": 1
     },
