@@ -377,6 +377,7 @@ function show_list_stats() {
 
 // ========================================
 // INJECT CUSTOM STYLES FOR LIST VIEW
+// NO ALTERNATING COLORS - CLEAN LOOK
 // ========================================
 function inject_list_view_styles() {
   if ($('#spare-part-request-list-styles').length) return; // Already added
@@ -415,16 +416,13 @@ function inject_list_view_styles() {
         text-decoration: underline;
       }
       
-      /* Alternating row colors */
-      .list-row-container:nth-child(even) {
-        background: #fafafa;
-      }
-      
       /* Make status and priority stand out */
       .list-row [data-field="status"],
       .list-row [data-field="priority"] {
         font-weight: 700;
       }
+      
+      /* NO alternating row colors - clean white background */
     </style>
   `;
   
