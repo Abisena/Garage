@@ -65,7 +65,7 @@ class GarageVehicleInspection(Document):
             return
 
         for item in DEFAULT_INSPECTION_ITEMS:
-            self.append("inspection_items", {"item": item})
+            self.append("inspection_items", {"item": item, "severity": "OK"})
 
     def _update_service_order(self) -> None:
         """Ensure the service order references this inspection and mirrors details."""
