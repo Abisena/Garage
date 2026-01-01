@@ -103,6 +103,7 @@ frappe.ui.form.on('Garage Service Order', {
       statusField.formatter = formatStockStatus;
       frm.refresh_field('required_parts');
     }
+    update_quick_info_card(frm);
     frm.add_custom_button(__('Add Bundle Items'), () => {
       if (!frm.doc.service_order_type) {
         frappe.msgprint(__('Pilih service type terlebih dahulu.'));
@@ -132,5 +133,88 @@ frappe.ui.form.on('Garage Service Order', {
   },
   service_order_type(frm) {
     autoApplyBundle(frm);
+    update_quick_info_card(frm);
+  },
+  customer(frm) {
+    update_quick_info_card(frm);
+  },
+  vehicle(frm) {
+    update_quick_info_card(frm);
+  },
+  assigned_mechanic(frm) {
+    update_quick_info_card(frm);
+  },
+  priority(frm) {
+    update_quick_info_card(frm);
+  },
+  status(frm) {
+    update_quick_info_card(frm);
+  },
+  required_parts_add(frm) {
+    update_quick_info_card(frm);
+  },
+  required_parts_remove(frm) {
+    update_quick_info_card(frm);
+  },
+  required_parts_on_form_rendered(frm) {
+    update_quick_info_card(frm);
   },
 });
+
+const update_quick_info_card = (frm) => {
+  if (frm.is_new()) {
+    return;
+  }
+
+  const escapeHtml = (value) => frappe.utils.escape_html(value || '-');
+  const requiredParts = (frm.doc.required_parts || []).filter((row) => row.item_code).length;
+  const partsLabel = `${requiredParts} item${requiredParts === 1 ? '' : 's'}`;
+  const statusColors = {
+    Draft: '#94a3b8',
+    Inspection: '#0ea5e9',
+    Estimate: '#6366f1',
+    'Awaiting Approval': '#f59e0b',
+    Approved: '#22c55e',
+    'Request Part': '#f97316',
+    'Work In Progress': '#3b82f6',
+    'Waiting Payment': '#a855f7',
+    Completed: '#10b981',
+    Cancelled: '#ef4444',
+  };
+  const statusColor = statusColors[frm.doc.status] || '#64748b';
+
+  const html = `
+    <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 20px; border-radius: 12px; margin: 10px 0 20px 0; box-shadow: 0 6px 18px rgba(99, 102, 241, 0.3);">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 15px;">
+        <h4 style="margin: 0; font-size: 18px;">🧾 Service Order Summary</h4>
+        <div style="background: ${statusColor}; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase;">
+          ${escapeHtml(frm.doc.status || 'Draft')}
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;">
+        <div style="background: rgba(255, 255, 255, 0.15); padding: 12px; border-radius: 8px; backdrop-filter: blur(10px);">
+          <div style="font-size: 11px; opacity: 0.9;">Customer</div>
+          <div style="font-size: 15px; font-weight: 700;">${escapeHtml(frm.doc.customer_display || frm.doc.customer)}</div>
+        </div>
+        <div style="background: rgba(255, 255, 255, 0.15); padding: 12px; border-radius: 8px; backdrop-filter: blur(10px);">
+          <div style="font-size: 11px; opacity: 0.9;">Vehicle</div>
+          <div style="font-size: 15px; font-weight: 700;">${escapeHtml(frm.doc.vehicle_display || frm.doc.vehicle)}</div>
+        </div>
+        <div style="background: rgba(255, 255, 255, 0.15); padding: 12px; border-radius: 8px; backdrop-filter: blur(10px);">
+          <div style="font-size: 11px; opacity: 0.9;">Parts Required</div>
+          <div style="font-size: 15px; font-weight: 700;">${escapeHtml(partsLabel)}</div>
+        </div>
+        <div style="background: rgba(255, 255, 255, 0.15); padding: 12px; border-radius: 8px; backdrop-filter: blur(10px);">
+          <div style="font-size: 11px; opacity: 0.9;">Mechanic</div>
+          <div style="font-size: 15px; font-weight: 700;">${escapeHtml(frm.doc.assigned_mechanic_name || frm.doc.assigned_mechanic)}</div>
+        </div>
+        <div style="background: rgba(255, 255, 255, 0.15); padding: 12px; border-radius: 8px; backdrop-filter: blur(10px);">
+          <div style="font-size: 11px; opacity: 0.9;">Priority</div>
+          <div style="font-size: 15px; font-weight: 700;">${escapeHtml(frm.doc.priority || 'Normal')}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  $('#service-order-quick-info').html(html);
+};
