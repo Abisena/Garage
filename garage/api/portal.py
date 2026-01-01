@@ -2094,7 +2094,20 @@ def _create_payment_entry(payload: Mapping[str, Any]) -> frappe.Document:
     seed_invoice = allocations[0]["invoice"]
     base_invoice = _get_doc("Sales Invoice", seed_invoice)
 
-    pe = get_payment_entry("Sales Invoice", seed_invoice)
+    existing_pe_name = _find_existing_payment_entry(allocations)
+    pe = None
+    reuse_existing = False
+    if existing_pe_name:
+        pe = _get_doc("Payment Entry", existing_pe_name)
+        if pe.docstatus == 1:
+            return pe
+        if pe.docstatus < 1:
+            reuse_existing = True
+        else:
+            pe = None
+
+    if not pe:
+        pe = get_payment_entry("Sales Invoice", seed_invoice)
 
     party_type = payload.get("party_type") or pe.party_type or "Customer"
     party = payload.get("party") or payload.get("customer") or pe.party or getattr(base_invoice, "customer", None)
@@ -2166,7 +2179,10 @@ def _create_payment_entry(payload: Mapping[str, Any]) -> frappe.Document:
     pe.set_missing_values()
     _ensure_branch_allowed(pe)
 
-    pe = _insert_doc(pe)
+    if reuse_existing:
+        pe.save(ignore_permissions=True)
+    else:
+        pe = _insert_doc(pe)
 
     auto_submit = payload.get("auto_submit")
     if auto_submit is None:
@@ -2176,6 +2192,41 @@ def _create_payment_entry(payload: Mapping[str, Any]) -> frappe.Document:
         pe = _submit_doc(pe)
 
     return pe
+
+
+def _find_existing_payment_entry(allocations: Iterable[Mapping[str, Any]]) -> Optional[str]:
+    invoice_names = [row.get("invoice") for row in allocations if row.get("invoice")]
+    if not invoice_names:
+        return None
+
+    references = frappe.get_all(
+        "Payment Entry Reference",
+        filters={
+            "reference_doctype": "Sales Invoice",
+            "reference_name": ["in", invoice_names],
+        },
+        fields=["parent", "reference_name"],
+        order_by="creation desc",
+    )
+
+    if not references:
+        return None
+
+    parent_names = {row.get("parent") for row in references if row.get("parent")}
+    if not parent_names:
+        return None
+
+    entries = frappe.get_all(
+        "Payment Entry",
+        filters={"name": ["in", list(parent_names)]},
+        fields=["name", "docstatus", "modified"],
+        order_by="modified desc",
+        limit=1,
+    )
+    if not entries:
+        return None
+
+    return entries[0].get("name")
 
 
 def _new_document(doctype: str, data: Mapping[str, Any]) -> frappe.Document:
