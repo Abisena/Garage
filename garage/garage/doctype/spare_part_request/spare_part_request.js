@@ -133,13 +133,13 @@ function add_simple_buttons(frm) {
     // ADD ONLY 2 BUTTONS IN ACTIONS DROPDOWN
     // ========================================
     frm.add_custom_button(
-        __('Prepare All'), 
+        __('Prepared All'), 
         () => updateAll('Prepared'), 
         __('Actions')
     );
     
     frm.add_custom_button(
-        __('Reject All'), 
+        __('Rejected All'), 
         () => updateAll('Rejected'), 
         __('Actions')
     );
@@ -223,20 +223,8 @@ function get_priority_emoji(priority) {
 function update_status_indicator(frm) {
     if (!frm.doc.status) return;
     
-    const status_config = {
-        'Pending': { color: 'orange', icon: '⏳', message: 'Waiting for approval' },
-        'Partial Approve': { color: 'blue', icon: '✓', message: 'Some items approved' },
-        'Partial Reject': { color: 'orange', icon: '⚠️', message: 'Some items rejected' },
-        'Prepared': { color: 'green', icon: '✅', message: 'Parts ready for use' },
-        'Rejected': { color: 'red', icon: '❌', message: 'Request rejected' }
-    };
-    
-    const config = status_config[frm.doc.status] || { color: 'gray', icon: '📋', message: '' };
-    
-    frm.dashboard.set_headline_alert(
-        `${config.icon} <strong>${frm.doc.status}</strong>: ${config.message}`,
-        config.color
-    );
+    // Status indicator removed to avoid double banners
+    // The Quick Info Card already shows the status with colors
 }
 
 // ========================================
@@ -677,7 +665,6 @@ function inject_list_view_styles() {
         <style id="spare-part-request-list-styles">
             .list-row-container:hover {
                 background: #f9fafb !important;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
                 border-left: 3px solid #667eea !important;
                 transition: all 0.2s ease;
             }
