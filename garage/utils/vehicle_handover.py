@@ -23,8 +23,11 @@ def _resolve_service_order_from_invoice(invoice) -> str | None:
     if source_type == "Garage Service Order" and source_name:
         return source_name
 
-    service_order = getattr(invoice, "service_order", None) or getattr(
-        invoice, "garage_service_order", None
+    service_order = (
+        getattr(invoice, "service_order", None)
+        or getattr(invoice, "service_order_ref", None)
+        or getattr(invoice, "garage_service_order", None)
+        or getattr(invoice, "garage_service_order_ref", None)
     )
     if service_order:
         return service_order
