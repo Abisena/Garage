@@ -44,6 +44,7 @@ frappe.ui.form.on("Garage Vehicle Inspection", {
     DEFAULT_INSPECTION_ITEMS.forEach((item) => {
       const row = frm.add_child("inspection_items");
       row.item = item;
+      row.severity = "OK";
     });
 
     frm.refresh_field("inspection_items");
