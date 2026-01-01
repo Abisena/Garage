@@ -54,7 +54,7 @@ class GarageStockMovement(Document):
             self._update_stock_and_ledger(row, qty_sign)
 
     def _update_stock_and_ledger(self, row: Document, qty_sign: int) -> None:
-        spare_part = frappe.get_doc("Garage Spare Part", row.item_code)
+        spare_part = self._get_or_create_spare_part(row)
         delta_qty = qty_sign * (row.qty or 0)
         spare_part.stock_qty = (spare_part.stock_qty or 0) + delta_qty
 
@@ -99,3 +99,15 @@ class GarageStockMovement(Document):
         )
 
         ledger_doc.insert(ignore_permissions=True)
+
+    def _get_or_create_spare_part(self, row: Document) -> Document:
+        if frappe.db.exists("Garage Spare Part", row.item_code):
+            return frappe.get_doc("Garage Spare Part", row.item_code)
+
+        spare_part = frappe.new_doc("Garage Spare Part")
+        spare_part.part_code = row.item_code
+        spare_part.part_name = row.item_name or row.item_code
+        spare_part.description = row.description
+        spare_part.uom = row.uom or spare_part.uom
+        spare_part.insert(ignore_permissions=True)
+        return spare_part
