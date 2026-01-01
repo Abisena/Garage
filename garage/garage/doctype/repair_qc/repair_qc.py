@@ -102,6 +102,53 @@ class RepairQC(Document):
         if not self.service_order:
             return None
 
+        link_field = self._get_sales_invoice_link_field()
+
+        if link_field:
+            try:
+                invoices = frappe.get_all(
+                    "Sales Invoice",
+                    filters={link_field: self.service_order, "docstatus": ["!=", 2]},
+                    fields=[
+                        "name",
+                        "grand_total",
+                        "rounded_total",
+                        "outstanding_amount",
+                        "customer",
+                        "company",
+                        "docstatus",
+                    ],
+                    order_by="creation desc",
+                    limit=1,
+                )
+                if invoices:
+                    invoices[0]["doctype"] = "Sales Invoice"
+                    return invoices[0]
+            except Exception:
+                pass
+
+        try:
+            invoices = frappe.get_all(
+                "Sales Invoice",
+                filters={"po_no": self.service_order, "docstatus": ["!=", 2]},
+                fields=[
+                    "name",
+                    "grand_total",
+                    "rounded_total",
+                    "outstanding_amount",
+                    "customer",
+                    "company",
+                    "docstatus",
+                ],
+                order_by="creation desc",
+                limit=1,
+            )
+            if invoices:
+                invoices[0]["doctype"] = "Sales Invoice"
+                return invoices[0]
+        except Exception:
+            pass
+
         # Try SQL query directly
         try:
             invoices = frappe.db.sql("""
@@ -252,12 +299,29 @@ class RepairQC(Document):
             return None
 
         # Get customer
-        customer_name = service_order.get("customer")
-        if not customer_name:
+        customer_link = service_order.get("customer")
+        if not customer_link:
             frappe.msgprint(
                 _("Customer tidak ditemukan"),
                 indicator="red",
                 alert=True
+            )
+            return None
+        customer_name = None
+        try:
+            from garage.api.portal import _ensure_erp_customer
+
+            customer_name = _ensure_erp_customer(
+                customer_link, service_order.get("branch")
+            )
+        except Exception:
+            customer_name = None
+
+        if not customer_name:
+            frappe.msgprint(
+                _("Customer tidak ditemukan"),
+                indicator="red",
+                alert=True,
             )
             return None
 
@@ -283,11 +347,16 @@ class RepairQC(Document):
             si.posting_date = nowdate()
             si.set_posting_time = 1
             si.due_date = nowdate()
+            si.po_no = service_order.name
             si.remarks = f"Auto-generated from Repair QC {self.name} (Service Order {service_order.name})"
             
             # Set branch if field exists
             if self._doctype_has_field("Sales Invoice", "branch"):
                 si.branch = service_order.get("branch")
+
+            link_field = self._get_sales_invoice_link_field()
+            if link_field:
+                setattr(si, link_field, service_order.name)
             
             # Add items
             for item in items:
