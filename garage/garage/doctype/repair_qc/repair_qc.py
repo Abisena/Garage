@@ -693,6 +693,11 @@ class RepairQC(Document):
             
         except Exception as e:
             frappe.log_error(f"Create Payment Entry failed: {str(e)}\n{frappe.get_traceback()}", "Repair QC - Payment Entry")
+            frappe.msgprint(
+                _("❌ Gagal membuat Payment Entry: {0}").format(str(e)),
+                indicator="red",
+                alert=True
+            )
             return None
 
 
@@ -709,9 +714,3 @@ def is_repair_qc_invoice_paid(repair_qc: str):
     invoice = doc._get_latest_invoice()
     invoice_name = invoice.get("name") if invoice else None
     return {"paid": doc._is_latest_invoice_paid(), "invoice": invoice_name}
-            frappe.msgprint(
-                _("❌ Gagal membuat Payment Entry: {0}").format(str(e)),
-                indicator="red",
-                alert=True
-            )
-            return None
