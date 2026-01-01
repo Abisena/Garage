@@ -652,21 +652,6 @@ class RepairQC(Document):
         if not invoice:
             return None
 
-
-@frappe.whitelist()
-def is_repair_qc_invoice_paid(repair_qc: str):
-    if not repair_qc:
-        return {"paid": False, "invoice": None}
-
-    try:
-        doc = frappe.get_doc("Repair QC", repair_qc)
-    except Exception:
-        return {"paid": False, "invoice": None}
-
-    invoice = doc._get_latest_invoice()
-    invoice_name = invoice.get("name") if invoice else None
-    return {"paid": doc._is_latest_invoice_paid(), "invoice": invoice_name}
-
         if invoice.get("doctype") != "Sales Invoice":
             return None
 
@@ -708,6 +693,22 @@ def is_repair_qc_invoice_paid(repair_qc: str):
             
         except Exception as e:
             frappe.log_error(f"Create Payment Entry failed: {str(e)}\n{frappe.get_traceback()}", "Repair QC - Payment Entry")
+            return None
+
+
+@frappe.whitelist()
+def is_repair_qc_invoice_paid(repair_qc: str):
+    if not repair_qc:
+        return {"paid": False, "invoice": None}
+
+    try:
+        doc = frappe.get_doc("Repair QC", repair_qc)
+    except Exception:
+        return {"paid": False, "invoice": None}
+
+    invoice = doc._get_latest_invoice()
+    invoice_name = invoice.get("name") if invoice else None
+    return {"paid": doc._is_latest_invoice_paid(), "invoice": invoice_name}
             frappe.msgprint(
                 _("❌ Gagal membuat Payment Entry: {0}").format(str(e)),
                 indicator="red",
