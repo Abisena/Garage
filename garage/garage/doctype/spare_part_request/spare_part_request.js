@@ -4,6 +4,18 @@
 frappe.ui.form.on('Spare Part Request', {
   refresh(frm) {
     const grid = frm.get_field('items').grid;
+    const status = (frm.doc.status || '').toLowerCase();
+    const statusColorMap = {
+      prepared: 'green',
+      rejected: 'red',
+      pending: 'orange',
+      'partial approve': 'blue',
+      'partial reject': 'orange',
+    };
+    const indicatorColor = statusColorMap[status];
+    if (indicatorColor) {
+      frm.set_indicator(frm.doc.status, indicatorColor);
+    }
 
     const updateSelected = (status) => {
       const selected = grid.get_selected_children();
