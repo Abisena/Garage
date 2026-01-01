@@ -4,58 +4,61 @@
   "allow_guest_to_view": 0,
   "allow_import": 1,
   "allow_rename": 0,
-  "autoname": "",
+  "autoname": "format:BGR-SPK-{YYYY}-{#####}",
   "beta": 0,
   "creation": "2024-06-02 00:00:00.000000",
   "default_view": "Form",
   "disable_prepared_report": 0,
   "docstatus": 0,
   "doctype": "DocType",
-  "editable_grid": 0,
+  "editable_grid": 1,
   "engine": "InnoDB",
   "field_order": [
-    "basic_section",
+    "header_section",
     "branch",
-    "cb_basic_1",
     "service_order_type",
-    "row_basic_2",
-    "intake_type",
-    "cb_basic_2",
+    "column_break_header",
     "status",
-    "row_basic_3",
     "priority",
-    "cb_basic_3",
-    "primary_contact",
-    "row_basic_5b",
-    "assigned_mechanic",
-    "cb_basic_5b",
-    "assigned_mechanic_name",
-    "row_basic_6",
-    "booking_channel",
-    "cb_basic_6",
-    "booking_reference",
-    "row_basic_7",
-    "service_booking_date",
-    "cb_basic_7",
-    "branch_code",
+    "section_break_quick_info",
+    "quick_info_html",
     "customer_vehicle_section",
     "customer",
     "customer_display",
-    "cb_cv_1",
+    "primary_contact",
+    "column_break_cv",
     "vehicle",
     "vehicle_display",
-    "notes_section",
-    "inspection_record",
-    "service_notes",
-    "operations_section",
+    "section_break_service_details",
+    "intake_type",
+    "booking_channel",
+    "column_break_sd",
+    "service_booking_date",
+    "booking_reference",
+    "section_break_assignment",
+    "assigned_mechanic",
+    "column_break_assignment",
+    "assigned_mechanic_name",
+    "section_break_operations",
+    "operations_tab_html",
     "required_parts",
-    "progress_logs"
+    "section_break_progress",
+    "progress_logs",
+    "section_break_inspection",
+    "inspection_record",
+    "column_break_inspection",
+    "inspection_quick_create",
+    "section_break_notes",
+    "service_notes",
+    "section_break_hidden",
+    "branch_code"
   ],
   "fields": [
     {
-      "fieldname": "basic_section",
+      "fieldname": "header_section",
       "fieldtype": "Section Break",
-      "label": "Basic Information"
+      "label": "📋 Service Order Details",
+      "collapsible": 0
     },
     {
       "fieldname": "branch",
@@ -63,34 +66,24 @@
       "label": "Branch",
       "options": "Garage Branch",
       "reqd": 1,
-      "in_list_view": 1
-    },
-    {
-      "fieldname": "cb_basic_1",
-      "fieldtype": "Column Break"
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "bold": 1,
+      "description": "Select service branch location"
     },
     {
       "fieldname": "service_order_type",
       "fieldtype": "Link",
-      "label": "Service",
+      "label": "Service Type",
       "options": "Garage Service Type",
-      "reqd": 1
-    },
-    {
-      "fieldname": "row_basic_2",
-      "fieldtype": "Section Break"
-    },
-    {
-      "fieldname": "intake_type",
-      "fieldtype": "Select",
-      "label": "Registration Type",
-      "options": "Walk-In\nBooking",
-      "default": "Walk-In",
       "reqd": 1,
-      "in_list_view": 1
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "bold": 1,
+      "description": "Type of service requested (e.g., Oil Change, Repair)"
     },
     {
-      "fieldname": "cb_basic_2",
+      "fieldname": "column_break_header",
       "fieldtype": "Column Break"
     },
     {
@@ -99,95 +92,38 @@
       "label": "Status",
       "options": "Draft\nInspection\nEstimate\nAwaiting Approval\nApproved\nRequest Part\nWork In Progress\nWaiting Payment\nCompleted\nCancelled",
       "default": "Draft",
-      "read_only": 1,
-      "in_list_view": 1
-    },
-    {
-      "fieldname": "row_basic_3",
-      "fieldtype": "Section Break"
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "bold": 1,
+      "description": "Current status of the service order"
     },
     {
       "fieldname": "priority",
       "fieldtype": "Select",
       "label": "Priority",
       "options": "Normal\nHigh\nCritical",
-      "default": "Normal"
+      "default": "Normal",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "description": "Service urgency level"
     },
     {
-      "fieldname": "cb_basic_3",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "primary_contact",
-      "fieldtype": "Data",
-      "label": "Primary Contact"
-    },
-    {
-      "fieldname": "row_basic_5b",
+      "fieldname": "section_break_quick_info",
       "fieldtype": "Section Break",
-      "label": "Mechanic Assignment"
+      "label": "",
+      "collapsible": 0
     },
     {
-      "fieldname": "assigned_mechanic",
-      "fieldtype": "Link",
-      "label": "Mechanic",
-      "options": "Employee"
-    },
-    {
-      "fieldname": "cb_basic_5b",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "assigned_mechanic_name",
-      "fieldtype": "Data",
-      "label": "Mechanic Name",
-      "fetch_from": "assigned_mechanic.employee_name",
-      "read_only": 1
-    },
-    {
-      "fieldname": "row_basic_6",
-      "fieldtype": "Section Break"
-    },
-    {
-      "fieldname": "booking_channel",
-      "fieldtype": "Select",
-      "label": "Booking Channel",
-      "options": "\nWhatsApp\nPhone Call\nAdmin Input\nWebsite\nOther"
-    },
-    {
-      "fieldname": "cb_basic_6",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "booking_reference",
-      "fieldtype": "Data",
-      "label": "Booking Reference"
-    },
-    {
-      "fieldname": "row_basic_7",
-      "fieldtype": "Section Break"
-    },
-    {
-      "fieldname": "service_booking_date",
-      "fieldtype": "Datetime",
-      "label": "Booking Datetime"
-    },
-    {
-      "fieldname": "cb_basic_7",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "branch_code",
-      "fieldtype": "Data",
-      "label": "Branch Code",
-      "read_only": 1,
-      "hidden": 1,
-      "fetch_from": "branch.branch_code"
+      "fieldname": "quick_info_html",
+      "fieldtype": "HTML",
+      "label": "Quick Info",
+      "options": "<div id='service-order-quick-info'></div>"
     },
     {
       "fieldname": "customer_vehicle_section",
       "fieldtype": "Section Break",
-      "label": "Customer & Vehicle"
+      "label": "🚗 Customer & Vehicle Information",
+      "collapsible": 0
     },
     {
       "fieldname": "customer",
@@ -195,17 +131,28 @@
       "label": "Customer",
       "options": "Garage Customer",
       "reqd": 1,
-      "in_list_view": 1
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "bold": 1,
+      "description": "Select or create customer"
     },
     {
       "fieldname": "customer_display",
       "fieldtype": "Data",
       "label": "Customer Name",
       "read_only": 1,
-      "fetch_from": "customer.customer_name"
+      "fetch_from": "customer.customer_name",
+      "bold": 1
     },
     {
-      "fieldname": "cb_cv_1",
+      "fieldname": "primary_contact",
+      "fieldtype": "Data",
+      "label": "Phone Number",
+      "description": "Customer contact number",
+      "bold": 1
+    },
+    {
+      "fieldname": "column_break_cv",
       "fieldtype": "Column Break"
     },
     {
@@ -214,47 +161,170 @@
       "label": "Vehicle",
       "options": "Garage Vehicle",
       "reqd": 1,
-      "in_list_view": 1
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "bold": 1,
+      "description": "Select vehicle or create new"
     },
     {
       "fieldname": "vehicle_display",
       "fieldtype": "Data",
       "label": "Vehicle Details",
-      "read_only": 1
+      "read_only": 1,
+      "description": "License plate, brand, model",
+      "bold": 1
     },
     {
-      "fieldname": "notes_section",
+      "fieldname": "section_break_service_details",
       "fieldtype": "Section Break",
-      "label": "Notes"
+      "label": "📅 Booking & Registration Details",
+      "collapsible": 1,
+      "depends_on": "eval:doc.intake_type=='Booking'"
+    },
+    {
+      "fieldname": "intake_type",
+      "fieldtype": "Select",
+      "label": "Registration Type",
+      "options": "Walk-In\nBooking",
+      "default": "Walk-In",
+      "reqd": 1,
+      "in_standard_filter": 1,
+      "description": "How did customer arrive?"
+    },
+    {
+      "fieldname": "booking_channel",
+      "fieldtype": "Select",
+      "label": "Booking Channel",
+      "options": "\nWhatsApp\nPhone Call\nAdmin Input\nWebsite\nMobile App\nOther",
+      "depends_on": "eval:doc.intake_type=='Booking'",
+      "description": "How was booking made?"
+    },
+    {
+      "fieldname": "column_break_sd",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "service_booking_date",
+      "fieldtype": "Datetime",
+      "label": "Booking Date & Time",
+      "depends_on": "eval:doc.intake_type=='Booking'",
+      "description": "Scheduled appointment time"
+    },
+    {
+      "fieldname": "booking_reference",
+      "fieldtype": "Data",
+      "label": "Booking Reference",
+      "depends_on": "eval:doc.intake_type=='Booking'",
+      "description": "External booking ID or reference"
+    },
+    {
+      "fieldname": "section_break_assignment",
+      "fieldtype": "Section Break",
+      "label": "👨‍🔧 Mechanic Assignment",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "assigned_mechanic",
+      "fieldtype": "Link",
+      "label": "Assigned Mechanic",
+      "options": "Employee",
+      "in_standard_filter": 1,
+      "description": "Select mechanic responsible for this job"
+    },
+    {
+      "fieldname": "column_break_assignment",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "assigned_mechanic_name",
+      "fieldtype": "Data",
+      "label": "Mechanic Name",
+      "fetch_from": "assigned_mechanic.employee_name",
+      "read_only": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "section_break_operations",
+      "fieldtype": "Section Break",
+      "label": "🔧 Required Parts & Materials",
+      "collapsible": 0,
+      "description": "Parts needed for this service"
+    },
+    {
+      "fieldname": "operations_tab_html",
+      "fieldtype": "HTML",
+      "label": "",
+      "options": "<div class='operations-helper'><p style='color: #666; font-size: 13px; margin-bottom: 10px;'>💡 Tip: Add parts required for this service. Prices will be calculated automatically.</p></div>"
+    },
+    {
+      "fieldname": "required_parts",
+      "fieldtype": "Table",
+      "label": "Required Parts",
+      "options": "Garage Service Order Part",
+      "description": "List of parts needed"
+    },
+    {
+      "fieldname": "section_break_progress",
+      "fieldtype": "Section Break",
+      "label": "📊 Service Progress & Timeline",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "progress_logs",
+      "fieldtype": "Table",
+      "label": "Progress Logs",
+      "options": "Garage Service Order Progress",
+      "description": "Track service milestones and updates"
+    },
+    {
+      "fieldname": "section_break_inspection",
+      "fieldtype": "Section Break",
+      "label": "🔍 Vehicle Inspection",
+      "collapsible": 1
     },
     {
       "fieldname": "inspection_record",
       "fieldtype": "Link",
       "label": "Inspection Document",
       "options": "Garage Vehicle Inspection",
-      "read_only": 1
+      "read_only": 1,
+      "description": "Linked inspection report"
+    },
+    {
+      "fieldname": "column_break_inspection",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "inspection_quick_create",
+      "fieldtype": "Button",
+      "label": "Create Inspection"
+    },
+    {
+      "fieldname": "section_break_notes",
+      "fieldtype": "Section Break",
+      "label": "📝 Service Notes & Comments",
+      "collapsible": 1
     },
     {
       "fieldname": "service_notes",
-      "fieldtype": "Text",
-      "label": "Service Notes"
+      "fieldtype": "Text Editor",
+      "label": "Notes",
+      "description": "Additional observations, customer complaints, or special instructions"
     },
     {
-      "fieldname": "operations_section",
+      "fieldname": "section_break_hidden",
       "fieldtype": "Section Break",
-      "label": "Operations"
+      "label": "Hidden Fields",
+      "collapsible": 1,
+      "collapsed": 1
     },
     {
-      "fieldname": "required_parts",
-      "fieldtype": "Table",
-      "label": "Required Parts",
-      "options": "Garage Service Order Part"
-    },
-    {
-      "fieldname": "progress_logs",
-      "fieldtype": "Table",
-      "label": "Progress Logs",
-      "options": "Garage Service Order Progress"
+      "fieldname": "branch_code",
+      "fieldtype": "Data",
+      "label": "Branch Code",
+      "read_only": 1,
+      "hidden": 1,
+      "fetch_from": "branch.branch_code"
     }
   ],
   "has_web_view": 0,
@@ -267,13 +337,22 @@
   "is_submittable": 0,
   "issingle": 0,
   "istable": 0,
-  "links": [],
+  "links": [
+    {
+      "link_doctype": "Garage Vehicle Inspection",
+      "link_fieldname": "service_order"
+    },
+    {
+      "link_doctype": "Repair QC",
+      "link_fieldname": "service_order"
+    }
+  ],
   "make_attachments_public": 0,
-  "max_attachments": 0,
+  "max_attachments": 10,
   "modified": "2024-06-02 00:00:00.000000",
   "module": "Garage",
   "name": "Garage Service Order",
-  "naming_rule": "",
+  "naming_rule": "By \"Naming Series\" field",
   "owner": "Administrator",
   "permissions": [
     {
@@ -286,20 +365,43 @@
       "print": 1,
       "share": 1,
       "export": 1
+    },
+    {
+      "role": "Garage Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1,
+      "export": 1
+    },
+    {
+      "role": "Garage User",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 0,
+      "email": 1,
+      "print": 1,
+      "share": 0,
+      "export": 0
     }
   ],
   "quick_entry": 0,
   "read_only": 0,
   "read_only_onload": 0,
   "show_name_in_global_search": 1,
-  "show_preview_popup": 0,
+  "show_preview_popup": 1,
   "sort_field": "modified",
   "sort_order": "DESC",
   "states": [],
   "subject": "",
+  "title_field": "customer_display",
   "track_changes": 1,
-  "track_seen": 0,
+  "track_seen": 1,
   "translated_doctype": 0,
   "migration_hash": "",
-  "description": "Primary document orchestrating end-to-end workshop service flow."
+  "description": "Complete workshop service management from customer intake to job completion"
 }
