@@ -236,12 +236,6 @@
   "is_submittable": 0,
   "issingle": 0,
   "istable": 0,
-  "links": [
-    {
-      "link_doctype": "Garage Service Order",
-      "link_fieldname": "name"
-    }
-  ],
   "make_attachments_public": 0,
   "max_attachments": 5,
   "modified": "2024-07-09 00:00:00.000000",

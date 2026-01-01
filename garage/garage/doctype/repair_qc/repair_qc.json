@@ -582,20 +582,6 @@
   "is_submittable": 0,
   "issingle": 0,
   "istable": 0,
-  "links": [
-    {
-      "link_doctype": "Garage Service Order",
-      "link_fieldname": "name"
-    },
-    {
-      "link_doctype": "Sales Invoice",
-      "link_fieldname": "name"
-    },
-    {
-      "link_doctype": "Payment Entry",
-      "link_fieldname": "name"
-    }
-  ],
   "make_attachments_public": 0,
   "max_attachments": 10,
   "modified": "2024-06-02 00:00:00.000000",
