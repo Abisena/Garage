@@ -79,12 +79,24 @@ def _handover_exists(service_order_name: str) -> bool:
     return bool(frappe.db.exists("Vehicle Handover", {"service_order": service_order_name}))
 
 
+def _extract_permit_details(doc) -> tuple[str | None, str | None]:
+    permit_number = getattr(doc, "permit_number", None) or getattr(
+        doc, "exit_permit_number", None
+    )
+    sikk_number = getattr(doc, "sikk_number", None) or getattr(
+        doc, "exit_permit_reference", None
+    )
+    return permit_number, sikk_number
+
+
 def _create_handover(
     *,
     service_order_name: str,
     branch: str,
     receipt_number: str | None = None,
     payment_entry: str | None = None,
+    permit_number: str | None = None,
+    sikk_number: str | None = None,
 ) -> None:
     if _handover_exists(service_order_name):
         return
@@ -101,6 +113,10 @@ def _create_handover(
         handover.receipt_number = receipt_number
     if payment_entry:
         handover.payment_entry = payment_entry
+    if permit_number:
+        handover.permit_number = permit_number
+    if sikk_number:
+        handover.sikk_number = sikk_number
     handover.save(ignore_permissions=True)
 
 
@@ -148,10 +164,14 @@ def handle_paid_sales_invoice(doc, method=None) -> None:  # pragma: no cover - f
     if not branch:
         return
 
+    permit_number, sikk_number = _extract_permit_details(service_order)
+
     _create_handover(
         service_order_name=service_order_name,
         branch=branch,
         receipt_number=doc.name,
+        permit_number=permit_number,
+        sikk_number=sikk_number,
     )
 
 
@@ -193,10 +213,37 @@ def handle_paid_payment_entry(doc, method=None) -> None:  # pragma: no cover - f
         if not branch:
             continue
 
+        permit_number, sikk_number = _extract_permit_details(service_order)
+
         _create_handover(
             service_order_name=service_order_name,
             branch=branch,
             receipt_number=doc.name,
             payment_entry=doc.name,
+            permit_number=permit_number,
+            sikk_number=sikk_number,
         )
         created_for.add(service_order_name)
+
+
+def handle_completed_service_order(doc, method=None) -> None:  # pragma: no cover - frappe hook
+    """Auto-create Vehicle Handover when service order is completed."""
+
+    if getattr(doc, "status", None) != "Completed":
+        return
+
+    if _handover_exists(doc.name):
+        return
+
+    branch = getattr(doc, "branch", None)
+    if not branch:
+        return
+
+    permit_number, sikk_number = _extract_permit_details(doc)
+
+    _create_handover(
+        service_order_name=doc.name,
+        branch=branch,
+        permit_number=permit_number,
+        sikk_number=sikk_number,
+    )

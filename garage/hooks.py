@@ -316,4 +316,7 @@ doc_events = {
         "on_update": "garage.utils.vehicle_handover.handle_paid_payment_entry",
         "on_submit": "garage.utils.payment_hooks.handle_payment_entry_submit",
     },
+    "Garage Service Order": {
+        "on_update": "garage.utils.vehicle_handover.handle_completed_service_order",
+    },
 }
