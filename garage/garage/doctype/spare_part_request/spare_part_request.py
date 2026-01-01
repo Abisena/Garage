@@ -40,28 +40,26 @@ class SparePartRequest(Document):
         self._sync_service_order_parts()
 
     def update_items_status(self, item_names: Sequence[str], status: str) -> None:
-        """Update the approval status for specific items.
-
-        Creating a stock issue is handled automatically when items move to
-        "Prepared" status. Existing issue documents are left untouched to avoid
-        double counting.
-        """
-
-        normalized_status = normalize_approval_status(status)
-        if normalized_status not in {ITEM_PREPARED, ITEM_REJECTED}:
-            frappe.throw(_("Status {0} tidak diizinkan.").format(status))
-
-        changed = False
-        for row in self.items or []:
-            if row.name not in item_names:
-                continue
-            changed = self._apply_item_status(row, normalized_status) or changed
-
-        if not changed:
-            return
-
-        self._sync_status_from_items()
-        self.save(ignore_permissions=True)
+	    """Update the approval status for specific items."""
+	
+	    normalized_status = normalize_approval_status(status)
+	    if normalized_status not in {ITEM_PREPARED, ITEM_REJECTED}:
+	        frappe.throw(_("Status {0} tidak diizinkan.").format(status))
+	
+	    # Convert item_names to strings for comparison
+	    item_names_str = [str(name) for name in item_names]
+	    
+	    changed = False
+	    for row in self.items or []:
+	        if str(row.name) not in item_names_str:  # ← FIX: Convert both to string
+	            continue
+	        changed = self._apply_item_status(row, normalized_status) or changed
+	
+	    if not changed:
+	        return
+	
+	    self._sync_status_from_items()
+	    self.save(ignore_permissions=True)
 
     # internal helpers
     def _sync_status_from_items(self) -> None:
