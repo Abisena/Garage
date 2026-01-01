@@ -36,7 +36,6 @@
     "items_helper_html",
     "items",
     "section_break_totals",
-    "totals_html",
     "section_break_remarks",
     "remarks",
     "section_break_timeline",
@@ -46,7 +45,7 @@
     {
       "fieldname": "header_section",
       "fieldtype": "Section Break",
-      "label": "📦 Spare Part Request Details",
+      "label": "\ud83d\udce6 Spare Part Request Details",
       "collapsible": 0
     },
     {
@@ -110,7 +109,7 @@
     {
       "fieldname": "reference_section",
       "fieldtype": "Section Break",
-      "label": "🔗 Reference Information",
+      "label": "\ud83d\udd17 Reference Information",
       "collapsible": 0
     },
     {
@@ -148,7 +147,7 @@
     {
       "fieldname": "section_break_approval",
       "fieldtype": "Section Break",
-      "label": "👥 Request & Approval Info",
+      "label": "\ud83d\udc65 Request & Approval Info",
       "collapsible": 1
     },
     {
@@ -178,7 +177,7 @@
     {
       "fieldname": "items_section",
       "fieldtype": "Section Break",
-      "label": "📋 Requested Spare Parts",
+      "label": "\ud83d\udccb Requested Spare Parts",
       "collapsible": 0,
       "description": "List of parts requested for approval"
     },
@@ -186,7 +185,7 @@
       "fieldname": "items_helper_html",
       "fieldtype": "HTML",
       "label": "",
-      "options": "<div class='items-helper'><p style='color: #666; font-size: 13px; margin-bottom: 10px;'>💡 Tip: Add parts needed. Approval status can be set per item.</p></div>"
+      "options": "<div class='items-helper'><p style='color: #666; font-size: 13px; margin-bottom: 10px;'>\ud83d\udca1 Tip: Add parts needed. Approval status can be set per item.</p></div>"
     },
     {
       "fieldname": "items",
@@ -199,19 +198,13 @@
     {
       "fieldname": "section_break_totals",
       "fieldtype": "Section Break",
-      "label": "💰 Summary & Totals",
+      "label": "\ud83d\udcb0 Summary & Totals",
       "collapsible": 1
-    },
-    {
-      "fieldname": "totals_html",
-      "fieldtype": "HTML",
-      "label": "",
-      "options": "<div id='spare-part-totals'></div>"
     },
     {
       "fieldname": "section_break_remarks",
       "fieldtype": "Section Break",
-      "label": "📝 Remarks & Notes",
+      "label": "\ud83d\udcdd Remarks & Notes",
       "collapsible": 1
     },
     {
@@ -223,7 +216,7 @@
     {
       "fieldname": "section_break_timeline",
       "fieldtype": "Section Break",
-      "label": "⏱️ Request Timeline",
+      "label": "\u23f1\ufe0f Request Timeline",
       "collapsible": 1
     },
     {
