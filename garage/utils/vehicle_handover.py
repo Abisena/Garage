@@ -96,6 +96,19 @@ def _get_payment_entry(payment_entry_name: str):
         return None
 
 
+def _get_invoice_doc(invoice_name: str):
+    if not invoice_name:
+        return None
+
+    if frappe.db.exists("Garage Sales Invoice", invoice_name):
+        return frappe.get_doc("Garage Sales Invoice", invoice_name)
+
+    if frappe.db.exists("Sales Invoice", invoice_name):
+        return frappe.get_doc("Sales Invoice", invoice_name)
+
+    return None
+
+
 def _resolve_payment_entry_for_invoice(invoice_name: str | None):
     if not invoice_name:
         return None
@@ -268,13 +281,9 @@ def handle_paid_payment_entry(doc, method=None) -> None:  # pragma: no cover - f
 
     created_for = set()
     for invoice_name in invoice_names:
-        try:
-            invoice = frappe.get_doc("Garage Sales Invoice", invoice_name)
-        except Exception:
-            try:
-                invoice = frappe.get_doc("Sales Invoice", invoice_name)
-            except Exception:
-                continue
+        invoice = _get_invoice_doc(invoice_name)
+        if not invoice:
+            continue
 
         service_order_name = _resolve_service_order_from_invoice(invoice)
         if not service_order_name or service_order_name in created_for:
