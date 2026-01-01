@@ -17,25 +17,6 @@ const isInvoicePaid = async (frm) => {
   }
 };
 
-const hasVehicleHandover = async (frm) => {
-  if (!frm.doc.service_order) {
-    return false;
-  }
-
-  try {
-    const handovers = await frappe.db.get_list('Vehicle Handover', {
-      filters: {
-        service_order: frm.doc.service_order
-      },
-      fields: ['name'],
-      limit: 1
-    });
-    return Boolean(handovers?.length);
-  } catch (error) {
-    return false;
-  }
-};
-
 frappe.ui.form.on('Repair QC', {
   async refresh(frm) {
     frm.set_df_property('summary_total_amount', 'hidden', 1);
@@ -46,11 +27,8 @@ frappe.ui.form.on('Repair QC', {
       frm.clear_custom_buttons();
       if (frm.doc.status === 'Finished') {
         frm.disable_save();
-        const [invoicePaid, vehicleHandoverExists] = await Promise.all([
-          isInvoicePaid(frm),
-          hasVehicleHandover(frm)
-        ]);
-        const canReopen = !(invoicePaid && vehicleHandoverExists);
+        const invoicePaid = await isInvoicePaid(frm);
+        const canReopen = !invoicePaid;
 
         if (canReopen) {
           frm.page.set_primary_action(__('Reopen'), () => {
