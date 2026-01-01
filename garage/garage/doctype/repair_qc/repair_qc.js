@@ -1,17 +1,17 @@
 const isInvoicePaid = async (frm) => {
-  if (!frm.doc.summary_invoice) {
+  if (!frm.doc.name) {
     return false;
   }
 
   try {
-    const response = await frappe.db.get_value('Sales Invoice', frm.doc.summary_invoice, [
-      'status',
-      'outstanding_amount'
-    ]);
-    const invoice = response?.message || {};
-    const status = (invoice.status || '').toLowerCase();
-    const outstanding = frappe.utils.flt(invoice.outstanding_amount || 0);
-    return status === 'paid' || outstanding <= 0;
+    const response = await frappe.call({
+      method: 'garage.garage.doctype.repair_qc.repair_qc.is_repair_qc_invoice_paid',
+      args: {
+        repair_qc: frm.doc.name
+      }
+    });
+
+    return Boolean(response?.message?.paid);
   } catch (error) {
     return false;
   }

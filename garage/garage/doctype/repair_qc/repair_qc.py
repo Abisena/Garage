@@ -21,6 +21,10 @@ class RepairQC(Document):
         #     self._validate_completion_fields()
 
         self._sync_invoice_summary()
+        if self.status == "Reopened" and self._is_latest_invoice_paid():
+            frappe.throw(
+                _("Repair QC tidak bisa di-reopen karena Sales Invoice sudah lunas.")
+            )
 
     def on_update(self):
         """Called after document is saved"""
@@ -219,6 +223,36 @@ class RepairQC(Document):
             pass
 
         return total_amount, outstanding_amount
+
+    def _is_invoice_paid(self, invoice_name: str) -> bool:
+        if not invoice_name:
+            return False
+
+        try:
+            values = frappe.db.get_value(
+                "Sales Invoice",
+                invoice_name,
+                ["status", "outstanding_amount", "docstatus"],
+                as_dict=True,
+            )
+        except Exception:
+            return False
+
+        if not values or values.get("docstatus") != 1:
+            return False
+
+        status = (values.get("status") or "").lower()
+        outstanding = flt(values.get("outstanding_amount") or 0)
+        return status == "paid" or outstanding <= 0
+
+    def _is_latest_invoice_paid(self) -> bool:
+        invoice = self._get_latest_invoice()
+        if not invoice:
+            return False
+        if invoice.get("doctype") and invoice.get("doctype") != "Sales Invoice":
+            return False
+
+        return self._is_invoice_paid(invoice.get("name"))
 
     def _sync_invoice_summary(self):
         invoice = self._get_latest_invoice()
@@ -617,6 +651,21 @@ class RepairQC(Document):
         invoice = self._get_latest_invoice()
         if not invoice:
             return None
+
+
+@frappe.whitelist()
+def is_repair_qc_invoice_paid(repair_qc: str):
+    if not repair_qc:
+        return {"paid": False, "invoice": None}
+
+    try:
+        doc = frappe.get_doc("Repair QC", repair_qc)
+    except Exception:
+        return {"paid": False, "invoice": None}
+
+    invoice = doc._get_latest_invoice()
+    invoice_name = invoice.get("name") if invoice else None
+    return {"paid": doc._is_latest_invoice_paid(), "invoice": invoice_name}
 
         if invoice.get("doctype") != "Sales Invoice":
             return None
