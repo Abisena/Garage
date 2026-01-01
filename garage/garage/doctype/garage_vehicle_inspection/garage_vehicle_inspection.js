@@ -38,6 +38,7 @@ frappe.ui.form.on("Garage Vehicle Inspection", {
     }
 
     if (!frm.is_new() || (frm.doc.inspection_items || []).length > 0) {
+      update_overall_condition(frm);
       return;
     }
 
@@ -48,5 +49,53 @@ frappe.ui.form.on("Garage Vehicle Inspection", {
     });
 
     frm.refresh_field("inspection_items");
+    update_overall_condition(frm);
+  },
+  inspection_items_add(frm) {
+    update_overall_condition(frm);
+  },
+  inspection_items_remove(frm) {
+    update_overall_condition(frm);
   },
 });
+
+frappe.ui.form.on("Garage Service Order Inspection", {
+  severity(frm) {
+    update_overall_condition(frm);
+  },
+});
+
+const SEVERITY_SCORES = {
+  OK: 0,
+  "Need Attention": 1,
+  Replace: 2,
+};
+
+const CONDITION_THRESHOLDS = [
+  { maxRatio: 0.1, condition: "Good" },
+  { maxRatio: 0.3, condition: "Fair" },
+  { maxRatio: 0.6, condition: "Poor" },
+  { maxRatio: 1, condition: "Critical" },
+];
+
+function update_overall_condition(frm) {
+  const items = frm.doc.inspection_items || [];
+  if (items.length === 0) {
+    return;
+  }
+
+  const totalScore = items.reduce((sum, item) => {
+    const severity = item.severity || "OK";
+    const score = SEVERITY_SCORES[severity] ?? 0;
+    return sum + score;
+  }, 0);
+  const maxScore = items.length * SEVERITY_SCORES.Replace;
+  const ratio = maxScore === 0 ? 0 : totalScore / maxScore;
+  const nextCondition =
+    CONDITION_THRESHOLDS.find((threshold) => ratio <= threshold.maxRatio)
+      ?.condition || "Critical";
+
+  if (frm.doc.overall_condition !== nextCondition) {
+    frm.set_value("overall_condition", nextCondition);
+  }
+}
