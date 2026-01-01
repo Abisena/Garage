@@ -6,8 +6,9 @@
 // ========================================
 frappe.ui.form.on('Spare Part Request', {
   refresh(frm) {
-    const grid = frm.get_field('items').grid;
     const status = (frm.doc.status || '').toLowerCase();
+
+    frm.set_df_property('status', 'read_only', 1);
     
     // ========================================
     // STATUS INDICATOR (FIXED!)
@@ -25,43 +26,6 @@ frappe.ui.form.on('Spare Part Request', {
       // ✅ CORRECT: Use frm.page.set_indicator()
       frm.page.set_indicator(frm.doc.status, indicatorColor);
     }
-    
-    // ========================================
-    // HELPER: UPDATE SELECTED ITEMS
-    // ========================================
-    const updateSelected = (status) => {
-      const selected = grid.get_selected_children();
-      
-      if (!selected.length) {
-        frappe.msgprint({
-          title: __('No Items Selected'),
-          message: __('⚠️ Pilih minimal satu item yang ingin diperbarui.'),
-          indicator: 'orange'
-        });
-        return;
-      }
-      
-      const statusLabel = status === 'Prepared' ? 'PREPARED' : 'REJECTED';
-      const statusEmoji = status === 'Prepared' ? '✅' : '❌';
-      
-      frappe.call({
-        method: 'garage.garage.doctype.spare_part_request.spare_part_request.update_items_status',
-        args: {
-          name: frm.doc.name,
-          item_names: selected.map((row) => row.name),
-          status,
-        },
-        callback: (r) => {
-          if (!r.exc) {
-            frm.reload_doc();
-            frappe.show_alert({
-              message: __('{0} {1} items {2}!', [statusEmoji, selected.length, statusLabel]),
-              indicator: status === 'Prepared' ? 'green' : 'red'
-            }, 5);
-          }
-        },
-      });
-    };
     
     // ========================================
     // HELPER: UPDATE ALL ITEMS
@@ -125,30 +89,18 @@ frappe.ui.form.on('Spare Part Request', {
     // ADD CUSTOM BUTTONS
     // ========================================
     
-    // Selected Items dropdown
-    frm.add_custom_button(
-      __('✅ Prepare Selected'), 
-      () => updateSelected('Prepared'), 
-      __('Selected Items')
-    );
-    
-    frm.add_custom_button(
-      __('❌ Reject Selected'), 
-      () => updateSelected('Rejected'), 
-      __('Selected Items')
-    );
-    
-    // All Items dropdown
+    frm.clear_custom_buttons();
+
     frm.add_custom_button(
       __('✅ Prepare All'), 
       () => updateAll('Prepared'), 
-      __('All Items')
+      __('Legacy Actions')
     );
     
     frm.add_custom_button(
       __('❌ Reject All'), 
       () => updateAll('Rejected'), 
-      __('All Items')
+      __('Legacy Actions')
     );
     
     // ========================================
