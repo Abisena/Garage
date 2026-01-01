@@ -303,14 +303,17 @@ doc_events = {
     "Repair QC": {
         "on_update": "garage.utils.service_order_status.sync_from_repair_qc",
     },
+    # ==========================================
+    # MODIFIED: Sales Invoice sekarang trigger completion
+    # ==========================================
     "Garage Sales Invoice": {
-        "on_update": "garage.utils.vehicle_handover.handle_paid_sales_invoice",
+        "on_update": "garage.utils.sales_invoice_handler.handle_sales_invoice_paid",
     },
     "Sales Invoice": {
-        "on_update": "garage.utils.vehicle_handover.handle_paid_sales_invoice",
+        "on_update": "garage.utils.sales_invoice_handler.handle_sales_invoice_paid",
     },
     "Garage Payment Entry": {
-        "on_update": "garage.utils.vehicle_handover.handle_paid_payment_entry",
+        "on_update": "garage.utils.sales_invoice_handler.handle_sales_invoice_paid",
     },
     "Payment Entry": {
         "on_update": "garage.utils.vehicle_handover.handle_paid_payment_entry",
