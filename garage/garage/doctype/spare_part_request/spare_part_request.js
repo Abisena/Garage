@@ -3,7 +3,8 @@
 
 frappe.ui.form.on('Spare Part Request', {
   refresh(frm) {
-    const grid = frm.get_field('items').grid;
+    const itemsField = frm.get_field('items');
+    const grid = itemsField ? itemsField.grid : null;
     const status = (frm.doc.status || '').toLowerCase();
     const statusColorMap = {
       prepared: 'green',
@@ -18,6 +19,10 @@ frappe.ui.form.on('Spare Part Request', {
     }
 
     const updateSelected = (status) => {
+      if (!grid) {
+        frappe.msgprint(__('Daftar item belum tersedia.'));
+        return;
+      }
       const selected = grid.get_selected_children();
       if (!selected.length) {
         frappe.msgprint(__('Pilih minimal satu item yang ingin diperbarui.'));
@@ -35,7 +40,18 @@ frappe.ui.form.on('Spare Part Request', {
       });
     };
 
-    frm.add_custom_button(__('Prepare Selected'), () => updateSelected('Prepared'));
-    frm.add_custom_button(__('Reject Selected'), () => updateSelected('Rejected'));
+    frm.clear_custom_buttons();
+    if (!frm.is_new()) {
+      frm.add_custom_button(__('Prepare Selected'), () => updateSelected('Prepared'));
+      frm.add_custom_button(__('Reject Selected'), () => updateSelected('Rejected'));
+    }
+
+    if (grid?.add_custom_button) {
+      if (grid.clear_custom_buttons) {
+        grid.clear_custom_buttons();
+      }
+      grid.add_custom_button(__('Prepare Selected'), () => updateSelected('Prepared'));
+      grid.add_custom_button(__('Reject Selected'), () => updateSelected('Rejected'));
+    }
   },
 });
