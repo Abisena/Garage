@@ -32,6 +32,10 @@ def _resolve_service_order_from_invoice(invoice) -> str | None:
     if service_order:
         return service_order
 
+    po_no = getattr(invoice, "po_no", None)
+    if po_no and frappe.db.exists("Garage Service Order", po_no):
+        return po_no
+
     return None
 
 
