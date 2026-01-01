@@ -4,102 +4,94 @@
   "allow_guest_to_view": 0,
   "allow_import": 1,
   "allow_rename": 0,
-  "autoname": "autoincrement",
+  "autoname": "format:SIKK-{YYYY}-{#####}",
   "beta": 0,
   "creation": "2024-10-23 00:00:00.000000",
   "default_view": "Form",
   "disable_prepared_report": 0,
   "docstatus": 0,
   "doctype": "DocType",
-  "editable_grid": 0,
+  "editable_grid": 1,
   "engine": "InnoDB",
   "field_order": [
-    "service_order",
-    "payment_entry",
-    "receipt_number",
-    "branch",
-    "branch_code",
-    "permit_number",
+    "header_section",
     "sikk_number",
     "permit_type",
-    "column_break_dates",
-    "valid_from",
-    "valid_until",
+    "column_break_header",
+    "branch",
     "submission_date",
+    "section_break_quick_info",
+    "quick_info_html",
+    "reference_section",
+    "service_order",
+    "column_break_ref",
+    "payment_entry",
+    "receipt_number",
+    "permit_section",
+    "permit_number",
+    "valid_from",
+    "column_break_permit",
+    "valid_until",
     "requesting_unit",
+    "applicant_section",
     "applicant",
+    "column_break_applicant",
     "approved_by",
     "permit_notes",
     "vehicle_section",
     "vehicle",
     "license_plate",
     "vehicle_brand",
+    "column_break_vehicle",
     "vehicle_model",
     "vehicle_color",
     "transmission",
+    "body_notes_section",
     "body_notes",
     "personnel_section",
     "workshop_name",
+    "column_break_personnel",
     "responsible_person",
     "recipient_name",
+    "tab_break_checklist",
     "checklist_section",
     "checklist_instructions",
+    "checklist_progress_html",
     "completeness_checked",
     "spare_part_release_confirmed",
     "body_checked",
+    "checklist_column_break",
     "workshop_approved",
     "signature_captured",
     "stamped",
+    "handover_section",
     "handover_completed",
+    "column_break_handover",
     "handover_date",
-    "print_count"
+    "tab_break_summary",
+    "summary_section",
+    "summary_html",
+    "printing_section",
+    "print_count",
+    "section_break_hidden",
+    "branch_code"
   ],
   "fields": [
     {
-      "fieldname": "service_order",
-      "fieldtype": "Link",
-      "label": "Service Order",
-      "options": "Garage Service Order",
-      "in_list_view": 1
-    },
-    {
-      "fieldname": "payment_entry",
-      "fieldtype": "Link",
-      "label": "Payment Entry",
-      "options": "Payment Entry"
-    },
-    {
-      "fieldname": "receipt_number",
-      "fieldtype": "Data",
-      "label": "Receipt Number",
-      "in_list_view": 1
-    },
-    {
-      "fieldname": "branch",
-      "fieldtype": "Link",
-      "label": "Branch",
-      "options": "Garage Branch",
-      "reqd": 1
-    },
-    {
-      "fieldname": "branch_code",
-      "fieldtype": "Data",
-      "label": "Branch Code",
-      "fetch_from": "branch.branch_code",
-      "read_only": 1,
-      "hidden": 1
-    },
-    {
-      "fieldname": "permit_number",
-      "fieldtype": "Data",
-      "label": "Document Number",
-      "in_list_view": 1
+      "fieldname": "header_section",
+      "fieldtype": "Section Break",
+      "label": "🚗 Vehicle Handover / SIKK",
+      "collapsible": 0
     },
     {
       "fieldname": "sikk_number",
       "fieldtype": "Data",
       "label": "SIKK Number",
-      "in_list_view": 1
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "bold": 1,
+      "read_only": 1,
+      "description": "Auto-generated SIKK number"
     },
     {
       "fieldname": "permit_type",
@@ -107,60 +99,157 @@
       "label": "Jenis Perizinan",
       "options": "Keluar Workshop\nMasuk Workshop",
       "default": "Keluar Workshop",
-      "reqd": 1
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "bold": 1,
+      "description": "Type of vehicle movement"
     },
     {
-      "fieldname": "column_break_dates",
+      "fieldname": "column_break_header",
       "fieldtype": "Column Break"
     },
     {
-      "fieldname": "valid_from",
-      "fieldtype": "Date",
-      "label": "Periode Berlaku"
-    },
-    {
-      "fieldname": "valid_until",
-      "fieldtype": "Datetime",
-      "label": "Batas Waktu"
+      "fieldname": "branch",
+      "fieldtype": "Link",
+      "label": "Branch",
+      "options": "Garage Branch",
+      "reqd": 1,
+      "in_standard_filter": 1,
+      "bold": 1,
+      "description": "Workshop branch location"
     },
     {
       "fieldname": "submission_date",
       "fieldtype": "Date",
       "label": "Tanggal Pengajuan",
-      "default": "Today"
+      "default": "Today",
+      "reqd": 1,
+      "in_list_view": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "section_break_quick_info",
+      "fieldtype": "Section Break",
+      "label": "",
+      "collapsible": 0
+    },
+    {
+      "fieldname": "quick_info_html",
+      "fieldtype": "HTML",
+      "label": "Quick Info",
+      "options": "<div id='vehicle-handover-quick-info'></div>"
+    },
+    {
+      "fieldname": "reference_section",
+      "fieldtype": "Section Break",
+      "label": "🔗 Reference Information",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "service_order",
+      "fieldtype": "Link",
+      "label": "Service Order",
+      "options": "Garage Service Order",
+      "in_standard_filter": 1,
+      "description": "Link to service order (if applicable)"
+    },
+    {
+      "fieldname": "column_break_ref",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "payment_entry",
+      "fieldtype": "Link",
+      "label": "Payment Entry",
+      "options": "Payment Entry",
+      "description": "Link to payment entry (if applicable)"
+    },
+    {
+      "fieldname": "receipt_number",
+      "fieldtype": "Data",
+      "label": "Receipt Number",
+      "description": "Payment receipt number"
+    },
+    {
+      "fieldname": "permit_section",
+      "fieldtype": "Section Break",
+      "label": "📋 Permit Details",
+      "collapsible": 0
+    },
+    {
+      "fieldname": "permit_number",
+      "fieldtype": "Data",
+      "label": "Document Number",
+      "in_list_view": 1,
+      "description": "Official permit document number"
+    },
+    {
+      "fieldname": "valid_from",
+      "fieldtype": "Date",
+      "label": "Periode Berlaku",
+      "description": "Permit valid from date"
+    },
+    {
+      "fieldname": "column_break_permit",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "valid_until",
+      "fieldtype": "Datetime",
+      "label": "Batas Waktu",
+      "description": "Permit valid until (date & time)"
     },
     {
       "fieldname": "requesting_unit",
       "fieldtype": "Data",
-      "label": "Pengajuan Dari"
+      "label": "Pengajuan Dari",
+      "description": "Requesting department or unit"
+    },
+    {
+      "fieldname": "applicant_section",
+      "fieldtype": "Section Break",
+      "label": "👥 Applicant & Approval",
+      "collapsible": 1
     },
     {
       "fieldname": "applicant",
       "fieldtype": "Link",
       "label": "Pemohon",
-      "options": "User"
+      "options": "User",
+      "description": "Person who requested this permit"
+    },
+    {
+      "fieldname": "column_break_applicant",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "approved_by",
       "fieldtype": "Link",
       "label": "Disetujui Oleh",
-      "options": "User"
+      "options": "User",
+      "description": "Approving authority"
     },
     {
       "fieldname": "permit_notes",
-      "fieldtype": "Small Text",
-      "label": "Catatan"
+      "fieldtype": "Text Editor",
+      "label": "Catatan",
+      "description": "Additional notes or special instructions"
     },
     {
       "fieldname": "vehicle_section",
       "fieldtype": "Section Break",
-      "label": "Informasi Kendaraan"
+      "label": "🚙 Informasi Kendaraan",
+      "collapsible": 0
     },
     {
       "fieldname": "vehicle",
       "fieldtype": "Link",
       "label": "Kendaraan",
-      "options": "Garage Vehicle"
+      "options": "Garage Vehicle",
+      "reqd": 1,
+      "bold": 1,
+      "description": "Select vehicle"
     },
     {
       "fieldname": "license_plate",
@@ -168,7 +257,8 @@
       "label": "No. Polisi",
       "fetch_from": "vehicle.license_plate",
       "read_only": 1,
-      "in_list_view": 1
+      "in_list_view": 1,
+      "bold": 1
     },
     {
       "fieldname": "vehicle_brand",
@@ -176,6 +266,10 @@
       "label": "Merk",
       "fetch_from": "vehicle.brand",
       "read_only": 1
+    },
+    {
+      "fieldname": "column_break_vehicle",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "vehicle_model",
@@ -187,121 +281,216 @@
     {
       "fieldname": "vehicle_color",
       "fieldtype": "Data",
-      "label": "Warna"
+      "label": "Warna",
+      "description": "Vehicle color"
     },
     {
       "fieldname": "transmission",
       "fieldtype": "Select",
       "label": "Tipe / Transmisi",
-      "options": "AT\nMT"
+      "options": "\nAutomatic (AT)\nManual (MT)",
+      "description": "Transmission type"
+    },
+    {
+      "fieldname": "body_notes_section",
+      "fieldtype": "Section Break",
+      "label": "📝 Body Condition Notes",
+      "collapsible": 1
     },
     {
       "fieldname": "body_notes",
-      "fieldtype": "Small Text",
-      "label": "Catatan Bodi"
+      "fieldtype": "Text Editor",
+      "label": "Catatan Bodi",
+      "description": "Notes on vehicle body condition, scratches, dents, etc."
     },
     {
       "fieldname": "personnel_section",
       "fieldtype": "Section Break",
-      "label": "Pihak Keluarkan"
+      "label": "👤 Workshop Personnel",
+      "collapsible": 1
     },
     {
       "fieldname": "workshop_name",
       "fieldtype": "Data",
-      "label": "Bengkel"
+      "label": "Bengkel",
+      "description": "Workshop name"
+    },
+    {
+      "fieldname": "column_break_personnel",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "responsible_person",
       "fieldtype": "Link",
       "label": "Penanggung Jawab",
-      "options": "User"
+      "options": "User",
+      "description": "Person in charge"
     },
     {
       "fieldname": "recipient_name",
       "fieldtype": "Data",
-      "label": "Penerima"
+      "label": "Penerima",
+      "description": "Recipient name"
+    },
+    {
+      "fieldname": "tab_break_checklist",
+      "fieldtype": "Tab Break",
+      "label": "Security Checklist"
     },
     {
       "fieldname": "checklist_section",
       "fieldtype": "Section Break",
-      "label": "Checklist Security"
+      "label": "✅ Security Checklist",
+      "collapsible": 0
     },
     {
       "fieldname": "checklist_instructions",
       "fieldtype": "HTML",
-      "label": "Petunjuk Checklist",
-      "options": "<div class=\"text-muted\">Checklist Security wajib dilengkapi sebelum kendaraan keluar area bengkel.</div>"
+      "label": "Petunjuk",
+      "options": "<div class='checklist-instructions'><p style='color: #667eea; font-weight: 600; font-size: 14px; margin: 10px 0;'>🔒 Security: Checklist wajib dilengkapi sebelum kendaraan keluar area bengkel.</p></div>"
+    },
+    {
+      "fieldname": "checklist_progress_html",
+      "fieldtype": "HTML",
+      "label": "",
+      "options": "<div id='checklist-progress'></div>"
     },
     {
       "default": 0,
       "fieldname": "completeness_checked",
       "fieldtype": "Check",
-      "label": "Kelengkapan Kendaraan"
+      "label": "✓ Kelengkapan Kendaraan"
     },
     {
       "default": 0,
       "fieldname": "spare_part_release_confirmed",
       "fieldtype": "Check",
-      "label": "Pengeluaran Sparepart"
+      "label": "✓ Pengeluaran Sparepart"
     },
     {
       "default": 0,
       "fieldname": "body_checked",
       "fieldtype": "Check",
-      "label": "Checklist Bodi"
+      "label": "✓ Checklist Bodi"
+    },
+    {
+      "fieldname": "checklist_column_break",
+      "fieldtype": "Column Break"
     },
     {
       "default": 0,
       "fieldname": "workshop_approved",
       "fieldtype": "Check",
-      "label": "Persetujuan Workshop"
+      "label": "✓ Persetujuan Workshop"
     },
     {
       "default": 0,
       "fieldname": "signature_captured",
       "fieldtype": "Check",
-      "label": "TTD"
+      "label": "✓ TTD"
     },
     {
       "default": 0,
       "fieldname": "stamped",
       "fieldtype": "Check",
-      "label": "Stempel"
+      "label": "✓ Stempel"
+    },
+    {
+      "fieldname": "handover_section",
+      "fieldtype": "Section Break",
+      "label": "🤝 Handover Completion",
+      "collapsible": 0
     },
     {
       "default": 0,
       "fieldname": "handover_completed",
       "fieldtype": "Check",
-      "label": "Handover Selesai"
+      "label": "✅ Handover Selesai",
+      "bold": 1
+    },
+    {
+      "fieldname": "column_break_handover",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "handover_date",
       "fieldtype": "Datetime",
-      "label": "Tanggal Handover"
+      "label": "Tanggal Handover",
+      "bold": 1,
+      "description": "Date and time of handover completion"
+    },
+    {
+      "fieldname": "tab_break_summary",
+      "fieldtype": "Tab Break",
+      "label": "Summary & Print"
+    },
+    {
+      "fieldname": "summary_section",
+      "fieldtype": "Section Break",
+      "label": "📄 Document Summary",
+      "collapsible": 0
+    },
+    {
+      "fieldname": "summary_html",
+      "fieldtype": "HTML",
+      "label": "",
+      "options": "<div id='sikk-summary'></div>"
+    },
+    {
+      "fieldname": "printing_section",
+      "fieldtype": "Section Break",
+      "label": "🖨️ Printing Information",
+      "collapsible": 0
     },
     {
       "default": "0",
       "fieldname": "print_count",
       "fieldtype": "Int",
       "label": "Jumlah Cetak SIKK",
-      "read_only": 1
+      "read_only": 1,
+      "bold": 1,
+      "description": "Number of times SIKK has been printed"
+    },
+    {
+      "fieldname": "section_break_hidden",
+      "fieldtype": "Section Break",
+      "label": "Hidden Fields",
+      "collapsible": 1,
+      "collapsed": 1
+    },
+    {
+      "fieldname": "branch_code",
+      "fieldtype": "Data",
+      "label": "Branch Code",
+      "fetch_from": "branch.branch_code",
+      "read_only": 1,
+      "hidden": 1
     }
   ],
   "has_web_view": 0,
   "hide_heading": 0,
   "hide_toolbar": 0,
-  "index_web_pages_for_search": 0,
+  "index_web_pages_for_search": 1,
   "inline_filters": 0,
   "is_published_field": "",
   "issingle": 0,
   "istable": 0,
-  "links": [],
+  "links": [
+    {
+      "link_doctype": "Garage Service Order",
+      "link_fieldname": "name"
+    },
+    {
+      "link_doctype": "Payment Entry",
+      "link_fieldname": "name"
+    }
+  ],
   "make_attachments_public": 0,
-  "max_attachments": 0,
+  "max_attachments": 10,
   "modified": "2024-10-23 00:00:00.000000",
   "module": "Garage",
   "name": "Vehicle Handover",
-  "naming_rule": "",
+  "naming_rule": "By \"Naming Series\" field",
   "owner": "Administrator",
   "permissions": [
     {
@@ -314,22 +503,48 @@
       "print": 1,
       "share": 1,
       "export": 1
+    },
+    {
+      "role": "Garage Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1
+    },
+    {
+      "role": "Garage User",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 0,
+      "email": 1,
+      "print": 1
+    },
+    {
+      "role": "Security User",
+      "create": 0,
+      "read": 1,
+      "write": 1,
+      "delete": 0,
+      "print": 1
     }
   ],
   "quick_entry": 0,
   "read_only": 0,
   "read_only_onload": 0,
   "show_name_in_global_search": 1,
-  "show_preview_popup": 0,
-  "show_title_field_in_link": 0,
+  "show_preview_popup": 1,
+  "show_title_field_in_link": 1,
   "sort_field": "modified",
   "sort_order": "DESC",
   "states": [],
   "subject": "",
   "title_field": "sikk_number",
   "track_changes": 1,
-  "track_seen": 0,
+  "track_seen": 1,
   "translated_doctype": 0,
   "migration_hash": "",
-  "description": "Vehicle Handover / SIKK document capturing branch, permit validity, vehicle details, and security checklist for manual or web entries."
+  "description": "SIKK (Surat Izin Keluar/Masuk Kendaraan) - Vehicle handover document with security checklist and approval workflow"
 }
