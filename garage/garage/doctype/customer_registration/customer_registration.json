@@ -136,14 +136,12 @@
     {
       "fieldname": "chassiss_bumber",
       "fieldtype": "Int",
-      "label": "Chassis Number",
-      "reqd": 1
+      "label": "Chassis Number"
     },
     {
       "fieldname": "engine_number",
       "fieldtype": "Int",
-      "label": "Engine Number",
-      "reqd": 1
+      "label": "Engine Number"
     },
     {
       "fieldname": "column_break_v2",
