@@ -398,7 +398,7 @@ class RepairQC(Document):
             if not si.posting_date:
                 si.posting_date = nowdate()
             if not si.due_date:
-                si.due_date = nowdate()
+                si.due_date = si.posting_date or nowdate()
             
             # Fix write-off
             si.base_write_off_amount = flt(si.base_write_off_amount or 0)
