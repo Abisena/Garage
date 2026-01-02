@@ -3,7 +3,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt, nowdate
+from frappe.utils import flt, nowdate, getdate, today
 
 
 class RepairQC(Document):
@@ -369,12 +369,15 @@ class RepairQC(Document):
 
         # Create Sales Invoice
         try:
+            # Get proper posting date
+            posting_date = getdate(nowdate()) if nowdate() else getdate(today())
+            
             si = frappe.new_doc("Sales Invoice")
             si.customer = customer_name
             si.company = company
-            si.posting_date = nowdate()
+            si.posting_date = posting_date
             si.set_posting_time = 1
-            si.due_date = nowdate()
+            si.due_date = posting_date
             si.po_no = service_order.name
             si.remarks = f"Auto-generated from Repair QC {self.name} (Service Order {service_order.name})"
             
@@ -396,9 +399,9 @@ class RepairQC(Document):
 
             # Ensure required dates are set after hooks
             if not si.posting_date:
-                si.posting_date = nowdate()
+                si.posting_date = posting_date
             if not si.due_date:
-                si.due_date = si.posting_date or nowdate()
+                si.due_date = posting_date
             
             # Fix write-off
             si.base_write_off_amount = flt(si.base_write_off_amount or 0)
@@ -673,14 +676,17 @@ class RepairQC(Document):
         try:
             from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
             
+            # Get proper posting date
+            posting_date = getdate(nowdate()) if nowdate() else getdate(today())
+            
             pe = get_payment_entry("Sales Invoice", invoice.get("name"))
             
             if self._doctype_has_field("Payment Entry", "branch"):
                 pe.branch = frappe.db.get_value("Sales Invoice", invoice.get("name"), "branch")
             
-            pe.posting_date = nowdate()
+            pe.posting_date = posting_date
             pe.reference_no = f"QC-{self.name}"
-            pe.reference_date = nowdate()
+            pe.reference_date = posting_date
             pe.remarks = f"Auto-generated from Repair QC {self.name}"
             
             pe.insert(ignore_permissions=True)
