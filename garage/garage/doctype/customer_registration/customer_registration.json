@@ -21,7 +21,9 @@
     
     "vehicle_info",
     "vehicle_type",
+    "chassiss_bumber",
     "vehicle_year",
+    "engine_number",
     "column_break_v2",
     "mileage",
     
@@ -130,6 +132,18 @@
       "fieldtype": "Int",
       "label": "Year",
       "description": "What year was it made?"
+    },
+    {
+      "fieldname": "chassiss_bumber",
+      "fieldtype": "Int",
+      "label": "Chassis Number",
+      "reqd": 1,
+    },
+    {
+      "fieldname": "engine_number",
+      "fieldtype": "Int",
+      "label": "Engine Number",
+      "reqd": 1,
     },
     {
       "fieldname": "column_break_v2",
