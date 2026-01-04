@@ -335,10 +335,10 @@ class RepairQC(Document):
                 alert=True
             )
             return None
+        from garage.api.portal import _ensure_erp_customer, _apply_ppn_pricing
+
         customer_name = None
         try:
-            from garage.api.portal import _ensure_erp_customer
-
             customer_name = _ensure_erp_customer(
                 customer_link, service_order.get("branch")
             )
@@ -392,9 +392,15 @@ class RepairQC(Document):
             # Add items
             for item in items:
                 si.append("items", item)
+
+            base_total = sum(
+                flt(item.get("rate") or 0) * flt(item.get("qty") or 0)
+                for item in items
+            )
             
             # Calculate totals
             si.run_method("set_missing_values")
+            _apply_ppn_pricing(si, base_total)
             si.calculate_taxes_and_totals()
 
             # Ensure required dates are set after hooks
