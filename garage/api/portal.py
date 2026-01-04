@@ -165,6 +165,30 @@ def _doctype_has_field(doctype: str, field: str) -> bool:
         return False
 
 
+PPN_RATE = 0.11
+
+
+def _apply_ppn_pricing(
+    invoice_doc: frappe.Document, base_total: Optional[float] = None
+) -> float:
+    dpp_total = 0.0
+    for item in invoice_doc.items or []:
+        base_rate = flt(getattr(item, "rate", None) or 0)
+        qty = flt(getattr(item, "qty", None) or 0)
+        dpp_total += base_rate * qty
+
+        if base_rate:
+            item.rate = flt(base_rate * (1 + PPN_RATE))
+
+    if base_total is not None:
+        dpp_total = flt(base_total)
+
+    if _doctype_has_field("Sales Invoice", "total_amount"):
+        invoice_doc.total_amount = dpp_total
+
+    return dpp_total
+
+
 @lru_cache(maxsize=None)
 def _default_branch(user: str) -> Optional[str]:
     allowed = _allowed_branches(user)
@@ -4552,6 +4576,8 @@ def _ensure_billing_placeholders(
             return None
 
         invoice_doc.run_method("set_missing_values")
+        base_total = max(parts_total + labor_amount, total_amount)
+        _apply_ppn_pricing(invoice_doc, base_total)
         invoice_doc.calculate_taxes_and_totals()
 
         # ✅ avoid NoneType write-off crash
