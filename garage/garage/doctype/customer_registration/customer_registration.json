@@ -52,8 +52,7 @@
     "vehicle",
     "customer",
     "column_break_sys",
-    "service_order",
-    "workflow_state"
+    "service_order"
   ],
 
   "fields": [
@@ -319,16 +318,6 @@
       "label": "Service Order",
       "options": "Garage Service Order",
       "read_only": 1
-    },
-    {
-      "fieldname": "workflow_state",
-      "fieldtype": "Select",
-      "label": "Status",
-      "options": "Draft\nRegistered\nIn Progress\nCompleted\nCancelled",
-      "default": "Draft",
-      "read_only": 1,
-      "in_list_view": 1,
-      "bold": 1
     }
   ],
 
