@@ -286,6 +286,7 @@ fixtures = [
                 "Garage Service Order Print",
                 "Garage Sales Invoice Print",
                 "Garage Spare Part Request Print",
+                "Garage Vehicle Handover Print",
             ],
         ]],
     },
