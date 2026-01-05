@@ -32,7 +32,7 @@
     "vehicle_type",
     "vehicle_year",
     "column_break_v2",
-    "chassiss_bumber",
+    "chassiss_number",
     "engine_number",
     
     "service_section",
@@ -204,7 +204,7 @@
       "fieldtype": "Column Break"
     },
     {
-      "fieldname": "chassiss_bumber",
+      "fieldname": "chassiss_number",
       "fieldtype": "Data",
       "label": "Chassis Number",
       "description": "17-digit VIN"
