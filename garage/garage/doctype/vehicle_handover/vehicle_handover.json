@@ -8,8 +8,6 @@
   "beta": 0,
   "creation": "2024-10-23 00:00:00.000000",
   "default_view": "Form",
-  "disable_prepared_report": 0,
-  "docstatus": 0,
   "doctype": "DocType",
   "editable_grid": 1,
   "engine": "InnoDB",
@@ -28,15 +26,9 @@
     "payment_entry",
     "receipt_number",
     "permit_section",
-    "permit_number",
     "valid_from",
     "column_break_permit",
     "valid_until",
-    "requesting_unit",
-    "applicant_section",
-    "applicant",
-    "column_break_applicant",
-    "approved_by",
     "permit_notes",
     "vehicle_section",
     "vehicle",
@@ -44,15 +36,8 @@
     "vehicle_brand",
     "column_break_vehicle",
     "vehicle_model",
-    "vehicle_color",
-    "transmission",
     "body_notes_section",
     "body_notes",
-    "personnel_section",
-    "workshop_name",
-    "column_break_personnel",
-    "responsible_person",
-    "recipient_name",
     "tab_break_checklist",
     "checklist_section",
     "checklist_instructions",
@@ -68,9 +53,6 @@
     "handover_completed",
     "column_break_handover",
     "handover_date",
-    "tab_break_summary",
-    "summary_section",
-    "summary_html",
     "printing_section",
     "print_count",
     "section_break_hidden",
@@ -174,15 +156,8 @@
     {
       "fieldname": "permit_section",
       "fieldtype": "Section Break",
-      "label": "📋 Permit Details",
-      "collapsible": 0
-    },
-    {
-      "fieldname": "permit_number",
-      "fieldtype": "Data",
-      "label": "Document Number",
-      "in_list_view": 1,
-      "description": "Official permit document number"
+      "label": "📋 Permit Validity",
+      "collapsible": 1
     },
     {
       "fieldname": "valid_from",
@@ -199,36 +174,6 @@
       "fieldtype": "Datetime",
       "label": "Batas Waktu",
       "description": "Permit valid until (date & time)"
-    },
-    {
-      "fieldname": "requesting_unit",
-      "fieldtype": "Data",
-      "label": "Pengajuan Dari",
-      "description": "Requesting department or unit"
-    },
-    {
-      "fieldname": "applicant_section",
-      "fieldtype": "Section Break",
-      "label": "👥 Applicant & Approval",
-      "collapsible": 1
-    },
-    {
-      "fieldname": "applicant",
-      "fieldtype": "Link",
-      "label": "Pemohon",
-      "options": "User",
-      "description": "Person who requested this permit"
-    },
-    {
-      "fieldname": "column_break_applicant",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "approved_by",
-      "fieldtype": "Link",
-      "label": "Disetujui Oleh",
-      "options": "User",
-      "description": "Approving authority"
     },
     {
       "fieldname": "permit_notes",
@@ -279,19 +224,6 @@
       "read_only": 1
     },
     {
-      "fieldname": "vehicle_color",
-      "fieldtype": "Data",
-      "label": "Warna",
-      "description": "Vehicle color"
-    },
-    {
-      "fieldname": "transmission",
-      "fieldtype": "Select",
-      "label": "Tipe / Transmisi",
-      "options": "\nAutomatic (AT)\nManual (MT)",
-      "description": "Transmission type"
-    },
-    {
       "fieldname": "body_notes_section",
       "fieldtype": "Section Break",
       "label": "📝 Body Condition Notes",
@@ -302,35 +234,6 @@
       "fieldtype": "Text Editor",
       "label": "Catatan Bodi",
       "description": "Notes on vehicle body condition, scratches, dents, etc."
-    },
-    {
-      "fieldname": "personnel_section",
-      "fieldtype": "Section Break",
-      "label": "👤 Workshop Personnel",
-      "collapsible": 1
-    },
-    {
-      "fieldname": "workshop_name",
-      "fieldtype": "Data",
-      "label": "Bengkel",
-      "description": "Workshop name"
-    },
-    {
-      "fieldname": "column_break_personnel",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "responsible_person",
-      "fieldtype": "Link",
-      "label": "Penanggung Jawab",
-      "options": "User",
-      "description": "Person in charge"
-    },
-    {
-      "fieldname": "recipient_name",
-      "fieldtype": "Data",
-      "label": "Penerima",
-      "description": "Recipient name"
     },
     {
       "fieldname": "tab_break_checklist",
@@ -347,7 +250,7 @@
       "fieldname": "checklist_instructions",
       "fieldtype": "HTML",
       "label": "Petunjuk",
-      "options": "<div class='checklist-instructions'><p style='color: #667eea; font-weight: 600; font-size: 14px; margin: 10px 0;'>🔒 Security: Checklist wajib dilengkapi sebelum kendaraan keluar area bengkel.</p></div>"
+      "options": "<div class='alert alert-info' style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white; border-radius: 8px; padding: 15px; margin-bottom: 20px;'><h5 style='color: white; margin: 0 0 8px 0; font-weight: 700;'>🔒 Security Checklist</h5><p style='margin: 0; font-size: 13px;'>Checklist wajib dilengkapi sebelum kendaraan keluar area bengkel. Pastikan semua item sudah dicentang untuk keamanan maksimal.</p></div>"
     },
     {
       "fieldname": "checklist_progress_html",
@@ -359,19 +262,22 @@
       "default": 0,
       "fieldname": "completeness_checked",
       "fieldtype": "Check",
-      "label": "✓ Kelengkapan Kendaraan"
+      "label": "✓ Kelengkapan Kendaraan",
+      "description": "Pastikan semua kelengkapan kendaraan ada (ban serep, dongkrak, kunci roda, dll)"
     },
     {
       "default": 0,
       "fieldname": "spare_part_release_confirmed",
       "fieldtype": "Check",
-      "label": "✓ Pengeluaran Sparepart"
+      "label": "✓ Pengeluaran Sparepart",
+      "description": "Konfirmasi sparepart yang diganti sudah dicatat"
     },
     {
       "default": 0,
       "fieldname": "body_checked",
       "fieldtype": "Check",
-      "label": "✓ Checklist Bodi"
+      "label": "✓ Checklist Bodi",
+      "description": "Kondisi bodi kendaraan sudah dicek dan dicatat"
     },
     {
       "fieldname": "checklist_column_break",
@@ -381,19 +287,22 @@
       "default": 0,
       "fieldname": "workshop_approved",
       "fieldtype": "Check",
-      "label": "✓ Persetujuan Workshop"
+      "label": "✓ Persetujuan Workshop",
+      "description": "Pekerjaan sudah disetujui oleh workshop supervisor"
     },
     {
       "default": 0,
       "fieldname": "signature_captured",
       "fieldtype": "Check",
-      "label": "✓ TTD"
+      "label": "✓ Tanda Tangan",
+      "description": "Tanda tangan customer sudah diperoleh"
     },
     {
       "default": 0,
       "fieldname": "stamped",
       "fieldtype": "Check",
-      "label": "✓ Stempel"
+      "label": "✓ Stempel",
+      "description": "Dokumen sudah distempel"
     },
     {
       "fieldname": "handover_section",
@@ -406,7 +315,8 @@
       "fieldname": "handover_completed",
       "fieldtype": "Check",
       "label": "✅ Handover Selesai",
-      "bold": 1
+      "bold": 1,
+      "description": "Centang jika proses handover sudah selesai"
     },
     {
       "fieldname": "column_break_handover",
@@ -420,27 +330,11 @@
       "description": "Date and time of handover completion"
     },
     {
-      "fieldname": "tab_break_summary",
-      "fieldtype": "Tab Break",
-      "label": "Summary & Print"
-    },
-    {
-      "fieldname": "summary_section",
-      "fieldtype": "Section Break",
-      "label": "📄 Document Summary",
-      "collapsible": 0
-    },
-    {
-      "fieldname": "summary_html",
-      "fieldtype": "HTML",
-      "label": "",
-      "options": "<div id='sikk-summary'></div>"
-    },
-    {
       "fieldname": "printing_section",
       "fieldtype": "Section Break",
       "label": "🖨️ Printing Information",
-      "collapsible": 0
+      "collapsible": 1,
+      "collapsed": 1
     },
     {
       "default": "0",
@@ -468,13 +362,8 @@
     }
   ],
   "has_web_view": 0,
-  "hide_heading": 0,
   "hide_toolbar": 0,
   "index_web_pages_for_search": 1,
-  "inline_filters": 0,
-  "is_published_field": "",
-  "issingle": 0,
-  "istable": 0,
   "links": [
     {
       "link_doctype": "Garage Service Order",
@@ -485,7 +374,6 @@
       "link_fieldname": "name"
     }
   ],
-  "make_attachments_public": 0,
   "max_attachments": 10,
   "modified": "2024-10-23 00:00:00.000000",
   "module": "Garage",
@@ -532,19 +420,13 @@
     }
   ],
   "quick_entry": 0,
-  "read_only": 0,
-  "read_only_onload": 0,
   "show_name_in_global_search": 1,
   "show_preview_popup": 1,
   "show_title_field_in_link": 1,
   "sort_field": "modified",
   "sort_order": "DESC",
-  "states": [],
-  "subject": "",
   "title_field": "sikk_number",
   "track_changes": 1,
   "track_seen": 1,
-  "translated_doctype": 0,
-  "migration_hash": "",
   "description": "SIKK (Surat Izin Keluar/Masuk Kendaraan) - Vehicle handover document with security checklist and approval workflow"
 }
