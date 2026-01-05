@@ -40,6 +40,7 @@
     "priority",
     "column_break_s1",
     "estimated_duration",
+    "service_booking_date",
     "preferred_date",
     
     "complaint_section",
@@ -250,6 +251,14 @@
       "label": "Estimated Duration",
       "options": "\n30 Minutes\n1 Hour\n2 Hours\n3 Hours\n4+ Hours\nFull Day",
       "description": "Approximate service time"
+    },
+    {
+      "fieldname": "service_booking_date",
+      "fieldtype": "Datetime",
+      "label": "Booking Date & Time",
+      "depends_on": "eval:doc.intake_type=='Booking'",
+      "mandatory_depends_on": "eval:doc.intake_type=='Booking'",
+      "description": "Scheduled appointment time for booking"
     },
     {
       "fieldname": "preferred_date",

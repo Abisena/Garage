@@ -180,23 +180,11 @@ jinja = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"garage.tasks.all"
-# 	],
-# 	"daily": [
-# 		"garage.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"garage.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"garage.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"garage.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"hourly": [
+		"garage.garage.doctype.customer_registration.customer_registration.process_booking_registrations"
+	]
+}
 
 # Testing
 # -------

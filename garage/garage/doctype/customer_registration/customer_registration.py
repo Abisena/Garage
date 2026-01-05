@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import get_datetime, now_datetime
 
 from garage.api import portal
 from garage.garage.doctype.customer_entry.customer_entry import create_from_registration
@@ -49,6 +50,7 @@ SERVICE_FIELDS = (
     "service_bundle_name",
     "priority",
     "intake_type",
+    "service_booking_date",
     "notes",
     "complaint",  # Added complaint field
     "service_notes",
@@ -82,7 +84,8 @@ class CustomerRegistration(Document):
         self._sync_master_records()
 
     def after_insert(self):
-        create_from_registration(self)
+        if self.service_order:
+            create_from_registration(self)
 
     def _apply_branch_default(self) -> None:
         """Ensure the intake inherits the user's preferred branch when blank."""
@@ -101,6 +104,8 @@ class CustomerRegistration(Document):
             return
 
         payload = self._as_portal_payload()
+        if self._should_defer_service_order():
+            payload["defer_service_order"] = True
         result = portal.register_customer_vehicle(payload=payload)
 
         created = result.get("created", {}) if isinstance(result, dict) else {}
@@ -115,6 +120,20 @@ class CustomerRegistration(Document):
             customer_name = created.get("customer_name")
             if customer_name:
                 self.customer_name = customer_name
+
+    def _should_defer_service_order(self) -> bool:
+        if (self.intake_type or "").strip() != "Booking":
+            return False
+
+        booking_value = self.get("service_booking_date")
+        if not booking_value:
+            return False
+
+        booking_dt = get_datetime(booking_value)
+        if not booking_dt:
+            return False
+
+        return booking_dt > now_datetime()
 
     def _as_portal_payload(self) -> Dict[str, Any]:
         payload: Dict[str, Any] = {}
@@ -191,3 +210,55 @@ def _require_login() -> None:
     if frappe.session.user and frappe.session.user != "Guest":
         return
     frappe.throw(_("You must be logged in to perform this action."), frappe.PermissionError)
+
+
+def process_booking_registrations() -> None:
+    """Create service orders for bookings that are due today or earlier."""
+
+    now_value = now_datetime()
+    booking_filters = {
+        "intake_type": "Booking",
+        "service_order": ["is", "not set"],
+        "service_booking_date": ["<=", now_value],
+    }
+
+    registrations = frappe.get_all(
+        "Customer Registration",
+        filters=booking_filters,
+        fields=["name"],
+        order_by="service_booking_date asc",
+    )
+
+    for row in registrations:
+        registration_name = row.get("name")
+        if not registration_name:
+            continue
+        try:
+            _create_service_order_for_booking(registration_name)
+        except Exception:
+            frappe.log_error(
+                title="Failed to create booking service order",
+                message=f"Booking registration {registration_name} could not be processed.",
+            )
+
+
+def _create_service_order_for_booking(registration_name: str) -> None:
+    registration = frappe.get_doc("Customer Registration", registration_name)
+    if not registration or registration.service_order:
+        return
+
+    payload = registration._as_portal_payload()
+    if registration.customer:
+        payload["existing_customer"] = registration.customer
+
+    result = portal.register_customer_vehicle(payload=payload)
+    created = result.get("created", {}) if isinstance(result, dict) else {}
+    service_order = created.get("service_order") or result.get("service_order")
+
+    if not service_order:
+        return
+
+    registration.service_order = service_order
+    registration.flags.ignore_permissions = True
+    registration.save(ignore_permissions=True)
+    create_from_registration(registration)

@@ -6978,7 +6978,9 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
 
     created["customer_name"] = customer_name
 
-    if customer_name and vehicle_name:
+    defer_service_order = bool(data.get("defer_service_order"))
+
+    if customer_name and vehicle_name and not defer_service_order:
         service_payload: Dict[str, Any] = {
             "customer": customer_name,
             "vehicle": vehicle_name,
