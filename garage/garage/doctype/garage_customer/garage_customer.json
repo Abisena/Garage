@@ -8,38 +8,52 @@
   "beta": 0,
   "creation": "2024-06-02 00:00:00.000000",
   "default_view": "Form",
-  "disable_prepared_report": 0,
-  "docstatus": 0,
   "doctype": "DocType",
   "editable_grid": 0,
   "engine": "InnoDB",
   "field_order": [
+    "basic_info_section",
     "customer_name",
     "customer_type",
     "branch",
+    "column_break_basic",
     "registration_date",
     "registration_time",
+    "is_vip",
+    "section_break_contact",
     "phone",
     "email",
+    "column_break_contact",
     "preferred_contact_method",
     "id_number",
+    "section_break_address",
     "address_line1",
     "address_line2",
+    "column_break_address",
     "city",
     "state",
     "postal_code",
     "country",
+    "section_break_additional",
     "marketing_source",
-    "is_vip",
+    "column_break_additional",
     "notes"
   ],
   "fields": [
+    {
+      "fieldname": "basic_info_section",
+      "fieldtype": "Section Break",
+      "label": "👤 Basic Information",
+      "collapsible": 0
+    },
     {
       "fieldname": "customer_name",
       "fieldtype": "Data",
       "label": "Customer Name",
       "reqd": 1,
-      "in_list_view": 1
+      "in_list_view": 1,
+      "bold": 1,
+      "description": "Full name of the customer"
     },
     {
       "fieldname": "customer_type",
@@ -47,7 +61,8 @@
       "label": "Customer Type",
       "options": "Individual\nCorporate",
       "default": "Individual",
-      "in_list_view": 1
+      "in_list_view": 1,
+      "description": "Select customer category"
     },
     {
       "fieldname": "branch",
@@ -55,109 +70,164 @@
       "label": "Branch",
       "options": "Garage Branch",
       "reqd": 1,
-      "in_list_view": 1
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "bold": 1,
+      "description": "Home branch for this customer"
+    },
+    {
+      "fieldname": "column_break_basic",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "registration_date",
       "fieldtype": "Date",
       "label": "Tanggal Registrasi",
       "read_only": 1,
-      "default": "Today"
+      "default": "Today",
+      "description": "Customer registration date"
     },
     {
       "fieldname": "registration_time",
       "fieldtype": "Time",
       "label": "Jam Registrasi",
-      "read_only": 1
+      "read_only": 1,
+      "description": "Customer registration time"
+    },
+    {
+      "fieldname": "is_vip",
+      "fieldtype": "Check",
+      "label": "⭐ VIP Customer",
+      "default": 0,
+      "description": "Mark as VIP for priority service"
+    },
+    {
+      "fieldname": "section_break_contact",
+      "fieldtype": "Section Break",
+      "label": "📞 Contact Information",
+      "collapsible": 0
     },
     {
       "fieldname": "phone",
       "fieldtype": "Data",
-      "label": "Phone",
-      "in_list_view": 1
+      "label": "Phone Number",
+      "in_list_view": 1,
+      "reqd": 1,
+      "description": "Primary contact number"
     },
     {
       "fieldname": "email",
       "fieldtype": "Data",
-      "label": "Email"
+      "label": "Email Address",
+      "options": "Email",
+      "description": "Email for notifications and invoices"
+    },
+    {
+      "fieldname": "column_break_contact",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "preferred_contact_method",
       "fieldtype": "Select",
-      "label": "Preferred Contact",
+      "label": "Preferred Contact Method",
       "options": "Phone\nEmail\nWhatsApp",
-      "default": "Phone"
+      "default": "Phone",
+      "description": "How customer prefers to be contacted"
     },
     {
       "fieldname": "id_number",
       "fieldtype": "Data",
-      "label": "Identity Number"
+      "label": "Identity Number (KTP/SIM)",
+      "description": "National ID or Driver's License number"
+    },
+    {
+      "fieldname": "section_break_address",
+      "fieldtype": "Section Break",
+      "label": "📍 Address Information",
+      "collapsible": 1
     },
     {
       "fieldname": "address_line1",
       "fieldtype": "Small Text",
-      "label": "Address Line 1"
+      "label": "Address Line 1",
+      "description": "Street address, P.O. box, company name, etc."
     },
     {
       "fieldname": "address_line2",
       "fieldtype": "Small Text",
-      "label": "Address Line 2"
+      "label": "Address Line 2",
+      "description": "Apartment, suite, unit, building, floor, etc."
+    },
+    {
+      "fieldname": "column_break_address",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "city",
       "fieldtype": "Data",
-      "label": "City"
+      "label": "City",
+      "description": "City or locality"
     },
     {
       "fieldname": "state",
       "fieldtype": "Data",
-      "label": "State/Province"
+      "label": "State/Province",
+      "description": "State, province, or region"
     },
     {
       "fieldname": "postal_code",
       "fieldtype": "Data",
-      "label": "Postal Code"
+      "label": "Postal Code",
+      "description": "ZIP or postal code"
     },
     {
       "fieldname": "country",
       "fieldtype": "Data",
       "label": "Country",
-      "default": "Indonesia"
+      "default": "Indonesia",
+      "description": "Country"
+    },
+    {
+      "fieldname": "section_break_additional",
+      "fieldtype": "Section Break",
+      "label": "ℹ️ Additional Information",
+      "collapsible": 1
     },
     {
       "fieldname": "marketing_source",
       "fieldtype": "Select",
-      "label": "Marketing Source",
-      "options": "Walk In\nReferral\nOnline\nSocial Media\nOther"
+      "label": "How Did You Hear About Us?",
+      "options": "\nWalk In\nReferral\nOnline Search\nSocial Media\nAdvertisement\nOther",
+      "description": "Marketing source or channel"
     },
     {
-      "fieldname": "is_vip",
-      "fieldtype": "Check",
-      "label": "VIP Customer"
+      "fieldname": "column_break_additional",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "notes",
       "fieldtype": "Small Text",
-      "label": "Notes"
+      "label": "Notes",
+      "description": "Additional notes or special requirements"
     }
   ],
   "has_web_view": 0,
-  "hide_heading": 0,
   "hide_toolbar": 0,
-  "idx": 0,
-  "image_field": "",
-  "in_create": 0,
-  "info_fields": [],
-  "is_submittable": 0,
-  "issingle": 0,
-  "istable": 0,
-  "links": [],
-  "make_attachments_public": 0,
-  "max_attachments": 0,
+  "index_web_pages_for_search": 1,
+  "links": [
+    {
+      "link_doctype": "Garage Service Order",
+      "link_fieldname": "customer"
+    },
+    {
+      "link_doctype": "Garage Vehicle",
+      "link_fieldname": "owner"
+    }
+  ],
   "modified": "2024-06-02 00:00:00.000000",
   "module": "Garage",
   "name": "Garage Customer",
-  "naming_rule": "",
+  "naming_rule": "By \"Naming Series\" field",
   "owner": "Administrator",
   "permissions": [
     {
@@ -170,21 +240,32 @@
       "print": 1,
       "share": 1,
       "export": 1
+    },
+    {
+      "role": "Garage Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1
+    },
+    {
+      "role": "Garage User",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 0,
+      "email": 1,
+      "print": 1
     }
   ],
-  "quick_entry": 0,
-  "read_only": 0,
-  "read_only_onload": 0,
+  "quick_entry": 1,
   "show_name_in_global_search": 1,
-  "show_preview_popup": 0,
+  "show_preview_popup": 1,
   "sort_field": "modified",
   "sort_order": "DESC",
-  "states": [],
-  "subject": "",
   "title_field": "customer_name",
   "track_changes": 1,
-  "track_seen": 0,
-  "translated_doctype": 0,
-  "migration_hash": "",
   "description": "Master data for workshop customers, covering contact and preference details."
 }
