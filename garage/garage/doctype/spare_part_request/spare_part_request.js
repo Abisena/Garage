@@ -1,13 +1,10 @@
 // Client Script for Spare Part Request
-// Full-featured with simplified action buttons
+// Simplified version without Request Summary banner
 
 frappe.ui.form.on('Spare Part Request', {
     refresh: function(frm) {
         // Add ONLY simplified buttons
         add_simple_buttons(frm);
-        
-        // Update quick info card
-        update_quick_info_card(frm);
         
         // Set status indicator
         update_status_indicator(frm);
@@ -36,7 +33,6 @@ frappe.ui.form.on('Spare Part Request', {
     status: function(frm) {
         // Update indicators
         update_status_indicator(frm);
-        update_quick_info_card(frm);
         
         // Show alerts
         show_status_alerts(frm);
@@ -146,85 +142,13 @@ function add_simple_buttons(frm) {
 }
 
 // ========================================
-// QUICK INFO CARD
-// ========================================
-function update_quick_info_card(frm) {
-    if (frm.is_new()) return;
-    
-    const items_count = (frm.doc.items || []).length;
-    const approved_count = (frm.doc.items || []).filter(i => i.approval_status === 'Approved').length;
-    const rejected_count = (frm.doc.items || []).filter(i => i.approval_status === 'Rejected').length;
-    const pending_count = items_count - approved_count - rejected_count;
-    
-    const total_qty = calculate_total_qty(frm);
-    
-    const status_colors = {
-        'Pending': '#f59e0b',
-        'Partial Approve': '#3b82f6',
-        'Partial Reject': '#f97316',
-        'Prepared': '#22c55e',
-        'Rejected': '#ef4444'
-    };
-    
-    const status_color = status_colors[frm.doc.status] || '#9ca3af';
-    
-    const html = `
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin: 10px 0 20px 0; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h4 style="margin: 0; font-size: 18px;">📦 Request Summary</h4>
-                <div style="background: ${status_color}; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase;">
-                    ${frm.doc.status || 'Pending'}
-                </div>
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
-                <div style="background: rgba(255, 255, 255, 0.15); padding: 12px; border-radius: 8px; backdrop-filter: blur(10px);">
-                    <div style="font-size: 11px; opacity: 0.9;">Total Items</div>
-                    <div style="font-size: 18px; font-weight: 700;">${items_count}</div>
-                </div>
-                <div style="background: rgba(34, 197, 94, 0.3); padding: 12px; border-radius: 8px; backdrop-filter: blur(10px);">
-                    <div style="font-size: 11px; opacity: 0.9;">✅ Approved</div>
-                    <div style="font-size: 18px; font-weight: 700;">${approved_count}</div>
-                </div>
-                <div style="background: rgba(239, 68, 68, 0.3); padding: 12px; border-radius: 8px; backdrop-filter: blur(10px);">
-                    <div style="font-size: 11px; opacity: 0.9;">❌ Rejected</div>
-                    <div style="font-size: 18px; font-weight: 700;">${rejected_count}</div>
-                </div>
-                <div style="background: rgba(245, 158, 11, 0.3); padding: 12px; border-radius: 8px; backdrop-filter: blur(10px);">
-                    <div style="font-size: 11px; opacity: 0.9;">⏳ Pending</div>
-                    <div style="font-size: 18px; font-weight: 700;">${pending_count}</div>
-                </div>
-                <div style="background: rgba(255, 255, 255, 0.15); padding: 12px; border-radius: 8px; backdrop-filter: blur(10px);">
-                    <div style="font-size: 11px; opacity: 0.9;">Total Quantity</div>
-                    <div style="font-size: 18px; font-weight: 700;">${total_qty}</div>
-                </div>
-                <div style="background: rgba(255, 255, 255, 0.15); padding: 12px; border-radius: 8px; backdrop-filter: blur(10px);">
-                    <div style="font-size: 11px; opacity: 0.9;">Priority</div>
-                    <div style="font-size: 18px; font-weight: 700;">${get_priority_emoji(frm.doc.priority)} ${frm.doc.priority || 'Normal'}</div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    $('#spare-part-request-quick-info').html(html);
-}
-
-function get_priority_emoji(priority) {
-    const emojis = {
-        'Normal': '📋',
-        'High': '⚠️',
-        'Urgent': '🚨'
-    };
-    return emojis[priority] || '📋';
-}
-
-// ========================================
 // STATUS INDICATOR
 // ========================================
 function update_status_indicator(frm) {
     if (!frm.doc.status) return;
     
-    // Status indicator removed to avoid double banners
-    // The Quick Info Card already shows the status with colors
+    // Status indicator removed to avoid clutter
+    // Status is already visible in the form
 }
 
 // ========================================
@@ -413,12 +337,10 @@ function calculate_total_qty(frm) {
 frappe.ui.form.on('Spare Part Request Item', {
     qty: function(frm, cdt, cdn) {
         auto_calculate_amount(cdt, cdn);
-        update_quick_info_card(frm);
     },
     
     rate: function(frm, cdt, cdn) {
         auto_calculate_amount(cdt, cdn);
-        update_quick_info_card(frm);
     },
     
     approval_status: function(frm, cdt, cdn) {
@@ -435,8 +357,6 @@ frappe.ui.form.on('Spare Part Request Item', {
                 indicator: 'red'
             }, 2);
         }
-        
-        update_quick_info_card(frm);
     },
     
     item_code: function(frm, cdt, cdn) {
