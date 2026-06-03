@@ -32,6 +32,11 @@ const normalizePaymentMethod = (method) => {
   return value;
 };
 
+const requiresBankReference = (method) => {
+  const normalized = normalizePaymentMethod(method);
+  return normalized !== 'Cash';
+};
+
 export function InvoicePaymentModal({ isOpen, invoice, onClose, onPaymentSuccess }) {
   const [paymentMethod, setPaymentMethod] = useState(paymentOptions[0].id);
   const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -57,16 +62,25 @@ export function InvoicePaymentModal({ isOpen, invoice, onClose, onPaymentSuccess
       return;
     }
 
-    setIsSubmitting(true);
     const normalizedPaymentMethod = normalizePaymentMethod(paymentMethod);
+    const needsBankReference = requiresBankReference(normalizedPaymentMethod);
+    const trimmedReferenceNo = referenceNo.trim();
+
+    if (needsBankReference && !trimmedReferenceNo) {
+      toast.error('No. referensi wajib diisi untuk pembayaran non-tunai (transfer/kartu/QRIS).');
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       const response = await frappeClient.request('/api/method/garage.api.portal.create_payment_entry', {
         method: 'POST',
         body: JSON.stringify({
-          entry: {  // ✅ TAMBAHKAN INI
+          entry: {
             payment_date: paymentDate,
+            reference_date: paymentDate,
             mode_of_payment: normalizedPaymentMethod,
-            reference_no: referenceNo || undefined,
+            reference_no: trimmedReferenceNo || undefined,
             party: invoice.customer,
             party_type: 'Customer',
             allocations: [
@@ -75,7 +89,7 @@ export function InvoicePaymentModal({ isOpen, invoice, onClose, onPaymentSuccess
                 allocated_amount: totalAmount,
               },
             ],
-          }
+          },
         }),
       });
 
@@ -104,7 +118,12 @@ export function InvoicePaymentModal({ isOpen, invoice, onClose, onPaymentSuccess
       onClose();
     } catch (error) {
       console.error('Failed to create payment entry', error);
-      toast.error('Gagal memproses pembayaran. Mohon coba lagi.');
+      const message = error?.message || '';
+      if (message.includes('Reference No and Reference Date')) {
+        toast.error('No. referensi dan tanggal referensi wajib untuk pembayaran bank.');
+      } else {
+        toast.error('Gagal memproses pembayaran. Mohon coba lagi.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -221,16 +240,29 @@ export function InvoicePaymentModal({ isOpen, invoice, onClose, onPaymentSuccess
               <div>
                 <label className="flex items-center gap-2 text-sm text-slate-600 mb-2">
                   <Hash className="w-4 h-4" />
-                  No. Referensi (opsional)
+                  No. Referensi
+                  {requiresBankReference(paymentMethod) && (
+                    <span className="text-red-500">*</span>
+                  )}
                 </label>
                 <input
                   type="text"
                   value={referenceNo}
                   onChange={(e) => setReferenceNo(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                  placeholder="Masukkan no. referensi pembayaran"
+                  placeholder={
+                    requiresBankReference(paymentMethod)
+                      ? 'No. bukti transfer / approval bank'
+                      : 'Opsional untuk pembayaran tunai'
+                  }
                   disabled={isSubmitting}
+                  required={requiresBankReference(paymentMethod)}
                 />
+                {requiresBankReference(paymentMethod) && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Wajib untuk transfer, kartu, QRIS, dan metode bank lainnya.
+                  </p>
+                )}
               </div>
             </div>
 

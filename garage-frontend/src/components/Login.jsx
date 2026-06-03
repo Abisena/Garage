@@ -51,10 +51,9 @@ export function Login({ onLogin }) {
 
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-6xl grid md:grid-cols-2 shadow-2xl rounded-2xl overflow-hidden bg-white">
+      <main className="w-full max-w-6xl grid md:grid-cols-2 shadow-2xl rounded-2xl overflow-hidden bg-white">
         
-        {/* Left Panel - Company Info */}
-        <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 p-12 text-white relative overflow-hidden">
+        <section className="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 p-12 text-white relative overflow-hidden" aria-labelledby="login-brand-title">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 left-0 w-64 h-64 bg-white rounded-full -translate-x-1/2 -translate-y-1/2"></div>
@@ -70,7 +69,7 @@ export function Login({ onLogin }) {
                 <Wrench className="w-10 h-10 text-blue-400" />
               </div>
               <div>
-                <h1 className="text-2xl">IMOGI WORKSHOP</h1>
+                <h1 id="login-brand-title" className="text-2xl">IMOGI WORKSHOP</h1>
                 <p className="text-slate-300 text-sm">Sistem Manajemen Bengkel Multi-Cabang</p>
               </div>
             </div>
@@ -106,22 +105,23 @@ export function Login({ onLogin }) {
               </p>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Right Panel - Login Form */}
-        <div className="p-12 flex flex-col justify-center">
+        <section className="p-12 flex flex-col justify-center" aria-labelledby="login-form-title">
           <div className="mb-8">
-            <h2 className="text-3xl text-slate-800 mb-2">Selamat Datang</h2>
+            <h2 id="login-form-title" className="text-3xl text-slate-800 mb-2">Selamat Datang</h2>
             <p className="text-slate-500">Login untuk mengakses sistem</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Username */}
+          <form onSubmit={handleSubmit} className="space-y-5" aria-describedby={error ? 'login-error' : undefined}>
             <div>
-              <label className="block text-slate-700 mb-2 text-sm">Username</label>
+              <label htmlFor="login-username" className="block text-slate-700 mb-2 text-sm">Username</label>
               <div className="relative">
                 <input
+                  id="login-username"
                   type="text"
+                  name="username"
+                  autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter your username"
@@ -132,12 +132,14 @@ export function Login({ onLogin }) {
               </div>
             </div>
 
-            {/* Password */}
             <div>
-              <label className="block text-slate-700 mb-2 text-sm">Password</label>
+              <label htmlFor="login-password" className="block text-slate-700 mb-2 text-sm">Password</label>
               <div className="relative">
                 <input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -150,25 +152,24 @@ export function Login({ onLogin }) {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                   disabled={loading}
+                  aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                  aria-pressed={showPassword}
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="w-5 h-5" aria-hidden="true" /> : <Eye className="w-5 h-5" aria-hidden="true" />}
                 </button>
               </div>
             </div>
 
-            {/* Remember & Forgot */}
             <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 text-slate-600 cursor-pointer">
-                <input type="checkbox" className="rounded" disabled={loading} />
+              <label htmlFor="remember-me" className="flex items-center gap-2 text-slate-600 cursor-pointer">
+                <input id="remember-me" type="checkbox" className="rounded" disabled={loading} />
                 <span>Ingat saya</span>
               </label>
-              <a href="#" className="text-blue-600 hover:text-blue-700">
-                Lupa password?
-              </a>
+              <span className="text-blue-600 text-sm">Hubungi admin untuk reset password</span>
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              <div id="login-error" role="alert" className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 {error}
               </div>
             )}
@@ -201,9 +202,9 @@ export function Login({ onLogin }) {
               Default: <code className="bg-blue-100 px-1 rounded">Administrator</code> / password Anda
             </p>
           </div>
-        </div>
+        </section>
 
-      </div>
+      </main>
     </div>
   );
 }

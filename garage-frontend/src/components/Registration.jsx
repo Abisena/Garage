@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Plus, User, Car } from 'lucide-react';
 import { Button } from './ui/button';
-import { WorkOrderModal } from './WorkOrderModall';
 import frappeClient from '../lib/frappeClient';
 import { loadFromStorage, saveToStorage } from '../lib/storage';
+
+const WorkOrderModal = lazy(() =>
+  import('./WorkOrderModall').then((m) => ({ default: m.WorkOrderModal }))
+);
 
 export function Registration({ currentUser }) {
   const defaultFormState = {
@@ -741,10 +744,13 @@ export function Registration({ currentUser }) {
                 <div className="grid grid-cols-2 gap-4">
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Plate Number *</label>
+                    <label htmlFor="plateNumber" className="block text-sm font-medium text-gray-700 mb-2">Plate Number *</label>
                     <input
+                      id="plateNumber"
                       type="text"
                       name="plateNumber"
+                      autoComplete="off"
+                      aria-describedby="plate-lookup-status"
                       placeholder="B 1234 XYZ"
                       className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
                         focusedField === 'plateNumber' ? 'bg-blue-50 border-blue-400' : 'bg-white'
@@ -759,6 +765,9 @@ export function Registration({ currentUser }) {
                     />
                     {lookupStatus.message && (
                       <p
+                        id="plate-lookup-status"
+                        role="status"
+                        aria-live="polite"
                         className={`mt-1 text-xs flex items-center gap-2 ${
                           lookupStatus.type === 'success'
                             ? 'text-green-700'
@@ -776,8 +785,9 @@ export function Registration({ currentUser }) {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Chassis Number *</label>
+                    <label htmlFor="chassisNumber" className="block text-sm font-medium text-gray-700 mb-2">Chassis Number *</label>
                     <input
+                      id="chassisNumber"
                       type="text"
                       name="chassisNumber"
                       placeholder="e.g. MHKA42V159K123456"
@@ -795,8 +805,9 @@ export function Registration({ currentUser }) {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Engine Number *</label>
+                    <label htmlFor="engineNumber" className="block text-sm font-medium text-gray-700 mb-2">Engine Number *</label>
                     <input
+                      id="engineNumber"
                       type="text"
                       name="engineNumber"
                       placeholder="e.g. 1NR-VE-123"
@@ -814,8 +825,9 @@ export function Registration({ currentUser }) {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Brand *</label>
+                    <label htmlFor="vehicleBrand" className="block text-sm font-medium text-gray-700 mb-2">Brand *</label>
                     <select 
+                      id="vehicleBrand"
                       name="vehicleBrand"
                       className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
                         focusedField === 'vehicleBrand' ? 'bg-blue-50 border-blue-400' : 'bg-white'
@@ -836,8 +848,9 @@ export function Registration({ currentUser }) {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Model *</label>
+                    <label htmlFor="vehicleModel" className="block text-sm font-medium text-gray-700 mb-2">Model *</label>
                     <select 
+                      id="vehicleModel"
                       name="vehicleModel"
                       className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
                         focusedField === 'vehicleModel' ? 'bg-blue-50 border-blue-400' : 'bg-white'
@@ -859,8 +872,9 @@ export function Registration({ currentUser }) {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Vehicle Type *</label>
+                    <label htmlFor="vehicleType" className="block text-sm font-medium text-gray-700 mb-2">Vehicle Type *</label>
                     <select 
+                      id="vehicleType"
                       name="vehicleType"
                       className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
                         focusedField === 'vehicleType' ? 'bg-blue-50 border-blue-400' : 'bg-white'
@@ -881,10 +895,12 @@ export function Registration({ currentUser }) {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Kilometer *</label>
+                    <label htmlFor="kilometer" className="block text-sm font-medium text-gray-700 mb-2">Kilometer *</label>
                     <input
+                      id="kilometer"
                       type="text"
                       name="kilometer"
+                      inputMode="numeric"
                       placeholder="e.g. 45000"
                       className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
                         focusedField === 'kilometer' ? 'bg-blue-50 border-blue-400' : 'bg-white'
@@ -900,8 +916,9 @@ export function Registration({ currentUser }) {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fuel *</label>
+                    <label htmlFor="fuel" className="block text-sm font-medium text-gray-700 mb-2">Fuel *</label>
                     <select 
+                      id="fuel"
                       name="fuel"
                       className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
                         focusedField === 'fuel' ? 'bg-blue-50 border-blue-400' : 'bg-white'
@@ -922,8 +939,9 @@ export function Registration({ currentUser }) {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Jenis Rakit *</label>
+                    <label htmlFor="assemblyType" className="block text-sm font-medium text-gray-700 mb-2">Jenis Rakit *</label>
                     <select 
+                      id="assemblyType"
                       name="assemblyType"
                       className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
                         focusedField === 'assemblyType' ? 'bg-blue-50 border-blue-400' : 'bg-white'
@@ -944,10 +962,12 @@ export function Registration({ currentUser }) {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Year *</label>
+                    <label htmlFor="vehicleYear" className="block text-sm font-medium text-gray-700 mb-2">Year *</label>
                     <input
+                      id="vehicleYear"
                       type="text"
                       name="vehicleYear"
+                      inputMode="numeric"
                       placeholder="e.g. 2020"
                       className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
                         focusedField === 'vehicleYear' ? 'bg-blue-50 border-blue-400' : 'bg-white'
@@ -972,10 +992,12 @@ export function Registration({ currentUser }) {
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                    <label htmlFor="customerName" className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                     <input
+                      id="customerName"
                       type="text"
                       name="customerName"
+                      autoComplete="name"
                       placeholder="Enter customer name"
                       className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
                         focusedField === 'customerName' ? 'bg-blue-50 border-blue-400' : 'bg-white'
@@ -990,10 +1012,12 @@ export function Registration({ currentUser }) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
                     <input
+                      id="phone"
                       type="tel"
                       name="phone"
+                      autoComplete="tel"
                       placeholder="+62 xxx-xxxx-xxxx"
                       className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
                         focusedField === 'phone' ? 'bg-blue-50 border-blue-400' : 'bg-white'
@@ -1008,10 +1032,12 @@ export function Registration({ currentUser }) {
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                     <input
+                      id="email"
                       type="email"
                       name="email"
+                      autoComplete="email"
                       placeholder="customer@email.com"
                       className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
                         focusedField === 'email' ? 'bg-blue-50 border-blue-400' : 'bg-white'
@@ -1030,8 +1056,9 @@ export function Registration({ currentUser }) {
 
               {/* Service Type (including packages) */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Service Type *</label>
+                <label htmlFor="serviceType" className="block text-sm font-medium text-gray-700 mb-2">Service Type *</label>
                 <select
+                  id="serviceType"
                   name="serviceType"
                   className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
                     focusedField === 'serviceType' ? 'bg-blue-50 border-blue-400' : 'bg-white'
@@ -1053,8 +1080,9 @@ export function Registration({ currentUser }) {
 
               {/* Customer Complaint */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Customer Complaint *</label>
+                <label htmlFor="customerComplaint" className="block text-sm font-medium text-gray-700 mb-2">Customer Complaint *</label>
                 <textarea
+                  id="customerComplaint"
                   name="customerComplaint"
                   rows={4}
                   placeholder="Describe the issues or problems with the vehicle..."
@@ -1070,8 +1098,9 @@ export function Registration({ currentUser }) {
 
               {/* Service Advisor Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Service Advisor Notes</label>
+                <label htmlFor="advisorNotes" className="block text-sm font-medium text-gray-700 mb-2">Service Advisor Notes</label>
                 <textarea
+                  id="advisorNotes"
                   name="advisorNotes"
                   rows={3}
                   placeholder="Additional notes from service advisor (optional)..."
@@ -1116,8 +1145,11 @@ export function Registration({ currentUser }) {
               </span>
             </div>
             
+            <label htmlFor="registration-search" className="sr-only">Cari registrasi hari ini</label>
             <input
-              type="text"
+              id="registration-search"
+              type="search"
+              name="registrationSearch"
               placeholder="Search by name, plate, order ID..."
               className="w-full px-4 py-2.5 mb-4 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               value={searchQuery}
@@ -1172,9 +1204,10 @@ export function Registration({ currentUser }) {
         </div>
       </div>
 
-      {/* Work Order Modal */}
-      <WorkOrderModal
-        isOpen={showWorkOrder}
+      {showWorkOrder && (
+        <Suspense fallback={null}>
+          <WorkOrderModal
+            isOpen={showWorkOrder}
         onClose={() => {
           setShowWorkOrder(false);
           setSelectedRegistration(null);
@@ -1200,7 +1233,9 @@ export function Registration({ currentUser }) {
         } : formData}
         onConfirm={handleWorkOrderConfirm}
         existingRegistration={selectedRegistration}
-      />
+          />
+        </Suspense>
+      )}
     </>
   );
 }

@@ -125,6 +125,7 @@ export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onM
       isExpandable: true,
       subItems: [
         { id: 'sparepartsrequest', label: 'Spare Parts Request', icon: Package },
+        { id: 'buyingsparepart', label: 'Buying Spare Parts', icon: ShoppingCart },
         { id: 'directsales', label: 'Direct Sales Sparepart', icon: DollarSign },
         { id: 'transferstock', label: 'Transfer Stock', icon: ArrowRightLeft }
       ]
@@ -203,38 +204,7 @@ export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onM
         </div>
 
         {/* Navigation with Custom Scrollbar */}
-        <nav className="flex-1 p-4 overflow-y-auto scrollbar-custom">
-          <style jsx>{`
-            .scrollbar-custom::-webkit-scrollbar {
-              width: 6px;
-            }
-            
-            .scrollbar-custom::-webkit-scrollbar-track {
-              background: rgba(15, 23, 42, 0.3);
-              border-radius: 10px;
-            }
-            
-            .scrollbar-custom::-webkit-scrollbar-thumb {
-              background: rgba(148, 163, 184, 0.3);
-              border-radius: 10px;
-              transition: background 0.2s;
-            }
-            
-            .scrollbar-custom::-webkit-scrollbar-thumb:hover {
-              background: rgba(148, 163, 184, 0.5);
-            }
-            
-            .scrollbar-custom::-webkit-scrollbar-thumb:active {
-              background: rgba(148, 163, 184, 0.7);
-            }
-            
-            /* Firefox */
-            .scrollbar-custom {
-              scrollbar-width: thin;
-              scrollbar-color: rgba(148, 163, 184, 0.3) rgba(15, 23, 42, 0.3);
-            }
-          `}</style>
-          
+        <nav className="flex-1 p-4 overflow-y-auto sidebar-scroll" aria-label="Navigasi utama">
           <ul className="space-y-1">
             {menuItems.map((item) => {
               if (item.id === 'divider-dashboard' || item.id === 'divider-1' || item.id === 'divider-2' || item.id === 'divider-3' || item.id === 'divider-4' || item.id === 'divider-purchase' || item.id === 'divider-5') {
@@ -260,7 +230,9 @@ export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onM
                   {item.isExpandable ? (
                     <>
                       <button
+                        type="button"
                         onClick={() => toggleMenu(item.id)}
+                        aria-expanded={isExpanded}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${
                           hasActiveSubItem
                             ? 'bg-slate-800 text-white'
@@ -318,7 +290,9 @@ export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onM
                                           return (
                                             <li key={nestedItem.id}>
                                               <button
+                                                type="button"
                                                 onClick={() => handleMenuClick(nestedItem.id)}
+                                                aria-current={isNestedActive ? 'page' : undefined}
                                                 className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors text-xs ${
                                                   isNestedActive
                                                     ? 'bg-blue-500 text-white'
@@ -336,7 +310,9 @@ export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onM
                                   </>
                                 ) : (
                                   <button
+                                    type="button"
                                     onClick={() => handleMenuClick(subItem.id)}
+                                    aria-current={isSubActive ? 'page' : undefined}
                                     className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm ${
                                       isSubActive
                                         ? 'bg-blue-500 text-white'
@@ -364,7 +340,9 @@ export function Sidebar({ currentPage, onNavigate, isMobileMenuOpen = false, onM
                     </>
                   ) : (
                     <button
+                      type="button"
                       onClick={() => handleMenuClick(item.id)}
+                      aria-current={isActive ? 'page' : undefined}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${
                         isActive
                           ? 'bg-blue-500 text-white'

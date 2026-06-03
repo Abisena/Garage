@@ -4,10 +4,13 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import './index.css'
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>
+const rootElement = document.getElementById('root')
+const appTree = (
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>
+)
+
+ReactDOM.createRoot(rootElement).render(
+  import.meta.env.DEV ? <React.StrictMode>{appTree}</React.StrictMode> : appTree
 )

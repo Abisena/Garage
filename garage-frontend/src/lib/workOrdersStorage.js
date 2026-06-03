@@ -201,25 +201,135 @@ export const persistWorkOrders = async (orders, { skipSync = false } = {}) => {
   return sanitized;
 };
 
-export const refreshWorkOrdersFromBackend = async ({ branch } = {}) => {
+const mapFrappeStatusToRepairStatus = (serviceOrder) => {
+  const mapped = mapRepairStatusFromServiceOrder(serviceOrder);
+  if (mapped) return mapped;
+
+  const status = normalizeStatusValue(serviceOrder?.status);
+  if (status === 'estimate' || status === 'awaiting-approval') return 'approved';
+  if (status === 'draft' || status === 'inspection') return 'approved';
+  return 'approved';
+};
+
+const mapServiceOrderToWorkOrder = (serviceOrder, index = 0) => {
+  const orderId = serviceOrder?.name || '';
+  const branch = serviceOrder?.branch || '';
+  const branchCode = (serviceOrder?.branch_code || branch.substring(0, 3) || 'GAR').toUpperCase();
+  const createdAt = serviceOrder?.creation ? new Date(serviceOrder.creation) : new Date();
+
+  return {
+    id: `${branchCode}-${String(index + 1).padStart(3, '0')}`,
+    orderId,
+    customerName: serviceOrder?.customer_name || 'Customer',
+    phone: serviceOrder?.customer_phone || '',
+    email: serviceOrder?.customer_email || '',
+    plateNumber: serviceOrder?.vehicle_plate || '',
+    chassisNumber: serviceOrder?.vehicle_vin || '',
+    engineNumber: serviceOrder?.vehicle_engine_number || '',
+    vehicleBrand: serviceOrder?.vehicle_brand || '',
+    vehicleModel: serviceOrder?.vehicle_model || serviceOrder?.vehicle_type_model || '',
+    vehicleType: serviceOrder?.vehicle_type_model || '',
+    vehicleYear: serviceOrder?.vehicle_year || '',
+    vehicleInfo: `${serviceOrder?.vehicle_brand || ''} ${serviceOrder?.vehicle_model || ''}`.trim(),
+    serviceType: serviceOrder?.service_order_type || '',
+    branch,
+    status: normalizeStatusValue(serviceOrder?.status) || 'inspection',
+    repairStatus: mapFrappeStatusToRepairStatus(serviceOrder),
+    paymentStatus:
+      normalizeStatusValue(serviceOrder?.invoice_status) === 'paid' ||
+      serviceOrder?.status === 'Completed'
+        ? 'paid'
+        : serviceOrder?.status === 'Waiting Payment'
+          ? 'pending'
+          : undefined,
+    qcApproved: normalizeStatusValue(serviceOrder?.qc_status) === 'passed',
+    createdAt: serviceOrder?.creation || createdAt.toISOString(),
+    date: createdAt.toLocaleDateString('id-ID'),
+    spareParts: [],
+    laborCost: Number(serviceOrder?.total_approved_amount || serviceOrder?.total_estimated_amount || 0) || 0,
+  };
+};
+
+const mergeWorkOrderRecords = (local, remote) => {
+  if (!local) return remote;
+
+  return {
+    ...remote,
+    ...local,
+    orderId: remote.orderId || local.orderId,
+    status: remote.status || local.status,
+    repairStatus: remote.repairStatus || local.repairStatus,
+    customerName: remote.customerName || local.customerName,
+    phone: remote.phone || local.phone,
+    email: remote.email || local.email,
+    plateNumber: remote.plateNumber || local.plateNumber,
+    vehicleBrand: remote.vehicleBrand || local.vehicleBrand,
+    vehicleModel: remote.vehicleModel || local.vehicleModel,
+    branch: remote.branch || local.branch,
+    spareParts: Array.isArray(local.spareParts) && local.spareParts.length > 0 ? local.spareParts : remote.spareParts,
+    laborCost: local.laborCost || remote.laborCost || 0,
+    paymentStatus: local.paymentStatus || remote.paymentStatus,
+    paymentMethod: local.paymentMethod || remote.paymentMethod,
+    paidAmount: local.paidAmount || remote.paidAmount,
+    paymentDate: local.paymentDate || remote.paymentDate,
+    invoiceNumber: local.invoiceNumber || remote.invoiceNumber,
+    receiptNumber: local.receiptNumber || remote.receiptNumber,
+    notaFakturNumber: local.notaFakturNumber || remote.notaFakturNumber,
+    notaNumber: local.notaNumber || remote.notaNumber,
+    inspectionData: local.inspectionData || remote.inspectionData,
+    mechanicName: local.mechanicName || remote.mechanicName,
+  };
+};
+
+export const loadWorkOrdersFromBackend = async ({ branch } = {}) => {
   if (!hasStorage()) return [];
 
-  const storedOrders = getStoredWorkOrders();
-  if (storedOrders.length === 0) return [];
+  try {
+    const response = await frappeClient.listServiceOrders({ branch });
+    const serviceOrders = Array.isArray(response?.orders) ? response.orders : [];
+
+    if (serviceOrders.length === 0) {
+      return getStoredWorkOrders();
+    }
+
+    const localOrders = getStoredWorkOrders();
+    const localByOrderId = new Map(
+      localOrders.map((order) => [(order.orderId || order.id || '').toString(), order])
+    );
+
+    const remoteOrders = serviceOrders.map((serviceOrder, index) => {
+      const mapped = mapServiceOrderToWorkOrder(serviceOrder, index);
+      const local = localByOrderId.get(mapped.orderId);
+      return mergeWorkOrderRecords(local, mapped);
+    });
+
+    const remoteIds = new Set(remoteOrders.map((order) => order.orderId));
+    const localOnly = localOrders.filter((order) => order.orderId && !remoteIds.has(order.orderId));
+    const merged = sanitizeWorkOrders([...remoteOrders, ...localOnly]);
+
+    await persistWorkOrders(merged, { skipSync: true });
+    return merged;
+  } catch (error) {
+    console.error('Failed to load work orders from backend:', error);
+    return getStoredWorkOrders();
+  }
+};
+
+export const refreshWorkOrdersFromBackend = async ({ branch } = {}) => {
+  const loaded = await loadWorkOrdersFromBackend({ branch });
+  if (loaded.length === 0) {
+    return [];
+  }
 
   try {
     const bootstrap = await frappeClient.getPortalBootstrap({ branch });
-    const serviceOrders = Array.isArray(bootstrap?.service_orders) ? bootstrap.service_orders : [];
     const sparePartRequests = Array.isArray(bootstrap?.spare_part_requests)
       ? bootstrap.spare_part_requests
       : [];
-    if (serviceOrders.length === 0) return storedOrders;
 
-    const serviceMap = new Map(
-      serviceOrders
-        .filter((order) => order?.name)
-        .map((order) => [order.name, order])
-    );
+    if (sparePartRequests.length === 0) {
+      return loaded;
+    }
 
     const sparePartsByOrder = new Map();
     sparePartRequests.forEach((row, index) => {
@@ -235,51 +345,20 @@ export const refreshWorkOrdersFromBackend = async ({ branch } = {}) => {
     });
 
     let changed = false;
-    const updatedOrders = storedOrders.map((order) => {
+    const updatedOrders = loaded.map((order) => {
       const orderKey = order.orderId || order.id;
-      if (!orderKey || !serviceMap.has(orderKey)) {
+      const incomingSpareParts = sparePartsByOrder.get(orderKey) || [];
+      if (incomingSpareParts.length === 0) {
         return order;
       }
 
-      const serviceOrder = serviceMap.get(orderKey);
-      const normalizedStatus = normalizeStatusValue(serviceOrder?.status);
-      const mappedRepairStatus = mapRepairStatusFromServiceOrder(serviceOrder);
-      const qcStatus = normalizeStatusValue(serviceOrder?.qc_status);
-
-      const updated = { ...order };
-      let updatedRow = false;
-
-      if (normalizedStatus && normalizedStatus !== order.status) {
-        updated.status = normalizedStatus;
-        updatedRow = true;
+      const mergedSpareParts = mergeSpareParts(order.spareParts, incomingSpareParts);
+      if (mergedSpareParts === order.spareParts) {
+        return order;
       }
 
-      if (mappedRepairStatus && mappedRepairStatus !== order.repairStatus) {
-        updated.repairStatus = mappedRepairStatus;
-        updatedRow = true;
-      }
-
-      if (qcStatus === 'passed' && !order.qcApproved) {
-        updated.qcApproved = true;
-        updatedRow = true;
-      }
-
-      const incomingSpareParts = sparePartsByOrder.get(orderKey) || [];
-      if (incomingSpareParts.length > 0) {
-        const mergedSpareParts = mergeSpareParts(order.spareParts, incomingSpareParts);
-
-        if (mergedSpareParts.length > 0 && mergedSpareParts !== order.spareParts) {
-          updated.spareParts = mergedSpareParts;
-          updatedRow = true;
-        }
-      }
-
-      if (updatedRow) {
-        changed = true;
-        return updated;
-      }
-
-      return order;
+      changed = true;
+      return { ...order, spareParts: mergedSpareParts };
     });
 
     if (changed) {
@@ -287,9 +366,9 @@ export const refreshWorkOrdersFromBackend = async ({ branch } = {}) => {
       return updatedOrders;
     }
 
-    return storedOrders;
+    return loaded;
   } catch (error) {
-    console.error('Failed to refresh work orders from backend:', error);
-    return storedOrders;
+    console.error('Failed to refresh spare parts on work orders:', error);
+    return loaded;
   }
 };

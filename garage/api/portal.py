@@ -2075,6 +2075,37 @@ def _normalize_payment_mode(mode: Any) -> Optional[str]:
     return value
 
 
+def _ensure_payment_entry_bank_references(
+    pe: frappe.Document,
+    payload: Mapping[str, Any],
+    *,
+    seed_invoice: Optional[str] = None,
+) -> None:
+    """ERPNext requires reference_no/reference_date when paid account type is Bank."""
+
+    bank_account = pe.paid_to if pe.payment_type == "Receive" else pe.paid_from
+    if not bank_account:
+        return
+
+    account_type = frappe.get_cached_value("Account", bank_account, "account_type")
+    if account_type != "Bank":
+        return
+
+    payment_date = _coerce_date_value(payload.get("payment_date"), date_only=True) or pe.posting_date or nowdate()
+
+    if not pe.reference_date:
+        pe.reference_date = (
+            _coerce_date_value(payload.get("reference_date"), date_only=True) or payment_date
+        )
+
+    if not pe.reference_no:
+        reference_no = cstr(payload.get("reference_no") or payload.get("reference_number") or "").strip()
+        if not reference_no:
+            invoice_ref = seed_invoice or getattr(pe, "title", None) or pe.name or "PAYMENT"
+            reference_no = f"{invoice_ref}-{now_datetime().strftime('%Y%m%d%H%M%S')}"
+        pe.reference_no = reference_no
+
+
 def _ensure_payment_mode_exists(mode: Optional[str]) -> None:
     """Create the Mode of Payment row if it is missing."""
 
@@ -2201,6 +2232,7 @@ def _create_payment_entry(payload: Mapping[str, Any]) -> frappe.Document:
         pe.title = payload.get("title") or payload.get("payment_title") or seed_invoice
 
     pe.set_missing_values()
+    _ensure_payment_entry_bank_references(pe, payload, seed_invoice=seed_invoice)
     _ensure_branch_allowed(pe)
 
     if reuse_existing:
@@ -3621,6 +3653,7 @@ def portal_bootstrap(
     payment_fields = [
         "name",
         "status",
+        "docstatus",
         "party",
         "payment_type",
         "posting_date",
@@ -3642,16 +3675,45 @@ def portal_bootstrap(
         date_range=date_range,
         date_field=_resolve_date_field("Payment Entry", "posting_date"),
     )
+
+    payment_names = [row.get("name") for row in raw_payments if row.get("name")]
+    payment_refs_map: Dict[str, List[Dict[str, Any]]] = {}
+    if payment_names:
+        ref_rows = frappe.get_all(
+            "Payment Entry Reference",
+            filters={"parent": ["in", payment_names]},
+            fields=["parent", "reference_doctype", "reference_name", "allocated_amount"],
+        )
+        for ref in ref_rows:
+            parent = ref.get("parent")
+            if not parent:
+                continue
+            payment_refs_map.setdefault(parent, []).append(
+                {
+                    "reference_doctype": ref.get("reference_doctype"),
+                    "reference_name": ref.get("reference_name"),
+                    "allocated_amount": flt(ref.get("allocated_amount") or 0),
+                }
+            )
+
     payments = []
     for row in raw_payments:
         payment_date = row.pop("posting_date", None)
         amount = flt(row.get("received_amount") or row.get("paid_amount") or 0)
+        refs = payment_refs_map.get(row.get("name"), [])
+        invoice_name = None
+        for ref in refs:
+            if cstr(ref.get("reference_doctype")) == "Sales Invoice":
+                invoice_name = ref.get("reference_name")
+                break
         payments.append(
             {
                 **row,
                 "customer": row.get("party"),
                 "payment_date": payment_date,
                 "amount": amount,
+                "references": refs,
+                "invoice": invoice_name,
             }
         )
 
@@ -3691,6 +3753,19 @@ def portal_bootstrap(
         date_range=date_range,
         date_field="receipt_date",
     )
+
+    receipt_by_payment = {
+        row.get("payment_entry"): row
+        for row in receipts
+        if row.get("payment_entry")
+    }
+    for payment in payments:
+        receipt = receipt_by_payment.get(payment.get("name"))
+        if receipt:
+            payment["receipt_number"] = receipt.get("receipt_number")
+            payment["receipt_document"] = receipt.get("name")
+        elif not payment.get("receipt_number"):
+            payment["receipt_number"] = payment.get("name")
 
     service_bundles = _get_service_bundles()
 
@@ -6471,6 +6546,249 @@ def cancel_service_order(order_id: str, reason: Optional[str] = None) -> Dict[st
 
 
 @frappe.whitelist()
+def list_handover_orders(branch: Optional[str] = None) -> Dict[str, Any]:
+    """Return service orders that are paid and ready for vehicle handover."""
+
+    _require_login()
+
+    requested_branch = cstr(branch or "").strip()
+    allowed = _allowed_branches(frappe.session.user)
+    if allowed is not None and requested_branch and requested_branch not in allowed:
+        requested_branch = ""
+
+    branch_filter = requested_branch or None
+
+    gso_fields = [
+        "name",
+        "status",
+        "customer",
+        "vehicle",
+        "branch",
+        "branch_code",
+        "service_order_type",
+        "service_booking_date",
+        "estimated_delivery_date",
+        "total_estimated_amount",
+        "total_approved_amount",
+        "invoice_status",
+        "sikk_status",
+        "creation",
+        "modified",
+    ]
+
+    orders = _list_dicts(
+        "Garage Service Order",
+        gso_fields,
+        filters=[["status", "=", "Waiting Payment"]],
+        branch=branch_filter,
+        limit=200,
+        order_by="modified desc",
+    )
+
+    order_names = [row.get("name") for row in orders if row.get("name")]
+    if not order_names:
+        return {"orders": [], "total_count": 0}
+
+    invoice_map: Dict[str, Dict[str, Any]] = {}
+    if frappe.db.table_exists("Sales Invoice"):
+        invoice_fields = [
+            "name",
+            "status",
+            "customer",
+            "grand_total",
+            "rounded_total",
+            "outstanding_amount",
+            "posting_date",
+        ]
+        if _doctype_has_field("Sales Invoice", "garage_service_order"):
+            invoice_fields.append("garage_service_order")
+        if _doctype_has_field("Sales Invoice", "po_no"):
+            invoice_fields.append("po_no")
+        if _doctype_has_field("Sales Invoice", "branch"):
+            invoice_fields.append("branch")
+
+        invoice_filters: List[List[Any]] = [["status", "=", "Paid"]]
+        or_filters: List[List[Any]] = []
+        if _doctype_has_field("Sales Invoice", "garage_service_order"):
+            or_filters.append(["garage_service_order", "in", order_names])
+        if _doctype_has_field("Sales Invoice", "po_no"):
+            or_filters.append(["po_no", "in", order_names])
+
+        paid_invoices: List[Dict[str, Any]] = []
+        if or_filters:
+            paid_invoices = frappe.get_all(
+                "Sales Invoice",
+                filters=invoice_filters,
+                or_filters=or_filters,
+                fields=invoice_fields,
+                limit=500,
+            )
+
+        for invoice in paid_invoices:
+            linked_order = invoice.get("garage_service_order") or invoice.get("po_no")
+            if linked_order and linked_order in order_names and linked_order not in invoice_map:
+                invoice_map[linked_order] = invoice
+
+    payment_map: Dict[str, Dict[str, Any]] = {}
+    if frappe.db.table_exists("Payment Entry"):
+        payment_fields = [
+            "name",
+            "status",
+            "docstatus",
+            "party",
+            "payment_type",
+            "posting_date",
+            "mode_of_payment",
+            "paid_amount",
+            "received_amount",
+        ]
+        if _doctype_has_field("Payment Entry", "garage_service_order"):
+            payment_fields.append("garage_service_order")
+            payment_rows = frappe.get_all(
+                "Payment Entry",
+                filters=[
+                    ["docstatus", "=", 1],
+                    ["garage_service_order", "in", order_names],
+                ],
+                fields=payment_fields,
+                limit=500,
+            )
+            for payment in payment_rows:
+                linked_order = payment.get("garage_service_order")
+                if linked_order and linked_order not in payment_map:
+                    payment_map[linked_order] = payment
+
+        missing_orders = [name for name in order_names if name not in payment_map]
+        invoice_names = [
+            invoice_map[name].get("name")
+            for name in missing_orders
+            if name in invoice_map and invoice_map[name].get("name")
+        ]
+        if invoice_names and frappe.db.table_exists("Payment Entry Reference"):
+            ref_rows = frappe.get_all(
+                "Payment Entry Reference",
+                filters=[
+                    ["reference_doctype", "=", "Sales Invoice"],
+                    ["reference_name", "in", invoice_names],
+                ],
+                fields=["parent", "reference_name", "allocated_amount"],
+                limit=500,
+            )
+            invoice_to_order = {
+                invoice_map[order_name].get("name"): order_name
+                for order_name in invoice_map
+                if invoice_map[order_name].get("name")
+            }
+            for ref in ref_rows:
+                order_name = invoice_to_order.get(ref.get("reference_name"))
+                parent = ref.get("parent")
+                if not order_name or not parent or order_name in payment_map:
+                    continue
+                payment_doc = frappe.db.get_value(
+                    "Payment Entry",
+                    parent,
+                    payment_fields,
+                    as_dict=True,
+                )
+                if payment_doc and cint(payment_doc.get("docstatus")) == 1:
+                    payment_map[order_name] = payment_doc
+
+    receipt_map: Dict[str, Dict[str, Any]] = {}
+    if payment_map and frappe.db.table_exists("Garage Receipt Document"):
+        payment_names = [row.get("name") for row in payment_map.values() if row.get("name")]
+        if payment_names:
+            receipt_rows = frappe.get_all(
+                "Garage Receipt Document",
+                filters=[["payment_entry", "in", payment_names]],
+                fields=["name", "payment_entry", "receipt_number", "receipt_date", "branch"],
+                limit=500,
+            )
+            payment_to_order = {
+                payment.get("name"): order_name
+                for order_name, payment in payment_map.items()
+                if payment.get("name")
+            }
+            for receipt in receipt_rows:
+                order_name = payment_to_order.get(receipt.get("payment_entry"))
+                if order_name and order_name not in receipt_map:
+                    receipt_map[order_name] = receipt
+
+    ready_orders: List[Dict[str, Any]] = []
+    for order in orders:
+        order_name = order.get("name")
+        if not order_name:
+            continue
+
+        invoice = invoice_map.get(order_name)
+        payment = payment_map.get(order_name)
+        if not invoice and not payment:
+            continue
+
+        if order.get("customer"):
+            try:
+                customer = frappe.db.get_value(
+                    "Garage Customer",
+                    order["customer"],
+                    ["customer_name", "phone", "email"],
+                    as_dict=True,
+                )
+                if customer:
+                    order["customer_name"] = customer.get("customer_name")
+                    order["customer_phone"] = customer.get("phone")
+                    order["customer_email"] = customer.get("email")
+            except Exception:
+                pass
+
+        if order.get("vehicle"):
+            try:
+                vehicle = frappe.db.get_value(
+                    "Garage Vehicle",
+                    order["vehicle"],
+                    ["license_plate", "brand", "type_model", "model", "vehicle_year", "color"],
+                    as_dict=True,
+                )
+                if vehicle:
+                    order["vehicle_plate"] = vehicle.get("license_plate")
+                    order["vehicle_brand"] = vehicle.get("brand")
+                    order["vehicle_model"] = vehicle.get("model") or vehicle.get("type_model")
+                    order["vehicle_year"] = vehicle.get("vehicle_year")
+                    order["vehicle_color"] = vehicle.get("color")
+            except Exception:
+                pass
+
+        receipt = receipt_map.get(order_name)
+        paid_amount = flt(
+            payment.get("received_amount") or payment.get("paid_amount")
+            if payment
+            else invoice.get("grand_total") or invoice.get("rounded_total")
+        )
+
+        branch_code = (order.get("branch_code") or order.get("branch") or "GAR")[:3].upper()
+        ready_orders.append(
+            {
+                **order,
+                "order_id": order_name,
+                "invoice_name": invoice.get("name") if invoice else None,
+                "invoice_number": invoice.get("name") if invoice else None,
+                "invoice_date": invoice.get("posting_date") if invoice else None,
+                "payment_entry": payment.get("name") if payment else None,
+                "payment_date": (payment or {}).get("posting_date"),
+                "mode_of_payment": (payment or {}).get("mode_of_payment"),
+                "paid_amount": paid_amount,
+                "receipt_number": (receipt or {}).get("receipt_number")
+                or (payment or {}).get("name")
+                or (invoice or {}).get("name"),
+                "receipt_document": (receipt or {}).get("name"),
+                "sikk_number": f"SIKK-{branch_code}-{order_name.split('-')[-1]}",
+                "payment_status": "paid",
+                "ready_for_handover": True,
+            }
+        )
+
+    return {"orders": ready_orders, "total_count": len(ready_orders)}
+
+
+@frappe.whitelist()
 def complete_service_order(order_id: str, completion_data: Optional[Any] = None) -> Dict[str, Any]:
     """Mark service order as completed."""
     
@@ -6484,7 +6802,7 @@ def complete_service_order(order_id: str, completion_data: Optional[Any] = None)
     doc = _get_doc("Garage Service Order", order_id)
     
     # Validate current status
-    if doc.status not in {"Awaiting QC", "Waiting Payment"}:
+    if doc.status not in {"Waiting Payment"}:
         frappe.throw(_("Service order harus dalam status Waiting Payment sebelum diselesaikan."))
     
     # Update status
@@ -6508,6 +6826,17 @@ def complete_service_order(order_id: str, completion_data: Optional[Any] = None)
             doc.service_notes += f"\n\n[Completion] {data.get('completion_notes')}"
         else:
             doc.service_notes = data.get("completion_notes")
+
+    if data.get("next_service_date") and hasattr(doc, "next_service_date"):
+        doc.next_service_date = _coerce_date_value(data.get("next_service_date"), date_only=True)
+
+    if data.get("handover_notes") and hasattr(doc, "handover_notes"):
+        doc.handover_notes = data.get("handover_notes")
+
+    if data.get("sikk_status") and hasattr(doc, "sikk_status"):
+        doc.sikk_status = data.get("sikk_status")
+    elif hasattr(doc, "sikk_status") and not getattr(doc, "sikk_status", None):
+        doc.sikk_status = "Completed"
     
     _save_doc(doc)
     
@@ -8751,7 +9080,12 @@ def create_payment_entry(entry: Optional[Any] = None) -> Dict[str, Any]:
                 "mode_of_payment": getattr(doc, "mode_of_payment", None),
             },
         )
-        return {"name": doc.name, "status": getattr(doc, "status", None) or doc.docstatus}
+        return {
+            "name": doc.name,
+            "payment_entry": doc.name,
+            "docstatus": doc.docstatus,
+            "status": getattr(doc, "status", None) or doc.docstatus,
+        }
     except ValidationError:
         raise
     except Exception:

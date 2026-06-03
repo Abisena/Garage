@@ -219,27 +219,32 @@ const BusinessProcessFlowDiagram = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
+    <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="flex items-center justify-center gap-4 mb-2">
+          <h1 className="text-2xl font-semibold text-slate-800 mb-2">
+            Business Process Flow
+          </h1>
+          <p className="text-slate-600 text-sm mb-3">
+            Sistem Manajemen Bengkel Multi-Cabang IMOGI Workshop
+          </p>
+          <div className="flex items-center justify-center gap-4">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-6 py-2 rounded-full shadow-lg">
-              <Target className="w-5 h-5" />
-              <h1 className="text-xl">Flow It!</h1>
+              <Target className="w-5 h-5" aria-hidden="true" />
+              <span className="text-xl font-medium">Flow It!</span>
             </div>
             
             <button
+              type="button"
               onClick={handleDownload}
+              aria-label="Unduh diagram alur proses bisnis"
               className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-5 py-2 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-4 h-4" aria-hidden="true" />
               <span className="text-sm">Download PNG</span>
             </button>
           </div>
-          <p className="text-slate-600 text-sm">
-            Business Process Flow - Sistem Manajemen Bengkel Multi-Cabang
-          </p>
         </div>
 
         {/* Main Content - Wrapped with ID for capture */}
@@ -328,7 +333,7 @@ const BusinessProcessFlowDiagram = () => {
             </div>
 
             {/* RIGHT: Details - 8 columns */}
-            <div className="col-span-12 lg:col-span-8">
+            <div className="col-span-12 lg:col-span-8 content-deferred">
               <h2 className="text-sm text-slate-700 mb-3">Detail Tahapan Proses</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -437,4 +442,4 @@ const BusinessProcessFlowDiagram = () => {
   );
 };
 
-export default BusinessProcessFlowDiagram;
+export default React.memo(BusinessProcessFlowDiagram);

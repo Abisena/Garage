@@ -1880,7 +1880,9 @@ import { ProcessPaymentModal } from './ProcessPaymentModal';
 import { ReceiptModal } from './ReceiptModal';
 import { DirectSalesNotaModal } from './DirectSalesNotaModal';
 import { DirectSalesInvoiceModal } from './DirectSalesInvoiceModal';
+import { InvoicePaymentModal } from './InvoicePaymentModal';
 import { frappeClient } from '../lib/frappeClient';
+import { getStoredWorkOrders, persistWorkOrders, refreshWorkOrdersFromBackend } from '../lib/workOrdersStorage';
 
 export function Payment({ currentUser }) {
   const [activeTab, setActiveTab] = useState('service');
@@ -1902,6 +1904,10 @@ export function Payment({ currentUser }) {
   const [showDirectSalesPaymentModal, setShowDirectSalesPaymentModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelNotes, setCancelNotes] = useState('');
+  const [salesInvoices, setSalesInvoices] = useState([]);
+  const [showInvoicePaymentModal, setShowInvoicePaymentModal] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [pendingPaymentMethod, setPendingPaymentMethod] = useState('cash');
   
   // Payment Form State
   const [paymentMethod, setPaymentMethod] = useState('cash');
@@ -1960,10 +1966,69 @@ export function Payment({ currentUser }) {
   };
 
   useEffect(() => {
-    loadWorkOrders();
+    void loadWorkOrders();
     loadPurchaseOrders();
     loadDirectSales();
-  }, []);
+    void loadFinanceData();
+  }, [currentUser?.branch]);
+
+  const paymentReadyFilter = (order) =>
+    order.status === 'waiting-payment' ||
+    order.status === 'ready-for-payment' ||
+    order.repairStatus === 'final-inspection' ||
+    order.repairStatus === 'qc-finished' ||
+    order.repairStatus === 'waiting-payment' ||
+    order.paymentStatus === 'pending' ||
+    order.paymentStatus === 'waiting-recon' ||
+    order.paymentStatus === 'paid' ||
+    order.paymentStatus === 'cancelled' ||
+    order.paymentStatus === 'nota-printed';
+
+  const loadWorkOrders = async () => {
+    try {
+      const branchParam = currentUser?.branch === 'all' ? undefined : currentUser?.branch;
+      const orders = await refreshWorkOrdersFromBackend({ branch: branchParam });
+      let paymentOrders = orders.filter(paymentReadyFilter);
+
+      if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
+        paymentOrders = paymentOrders.filter((order) => order.branch === currentUser.branch);
+      }
+
+      setWorkOrders(paymentOrders);
+    } catch (error) {
+      console.error('Failed to load work orders from backend', error);
+      const savedWorkOrders = getStoredWorkOrders();
+      let paymentOrders = savedWorkOrders.filter(paymentReadyFilter);
+      if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
+        paymentOrders = paymentOrders.filter((order) => order.branch === currentUser.branch);
+      }
+      setWorkOrders(paymentOrders);
+    }
+  };
+
+  const loadFinanceData = async () => {
+    try {
+      const branchParam = currentUser?.branch === 'all' ? undefined : currentUser?.branch;
+      const bootstrap = await frappeClient.getPortalBootstrap({ branch: branchParam, mode: 'finance' });
+      setSalesInvoices(Array.isArray(bootstrap?.sales_invoices) ? bootstrap.sales_invoices : []);
+    } catch (error) {
+      console.error('Failed to load sales invoices from ERP:', error);
+    }
+  };
+
+  const findInvoiceForOrder = (order, invoices = salesInvoices) => {
+    const orderKey = (order?.orderId || order?.id || '').toString();
+    if (!orderKey) return null;
+
+    return (invoices || []).find((invoice) => {
+      const matchesOrder =
+        invoice?.po_no === orderKey || invoice?.garage_service_order === orderKey;
+      if (!matchesOrder) return false;
+
+      const outstanding = Number(invoice?.outstanding_amount ?? invoice?.outstanding ?? 0);
+      return invoice?.status !== 'Paid' && invoice?.status !== 'Cancelled' && outstanding > 0;
+    }) || null;
+  };
 
   // Handle auto-close invoice modal after print
   useEffect(() => {
@@ -2000,28 +2065,6 @@ export function Payment({ currentUser }) {
     }
   };
 
-  const loadWorkOrders = () => {
-    const savedWorkOrders = localStorage.getItem('workOrders');
-    if (savedWorkOrders) {
-      const orders = JSON.parse(savedWorkOrders);
-      let paymentOrders = orders.filter(order => 
-        order.status === 'waiting-payment' ||
-        order.status === 'ready-for-payment' ||
-        order.paymentStatus === 'pending' ||
-        order.paymentStatus === 'waiting-recon' ||
-        order.paymentStatus === 'paid' ||
-        order.paymentStatus === 'cancelled' ||
-        order.paymentStatus === 'nota-printed'
-      );
-      
-      if (currentUser.role === 'branch' && currentUser.branch !== 'all') {
-        paymentOrders = paymentOrders.filter(order => order.branch === currentUser.branch);
-      }
-      
-      setWorkOrders(paymentOrders);
-    }
-  };
-
   const loadPurchaseOrders = () => {
     const savedPOs = localStorage.getItem('purchaseOrders');
     if (savedPOs) {
@@ -2042,15 +2085,15 @@ export function Payment({ currentUser }) {
     }
   };
 
-  const saveWorkOrders = (updatedOrders) => {
-    const allOrders = JSON.parse(localStorage.getItem('workOrders') || '[]');
-    const mergedOrders = allOrders.map(order => {
-      const updated = updatedOrders.find(o => o.id === order.id);
-      return updated || order;
-    });
-    localStorage.setItem('workOrders', JSON.stringify(mergedOrders));
+  const saveWorkOrders = async (updatedOrders) => {
+    const allOrders = getStoredWorkOrders();
+    const updatedIds = new Set(updatedOrders.map((order) => order.id));
+    const mergedOrders = [
+      ...allOrders.filter((order) => !updatedIds.has(order.id)),
+      ...updatedOrders,
+    ];
+    await persistWorkOrders(mergedOrders, { skipSync: true });
     setWorkOrders(updatedOrders);
-    window.dispatchEvent(new CustomEvent('workOrdersUpdated'));
   };
 
   const formatCurrency = (amount) => {
@@ -2235,7 +2278,7 @@ export function Payment({ currentUser }) {
     return invoiceNumber;
   };
 
-  const handleProcessPayment = (method, cash) => {
+  const handleLocalProcessPayment = (method, cash) => {
     if (!selectedOrder) return;
 
     // Use parameters if provided, otherwise use state
@@ -2319,6 +2362,111 @@ export function Payment({ currentUser }) {
       void syncPaymentToERP(updatedOrder);
     } else {
       alert('✅ Transfer tercatat. Menunggu rekonsiliasi sebelum status menjadi Paid.');
+    }
+  };
+
+  const handleInvoicePaymentSuccess = async (paymentInfo) => {
+    if (!selectedOrder) return;
+
+    const paymentMethodMap = {
+      Cash: 'cash',
+      'Bank Transfer': 'transfer',
+      'Credit Card': 'credit-card',
+      'Debit Card': 'debit-card',
+      QRIS: 'qris',
+      Credit: 'credit',
+    };
+
+    const mappedMethod =
+      paymentMethodMap[paymentInfo?.paymentMethod] ||
+      paymentMethodMap[pendingPaymentMethod] ||
+      pendingPaymentMethod ||
+      'cash';
+
+    const paymentDate = paymentInfo?.paymentDate
+      ? new Date(paymentInfo.paymentDate).toLocaleString('id-ID', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : new Date().toLocaleString('id-ID', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+
+    const updatedOrder = {
+      ...selectedOrder,
+      paymentStatus: 'paid',
+      paymentMethod: mappedMethod,
+      paidAmount: paymentInfo?.amount || selectedOrder.paidAmount,
+      paymentDate,
+      receiptNumber: paymentInfo?.paymentEntry || selectedOrder.receiptNumber,
+      erpPaymentEntry: paymentInfo?.paymentEntry,
+      erpInvoiceName: paymentInfo?.invoice?.name || selectedInvoice?.name,
+      invoiceNumber: paymentInfo?.invoice?.name || selectedOrder.invoiceNumber,
+      status: 'paid',
+      repairStatus: 'completed',
+    };
+
+    const allOrders = getStoredWorkOrders();
+    const mergedOrders = allOrders.some((order) => order.orderId === updatedOrder.orderId)
+      ? allOrders.map((order) =>
+          order.orderId === updatedOrder.orderId ? { ...order, ...updatedOrder } : order
+        )
+      : [...allOrders, updatedOrder];
+
+    await persistWorkOrders(mergedOrders, { skipSync: true });
+    setWorkOrders((prev) =>
+      prev.map((order) => (order.id === updatedOrder.id ? updatedOrder : order))
+    );
+    setSelectedOrder(updatedOrder);
+    setShowInvoicePaymentModal(false);
+    setSelectedInvoice(null);
+    setShowReceiptModal(true);
+    await loadFinanceData();
+    toast.success('Payment Entry ERPNext berhasil dibuat.');
+  };
+
+  const handleProcessPayment = async (method, cash) => {
+    if (!selectedOrder) return;
+
+    const finalPaymentMethod = method || paymentMethod;
+    const isTransfer = finalPaymentMethod === 'transfer';
+
+    if (isTransfer) {
+      handleLocalProcessPayment(method, cash);
+      return;
+    }
+
+    setPendingPaymentMethod(finalPaymentMethod);
+
+    try {
+      await frappeClient.syncWorkOrders([selectedOrder]);
+
+      const branchParam = currentUser?.branch === 'all' ? undefined : currentUser?.branch;
+      const bootstrap = await frappeClient.getPortalBootstrap({ branch: branchParam, mode: 'finance' });
+      const invoices = Array.isArray(bootstrap?.sales_invoices) ? bootstrap.sales_invoices : [];
+      setSalesInvoices(invoices);
+
+      const invoice = findInvoiceForOrder(selectedOrder, invoices);
+      if (invoice) {
+        setSelectedInvoice(invoice);
+        setShowPaymentModal(false);
+        setShowInvoicePaymentModal(true);
+        return;
+      }
+
+      toast.message('Sales Invoice ERP belum tersedia. Pembayaran disimpan lokal dan disinkronkan.');
+      handleLocalProcessPayment(method, cash);
+    } catch (error) {
+      console.error('Failed to process ERP payment:', error);
+      toast.error('Gagal terhubung ke ERP. Pembayaran disimpan lokal.');
+      handleLocalProcessPayment(method, cash);
     }
   };
 
@@ -2975,7 +3123,7 @@ export function Payment({ currentUser }) {
           selectedOrder={selectedOrder}
           onClose={() => setShowPaymentModal(false)}
           onConfirmPayment={(method, cash) => {
-            handleProcessPayment(method, cash);
+            void handleProcessPayment(method, cash);
           }}
           formatCurrency={formatCurrency}
           calculatePartsCost={calculatePartsCost}
@@ -3314,6 +3462,18 @@ export function Payment({ currentUser }) {
             </div>
           </div>
         )}
+
+        <InvoicePaymentModal
+          isOpen={showInvoicePaymentModal}
+          invoice={selectedInvoice}
+          onClose={() => {
+            setShowInvoicePaymentModal(false);
+            setSelectedInvoice(null);
+          }}
+          onPaymentSuccess={(paymentInfo) => {
+            void handleInvoicePaymentSuccess(paymentInfo);
+          }}
+        />
 
         <ReceiptModal
           isOpen={showReceiptModal}

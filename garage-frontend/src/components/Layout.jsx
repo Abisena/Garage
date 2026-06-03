@@ -41,6 +41,12 @@ export function Layout({
 
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:bg-blue-600 focus:px-4 focus:py-2 focus:text-white"
+      >
+        Lewati ke konten utama
+      </a>
       {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex-shrink-0 ${
@@ -75,17 +81,17 @@ export function Layout({
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* TopBar */}
-        <TopBar
+        <header role="banner">
+          <TopBar
           currentUser={currentUser}
           onLogout={onLogout}
           branches={availableBranches}
           onBranchChange={onBranchChange}
           onToggleSidebar={toggleSidebar}
-        />
+          />
+        </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto bg-slate-50">
+        <main id="main-content" className="flex-1 overflow-auto bg-slate-50" tabIndex={-1}>
           <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
             {children}
           </div>

@@ -16,6 +16,9 @@ TERMINAL_STATUSES = {"Completed", "Cancelled"}
 STATUS_FLOW = [
     "Draft",
     "Inspection",
+    "Estimate",
+    "Awaiting Approval",
+    "Approved",
     "Request Part",
     "Work In Progress",
     "Waiting Payment",

@@ -1,5 +1,5 @@
 (() => {
-    frappe.listview_settings["BCA Bank Statement Import"] = {
+    frappe.listview_settings["Bank Statement"] = {
         order_by: "imported_on asc",
     };
 })();

@@ -1,4 +1,4 @@
-const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || 'http://localhost:8008';
+const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || 'http://localhost:3000';
 
 const CSRF_HEADER = 'X-Frappe-CSRF-Token';
 const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
@@ -319,8 +319,89 @@ class FrappeClient {
 
       return response.data || [];
     } catch (error) {
-      console.error('Failed to list service orders:', error);
+      console.error('Failed to list service orders by names:', error);
       return [];
+    }
+  }
+
+  async listServiceOrders({ branch, status } = {}) {
+    try {
+      const filters = {};
+      if (branch && branch !== 'all') {
+        filters.branch = branch;
+      }
+      if (status) {
+        filters.status = status;
+      }
+
+      const response = await this.request('/api/method/garage.api.portal.list_service_orders', {
+        method: 'POST',
+        body: JSON.stringify({ filters }),
+      });
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to list service orders:', error);
+      throw error;
+    }
+  }
+
+  async listHandoverOrders({ branch } = {}) {
+    try {
+      const searchParams = new URLSearchParams();
+      if (branch && branch !== 'all') {
+        searchParams.append('branch', branch);
+      }
+
+      const query = searchParams.toString();
+      const endpoint = query
+        ? `/api/method/garage.api.portal.list_handover_orders?${query}`
+        : '/api/method/garage.api.portal.list_handover_orders';
+
+      const response = await this.request(endpoint);
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to list handover orders:', error);
+      throw error;
+    }
+  }
+
+  async completeServiceOrder(orderId, completionData = {}) {
+    if (!orderId) {
+      throw new Error('Service Order ID is required');
+    }
+
+    try {
+      const response = await this.request('/api/method/garage.api.portal.complete_service_order', {
+        method: 'POST',
+        body: JSON.stringify({
+          order_id: orderId,
+          completion_data: completionData,
+        }),
+      });
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to complete service order:', error);
+      throw error;
+    }
+  }
+
+  async updateServiceOrder(name, updates = {}) {
+    if (!name) {
+      throw new Error('Service Order name is required');
+    }
+
+    try {
+      const response = await this.request('/api/method/garage.api.portal.update_service_order', {
+        method: 'POST',
+        body: JSON.stringify({ name, updates }),
+      });
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to update service order:', error);
+      throw error;
     }
   }
 
