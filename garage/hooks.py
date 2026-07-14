@@ -97,6 +97,7 @@ jinja = {
         "garage.utils.jinja.get_portal_nav_items",
         "garage.utils.jinja.rupiah_terbilang",
         "garage.utils.jinja.get_payment_receipt_context",
+        "garage.utils.jinja.get_nota_service_context",
     ]
 }
 
@@ -257,6 +258,7 @@ fixtures = [
                 "Garage Spare Part Request Print",
                 "Garage Vehicle Handover Print",
                 "Garage Payment Receipt",
+                "Nota Service",
             ],
         ]],
     },
@@ -278,6 +280,7 @@ fixtures = [
             "in",
             [
                 "Payment Entry-main-default_print_format",
+                "Sales Invoice-main-default_print_format",
             ],
         ]],
     },
