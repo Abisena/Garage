@@ -4,7 +4,7 @@
   "allow_guest_to_view": 0,
   "allow_import": 1,
   "allow_rename": 0,
-  "autoname": "format:{branch}-{license_plate}",
+  "autoname": "field:license_plate",
   "beta": 0,
   "creation": "2024-06-02 00:00:00.000000",
   "default_view": "Form",
@@ -12,66 +12,38 @@
   "editable_grid": 0,
   "engine": "InnoDB",
   "field_order": [
-    "owner_info_section",
-    "customer",
-    "branch",
     "section_break_vehicle_id",
     "license_plate",
-    "vin",
-    "column_break_vehicle_id",
-    "engine_number",
-    "section_break_vehicle_details",
     "brand",
-    "model",
     "vehicle_type",
-    "column_break_details",
-    "vehicle_year",
-    "assembly_type",
-    "section_break_specs",
-    "transmission",
     "fuel_type",
-    "column_break_specs",
+    "column_break_vehicle_id",
+    "vin",
+    "model",
+    "vehicle_year",
     "mileage",
-    "section_break_service_history",
+    "column_break_vehicle_id2",
+    "engine_number",
+    "color",
+    "transmission",
+    "section_break_owner",
+    "customer",
+    "column_break_owner",
+    "customer_name",
+    "customer_number",
+    "customer_phone",
+    "section_break_hidden",
+    "notes",
+    "branch",
+    "assembly_type",
     "last_service_date",
-    "column_break_service",
-    "last_service_logged_at",
-    "section_break_notes",
-    "notes"
+    "last_service_logged_at"
   ],
   "fields": [
     {
-      "fieldname": "owner_info_section",
-      "fieldtype": "Section Break",
-      "label": "👤 Owner Information",
-      "collapsible": 0
-    },
-    {
-      "fieldname": "customer",
-      "fieldtype": "Link",
-      "label": "Customer",
-      "options": "Garage Customer",
-      "reqd": 1,
-      "bold": 1,
-      "in_standard_filter": 1,
-      "description": "Vehicle owner"
-    },
-    {
-      "fieldname": "branch",
-      "fieldtype": "Link",
-      "label": "Branch",
-      "options": "Garage Branch",
-      "reqd": 1,
-      "in_list_view": 1,
-      "in_standard_filter": 1,
-      "bold": 1,
-      "description": "Home branch for this vehicle"
-    },
-    {
       "fieldname": "section_break_vehicle_id",
       "fieldtype": "Section Break",
-      "label": "🚗 Vehicle Identification",
-      "collapsible": 0
+      "label": "Vehicle"
     },
     {
       "fieldname": "license_plate",
@@ -80,15 +52,12 @@
       "reqd": 1,
       "in_list_view": 1,
       "bold": 1,
-      "description": "Vehicle license plate number",
       "unique": 1
     },
     {
       "fieldname": "vin",
       "fieldtype": "Data",
-      "label": "Chassis Number (No. Rangka)",
-      "in_list_view": 1,
-      "description": "Vehicle Identification Number / Chassis number"
+      "label": "Chassis Number (No. Rangka)"
     },
     {
       "fieldname": "column_break_vehicle_id",
@@ -97,125 +66,146 @@
     {
       "fieldname": "engine_number",
       "fieldtype": "Data",
-      "label": "Engine Number (No. Mesin)",
-      "in_list_view": 1,
-      "description": "Engine serial number"
+      "label": "Engine Number (No. Mesin)"
     },
     {
-      "fieldname": "section_break_vehicle_details",
+      "fieldname": "color",
+      "fieldtype": "Data",
+      "label": "Color (Warna)"
+    },
+    {
+      "fieldname": "section_break_owner",
       "fieldtype": "Section Break",
-      "label": "🚙 Vehicle Details",
-      "collapsible": 0
+      "label": "Owner"
+    },
+    {
+      "fieldname": "customer_number",
+      "fieldtype": "Data",
+      "label": "Customer Number",
+      "bold": 1,
+      "length": 15,
+      "hidden": 1
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "No. Customer",
+      "options": "Garage Customer",
+      "reqd": 1,
+      "bold": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "column_break_owner",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "customer_name",
+      "fieldtype": "Data",
+      "label": "Customer Name",
+      "fetch_from": "customer.customer_name",
+      "bold": 1
+    },
+    {
+      "fieldname": "customer_phone",
+      "fieldtype": "Data",
+      "label": "Phone",
+      "read_only": 1,
+      "fetch_from": "customer.phone",
+      "hidden": 1
+    },
+    {
+      "fieldname": "column_break_vehicle_id2",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "brand",
       "fieldtype": "Link",
       "label": "Brand (Merk)",
       "options": "Garage Brand",
+      "reqd": 1,
       "in_list_view": 1,
       "bold": 1,
-      "in_standard_filter": 1,
-      "description": "Vehicle manufacturer"
+      "in_standard_filter": 1
     },
     {
       "fieldname": "model",
       "fieldtype": "Link",
       "label": "Model",
       "options": "Garage Model",
+      "reqd": 1,
       "in_list_view": 1,
       "bold": 1,
-      "in_standard_filter": 1,
-      "description": "Vehicle model"
+      "in_standard_filter": 1
     },
     {
       "fieldname": "vehicle_type",
       "fieldtype": "Select",
       "label": "Vehicle Type",
       "options": "\nSedan\nHatchback\nSUV\nMPV\nTruck\nVan\nCoupe\nWagon\nPickup",
-      "in_standard_filter": 1,
-      "description": "Body type of the vehicle"
-    },
-    {
-      "fieldname": "column_break_details",
-      "fieldtype": "Column Break"
+      "in_standard_filter": 1
     },
     {
       "fieldname": "vehicle_year",
       "fieldtype": "Int",
-      "label": "Year",
-      "description": "Manufacturing year"
-    },
-    {
-      "fieldname": "assembly_type",
-      "fieldtype": "Select",
-      "label": "Assembly Type (Jenis Rakit)",
-      "options": "\nCKD\nCBU",
-      "description": "CKD = Completely Knocked Down, CBU = Completely Built Up"
-    },
-    {
-      "fieldname": "section_break_specs",
-      "fieldtype": "Section Break",
-      "label": "⚙️ Specifications",
-      "collapsible": 1
+      "label": "Year"
     },
     {
       "fieldname": "transmission",
       "fieldtype": "Select",
       "label": "Transmission",
-      "options": "\nManual (MT)\nAutomatic (AT)\nCVT\nDCT\nOther",
-      "description": "Transmission type"
+      "options": "\nManual (MT)\nAutomatic (AT)\nCVT\nDCT\nOther"
     },
     {
       "fieldname": "fuel_type",
       "fieldtype": "Select",
       "label": "Fuel Type",
-      "options": "\nPetrol (Bensin)\nDiesel (Solar)\nHybrid\nElectric\nOther",
-      "description": "Primary fuel type"
-    },
-    {
-      "fieldname": "column_break_specs",
-      "fieldtype": "Column Break"
+      "options": "\nPetrol (Bensin)\nDiesel (Solar)\nHybrid\nElectric\nOther"
     },
     {
       "fieldname": "mileage",
       "fieldtype": "Int",
-      "label": "Current Mileage (KM)",
-      "description": "Current odometer reading in kilometers"
+      "label": "Current Mileage (KM)"
     },
     {
-      "fieldname": "section_break_service_history",
+      "fieldname": "notes",
+      "fieldtype": "Small Text",
+      "label": "Notes",
+      "hidden": 1
+    },
+    {
+      "fieldname": "section_break_hidden",
       "fieldtype": "Section Break",
-      "label": "🔧 Service History",
-      "collapsible": 1
+      "hidden": 1
+    },
+    {
+      "fieldname": "branch",
+      "fieldtype": "Link",
+      "label": "Branch",
+      "options": "Garage Branch",
+      "hidden": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "assembly_type",
+      "fieldtype": "Select",
+      "label": "Assembly Type",
+      "options": "\nCKD\nCBU",
+      "hidden": 1
     },
     {
       "fieldname": "last_service_date",
       "fieldtype": "Date",
       "label": "Last Service Date",
-      "description": "Date of most recent service"
-    },
-    {
-      "fieldname": "column_break_service",
-      "fieldtype": "Column Break"
+      "hidden": 1
     },
     {
       "fieldname": "last_service_logged_at",
       "fieldtype": "Datetime",
       "label": "Last Service Logged At",
       "read_only": 1,
-      "description": "Timestamp when last service was logged"
-    },
-    {
-      "fieldname": "section_break_notes",
-      "fieldtype": "Section Break",
-      "label": "📝 Additional Notes",
-      "collapsible": 1
-    },
-    {
-      "fieldname": "notes",
-      "fieldtype": "Small Text",
-      "label": "Notes",
-      "description": "Any special notes about this vehicle (modifications, issues, preferences, etc.)"
+      "hidden": 1
     }
   ],
   "has_web_view": 0,
@@ -238,7 +228,7 @@
   "modified": "2024-06-02 00:00:00.000000",
   "module": "Garage",
   "name": "Garage Vehicle",
-  "naming_rule": "By \"Naming Series\" field",
+  "naming_rule": "By fieldname",
   "owner": "Administrator",
   "permissions": [
     {
@@ -278,5 +268,5 @@
   "sort_field": "modified",
   "sort_order": "DESC",
   "track_changes": 1,
-  "description": "Vehicle registry connected to a garage customer with complete vehicle specifications and service history."
+  "description": "Vehicle registry with complete specifications, linked to customer."
 }
