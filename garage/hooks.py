@@ -45,6 +45,7 @@ app_include_js = ["/assets/garage/js/route_aliases.js?v=1", "/assets/garage/js/g
 # include js in doctype views
 doctype_js = {
     "Product Bundle": "public/js/product_bundle.js",
+    "Payment Entry": "public/js/payment_entry.js",
 }
 doctype_list_js = {
     "Garage Vehicle": "public/js/garage_vehicle_list.js",
