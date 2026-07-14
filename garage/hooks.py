@@ -25,8 +25,8 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/garage/css/garage.css"
-app_include_js = "/assets/garage/js/route_aliases.js"
+app_include_css = "/assets/garage/css/garage_desk.css?v=122"
+app_include_js = ["/assets/garage/js/route_aliases.js?v=1", "/assets/garage/js/garage_theme.js?v=17"]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/garage/css/garage.css"
@@ -43,19 +43,24 @@ app_include_js = "/assets/garage/js/route_aliases.js"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {
+    "Product Bundle": "public/js/product_bundle.js",
+}
 doctype_list_js = {
     "Garage Vehicle": "public/js/garage_vehicle_list.js",
     "Garage Customer": "public/js/garage_customer_list.js",
-    "Bank Statement": "public/js/bca_bank_statement_import_list.js",
+    "Garage Service Order": "public/js/garage_service_order_list.js",
+    "Sales Invoice": "public/js/sales_invoice_list.js",
+    "Repair QC": "public/js/repair_qc_list.js",
+    "Bank Statement Import": "public/js/bca_bank_statement_import_list.js",
 }
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
 # Redirect legacy routes
-website_route_rules = [
-    {"from_route": "/customer-entry", "to_route": "/garage/intake"},
-]
+# website_route_rules = [
+#     {"from_route": "/customer-entry", "to_route": "/garage/intake"},
+# ]
 
 # Svg Icons
 # ------------------
@@ -66,37 +71,10 @@ website_route_rules = [
 # ----------
 
 # application home page (will override Website Settings)
-home_page = "garage/login"
+home_page = "login"
 
 # website user home page (by Role)
-role_home_page = {
-	"Admin": "garage/intake",
-	"Registrasi": "garage/intake",
-	"Customer Service": "garage/intake",
-	"Front Desk": "garage/intake",
-	"Service": "garage/service",
-	"Servis": "garage/service",
-	"Service Advisor": "garage/service",
-        "Technician": "garage/service",
-        "Teknisi": "garage/service",
-        "Mechanic": "garage/service",
-        "Mekanik": "garage/service",
-	"Sparepart": "garage/sparepart",
-	"Spare Part": "garage/sparepart",
-	"Inventory": "garage/sparepart",
-	"Inventory Controller": "garage/sparepart",
-	"Pengadaan": "garage/procurement",
-	"Procurement": "garage/procurement",
-	"Buying": "garage/procurement",
-	"Finance": "garage/finance",
-	"Keuangan": "garage/finance",
-	"Accountant": "garage/finance",
-	"Cashier": "garage/finance",
-	"Administrator": "garage",
-	"System Manager": "garage",
-	"Manager Bengkel": "garage",
-	"Garage Manager": "garage",
-}
+# role_home_page = {}
 
 # Generators
 # ----------
@@ -116,6 +94,8 @@ role_home_page = {
 jinja = {
     "methods": [
         "garage.utils.jinja.get_portal_nav_items",
+        "garage.utils.jinja.rupiah_terbilang",
+        "garage.utils.jinja.get_payment_receipt_context",
     ]
 }
 
@@ -275,13 +255,35 @@ fixtures = [
                 "Garage Sales Invoice Print",
                 "Garage Spare Part Request Print",
                 "Garage Vehicle Handover Print",
+                "Garage Payment Receipt",
+            ],
+        ]],
+    },
+    {
+        "doctype": "Custom Field",
+        "filters": [[
+            "name",
+            "in",
+            [
+                "Product Bundle-service_type",
+                "User-garage_branch",
+            ],
+        ]],
+    },
+    {
+        "doctype": "Property Setter",
+        "filters": [[
+            "name",
+            "in",
+            [
+                "Payment Entry-main-default_print_format",
             ],
         ]],
     },
 ]
 
 doc_events = {
-    "Bank Statement": {
+    "Bank Statement Import": {
         "autoname": "garage.utils.bca_bank_statement_import.set_import_naming",
     },
     "Garage Vehicle Inspection": {
@@ -311,5 +313,8 @@ doc_events = {
     },
     "Garage Service Order": {
         "on_update": "garage.utils.vehicle_handover.handle_completed_service_order",
+    },
+    "Item": {
+        "on_trash": "garage.utils.item_hooks.block_delete_if_spare_part_requested",
     },
 }
