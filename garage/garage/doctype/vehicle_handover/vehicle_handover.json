@@ -36,19 +36,13 @@
     "vehicle_brand",
     "column_break_vehicle",
     "vehicle_model",
+    "vehicle_year",
+    "owner_section",
+    "owner_name",
+    "column_break_owner",
+    "owner_phone",
     "body_notes_section",
     "body_notes",
-    "tab_break_checklist",
-    "checklist_section",
-    "checklist_instructions",
-    "checklist_progress_html",
-    "completeness_checked",
-    "spare_part_release_confirmed",
-    "body_checked",
-    "checklist_column_break",
-    "workshop_approved",
-    "signature_captured",
-    "stamped",
     "handover_section",
     "handover_completed",
     "column_break_handover",
@@ -136,9 +130,11 @@
       "fieldtype": "Link",
       "label": "Service Order",
       "options": "Garage Service Order",
+      "reqd": 1,
+      "bold": 1,
       "in_standard_filter": 1,
       "permlevel": 1,
-      "description": "Link to service order (if applicable)"
+      "description": "Source service order - vehicle and owner data below are pulled from here"
     },
     {
       "fieldname": "column_break_ref",
@@ -201,10 +197,11 @@
       "fieldtype": "Link",
       "label": "Kendaraan",
       "options": "Garage Vehicle",
-      "reqd": 1,
+      "fetch_from": "service_order.vehicle",
+      "read_only": 1,
       "bold": 1,
       "permlevel": 1,
-      "description": "Select vehicle"
+      "description": "Auto-filled from Service Order"
     },
     {
       "fieldname": "license_plate",
@@ -234,6 +231,38 @@
       "read_only": 1
     },
     {
+      "fieldname": "vehicle_year",
+      "fieldtype": "Data",
+      "label": "Tahun",
+      "fetch_from": "vehicle.vehicle_year",
+      "read_only": 1
+    },
+    {
+      "fieldname": "owner_section",
+      "fieldtype": "Section Break",
+      "label": "👤 Pemilik Kendaraan",
+      "collapsible": 0
+    },
+    {
+      "fieldname": "owner_name",
+      "fieldtype": "Data",
+      "label": "Nama Pemilik",
+      "fetch_from": "service_order.customer_display",
+      "read_only": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "column_break_owner",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "owner_phone",
+      "fieldtype": "Data",
+      "label": "No. Telepon",
+      "fetch_from": "service_order.primary_contact",
+      "read_only": 1
+    },
+    {
       "fieldname": "body_notes_section",
       "fieldtype": "Section Break",
       "label": "📝 Body Condition Notes",
@@ -244,75 +273,6 @@
       "fieldtype": "Text Editor",
       "label": "Catatan Bodi",
       "description": "Notes on vehicle body condition, scratches, dents, etc."
-    },
-    {
-      "fieldname": "tab_break_checklist",
-      "fieldtype": "Tab Break",
-      "label": "Security Checklist"
-    },
-    {
-      "fieldname": "checklist_section",
-      "fieldtype": "Section Break",
-      "label": "✅ Security Checklist",
-      "collapsible": 0
-    },
-    {
-      "fieldname": "checklist_instructions",
-      "fieldtype": "HTML",
-      "label": "Petunjuk",
-      "options": "<div class='alert alert-info' style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white; border-radius: 8px; padding: 15px; margin-bottom: 20px;'><h5 style='color: white; margin: 0 0 8px 0; font-weight: 700;'>🔒 Security Checklist</h5><p style='margin: 0; font-size: 13px;'>Checklist wajib dilengkapi sebelum kendaraan keluar area bengkel. Pastikan semua item sudah dicentang untuk keamanan maksimal.</p></div>"
-    },
-    {
-      "fieldname": "checklist_progress_html",
-      "fieldtype": "HTML",
-      "label": "",
-      "options": "<div id='checklist-progress'></div>"
-    },
-    {
-      "default": 0,
-      "fieldname": "completeness_checked",
-      "fieldtype": "Check",
-      "label": "✓ Kelengkapan Kendaraan",
-      "description": "Pastikan semua kelengkapan kendaraan ada (ban serep, dongkrak, kunci roda, dll)"
-    },
-    {
-      "default": 0,
-      "fieldname": "spare_part_release_confirmed",
-      "fieldtype": "Check",
-      "label": "✓ Pengeluaran Sparepart",
-      "description": "Konfirmasi sparepart yang diganti sudah dicatat"
-    },
-    {
-      "default": 0,
-      "fieldname": "body_checked",
-      "fieldtype": "Check",
-      "label": "✓ Checklist Bodi",
-      "description": "Kondisi bodi kendaraan sudah dicek dan dicatat"
-    },
-    {
-      "fieldname": "checklist_column_break",
-      "fieldtype": "Column Break"
-    },
-    {
-      "default": 0,
-      "fieldname": "workshop_approved",
-      "fieldtype": "Check",
-      "label": "✓ Persetujuan Workshop",
-      "description": "Pekerjaan sudah disetujui oleh workshop supervisor"
-    },
-    {
-      "default": 0,
-      "fieldname": "signature_captured",
-      "fieldtype": "Check",
-      "label": "✓ Tanda Tangan",
-      "description": "Tanda tangan customer sudah diperoleh"
-    },
-    {
-      "default": 0,
-      "fieldname": "stamped",
-      "fieldtype": "Check",
-      "label": "✓ Stempel",
-      "description": "Dokumen sudah distempel"
     },
     {
       "fieldname": "handover_section",
@@ -469,5 +429,5 @@
   "title_field": "sikk_number",
   "track_changes": 1,
   "track_seen": 1,
-  "description": "SIKK (Surat Izin Keluar/Masuk Kendaraan) - Vehicle handover document with security checklist and approval workflow"
+  "description": "SIKK (Surat Izin Keluar/Masuk Kendaraan) - vehicle exit/entry permit printed after service, auto-filled from the source Service Order"
 }

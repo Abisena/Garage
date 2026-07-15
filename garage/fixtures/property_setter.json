@@ -46,5 +46,21 @@
   "property_type": "Small Text",
   "row_name": null,
   "value": "[\"f948rsflgn\", \"mcc0uj74ld\"]"
+ },
+ {
+  "default_value": null,
+  "doc_type": "Vehicle Handover",
+  "docstatus": 0,
+  "doctype": "Property Setter",
+  "doctype_or_field": "DocType",
+  "field_name": null,
+  "is_system_generated": 1,
+  "modified": "2026-07-16 06:07:54.714861",
+  "module": null,
+  "name": "Vehicle Handover-main-default_print_format",
+  "property": "default_print_format",
+  "property_type": "Data",
+  "row_name": null,
+  "value": "Garage Vehicle Handover Print"
  }
 ]

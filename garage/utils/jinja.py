@@ -242,3 +242,58 @@ def get_nota_service_context(doc) -> Dict[str, Any]:
         # grand_total and this ever drift apart for some other reason.
         "total_tagihan": subtotal_jasa + subtotal_part + total_ppn,
     }
+
+
+def get_vehicle_handover_context(doc) -> Dict[str, Any]:
+    """Assemble the branch, service-order timeline, mechanic and invoice
+    reference info the "SIKK" (Surat Izin Keluar/Masuk Kendaraan) print
+    format needs. Vehicle/owner fields are already plain fields on the
+    Vehicle Handover doc itself (fetched from its Service Order at save
+    time), so only the extra context not already on the doc is built here."""
+
+    service_order = None
+    if getattr(doc, "service_order", None):
+        service_order = frappe.db.get_value(
+            "Garage Service Order",
+            doc.service_order,
+            ["order_date", "assigned_mechanic", "assigned_mechanic_name", "branch"],
+            as_dict=True,
+        )
+
+    branch_fields = ["branch_name", "address_line1", "address_line2", "city", "phone", "email"]
+    branch = None
+    branch_name = getattr(doc, "branch", None) or (service_order or {}).get("branch")
+    if branch_name:
+        branch = frappe.db.get_value("Garage Branch", branch_name, branch_fields, as_dict=True)
+    if not branch:
+        branch = frappe.db.get_value("Garage Branch", {"is_active": 1}, branch_fields, as_dict=True)
+
+    invoice_name = None
+    jenis_service = None
+    if getattr(doc, "service_order", None):
+        invoice_name = frappe.db.get_value(
+            "Sales Invoice",
+            {"service_order": doc.service_order, "docstatus": ["<", 2]},
+            "name",
+        )
+        if invoice_name:
+            service_item_names = []
+            for row in frappe.get_all(
+                "Sales Invoice Item", filters={"parent": invoice_name}, fields=["item_code", "item_name"]
+            ):
+                item_group = frappe.get_cached_value("Item", row.item_code, "item_group")
+                if item_group == _SERVICE_ITEM_GROUP:
+                    service_item_names.append(row.item_name or row.item_code)
+            jenis_service = ", ".join(service_item_names) or None
+
+    tanggal_keluar = getattr(doc, "handover_date", None) or getattr(doc, "submission_date", None)
+
+    return {
+        "branch": branch,
+        "tanggal_masuk": (service_order or {}).get("order_date"),
+        "tanggal_keluar": tanggal_keluar,
+        "mechanic_name": (service_order or {}).get("assigned_mechanic_name"),
+        "mechanic_code": (service_order or {}).get("assigned_mechanic"),
+        "jenis_service": jenis_service,
+        "ref_nota": invoice_name,
+    }
