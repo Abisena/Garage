@@ -181,6 +181,19 @@ if (frappe.ui.form.QuickEntryForm && !frappe.ui.form.GarageCustomerQuickEntryFor
   frappe.ui.form.GarageCustomerQuickEntryForm = class GarageCustomerQuickEntryForm extends (
     frappe.ui.form.QuickEntryForm
   ) {
+    is_quick_entry() {
+      // Same rule as GarageVehicleQuickEntryForm above: only pop the small
+      // dialog when triggered from another form's Link field (Vehicle's
+      // "No. Customer" -> "+ Create New"). Direct creation - List View's
+      // "+ Add Garage Customer", or the /new route - falls through to the
+      // full form. Without this override the List View "+ Add" button
+      // showed the compact dialog while Garage Vehicle's showed the full
+      // form for the exact same kind of action - the inconsistency this
+      // fixes.
+      if (!frappe._from_link) return false;
+      return super.is_quick_entry();
+    }
+
     set_meta_and_mandatory_fields() {
       super.set_meta_and_mandatory_fields();
       // customer_number is deliberately NOT reqd (see garage_customer.json)
