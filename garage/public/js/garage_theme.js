@@ -1,3 +1,76 @@
+frappe.provide('garage');
+
+// Indonesian license plates are [huruf wilayah][angka][huruf seri], e.g.
+// "B 1234 XYZ" or "BK 5678 AB" - auto-insert the spaces between those three
+// groups as the user types, rather than making them type the spaces
+// themselves. Permissive on purpose (no length caps / format validation):
+// region codes are usually 1-2 letters but a few Java codes (AA, AB, AD, AE,
+// AG) are 2 letters too, so this only handles spacing, not correctness.
+//
+// Lives here (not Garage Vehicle's own doctype_js) because it also has to
+// run inside the Quick Entry dialog opened from *other* forms (e.g. Garage
+// Service Order's "No. Polisi" field -> "+ Create New"), and Garage
+// Vehicle's doctype_js only loads when Garage Vehicle's own form is open,
+// not just because another form references it through a Link field.
+const GARAGE_LICENSE_PLATE_GROUPS = /^([A-Z]*)([0-9]*)([A-Z]*)$/;
+
+garage.formatLicensePlateInput = function (raw) {
+  const clean = (raw || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  const match = clean.match(GARAGE_LICENSE_PLATE_GROUPS);
+  if (!match) return clean;
+  return [match[1], match[2], match[3]].filter(Boolean).join(' ');
+};
+
+garage.attachLicensePlateAutoFormat = function (control) {
+  const inputEl = control && control.$input && control.$input.get(0);
+  if (!inputEl || inputEl.__garagePlateFormatterAttached) return;
+  inputEl.__garagePlateFormatterAttached = true;
+
+  // Capture phase, so this runs and reformats *before* Frappe's own
+  // (bubble-phase) input listener reads the value - otherwise Frappe's
+  // control would capture the raw unspaced text instead of the formatted one.
+  inputEl.addEventListener(
+    'input',
+    (e) => {
+      const input = e.target;
+      const cursorPos = input.selectionStart;
+      const rawBeforeCursor = input.value
+        .slice(0, cursorPos)
+        .replace(/[^A-Za-z0-9]/g, '').length;
+
+      const formatted = garage.formatLicensePlateInput(input.value);
+      if (formatted === input.value) return;
+      input.value = formatted;
+
+      let seen = 0;
+      let pos = formatted.length;
+      for (let i = 0; i < formatted.length; i++) {
+        if (/[A-Za-z0-9]/.test(formatted[i])) seen++;
+        if (seen === rawBeforeCursor) {
+          pos = i + 1;
+          break;
+        }
+      }
+      input.setSelectionRange(pos, pos);
+    },
+    true,
+  );
+};
+
+// Quick Entry dialog customization hook (frappe.ui.form.{Doctype}QuickEntryForm
+// is core's documented mechanism for this - see
+// frappe/public/js/frappe/form/quick_entry.js make_quick_entry()).
+if (frappe.ui.form.QuickEntryForm && !frappe.ui.form.GarageVehicleQuickEntryForm) {
+  frappe.ui.form.GarageVehicleQuickEntryForm = class GarageVehicleQuickEntryForm extends (
+    frappe.ui.form.QuickEntryForm
+  ) {
+    render_dialog() {
+      super.render_dialog();
+      garage.attachLicensePlateAutoFormat(this.dialog.fields_dict.license_plate);
+    }
+  };
+}
+
 // Fix a Frappe core bug that breaks nested "+ Create New" chains inside a
 // Quick Entry dialog (e.g. Service Order -> new Vehicle quick-entry -> new
 // Customer quick-entry nested inside it). When the nested dialog resolves,
