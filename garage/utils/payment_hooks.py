@@ -8,6 +8,33 @@ import frappe
 from frappe.utils import nowdate
 
 
+@frappe.whitelist()
+def get_draft_payment_entry_for_reference(
+    reference_doctype: str, reference_name: str
+) -> Optional[str]:
+    """Return an existing unsubmitted Payment Entry that already references
+    the given document, if any.
+
+    "Create > Payment" on a Sales Invoice always builds a brand new mapped
+    Payment Entry with no check for one already in progress - clicking it
+    twice (e.g. the first draft never got saved/submitted) silently leaves
+    an orphaned draft behind and, if the second one gets submitted instead,
+    makes it look like the invoice was paid twice. Child table rows mirror
+    their parent's docstatus, so filtering "Payment Entry Reference" by
+    docstatus=0 is enough to find only still-draft parents.
+    """
+
+    return frappe.db.get_value(
+        "Payment Entry Reference",
+        {
+            "reference_doctype": reference_doctype,
+            "reference_name": reference_name,
+            "docstatus": 0,
+        },
+        "parent",
+    )
+
+
 def handle_payment_entry_submit(doc, _method=None) -> None:
     """Complete service orders when Payment Entry fully pays linked invoices."""
 

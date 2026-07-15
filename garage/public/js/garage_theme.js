@@ -331,6 +331,46 @@ if (frappe.views.ListSidebar && !frappe.views.ListSidebar.prototype.__garage_sid
   };
 }
 
+// "Create > Payment" on a Sales Invoice always builds a brand new mapped
+// Payment Entry with no check for one already in progress - clicking it
+// twice (e.g. the first draft was never saved/submitted, or the user just
+// clicked it again out of uncertainty) silently leaves an orphaned draft
+// behind and, if a second one gets submitted, makes it look like the
+// invoice was paid twice. Before creating a new one, ask the server for an
+// existing unsubmitted Payment Entry against this invoice and open that
+// instead. Scoped to Sales Invoice only - other doctypes sharing this
+// controller (Purchase Invoice, Sales/Purchase Order) keep default behavior.
+if (
+  window.erpnext &&
+  erpnext.TransactionController &&
+  !erpnext.TransactionController.prototype.__garage_payment_dedupe_patched
+) {
+  erpnext.TransactionController.prototype.__garage_payment_dedupe_patched = true;
+  const original_make_mapped_payment_entry =
+    erpnext.TransactionController.prototype.make_mapped_payment_entry;
+  erpnext.TransactionController.prototype.make_mapped_payment_entry = function (args) {
+    if (this.frm.doctype !== 'Sales Invoice') {
+      return original_make_mapped_payment_entry.call(this, args);
+    }
+    const me = this;
+    return frappe.call({
+      method: 'garage.utils.payment_hooks.get_draft_payment_entry_for_reference',
+      args: { reference_doctype: this.frm.doctype, reference_name: this.frm.docname },
+    }).then((r) => {
+      const existing = r.message;
+      if (existing) {
+        frappe.show_alert({
+          message: __('Sudah ada draft Payment Entry ({0}) untuk invoice ini - membuka yang itu, bukan bikin baru.', [existing]),
+          indicator: 'orange',
+        });
+        frappe.set_route('Form', 'Payment Entry', existing);
+        return;
+      }
+      return original_make_mapped_payment_entry.call(me, args);
+    });
+  };
+}
+
 // Testing-only "Reset Test Data" button: wipes transactional documents
 // (orders, invoices, payments, stock moves) and their GL/stock ledger
 // fallout, leaving master data (customers, vehicles, service types,
