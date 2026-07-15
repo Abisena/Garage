@@ -275,15 +275,22 @@ if (frappe.ui.form && frappe.ui.form.update_calling_link && !frappe.ui.form.upda
 
 // Collapse the form sidebar (tags/attachments/assign panel behind the ☰ toggle)
 // by default whenever a doctype form is freshly opened. Users can still expand
-// it manually; the flag on `page` only suppresses the auto-collapse for
-// subsequent documents viewed in the same Form instance during the session.
+// it manually for the document they're viewing - that choice is respected
+// across re-refreshes of the SAME document (save, field triggers, etc. all
+// call refresh() again) by keying the "already applied" flag off docname, not
+// just off the page instance. Frappe reuses one Form/Page instance across every
+// document of a doctype, so keying off the page instance alone (as an earlier
+// version of this patch did) only auto-collapsed the very first document ever
+// opened in a session - navigating to a second document left whatever sidebar
+// state the first one ended up in, which is the opposite of "opening any
+// document" should default to more screen room.
 if (frappe.ui.form && frappe.ui.form.Form && !frappe.ui.form.Form.prototype.__garage_sidebar_patched) {
   frappe.ui.form.Form.prototype.__garage_sidebar_patched = true;
   const original_refresh = frappe.ui.form.Form.prototype.refresh;
   frappe.ui.form.Form.prototype.refresh = function () {
     const result = original_refresh.apply(this, arguments);
-    if (this.page && !this.page.__garage_sidebar_default_applied) {
-      this.page.__garage_sidebar_default_applied = true;
+    if (this.page && this.page.__garage_sidebar_default_applied_docname !== this.docname) {
+      this.page.__garage_sidebar_default_applied_docname = this.docname;
       const $sidebar = this.page.wrapper.find('.layout-side-section');
       if ($sidebar.length) {
         // Don't gate on `:visible` here: at this point in the render the page
