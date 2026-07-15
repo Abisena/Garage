@@ -1406,6 +1406,15 @@ body[data-route*="Repair QC"] [data-fieldname="spare_parts_verification"] .frapp
    as broken/inconsistent rather than fixed. ───── */
 
 .modal-dialog.garage-quick-entry-wide {
+  /* `width`, not just `max-width` - Bootstrap's base .modal-dialog has no
+     explicit width (unlike .modal-lg/.modal-sm), so it sizes to its own
+     content by default. Garage Customer's dialog has fewer fields (9 vs
+     Vehicle's 12) and mostly Data inputs vs Vehicle's mix of Data/Link/
+     Select, so with only a max-width cap the two dialogs settled at
+     different natural widths - Customer's visibly narrower than the
+     Vehicle dialog it's nested inside. Forcing both to the same fixed
+     width makes them match regardless of what's inside. */
+  width: 1040px !important;
   max-width: 1040px;
 }
 
