@@ -480,17 +480,17 @@ frappe.ui.form.on('Sales Invoice', {
       ?.find('.grid-download, .grid-upload')
       .addClass('hidden');
 
-    // Item rate already has PPN (11%) baked in (see repair_qc.py's
-    // _apply_ppn_pricing) rather than shown as a separate tax line, which
-    // reads as a mismatch against the Service Order's pre-tax rate unless
-    // the column says so. A Property Setter on the label alone doesn't
-    // reach this grid's header (cached client-side), so set it at render
-    // time directly instead. Use make_head() (rebuilds the header row from
-    // grid.docfields), not grid.refresh() - refresh() calls setup_fields()
-    // first, which re-reads docfields from meta and silently undoes this.
-    // Deferred: the grid's own internal setup (data render, column sizing)
-    // runs after this refresh handler and redraws the header again from its
-    // own docfields snapshot, clobbering an in-place relabel otherwise.
+    // Item rate is stored tax-inclusive (see repair_qc.py's
+    // _apply_ppn_pricing, which bakes PPN straight into rate/amount rather
+    // than using a separate Sales Taxes and Charges row) but that reads as a
+    // mismatch against the Service Order's pre-tax rate column. Rather than
+    // changing the stored value (grand_total, payments and tax reporting all
+    // depend on it staying as-is), show a computed pre-tax number in the
+    // grid's static cell only via a formatter - editing a cell still shows
+    // the real stored value in the input, so nothing about save behavior
+    // changes. Deferred: the grid's own internal setup (data render, column
+    // sizing) runs after this refresh handler and redraws from its own
+    // docfields snapshot, clobbering an in-place property change otherwise.
     //
     // Also deferred for the same reason: ERPNext's own SalesInvoiceController
     // calls set_dynamic_labels() -> set_currency_labels() -> frm.refresh_fields()
@@ -502,7 +502,11 @@ frappe.ui.form.on('Sales Invoice', {
       const itemsGrid = frm.fields_dict.items?.grid;
       if (itemsGrid) {
         try {
-          itemsGrid.update_docfield_property('rate', 'label', 'Rate (Termasuk PPN)');
+          itemsGrid.update_docfield_property('rate', 'formatter', (value, df, options, doc) => {
+            const ppnPercent = flt(doc?.ppn_percent);
+            const preTax = ppnPercent ? flt(value) / (1 + ppnPercent / 100) : flt(value);
+            return frappe.format(preTax, { fieldtype: 'Currency' }, options, doc);
+          });
           itemsGrid.make_head();
         } catch (e) {
           // field not rendered yet on this view; ignore
