@@ -74,3 +74,18 @@ class VehicleHandover(Document):
             if not frappe.db.exists("Vehicle Handover", {"sikk_number": candidate}):
                 return candidate
             candidate_seq += 1
+
+
+@frappe.whitelist()
+def get_sikk_preview(name: str) -> dict:
+    """Same data the printed SIKK shows (tanggal masuk/keluar, jenis
+    service, mekanik, ref nota) - exposed so the desk form's quick-info
+    card can display it too, instead of only being visible after opening
+    the print view. Reuses get_vehicle_handover_context() directly so the
+    form and the printout can never drift apart."""
+
+    from garage.utils.jinja import get_vehicle_handover_context
+
+    doc = frappe.get_doc("Vehicle Handover", name)
+    doc.check_permission("read")
+    return get_vehicle_handover_context(doc)
