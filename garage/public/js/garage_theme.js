@@ -699,6 +699,13 @@ frappe.ui.form.on('Payment Entry', {
       filters: { name: ['in', ['Cash', 'Wire Transfer']] },
     }));
   },
+  on_submit(frm) {
+    // After Submit, jump straight to the print-ready view of the receipt
+    // (Garage Payment Receipt, already the default print format for this
+    // doctype) instead of leaving the cashier on the saved form - this is
+    // the KUITANSI PEMBAYARAN the customer needs handed over/printed.
+    frm.print_doc();
+  },
   party_type: gpeApplyFieldVisibility,
   payment_type: gpeApplyFieldVisibility,
   mode_of_payment(frm) {
