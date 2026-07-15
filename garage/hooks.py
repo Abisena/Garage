@@ -25,7 +25,7 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = "/assets/garage/css/garage_desk.css?v=129"
+app_include_css = "/assets/garage/css/garage_desk.css?v=130"
 app_include_js = ["/assets/garage/js/route_aliases.js?v=1", "/assets/garage/js/garage_theme.js?v=34"]
 
 # include js, css files in header of web template
@@ -51,6 +51,7 @@ doctype_list_js = {
     "Garage Vehicle": "public/js/garage_vehicle_list.js",
     "Garage Customer": "public/js/garage_customer_list.js",
     "Garage Service Order": "public/js/garage_service_order_list.js",
+    "Vehicle Handover": "public/js/vehicle_handover_list.js",
     "Sales Invoice": "public/js/sales_invoice_list.js",
     "Repair QC": "public/js/repair_qc_list.js",
     "Bank Statement Import": "public/js/bca_bank_statement_import_list.js",
