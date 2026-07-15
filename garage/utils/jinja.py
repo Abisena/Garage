@@ -184,6 +184,7 @@ def get_nota_service_context(doc) -> Dict[str, Any]:
     items: List[Dict[str, Any]] = []
     subtotal_jasa = 0.0
     subtotal_part = 0.0
+    total_ppn = 0.0
     for row in doc.items or []:
         item_group = None
         if row.item_code:
@@ -194,6 +195,17 @@ def get_nota_service_context(doc) -> Dict[str, Any]:
             subtotal_jasa += amount
         else:
             subtotal_part += amount
+
+        # doc.total_taxes_and_charges is always 0 in this app - PPN is baked
+        # into each item's tax-inclusive rate via the custom ppn_percent
+        # field instead (see repair_qc.py's _apply_ppn_pricing), and backed
+        # back out here the same way garage_theme.js's gsiRenderTotalsBox()
+        # computes the "Total Taxes and Charges (PPN)" row shown on the
+        # Sales Invoice form itself, so the printed nota matches what the
+        # desk screen shows.
+        ppn_percent = row.get("ppn_percent") or 0
+        if ppn_percent:
+            total_ppn += amount - amount / (1 + ppn_percent / 100)
 
         item_name = row.item_name or row.item_code
         description = frappe.utils.strip_html(row.description or "").strip()
@@ -220,4 +232,5 @@ def get_nota_service_context(doc) -> Dict[str, Any]:
         "line_items": items,
         "subtotal_jasa": subtotal_jasa,
         "subtotal_part": subtotal_part,
+        "total_ppn": total_ppn,
     }
