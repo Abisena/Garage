@@ -33,4 +33,10 @@ frappe.ui.form.on('Vehicle Handover', {
   refresh(frm) {
     renderQuickInfo(frm);
   },
+  on_submit(frm) {
+    // After Submit, jump straight to the print-ready view of the SIKK
+    // (Garage Vehicle Handover Print, already the default print format for
+    // this doctype) - same pattern as Payment Entry's auto-print on submit.
+    frm.print_doc();
+  },
 });
