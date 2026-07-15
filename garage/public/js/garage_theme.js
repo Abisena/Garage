@@ -692,6 +692,12 @@ frappe.ui.form.on('Payment Entry', {
   refresh(frm) {
     gpeApplyFieldVisibility(frm);
     gpeRenderSourceInfo(frm);
+    // Only Cash and Wire Transfer are valid payment methods for this
+    // garage - other Mode of Payment masters (Cheque, Credit Card, Bank
+    // Draft) exist in the system but shouldn't be selectable here.
+    frm.set_query('mode_of_payment', () => ({
+      filters: { name: ['in', ['Cash', 'Wire Transfer']] },
+    }));
   },
   party_type: gpeApplyFieldVisibility,
   payment_type: gpeApplyFieldVisibility,
