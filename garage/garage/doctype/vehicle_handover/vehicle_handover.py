@@ -43,18 +43,14 @@ class VehicleHandover(Document):
             self.handover_date = now_datetime()
 
     def _generate_sikk_number(self) -> str:
-        """SIKK-{branch code}-{year}-{5-digit sequence}, sequence reset per
-        branch per year. Retries on collision instead of trusting a single
-        count query, since two handovers for the same branch could insert
-        at nearly the same time (SPR/QC auto-creation isn't rate-limited)."""
+        """SIKK-{4-digit year}{5-digit sequence}, e.g. SIKK-202600001.
+        Sequence resets each year. Retries on collision instead of trusting
+        a single count query, since two handovers could insert at nearly
+        the same time (SPR/QC auto-creation isn't rate-limited)."""
 
-        branch_code = None
-        if self.branch:
-            branch_code = frappe.db.get_value("Garage Branch", self.branch, "branch_code")
-        branch_code = branch_code or "XXX"
         year = str(getdate(self.submission_date or nowdate()).year)
 
-        prefix = f"SIKK-{branch_code}-{year}-"
+        prefix = f"SIKK-{year}"
         existing_count = frappe.db.count(
             "Vehicle Handover", filters={"sikk_number": ["like", f"{prefix}%"]}
         )
