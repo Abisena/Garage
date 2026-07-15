@@ -16,6 +16,7 @@
   "field_order": [
     "item_code",
     "item_name",
+    "stock_status",
     "description",
     "qty",
     "uom",
@@ -25,8 +26,7 @@
     "rate",
     "discount",
     "tax",
-    "amount",
-    "stock_status"
+    "amount"
   ],
   "fields": [
     {
