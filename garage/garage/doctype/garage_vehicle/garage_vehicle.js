@@ -41,6 +41,17 @@ const lockIfNeeded = (frm) => {
   }
 };
 
+// Vehicle ownership is a one-time assignment, not an editable attribute:
+// once "No. Customer" has a value - even on a brand new, not-yet-saved
+// record - it locks immediately and stays locked, including through
+// "Update" mode (which normally restores every other field's editability).
+// Backed up server-side in garage_vehicle.py's _lock_customer().
+const lockCustomerIfSet = (frm) => {
+  if (frm.doc.customer) {
+    frm.set_df_property('customer', 'read_only', 1);
+  }
+};
+
 frappe.ui.form.on('Garage Vehicle', {
   setup(frm) {
     frm.set_query('model', () => {
@@ -62,15 +73,22 @@ frappe.ui.form.on('Garage Vehicle', {
       frm.add_custom_button('Update', () => {
         frm.__is_update_mode = true;
         toggleFormEditable(frm, true);
+        lockCustomerIfSet(frm);
       });
     }
 
     lockIfNeeded(frm);
+    lockCustomerIfSet(frm);
   },
 
   after_save(frm) {
     frm.__is_update_mode = false;
     lockIfNeeded(frm);
+    lockCustomerIfSet(frm);
+  },
+
+  customer(frm) {
+    lockCustomerIfSet(frm);
   },
 
   brand(frm) {

@@ -118,6 +118,25 @@ if (frappe.ui.form.QuickEntryForm && !frappe.ui.form.GarageVehicleQuickEntryForm
       // 12 fields are mandatory now (see garage_vehicle.json), so split
       // after the 6th to keep both columns even.
       this.mandatory = garage.splitIntoTwoColumns(this.mandatory, 'model');
+
+      // Vehicle ownership is a one-time assignment - lock "No. Customer"
+      // the moment it's set, even before the dialog is saved, same as the
+      // full form (garage_vehicle.js lockCustomerIfSet) and backed up
+      // server-side (garage_vehicle.py _lock_customer()). `onchange` has to
+      // be set on the docfield *before* frappe.ui.Dialog builds the control
+      // from it - it's what base_control.js's set() calls after any
+      // successful value assignment, including the nested "+ Create New
+      // Garage Customer" flow (that resolves through dialog.set_value() too,
+      // see the update_calling_link patch below).
+      const customerField = this.mandatory.find((df) => df.fieldname === 'customer');
+      if (customerField) {
+        customerField.onchange = function () {
+          if (this.value) {
+            this.df.read_only = 1;
+            this.refresh();
+          }
+        };
+      }
     }
 
     render_edit_in_full_page_link() {
