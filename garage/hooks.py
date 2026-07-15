@@ -281,7 +281,20 @@ fixtures = [
             [
                 "Payment Entry-main-default_print_format",
                 "Sales Invoice-main-default_print_format",
+                "Payment Entry-main-links_order",
             ],
+        ]],
+    },
+    {
+        "doctype": "DocType Link",
+        "filters": [[
+            "parent",
+            "=",
+            "Payment Entry",
+        ], [
+            "custom",
+            "=",
+            1,
         ]],
     },
 ]
