@@ -64,6 +64,21 @@ if (frappe.ui.form.QuickEntryForm && !frappe.ui.form.GarageVehicleQuickEntryForm
   frappe.ui.form.GarageVehicleQuickEntryForm = class GarageVehicleQuickEntryForm extends (
     frappe.ui.form.QuickEntryForm
   ) {
+    is_quick_entry() {
+      // Only pop the small dialog when triggered from another form's Link
+      // field (e.g. Service Order's "No. Polisi" -> "+ Create New" - see
+      // frappe/public/js/frappe/form/controls/link.js new_doc(), which sets
+      // frappe._from_link right before opening this). That's the
+      // stay-in-context case quick_entry=1 was turned on for. Direct
+      // creation - the List View's "+ Add Garage Vehicle", or navigating to
+      // the /new route straight - goes through frappe.new_doc() instead,
+      // which never sets frappe._from_link, so this falls through to the
+      // full form: a real new vehicle record needs more than the 4
+      // mandatory-field dialog (type, color, transmission, fuel, mileage...).
+      if (!frappe._from_link) return false;
+      return super.is_quick_entry();
+    }
+
     render_dialog() {
       super.render_dialog();
       garage.attachLicensePlateAutoFormat(this.dialog.fields_dict.license_plate);
