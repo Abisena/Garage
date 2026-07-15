@@ -15,6 +15,7 @@ class RepairQC(Document):
     def validate(self):
         self._set_default_users()
         self._sync_parts_used_pricing()
+        self._update_display_fields()
 
         # ✅ DISABLED - No checkbox validation
         # if not getattr(self.flags, "ignore_completion_validation", False):
@@ -29,26 +30,25 @@ class RepairQC(Document):
     def on_update(self):
         """Called after document is saved"""
         self._sync_service_order_status()
-        
+
         # ✅ CREATE IMMEDIATELY (not async)
-        if self.status == "Finished" and not self.flags.get("skip_auto_create"):
+        if self.status == "QC Complete" and not self.flags.get("skip_auto_create"):
             self._create_sales_invoice_and_payment()
 
     def _create_sales_invoice_and_payment(self):
-        """Create Sales Invoice and Payment Entry immediately"""
+        """Create Sales Invoice when QC completes.
+
+        Payment Entry is deliberately NOT auto-created here - it used to be
+        (see git history), but that silently produced a draft Payment Entry
+        the moment QC finished, before any staff member had actually
+        collected money. The invoice's own "Create > Payment" button (with
+        the existing-draft dedupe guard in garage_theme.js) is the only
+        place a Payment Entry should originate from now.
+        """
         try:
-            # Create Sales Invoice
             invoice_name = self._ensure_sales_invoice()
-            
             if invoice_name:
                 frappe.db.commit()
-                
-                # Create Payment Entry
-                payment_name = self._create_payment_entry_if_finished()
-                
-                if payment_name:
-                    frappe.db.commit()
-                    
         except Exception as e:
             frappe.log_error(f"Error creating documents: {str(e)}\n{frappe.get_traceback()}", "Repair QC - Document Creation")
 
@@ -67,6 +67,21 @@ class RepairQC(Document):
         """DISABLED - Not used"""
         pass
 
+    def _update_display_fields(self):
+        """Denormalize customer/plate/inspector name onto the doc itself so
+        the list view can show them without a per-row lookup. Set here (not
+        just via client-side fetch_from) because status transitions mostly
+        happen through whitelisted API calls, not manual form fills."""
+        if self.service_order:
+            customer_display, vehicle = frappe.db.get_value(
+                "Garage Service Order", self.service_order, ["customer_display", "vehicle"]
+            ) or (None, None)
+            self.customer_display = customer_display
+            self.vehicle_plate = vehicle
+
+        if self.qc_inspector:
+            self.qc_inspector_name = frappe.db.get_value("User", self.qc_inspector, "full_name")
+
     def _sync_service_order_status(self):
         if not self.service_order:
             return
@@ -78,19 +93,16 @@ class RepairQC(Document):
 
         updates = {}
 
-        if self.status == "Finished":
+        if self.status == "QC Complete":
+            # Note: SO.status itself transitions via the validated
+            # complete_qc() state machine (QC Review -> Waiting Payment),
+            # called separately from the client after this save completes.
             if hasattr(service_order, "qc_status"):
                 updates["qc_status"] = "Passed"
             if hasattr(service_order, "job_card_status"):
                 updates["job_card_status"] = "Completed"
             if hasattr(service_order, "work_order_status"):
                 updates["work_order_status"] = "Completed"
-            if hasattr(service_order, "status") and service_order.status not in {
-                "Waiting Payment",
-                "Completed",
-                "Cancelled",
-            }:
-                updates["status"] = "Waiting Payment"
 
         if updates:
             frappe.db.set_value(service_order.doctype, service_order.name, updates)
@@ -343,6 +355,11 @@ class RepairQC(Document):
                 customer_link, service_order.get("branch")
             )
         except Exception:
+            # frappe.throw() queues its message before raising, so catching the
+            # exception here does not stop it from still being flushed to the
+            # client as a raw, unstyled popup. Drop it - the "Customer tidak
+            # ditemukan" alert below is the message we actually want shown.
+            frappe.clear_last_message()
             customer_name = None
 
         if not customer_name:
@@ -564,15 +581,40 @@ class RepairQC(Document):
 
             amount = flt(getattr(row, "amount", None) or 0)
             rate = flt(getattr(row, "rate", None) or 0)
-            
+            discount_pct = flt(getattr(row, "discount", None) or 0)
+
             if not rate and amount:
                 rate = amount / qty
+
+            if not rate and item_code.startswith("JASA-PAKET-"):
+                # This is a bundle's own labor fee line. Check the bundle's
+                # current service_fee before the generic Item-based
+                # fallbacks below: those read standard_rate / Item Price,
+                # which for this placeholder Item may hold a stale value
+                # left over from an earlier bug (e.g. a past run of the
+                # hardcoded 100000 default getting recorded as an Item
+                # Price). The bundle itself is the authoritative source.
+                bundle_name = service_order.get("service_package")
+                if bundle_name:
+                    rate = flt(frappe.db.get_value("Garage Service Bundle", bundle_name, "service_fee"))
+
             if not rate:
                 rate = self._get_item_rate(item_code)
             if not rate:
                 rate = 100000  # Default
-            if not amount:
-                amount = rate * qty
+
+            # Garage Service Order Part keeps `rate` as the pre-discount unit
+            # price and `discount` as a separate percentage. Fold it into the
+            # unit rate here: neither _apply_ppn_pricing() (which bakes PPN
+            # into `rate`) nor calculate_taxes_and_totals() (which just does
+            # amount = rate * qty) apply discount_percentage automatically
+            # once rate/amount are already explicit - without this the line
+            # silently reverts to full price on the invoice.
+            price_list_rate = rate
+            if discount_pct:
+                rate = flt(rate * (1 - discount_pct / 100))
+
+            amount = flt(rate * qty)
 
             item_name = getattr(row, "item_name", None)
             description = getattr(row, "description", None)
@@ -600,6 +642,8 @@ class RepairQC(Document):
                 "uom": uom or "Nos",
                 "rate": rate,
                 "amount": amount,
+                "price_list_rate": price_list_rate,
+                "discount_percentage": discount_pct,
             })
 
         # If no items, add default service item
@@ -655,69 +699,6 @@ class RepairQC(Document):
             pass
 
         return 0
-
-    def _create_payment_entry_if_finished(self):
-        """
-        ✅ CREATE PAYMENT ENTRY IMMEDIATELY (SYNCHRONOUS)
-        """
-        if self.payment_entry:
-            return self.payment_entry
-            
-        invoice = self._get_latest_invoice()
-        if not invoice:
-            return None
-
-        if invoice.get("doctype") != "Sales Invoice":
-            return None
-
-        outstanding = flt(invoice.get("outstanding_amount") or 0)
-        if outstanding <= 0:
-            frappe.msgprint(
-                _("Invoice sudah lunas, tidak perlu Payment Entry"),
-                indicator="blue",
-                alert=True
-            )
-            return None
-
-        try:
-            from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
-            
-            # Get proper posting date
-            posting_date = getdate(nowdate()) if nowdate() else getdate(today())
-            
-            pe = get_payment_entry("Sales Invoice", invoice.get("name"))
-            
-            if self._doctype_has_field("Payment Entry", "branch"):
-                pe.branch = frappe.db.get_value("Sales Invoice", invoice.get("name"), "branch")
-            
-            pe.posting_date = posting_date
-            pe.reference_no = f"QC-{self.name}"
-            pe.reference_date = posting_date
-            pe.remarks = f"Auto-generated from Repair QC {self.name}"
-            
-            pe.insert(ignore_permissions=True)
-            
-            frappe.db.set_value("Repair QC", self.name, "payment_entry", pe.name, update_modified=False)
-            
-            frappe.msgprint(
-                _("✅ Payment Entry {0} berhasil dibuat sebagai DRAFT!").format(
-                    f'<a href="/app/payment-entry/{pe.name}" target="_blank">{pe.name}</a>'
-                ),
-                indicator="green",
-                alert=True
-            )
-            
-            return pe.name
-            
-        except Exception as e:
-            frappe.log_error(f"Create Payment Entry failed: {str(e)}\n{frappe.get_traceback()}", "Repair QC - Payment Entry")
-            frappe.msgprint(
-                _("❌ Gagal membuat Payment Entry: {0}").format(str(e)),
-                indicator="red",
-                alert=True
-            )
-            return None
-
 
 @frappe.whitelist()
 def is_repair_qc_invoice_paid(repair_qc: str):

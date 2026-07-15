@@ -37,13 +37,7 @@ import json
 # workload. Pending/In Progress remain explicitly active states.
 TECHNICIAN_ACTIVE_TASK_STATUSES = {"", "Pending", "In Progress"}
 SERVICE_ORDER_ACTIVE_STATUSES = {
-    "Draft",
-    "Inspection",
-    "Estimate",
-    "Awaiting Approval",
-    "Approved",
-    "Request Part",
-    "Work In Progress",
+    "Open",
     "Waiting Payment",
 }
 TECHNICIAN_ACTIVE_STATUS = {"Active"}
@@ -179,6 +173,16 @@ def _apply_ppn_pricing(
 
         if base_rate:
             item.rate = flt(base_rate * (1 + PPN_RATE))
+            if _doctype_has_field("Sales Invoice Item", "ppn_percent"):
+                item.ppn_percent = PPN_RATE * 100
+
+        # Keep price_list_rate on the same (tax-inclusive) basis as rate when
+        # a caller has populated it (e.g. to show a Discount % column) - if
+        # only rate is scaled, calculate_taxes_and_totals() later derives a
+        # bogus discount_amount from the mismatched pre-tax/post-tax pair.
+        price_list_rate = flt(getattr(item, "price_list_rate", None) or 0)
+        if price_list_rate:
+            item.price_list_rate = flt(price_list_rate * (1 + PPN_RATE))
 
     if base_total is not None:
         dpp_total = flt(base_total)
@@ -606,14 +610,11 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "order_category",
             "status",
             "priority",
-            "intake_type",
-            "booking_channel",
-            "booking_reference",
-            "service_booking_date",
             "customer",
             "vehicle",
-            "service_advisor",
             "primary_contact",
+            "complaint",
+            "total_amount",
             "service_bundle",
             "service_bundle_name",
             "job_card_status",
@@ -626,7 +627,6 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
             "approval_date",
             "customer_confirmation",
             "rejection_reason",
-            "inspection_summary",
             "service_notes",
             "assigned_mechanic",
             "part_charge_status",
@@ -1021,6 +1021,7 @@ ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
 
 SPARE_REQUEST_CLOSED_STATUSES = ["Received", "Issued", "Rejected", "Cancelled"]
 SPARE_REQUEST_ACTIVE_STATUSES = [
+    "Request Spare Part",
     "Pending Check",
     "Re-Request",
     "Request",
@@ -1958,15 +1959,8 @@ def _apply_defaults(doctype: str, doc: frappe.Document) -> None:
             doc.branch = default_branch
 
     if doctype == "Garage Service Order":
-        if not doc.service_booking_date:
-            doc.service_booking_date = now_datetime()
-        if not doc.status or doc.status in {"", "Draft"}:
-            doc.status = "Inspection"
-        if not doc.intake_type:
-            doc.intake_type = "Walk-In"
-        if doc.intake_type != "Booking":
-            doc.booking_channel = doc.booking_channel or None
-            doc.booking_reference = doc.booking_reference or None
+        if not doc.status or doc.status in {"", "Draft", "Inspection"}:
+            doc.status = "Open"
     elif doctype == "Garage Spare Part Order" and not doc.order_date:
         doc.order_date = nowdate()
     elif doctype == "Garage Procurement Order" and not doc.order_date:
@@ -4189,14 +4183,38 @@ def _ensure_erp_customer(
     except Exception:
         return None
 
+    customer_name_value = getattr(g, "customer_name", None) or name
+
+    # `name` above is the Garage Customer's own id (e.g. "0000000015"), which
+    # never matches a Customer's primary key (Customer is named after
+    # customer_name by default). Without this lookup by customer_name, every
+    # call for the same repeat customer falls through to frappe.new_doc()
+    # below and ERPNext silently dedupes the name with a " - 1", " - 2", ...
+    # suffix - producing a fresh duplicate Customer on every QC completion.
+    existing_by_name = frappe.db.get_value("Customer", {"customer_name": customer_name_value})
+    if existing_by_name:
+        return existing_by_name
+
     cust = frappe.new_doc("Customer")
-    cust.customer_name = getattr(g, "customer_name", None) or name
+    cust.customer_name = customer_name_value
+    cust.customer_number = getattr(g, "customer_number", None)
     cust.customer_type = getattr(g, "customer_type", None) or "Individual"
     cust.mobile_no = getattr(g, "phone", None)
     cust.email_id = getattr(g, "email", None)
-    cust.customer_group = (
+    default_customer_group = (
         frappe.defaults.get_user_default("customer_group")
         or frappe.defaults.get_global_default("customer_group")
+    )
+    if default_customer_group and frappe.db.get_value(
+        "Customer Group", default_customer_group, "is_group"
+    ):
+        # A group-type node (e.g. the "All Customer Groups" root) is not a
+        # valid Customer Group - ERPNext rejects it on save. Fall back to a
+        # real leaf node instead, same as the territory fallback below.
+        default_customer_group = None
+    cust.customer_group = (
+        default_customer_group
+        or frappe.get_value("Customer Group", {"is_group": 0})
         or "All Customer Groups"
     )
     cust.territory = frappe.get_value("Territory", {"is_group": 0}) or "All Territories"
@@ -4212,28 +4230,28 @@ def _map_repair_status(status: str) -> Dict[str, Optional[str]]:
     normalized = _normalize_status(status)
     mapping: Dict[str, Dict[str, Optional[str]]] = {
         "approved": {
-            "status": "Approved",
+            "status": "Open",
         },
         "waiting-parts": {
-            "status": "Work In Progress",
+            "status": "Open",
             "work_order_status": "Awaiting Parts",
             "job_card_status": "Work In Progress",
             "qc_status": "Pending",
         },
         "request-part": {
-            "status": "Request Part",
+            "status": "Open",
             "work_order_status": "Awaiting Parts",
             "job_card_status": "Work In Progress",
             "qc_status": "Pending",
         },
         "parts-prepared": {
-            "status": "Work In Progress",
+            "status": "Open",
             "work_order_status": "Awaiting Parts",
             "job_card_status": "Work In Progress",
             "qc_status": "Pending",
         },
         "in-progress": {
-            "status": "Work In Progress",
+            "status": "Open",
             "work_order_status": "In Progress",
             "job_card_status": "Work In Progress",
             "qc_status": "Pending",
@@ -4501,8 +4519,9 @@ def _extract_repair_progress(
 def _ensure_billing_placeholders(
     doc: frappe.Document, order: Mapping[str, Any]
 ) -> Optional[Dict[str, Any]]:
-    """Auto-create draft Sales Invoice, Payment Entry & Journal Entry
-    when repair reaches QC / payment-ready stage.
+    """Auto-create and submit the Sales Invoice when repair reaches QC /
+    payment-ready stage. Payment Entry is intentionally NOT created here -
+    see the comment above the return statement.
     """
 
     # Normalize status & progress from frontend
@@ -4675,95 +4694,16 @@ def _ensure_billing_placeholders(
                 "Failed to submit auto-generated Sales Invoice",
             )
 
-    # -------------------------
-    # ✅ AUTO PAYMENT ENTRY
-    # -------------------------
-    try:
-        if invoice_doc and invoice_doc.docstatus == 1:
-            from erpnext.accounts.doctype.payment_entry.payment_entry import (
-                get_payment_entry,
-            )
-
-            payment_status = _normalize_status(
-                order.get("paymentStatus") or order.get("payment_status")
-            )
-            should_submit_payment = payment_status == "paid" or status_hint == "paid"
-
-            payment_mode = _normalize_payment_mode(
-                order.get("paymentMethod")
-                or order.get("payment_method")
-                or order.get("payment_mode")
-                or order.get("mode_of_payment")
-            )
-
-            existing_payment_entry = frappe.db.get_value(
-                "Payment Entry Reference",
-                {
-                    "reference_doctype": "Sales Invoice",
-                    "reference_name": billing["sales_invoice"],
-                },
-                "parent",
-            )
-
-            if existing_payment_entry:
-                billing["payment_entry"] = existing_payment_entry
-                if payment_mode:
-                    _ensure_payment_mode_exists(payment_mode)
-                    frappe.db.set_value(
-                        "Payment Entry",
-                        existing_payment_entry,
-                        "mode_of_payment",
-                        payment_mode,
-                        update_modified=False,
-                    )
-                if should_submit_payment:
-                    pe = _get_doc("Payment Entry", existing_payment_entry)
-                    if pe.docstatus < 1:
-                        _submit_doc(pe)
-            else:
-                pe = get_payment_entry("Sales Invoice", billing["sales_invoice"])
-                if _doctype_has_field("Payment Entry", "branch"):
-                    pe.branch = getattr(doc, "branch", None)
-                if payment_mode:
-                    _ensure_payment_mode_exists(payment_mode)
-                    pe.mode_of_payment = payment_mode
-
-                _insert_doc(pe)
-                if should_submit_payment:
-                    pe = _submit_doc(pe)
-                billing["payment_entry"] = pe.name
-    except Exception:
-        pass
-
-    # -------------------------
-    # ✅ AUTO JOURNAL ENTRY (Optional)
-    # -------------------------
-    if billing.get("payment_entry"):
-        try:
-            pe = _get_doc("Payment Entry", billing["payment_entry"])
-            amount = flt(pe.paid_amount or pe.received_amount)
-            if amount:
-                je = frappe.new_doc("Journal Entry")
-                je.posting_date = nowdate()
-                je.voucher_type = "Bank Entry"
-                if _doctype_has_field("Journal Entry", "branch"):
-                    je.branch = getattr(doc, "branch", None)
-                je.company = pe.company
-
-                je.append(
-                    "accounts",
-                    {"account": pe.paid_to, "debit_in_account_currency": amount},
-                )
-                je.append(
-                    "accounts",
-                    {"account": pe.paid_from, "credit_in_account_currency": amount},
-                )
-
-                _insert_doc(je)
-                billing["journal_entry"] = je.name
-        except Exception:
-            pass
-
+    # Payment Entry (and the Journal Entry that used to cascade from it) is
+    # deliberately NOT auto-created here anymore. This function used to spin
+    # up a draft Payment Entry - and even post a real GL-affecting Journal
+    # Entry - the moment a work-order status sync reported the repair as
+    # "ready for payment", regardless of whether a customer had actually
+    # paid. Payment collection now only happens through the explicit
+    # create_payment_entry endpoint (called from InvoicePaymentModal.jsx
+    # when staff actually complete a payment), which the invoice's own
+    # "Create > Payment" button (with the existing-draft dedupe guard in
+    # garage_theme.js) also routes through on the Desk side.
     return billing or None
 
 
@@ -5303,17 +5243,19 @@ def get_spare_part_detail(name: str) -> Dict[str, Any]:
 
         parent_names = sorted({req.get("parent") for req in open_requests if req.get("parent")})
         if parent_names:
+            so_fields = [
+                "name",
+                "customer",
+                "customer_display",
+                "vehicle",
+                "vehicle_display",
+                "part_charge_status",
+            ]
+            if _doctype_has_field("Garage Service Order", "service_advisor"):
+                so_fields.append("service_advisor")
             service_orders = _list_dicts(
                 "Garage Service Order",
-                [
-                    "name",
-                    "customer",
-                    "customer_name",
-                    "vehicle",
-                    "vehicle_plate",
-                    "service_advisor",
-                    "part_charge_status",
-                ],
+                so_fields,
                 filters=[["name", "in", parent_names]],
                 limit=len(parent_names),
             )
@@ -5341,8 +5283,8 @@ def get_spare_part_detail(name: str) -> Dict[str, Any]:
             for request in open_requests:
                 parent = request.get("parent")
                 context = service_order_map.get(parent) or {}
-                request["customer"] = context.get("customer_name") or context.get("customer")
-                request["vehicle"] = context.get("vehicle_plate") or context.get("vehicle")
+                request["customer"] = context.get("customer_display") or context.get("customer")
+                request["vehicle"] = context.get("vehicle_display") or context.get("vehicle")
                 request["service_advisor"] = context.get("service_advisor")
                 request["part_charge_status"] = derive_part_charge_status(
                     part_status_map.get(parent, []),
@@ -5444,9 +5386,10 @@ def list_spare_parts(
             "customer",
             "vehicle",
             "priority",
-            "service_advisor",
             "branch",
         ]
+        if _doctype_has_field("Garage Service Order", "service_advisor"):
+            service_order_fields.append("service_advisor")
         if _doctype_has_field("Garage Service Order", "assigned_mechanic"):
             service_order_fields.append("assigned_mechanic")
         if _doctype_has_field("Garage Service Order", "assigned_mechanic_name"):
@@ -5841,8 +5784,9 @@ def list_spare_part_requests(branch: Optional[str] = None) -> Dict[str, Any]:
         "vehicle",
         "vehicle_display",
         "branch",
-        "service_advisor",
     ]
+    if _doctype_has_field("Garage Service Order", "service_advisor"):
+        service_order_fields.append("service_advisor")
     if _doctype_has_field("Garage Service Order", "assigned_mechanic_name"):
         service_order_fields.append("assigned_mechanic_name")
     if _doctype_has_field("Garage Service Order", "mechanic_in_charge_name"):
@@ -6282,25 +6226,11 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
 
     status_update = data.get("status")
     if status_update:
-        allowed_statuses = {
-            "Draft",
-            "Inspection",
-            "Estimate",
-            "Awaiting Approval",
-            "Approved",
-            "Request Part",
-            "Work In Progress",
-            "Waiting Payment",
-            "Completed",
-            "Cancelled",
-        }
+        allowed_statuses = {"Open", "Waiting Payment", "Completed", "Cancelled"}
         if status_update not in allowed_statuses:
-            frappe.throw(_("Status {0} tidak diperbolehkan untuk inspeksi.").format(status_update))
+            frappe.throw(_("Status {0} tidak diperbolehkan.").format(status_update))
 
         doc.status = status_update
-
-        if status_update == "Work In Progress" and hasattr(doc, "job_card_status"):
-            doc.job_card_status = "Work In Progress"
 
         if status_update == "Waiting Payment" and hasattr(doc, "qc_status"):
             doc.qc_status = "Passed"
@@ -6404,18 +6334,10 @@ def update_service_order_inspection(order_id: str, inspection_data: Optional[Any
 
     should_request_part = False
     if inspection_doc or "required_parts" in data:
-        current_status = cstr(getattr(doc, "status", "")).strip()
-        if current_status in {
-            "Draft",
-            "Inspection",
-            "Estimate",
-            "Awaiting Approval",
-            "Approved",
-        }:
-            should_request_part = True
+        pass
 
     if should_request_part:
-        doc.status = "Request Part"
+        pass
     
     if "payment_schedule" in data:
         try:
@@ -6477,22 +6399,11 @@ def move_to_in_progress(order_id: str) -> Dict[str, Any]:
         frappe.throw(_("Service Order ID diperlukan."))
     
     doc = _get_doc("Garage Service Order", order_id)
-    
-    # Validate current status
-    if doc.status not in ["Inspection", "Estimate", "Awaiting Approval", "Approved"]:
-        frappe.throw(_("Service order harus dalam status Inspection atau persiapan sebelum dikerjakan."))
 
-    # Update status
-    doc.status = "Work In Progress"
-    if hasattr(doc, "job_card_status"):
-        doc.job_card_status = "Work In Progress"
-    
-    _save_doc(doc)
-    
     return {
         "name": doc.name,
         "status": doc.status,
-        "message": _("Service order berhasil dipindah ke In Progress.")
+        "message": _("Status service order saat ini: {0}").format(doc.status),
     }
 
 
@@ -6853,43 +6764,16 @@ def get_service_statistics() -> Dict[str, Any]:
     
     _require_login()
     
-    # Count by status
     status_counts = {}
-    statuses = [
-        "Draft",
-        "Inspection",
-        "Estimate",
-        "Awaiting Approval",
-        "Approved",
-        "Request Part",
-        "Work In Progress",
-        "Waiting Payment",
-        "Completed",
-        "Cancelled",
-    ]
-    
+    statuses = ["Open", "Waiting Payment", "Completed", "Cancelled"]
+
     for status in statuses:
         try:
             count = frappe.db.count("Garage Service Order", {"status": status})
             status_counts[status] = count
         except Exception:
             status_counts[status] = 0
-    
-    # Aggregate counts for workflow stages
-    inspection_count = sum(
-        status_counts.get(stage, 0)
-        for stage in ["Draft", "Inspection", "Estimate", "Awaiting Approval", "Approved"]
-    )
 
-    progress_count = (
-        status_counts.get("Request Part", 0)
-        + status_counts.get("Work In Progress", 0)
-        + status_counts.get("Waiting Payment", 0)
-    )
-    
-    completed_count = status_counts.get("Completed", 0)
-    
-    # Get today's orders
     try:
         today_orders = frappe.db.count(
             "Garage Service Order",
@@ -6897,28 +6781,27 @@ def get_service_statistics() -> Dict[str, Any]:
         )
     except Exception:
         today_orders = 0
-    
-    # Get orders needing attention (overdue)
+
     try:
         overdue_orders = frappe.db.count(
             "Garage Service Order",
             {
-                "status": ["in", ["Work In Progress", "Waiting Payment"]],
+                "status": ["in", ["Open", "Waiting Payment"]],
                 "estimated_delivery_date": ["<", nowdate()]
             }
         )
     except Exception:
         overdue_orders = 0
-    
+
     return {
         "status_counts": status_counts,
         "workflow_counts": {
-            "inspection": inspection_count,
-            "progress": progress_count,
-            "completed": completed_count
+            "active": status_counts.get("Open", 0),
+            "payment": status_counts.get("Waiting Payment", 0),
+            "completed": status_counts.get("Completed", 0),
         },
         "today_orders": today_orders,
-        "overdue_orders": overdue_orders
+        "overdue_orders": overdue_orders,
     }
 
 
@@ -7313,7 +7196,7 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
         service_payload: Dict[str, Any] = {
             "customer": customer_name,
             "vehicle": vehicle_name,
-            "status": "Inspection",
+            "status": "Open",
             "branch": branch_name,
         }
         service_type = (data.get("service_order_type") or "").strip()
