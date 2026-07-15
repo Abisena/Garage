@@ -164,9 +164,13 @@ if (frappe.ui.form.QuickEntryForm && !frappe.ui.form.GarageCustomerQuickEntryFor
   ) {
     set_meta_and_mandatory_fields() {
       super.set_meta_and_mandatory_fields();
-      // 10 fields are mandatory now (see garage_customer.json), so split
-      // after the 5th to keep both columns even.
-      this.mandatory = garage.splitIntoTwoColumns(this.mandatory, 'email');
+      // customer_number is deliberately NOT reqd (see garage_customer.json)
+      // - it's system-generated in autoname() (garage_customer.py), always
+      // overwriting whatever's typed, so there's nothing meaningful for a
+      // user to enter here before the record is saved. 9 fields are
+      // mandatory, so split after the 5th (id_number) to keep both columns
+      // close to even (5/4).
+      this.mandatory = garage.splitIntoTwoColumns(this.mandatory, 'id_number');
     }
 
     render_edit_in_full_page_link() {
