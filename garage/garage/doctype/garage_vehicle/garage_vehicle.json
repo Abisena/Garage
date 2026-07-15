@@ -57,7 +57,8 @@
     {
       "fieldname": "vin",
       "fieldtype": "Data",
-      "label": "Chassis Number (No. Rangka)"
+      "label": "Chassis Number (No. Rangka)",
+      "reqd": 1
     },
     {
       "fieldname": "column_break_vehicle_id",
@@ -66,12 +67,14 @@
     {
       "fieldname": "engine_number",
       "fieldtype": "Data",
-      "label": "Engine Number (No. Mesin)"
+      "label": "Engine Number (No. Mesin)",
+      "reqd": 1
     },
     {
       "fieldname": "color",
       "fieldtype": "Data",
-      "label": "Color (Warna)"
+      "label": "Color (Warna)",
+      "reqd": 1
     },
     {
       "fieldname": "section_break_owner",
@@ -144,29 +147,34 @@
       "fieldtype": "Select",
       "label": "Vehicle Type",
       "options": "\nSedan\nHatchback\nSUV\nMPV\nTruck\nVan\nCoupe\nWagon\nPickup",
-      "in_standard_filter": 1
+      "in_standard_filter": 1,
+      "reqd": 1
     },
     {
       "fieldname": "vehicle_year",
       "fieldtype": "Int",
-      "label": "Year"
+      "label": "Year",
+      "reqd": 1
     },
     {
       "fieldname": "transmission",
       "fieldtype": "Select",
       "label": "Transmission",
-      "options": "\nManual (MT)\nAutomatic (AT)\nCVT\nDCT\nOther"
+      "options": "\nManual (MT)\nAutomatic (AT)\nCVT\nDCT\nOther",
+      "reqd": 1
     },
     {
       "fieldname": "fuel_type",
       "fieldtype": "Select",
       "label": "Fuel Type",
-      "options": "\nPetrol (Bensin)\nDiesel (Solar)\nHybrid\nElectric\nOther"
+      "options": "\nPetrol (Bensin)\nDiesel (Solar)\nHybrid\nElectric\nOther",
+      "reqd": 1
     },
     {
       "fieldname": "mileage",
       "fieldtype": "Int",
-      "label": "Current Mileage (KM)"
+      "label": "Current Mileage (KM)",
+      "reqd": 1
     },
     {
       "fieldname": "notes",
