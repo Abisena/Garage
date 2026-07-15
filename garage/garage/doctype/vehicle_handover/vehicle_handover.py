@@ -42,6 +42,19 @@ class VehicleHandover(Document):
         if not self.handover_date:
             self.handover_date = now_datetime()
 
+    def on_trash(self) -> None:  # pragma: no cover - frappe lifecycle hook
+        if not self.payment_entry:
+            return
+
+        payment_docstatus = frappe.db.get_value("Payment Entry", self.payment_entry, "docstatus")
+        if payment_docstatus == 1:
+            frappe.throw(
+                _(
+                    "SIKK {0} tidak bisa dihapus karena Payment Entry {1} masih berlaku. "
+                    "Batalkan Payment Entry-nya dulu sebelum menghapus SIKK ini."
+                ).format(self.name, self.payment_entry)
+            )
+
     def _generate_sikk_number(self) -> str:
         """SIKK-{4-digit year}{5-digit sequence}, e.g. SIKK-202600001.
         Sequence resets each year. Retries on collision instead of trusting
