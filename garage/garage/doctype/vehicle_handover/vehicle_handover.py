@@ -3,32 +3,65 @@
 from __future__ import annotations
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, nowdate
+from frappe.utils import getdate, now_datetime, nowdate
 
 
 class VehicleHandover(Document):
     """Stores vehicle permit data coming from the web app or manual entry."""
 
-    def on_update(self) -> None:  # pragma: no cover - frappe lifecycle hook
-        # REMOVED: Status update logic karena sekarang status diubah dari Sales Invoice
-        pass
-        
-    # OPTIONAL: Bisa tambahkan validasi bahwa Vehicle Handover hanya bisa dibuat 
-    # jika Service Order sudah Completed
+    def before_insert(self) -> None:  # pragma: no cover - frappe lifecycle hook
+        if not self.sikk_number:
+            self.sikk_number = self._generate_sikk_number()
+
     def validate(self) -> None:
         service_order_name = getattr(self, "service_order", None)
         if not service_order_name:
             return
-            
+
         try:
             service_order = frappe.get_doc("Garage Service Order", service_order_name)
             current_status = getattr(service_order, "status", None)
-            
+
             if current_status != "Completed":
                 frappe.throw(
-                    f"Cannot create Vehicle Handover. Service Order status must be 'Completed' (current: {current_status})"
+                    _("Cannot create Vehicle Handover. Service Order status must be 'Completed' (current: {0})").format(
+                        current_status
+                    )
                 )
         except Exception as e:
             if "does not exist" not in str(e):
                 raise
+
+    def before_submit(self) -> None:  # pragma: no cover - frappe lifecycle hook
+        if not self.handover_completed:
+            frappe.throw(
+                _('Centang "Handover Selesai" sebelum submit - dokumen ini terkunci begitu di-submit, jadi checklist harus lengkap dulu.')
+            )
+        if not self.handover_date:
+            self.handover_date = now_datetime()
+
+    def _generate_sikk_number(self) -> str:
+        """SIKK-{branch code}-{year}-{5-digit sequence}, sequence reset per
+        branch per year. Retries on collision instead of trusting a single
+        count query, since two handovers for the same branch could insert
+        at nearly the same time (SPR/QC auto-creation isn't rate-limited)."""
+
+        branch_code = None
+        if self.branch:
+            branch_code = frappe.db.get_value("Garage Branch", self.branch, "branch_code")
+        branch_code = branch_code or "XXX"
+        year = str(getdate(self.submission_date or nowdate()).year)
+
+        prefix = f"SIKK-{branch_code}-{year}-"
+        existing_count = frappe.db.count(
+            "Vehicle Handover", filters={"sikk_number": ["like", f"{prefix}%"]}
+        )
+
+        candidate_seq = existing_count + 1
+        while True:
+            candidate = f"{prefix}{candidate_seq:05d}"
+            if not frappe.db.exists("Vehicle Handover", {"sikk_number": candidate}):
+                return candidate
+            candidate_seq += 1
