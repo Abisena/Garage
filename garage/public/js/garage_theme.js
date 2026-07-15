@@ -81,7 +81,22 @@ if (frappe.ui.form.QuickEntryForm && !frappe.ui.form.GarageVehicleQuickEntryForm
 
     render_dialog() {
       super.render_dialog();
-      garage.attachLicensePlateAutoFormat(this.dialog.fields_dict.license_plate);
+      const control = this.dialog.fields_dict.license_plate;
+      garage.attachLicensePlateAutoFormat(control);
+
+      // The dialog can open pre-filled with whatever the user already typed
+      // into the Vehicle Link field's search box before clicking "+ Create
+      // New" (frappe/public/js/frappe/model/get_new_doc() copies
+      // route_options.name_field straight into the autoname field). That
+      // initial value is set programmatically, not typed, so it never fires
+      // the 'input' event the live formatter listens for - reformat it once
+      // here, through the dialog's own set_value() (not a raw DOM write) so
+      // the control's internal value/doc stay in sync too.
+      const current = control && control.get_value();
+      const formatted = current && garage.formatLicensePlateInput(current);
+      if (formatted && formatted !== current) {
+        this.dialog.set_value('license_plate', formatted);
+      }
     }
   };
 }
