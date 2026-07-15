@@ -1395,27 +1395,31 @@ body[data-route*="Repair QC"] [data-fieldname="spare_parts_verification"] .frapp
   background-color: var(--g-bg) !important;
 }
 
-/* ── Keep these Garage Vehicle labels on one line - long enough to wrap
-   onto a second line in the quick-entry dialog's narrower columns, which
-   pushes the input down and makes the row heights inconsistent. `!important`
-   needed to beat the general `.frappe-control .control-label { white-space:
-   normal !important }` rule above. ───── */
-.frappe-control[data-fieldname="license_plate"] .control-label,
-.frappe-control[data-fieldname="vin"] .control-label,
-.frappe-control[data-fieldname="engine_number"] .control-label {
+/* ── Garage Vehicle / Garage Customer quick-entry dialogs
+   (.garage-quick-entry-wide, added by garage.widenQuickEntryDialog() in
+   garage_theme.js). Both are wider than a default dialog and every field's
+   label column is widened *uniformly* by the same amount - not just on the
+   two or three fields with long labels - so every input in the dialog stays
+   the same width as its neighbors. An earlier version only widened the
+   label column for the long-labelled fields, which fixed their wrapping but
+   left their inputs visibly narrower than every other field's, which read
+   as broken/inconsistent rather than fixed. ───── */
+
+.modal-dialog.garage-quick-entry-wide {
+  max-width: 1040px;
+}
+
+/* Beats the general `.frappe-control .control-label { white-space: normal
+   !important }` rule above. */
+.modal-dialog.garage-quick-entry-wide .control-label {
   white-space: nowrap !important;
 }
 
-/* `nowrap` alone isn't enough - the label column is a fixed 160px
-   (`.frappe-control[data-fieldtype="..."] .form-group .clearfix` above,
-   shared by every Data/Link/Select/... field app-wide), too narrow for
-   "Chassis Number (No. Rangka)" or "License Plate (No. Polisi)" on one
-   line, so the overflowed text would render underneath the input next to
-   it. Widen the column for just these three instead of the global 160px,
-   so the rest of the app's label/input ratio is untouched. */
-.frappe-control[data-fieldname="license_plate"] .form-group .clearfix,
-.frappe-control[data-fieldname="vin"] .form-group .clearfix,
-.frappe-control[data-fieldname="engine_number"] .form-group .clearfix {
+/* Beats the app-wide 160px label column
+   (`.frappe-control[data-fieldtype="..."] .form-group .clearfix` above) -
+   210px comfortably fits the longest label in either dialog ("Chassis
+   Number (No. Rangka)", "Identity Number (KTP/SIM)") on one line. */
+.modal-dialog.garage-quick-entry-wide .frappe-control .form-group .clearfix {
   flex: 0 0 210px !important;
   min-width: 210px !important;
 }

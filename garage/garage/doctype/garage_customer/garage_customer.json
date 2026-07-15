@@ -49,7 +49,8 @@
       "label": "Customer Number",
       "bold": 1,
       "in_list_view": 1,
-      "unique": 1
+      "unique": 1,
+      "reqd": 1
     },
     {
       "fieldname": "customer_name",
@@ -67,7 +68,8 @@
       "options": "Individual\nCorporate",
       "default": "Individual",
       "in_list_view": 1,
-      "in_standard_filter": 1
+      "in_standard_filter": 1,
+      "reqd": 1
     },
     {
       "fieldname": "column_break_name",
@@ -85,12 +87,14 @@
       "fieldname": "email",
       "fieldtype": "Data",
       "label": "Email",
-      "options": "Email"
+      "options": "Email",
+      "reqd": 1
     },
     {
       "fieldname": "id_number",
       "fieldtype": "Data",
-      "label": "Identity Number (KTP/SIM)"
+      "label": "Identity Number (KTP/SIM)",
+      "reqd": 1
     },
     {
       "fieldname": "section_break_address",
@@ -100,12 +104,14 @@
     {
       "fieldname": "address_line1",
       "fieldtype": "Data",
-      "label": "Address"
+      "label": "Address",
+      "reqd": 1
     },
     {
       "fieldname": "city",
       "fieldtype": "Data",
-      "label": "City"
+      "label": "City",
+      "reqd": 1
     },
     {
       "fieldname": "column_break_address",
@@ -114,12 +120,14 @@
     {
       "fieldname": "state",
       "fieldtype": "Data",
-      "label": "Province"
+      "label": "Province",
+      "reqd": 1
     },
     {
       "fieldname": "postal_code",
       "fieldtype": "Data",
-      "label": "Postal Code"
+      "label": "Postal Code",
+      "reqd": 1
     },
     {
       "fieldname": "section_break_hidden",

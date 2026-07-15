@@ -60,6 +60,40 @@ garage.attachLicensePlateAutoFormat = function (control) {
 // Quick Entry dialog customization hook (frappe.ui.form.{Doctype}QuickEntryForm
 // is core's documented mechanism for this - see
 // frappe/public/js/frappe/form/quick_entry.js make_quick_entry()).
+// Shared sizing for Garage Vehicle's and Garage Customer's quick-entry
+// dialogs, so the nested "New Garage Customer" popup (opened from Vehicle's
+// "No. Customer" field) matches the size of the Vehicle dialog it's nested
+// inside, instead of popping up at the cramped default width.
+//
+// Widening alone isn't enough for one-line labels: labels and inputs share
+// a fixed-width row (`.frappe-control[data-fieldtype] .form-group .clearfix`
+// is the label column, sized 160px app-wide), so if only *some* fields' label
+// columns are widened to fit their text, the widened rows' inputs end up
+// visibly narrower than the rest - which is what made the first version of
+// this look "not proper". Widening every field's label column by the same
+// amount, uniformly, keeps every input in the dialog the same width as each
+// other.
+garage.widenQuickEntryDialog = function (dialog) {
+  dialog.$wrapper.find('.modal-dialog').addClass('garage-quick-entry-wide');
+};
+
+// Core's QuickEntryForm renders `this.mandatory` as a flat single column
+// (Column Break docfields are never reqd, so the filter in
+// frappe/public/js/frappe/form/quick_entry.js set_meta_and_mandatory_fields()
+// drops them along with every other layout-only field). Splits a mandatory
+// field list into two columns by inserting a plain Column Break docfield
+// right after `splitAfterField`, which frappe.ui.Dialog renders correctly
+// even though it didn't come from the doctype's own field list.
+garage.splitIntoTwoColumns = function (mandatory, splitAfterField) {
+  const splitIndex = mandatory.findIndex((df) => df.fieldname === splitAfterField);
+  if (splitIndex === -1) return mandatory;
+  return [
+    ...mandatory.slice(0, splitIndex + 1),
+    { fieldtype: 'Column Break' },
+    ...mandatory.slice(splitIndex + 1),
+  ];
+};
+
 if (frappe.ui.form.QuickEntryForm && !frappe.ui.form.GarageVehicleQuickEntryForm) {
   frappe.ui.form.GarageVehicleQuickEntryForm = class GarageVehicleQuickEntryForm extends (
     frappe.ui.form.QuickEntryForm
@@ -81,24 +115,9 @@ if (frappe.ui.form.QuickEntryForm && !frappe.ui.form.GarageVehicleQuickEntryForm
 
     set_meta_and_mandatory_fields() {
       super.set_meta_and_mandatory_fields();
-
-      // Core's QuickEntryForm renders `this.mandatory` as a flat single
-      // column (Column Break docfields aren't reqd, so the filter in
-      // frappe/public/js/frappe/form/quick_entry.js drops them along with
-      // every other layout-only field) - with all 12 fields now mandatory
-      // (see garage_vehicle.json) that reads as one long list. Split it
-      // into two columns instead, matching how frappe.ui.Dialog renders a
-      // plain {fieldtype: "Column Break"} entry inserted into the fields
-      // array directly.
-      const splitAfterField = 'model';
-      const splitIndex = this.mandatory.findIndex((df) => df.fieldname === splitAfterField);
-      if (splitIndex !== -1) {
-        this.mandatory = [
-          ...this.mandatory.slice(0, splitIndex + 1),
-          { fieldtype: 'Column Break' },
-          ...this.mandatory.slice(splitIndex + 1),
-        ];
-      }
+      // 12 fields are mandatory now (see garage_vehicle.json), so split
+      // after the 6th to keep both columns even.
+      this.mandatory = garage.splitIntoTwoColumns(this.mandatory, 'model');
     }
 
     render_edit_in_full_page_link() {
@@ -112,15 +131,7 @@ if (frappe.ui.form.QuickEntryForm && !frappe.ui.form.GarageVehicleQuickEntryForm
 
     render_dialog() {
       super.render_dialog();
-
-      // frappe.ui.Dialog.set_modal_size() (frappe/public/js/frappe/ui/dialog.js)
-      // only widens the dialog to "large" once there are >= 2 Column Breaks
-      // (i.e. 3+ columns) - with just the one Column Break added above for a
-      // 2-column layout, it stays at the cramped default width and the
-      // longer labels (Engine Number (No. Mesin), Current Mileage (KM)...)
-      // wrap and overlap the row below. Add the same "modal-lg" class
-      // set_modal_size() would add, directly.
-      this.dialog.$wrapper.find('.modal-dialog').addClass('modal-lg');
+      garage.widenQuickEntryDialog(this.dialog);
 
       const control = this.dialog.fields_dict.license_plate;
       garage.attachLicensePlateAutoFormat(control);
@@ -138,6 +149,33 @@ if (frappe.ui.form.QuickEntryForm && !frappe.ui.form.GarageVehicleQuickEntryForm
       if (formatted && formatted !== current) {
         this.dialog.set_value('license_plate', formatted);
       }
+    }
+  };
+}
+
+// Same treatment as GarageVehicleQuickEntryForm above, for the nested "New
+// Garage Customer" popup opened from Vehicle's "No. Customer" field: same
+// dialog width/label sizing (garage.widenQuickEntryDialog), every visible
+// field mandatory and shown (garage_customer.json), split into two columns,
+// "Edit Full Form" hidden.
+if (frappe.ui.form.QuickEntryForm && !frappe.ui.form.GarageCustomerQuickEntryForm) {
+  frappe.ui.form.GarageCustomerQuickEntryForm = class GarageCustomerQuickEntryForm extends (
+    frappe.ui.form.QuickEntryForm
+  ) {
+    set_meta_and_mandatory_fields() {
+      super.set_meta_and_mandatory_fields();
+      // 10 fields are mandatory now (see garage_customer.json), so split
+      // after the 5th to keep both columns even.
+      this.mandatory = garage.splitIntoTwoColumns(this.mandatory, 'email');
+    }
+
+    render_edit_in_full_page_link() {
+      // See GarageVehicleQuickEntryForm's version of this - same reasoning.
+    }
+
+    render_dialog() {
+      super.render_dialog();
+      garage.widenQuickEntryDialog(this.dialog);
     }
   };
 }
