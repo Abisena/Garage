@@ -190,22 +190,25 @@ def get_nota_service_context(doc) -> Dict[str, Any]:
         if row.item_code:
             item_group = frappe.get_cached_value("Item", row.item_code, "item_group")
         is_jasa = item_group == _SERVICE_ITEM_GROUP
-        amount = row.amount or 0
-        if is_jasa:
-            subtotal_jasa += amount
-        else:
-            subtotal_part += amount
 
         # doc.total_taxes_and_charges is always 0 in this app - PPN is baked
         # into each item's tax-inclusive rate via the custom ppn_percent
-        # field instead (see repair_qc.py's _apply_ppn_pricing), and backed
-        # back out here the same way garage_theme.js's gsiRenderTotalsBox()
-        # computes the "Total Taxes and Charges (PPN)" row shown on the
-        # Sales Invoice form itself, so the printed nota matches what the
-        # desk screen shows.
+        # field instead (see repair_qc.py's _apply_ppn_pricing), so row.amount
+        # is tax-inclusive. Back the tax out per line (same formula
+        # garage_theme.js's gsiRenderTotalsBox() uses for the "Total Taxes
+        # and Charges (PPN)" row on the Sales Invoice form) so the printed
+        # "Subtotal" column shows the pre-tax amount and Jasa + Part + PPN
+        # adds back up to the tax-inclusive grand total, instead of Jasa/Part
+        # silently already including tax and PPN double-counting on top.
+        gross_amount = row.amount or 0
         ppn_percent = row.get("ppn_percent") or 0
-        if ppn_percent:
-            total_ppn += amount - amount / (1 + ppn_percent / 100)
+        pre_tax_amount = gross_amount / (1 + ppn_percent / 100) if ppn_percent else gross_amount
+        total_ppn += gross_amount - pre_tax_amount
+
+        if is_jasa:
+            subtotal_jasa += pre_tax_amount
+        else:
+            subtotal_part += pre_tax_amount
 
         item_name = row.item_name or row.item_code
         description = frappe.utils.strip_html(row.description or "").strip()
@@ -218,7 +221,7 @@ def get_nota_service_context(doc) -> Dict[str, Any]:
                 "item_name": item_name,
                 "description": description or None,
                 "qty": row.qty,
-                "amount": amount,
+                "amount": pre_tax_amount,
                 "is_jasa": is_jasa,
             }
         )
@@ -233,4 +236,9 @@ def get_nota_service_context(doc) -> Dict[str, Any]:
         "subtotal_jasa": subtotal_jasa,
         "subtotal_part": subtotal_part,
         "total_ppn": total_ppn,
+        # Explicitly Jasa + Part + PPN, per what the printed nota shows above
+        # it - not doc.grand_total directly, so the total on the page is
+        # always exactly the sum of the lines printed above it, even if
+        # grand_total and this ever drift apart for some other reason.
+        "total_tagihan": subtotal_jasa + subtotal_part + total_ppn,
     }
