@@ -1284,13 +1284,21 @@ body[data-route*="Repair QC"] [data-fieldname="spare_parts_verification"] .frapp
   border: none !important;
   border-radius: var(--g-radius) !important;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.08) !important;
-  overflow: hidden;
+  /* Not `overflow: hidden` - that also clips any child that needs to
+     visually escape the box, like a Link field's Awesomplete suggestion
+     dropdown ("Create a new X" / "Advanced Search") when the field sits
+     near the dialog's edge (e.g. the right column of a 2-column Quick
+     Entry). Round the header/footer's own corners instead, since those are
+     the only children with a background that would otherwise show square
+     corners poking out past the rounded container. */
 }
 
 .modal-header {
   padding: 18px 20px 14px !important;
   border-bottom: 1px solid var(--g-border-light) !important;
   align-items: center !important;
+  border-top-left-radius: var(--g-radius);
+  border-top-right-radius: var(--g-radius);
 }
 
 .modal-header .indicator {
@@ -1354,6 +1362,8 @@ body[data-route*="Repair QC"] [data-fieldname="spare_parts_verification"] .frapp
   padding: 14px 20px !important;
   border-top: 1px solid var(--g-border-light) !important;
   background: var(--g-bg) !important;
+  border-bottom-left-radius: var(--g-radius);
+  border-bottom-right-radius: var(--g-radius);
 }
 
 .modal-footer .btn {
@@ -1383,5 +1393,30 @@ body[data-route*="Repair QC"] [data-fieldname="spare_parts_verification"] .frapp
 .modal-footer .standard-actions .btn-secondary:hover,
 .modal-footer .custom-actions .btn-secondary:hover {
   background-color: var(--g-bg) !important;
+}
+
+/* ── Keep these Garage Vehicle labels on one line - long enough to wrap
+   onto a second line in the quick-entry dialog's narrower columns, which
+   pushes the input down and makes the row heights inconsistent. `!important`
+   needed to beat the general `.frappe-control .control-label { white-space:
+   normal !important }` rule above. ───── */
+.frappe-control[data-fieldname="license_plate"] .control-label,
+.frappe-control[data-fieldname="vin"] .control-label,
+.frappe-control[data-fieldname="engine_number"] .control-label {
+  white-space: nowrap !important;
+}
+
+/* `nowrap` alone isn't enough - the label column is a fixed 160px
+   (`.frappe-control[data-fieldtype="..."] .form-group .clearfix` above,
+   shared by every Data/Link/Select/... field app-wide), too narrow for
+   "Chassis Number (No. Rangka)" or "License Plate (No. Polisi)" on one
+   line, so the overflowed text would render underneath the input next to
+   it. Widen the column for just these three instead of the global 160px,
+   so the rest of the app's label/input ratio is untouched. */
+.frappe-control[data-fieldname="license_plate"] .form-group .clearfix,
+.frappe-control[data-fieldname="vin"] .form-group .clearfix,
+.frappe-control[data-fieldname="engine_number"] .form-group .clearfix {
+  flex: 0 0 210px !important;
+  min-width: 210px !important;
 }
 

@@ -101,6 +101,15 @@ if (frappe.ui.form.QuickEntryForm && !frappe.ui.form.GarageVehicleQuickEntryForm
       }
     }
 
+    render_edit_in_full_page_link() {
+      // Hide the "Edit Full Form" escape hatch - with every field on the
+      // full form now mandatory (see garage_vehicle.json) and mirrored into
+      // this dialog already, there's nothing left to gain by bouncing out
+      // to the full page, and doing so would re-introduce the original
+      // problem this whole quick_entry setup exists to avoid: losing the
+      // in-progress Service Order underneath.
+    }
+
     render_dialog() {
       super.render_dialog();
 
