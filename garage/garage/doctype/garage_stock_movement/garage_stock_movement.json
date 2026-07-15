@@ -21,6 +21,7 @@
     "posting_time",
     "warehouse",
     "status",
+    "stock_entry",
     "remarks",
     "items"
   ],
@@ -68,6 +69,13 @@
       "options": "Draft\nSubmitted\nCancelled",
       "default": "Draft",
       "in_list_view": 1
+    },
+    {
+      "fieldname": "stock_entry",
+      "fieldtype": "Link",
+      "label": "Stock Entry",
+      "options": "Stock Entry",
+      "read_only": 1
     },
     {
       "fieldname": "remarks",
