@@ -286,7 +286,7 @@ def get_vehicle_handover_context(doc) -> Dict[str, Any]:
                     service_item_names.append(row.item_name or row.item_code)
             jenis_service = ", ".join(service_item_names) or None
 
-    tanggal_keluar = getattr(doc, "handover_date", None) or getattr(doc, "submission_date", None)
+    tanggal_keluar = getattr(doc, "submission_date", None)
 
     return {
         "branch": branch,

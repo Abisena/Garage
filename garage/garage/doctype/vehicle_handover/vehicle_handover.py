@@ -5,7 +5,7 @@ from __future__ import annotations
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import getdate, now_datetime, nowdate
+from frappe.utils import getdate, nowdate
 
 
 class VehicleHandover(Document):
@@ -33,14 +33,6 @@ class VehicleHandover(Document):
         except Exception as e:
             if "does not exist" not in str(e):
                 raise
-
-    def before_submit(self) -> None:  # pragma: no cover - frappe lifecycle hook
-        # No longer requires handover_completed to be checked first - that
-        # gate was tied to the Security Checklist workflow, which this
-        # doctype dropped (it's now just an auto-filled SIKK printout).
-        # Still auto-stamp handover_date on submit as a convenience.
-        if not self.handover_date:
-            self.handover_date = now_datetime()
 
     def on_trash(self) -> None:  # pragma: no cover - frappe lifecycle hook
         if not self.payment_entry:

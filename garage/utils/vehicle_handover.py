@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import frappe
-from frappe.utils import get_datetime, nowdate
+from frappe.utils import nowdate
 
 PAID_INVOICE_STATUSES = {"Paid", "Submitted"}
 PAID_PAYMENT_ENTRY_STATUSES = {"Submitted", "Cleared", "Paid"}
@@ -156,18 +156,8 @@ def _apply_payment_entry_details(handover, payment_entry) -> None:
         handover.receipt_number = payment_entry.name
 
     posting_date = getattr(payment_entry, "posting_date", None) or nowdate()
-    if not getattr(handover, "valid_from", None):
-        handover.valid_from = posting_date
-
     if not getattr(handover, "submission_date", None):
         handover.submission_date = posting_date
-
-    if not getattr(handover, "valid_until", None):
-        posting_time = getattr(payment_entry, "posting_time", None)
-        if posting_time:
-            handover.valid_until = get_datetime(f"{posting_date} {posting_time}")
-        else:
-            handover.valid_until = get_datetime(posting_date)
 
 
 def _create_handover(

@@ -25,11 +25,6 @@
     "column_break_ref",
     "payment_entry",
     "receipt_number",
-    "permit_section",
-    "valid_from",
-    "column_break_permit",
-    "valid_until",
-    "permit_notes",
     "vehicle_section",
     "vehicle",
     "license_plate",
@@ -43,12 +38,6 @@
     "owner_phone",
     "body_notes_section",
     "body_notes",
-    "handover_section",
-    "handover_completed",
-    "column_break_handover",
-    "handover_date",
-    "printing_section",
-    "print_count",
     "section_break_hidden",
     "branch_code"
   ],
@@ -156,37 +145,6 @@
       "description": "Payment receipt number"
     },
     {
-      "fieldname": "permit_section",
-      "fieldtype": "Section Break",
-      "label": "📋 Permit Validity",
-      "collapsible": 1
-    },
-    {
-      "fieldname": "valid_from",
-      "fieldtype": "Date",
-      "label": "Periode Berlaku",
-      "permlevel": 1,
-      "description": "Permit valid from date"
-    },
-    {
-      "fieldname": "column_break_permit",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "valid_until",
-      "fieldtype": "Datetime",
-      "label": "Batas Waktu",
-      "permlevel": 1,
-      "description": "Permit valid until (date & time)"
-    },
-    {
-      "fieldname": "permit_notes",
-      "fieldtype": "Text Editor",
-      "label": "Catatan",
-      "permlevel": 1,
-      "description": "Additional notes or special instructions"
-    },
-    {
       "fieldname": "vehicle_section",
       "fieldtype": "Section Break",
       "label": "🚙 Informasi Kendaraan",
@@ -273,47 +231,6 @@
       "fieldtype": "Text Editor",
       "label": "Catatan Bodi",
       "description": "Notes on vehicle body condition, scratches, dents, etc."
-    },
-    {
-      "fieldname": "handover_section",
-      "fieldtype": "Section Break",
-      "label": "🤝 Handover Completion",
-      "collapsible": 0
-    },
-    {
-      "default": 0,
-      "fieldname": "handover_completed",
-      "fieldtype": "Check",
-      "label": "✅ Handover Selesai",
-      "bold": 1,
-      "description": "Centang jika proses handover sudah selesai"
-    },
-    {
-      "fieldname": "column_break_handover",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "handover_date",
-      "fieldtype": "Datetime",
-      "label": "Tanggal Handover",
-      "bold": 1,
-      "description": "Date and time of handover completion"
-    },
-    {
-      "fieldname": "printing_section",
-      "fieldtype": "Section Break",
-      "label": "🖨️ Printing Information",
-      "collapsible": 1,
-      "collapsed": 1
-    },
-    {
-      "default": "0",
-      "fieldname": "print_count",
-      "fieldtype": "Int",
-      "label": "Jumlah Cetak SIKK",
-      "read_only": 1,
-      "bold": 1,
-      "description": "Number of times SIKK has been printed"
     },
     {
       "fieldname": "section_break_hidden",
