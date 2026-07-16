@@ -331,6 +331,40 @@ if (frappe.views.ListSidebar && !frappe.views.ListSidebar.prototype.__garage_sid
   };
 }
 
+// Same idea again for the Print View's own sidebar (Print Format/Language/
+// Letter Head selectors) - it's the exact same `.layout-side-section` DOM
+// element the Form/List sidebars use, just populated by
+// PrintView.setup_sidebar() instead.
+//
+// Can't use the Form/List patch pattern here: `frappe.ui.form.PrintView`
+// is defined by a page-specific bundle (apps/frappe/frappe/printing/page/
+// print/print.js) that Frappe lazy-loads only the first time the user
+// navigates to a print route - it doesn't exist yet when garage_theme.js
+// runs at page load, so `frappe.ui.form.PrintView.prototype` is undefined
+// and the guard silently never fires. `frappe.router`, in contrast, is a
+// core object that always exists - listening for route changes and
+// checking route[0] === "print" sidesteps the load-order problem entirely.
+// Not keyed per-docname like the Form sidebar: PrintView's sidebar DOM is
+// built once per session (in its constructor) and reused across every
+// print navigation, so re-hiding on every "print" route change (rather
+// than gating on "already applied for this doc") is what actually gives
+// "collapsed by default every time" - it still doesn't fight a manual
+// expand, since nothing re-runs this until the route changes again.
+if (frappe.router && !frappe.router.__garage_print_sidebar_patched) {
+  frappe.router.__garage_print_sidebar_patched = true;
+  frappe.router.on('change', () => {
+    const route = frappe.get_route();
+    if (!route || route[0] !== 'print') return;
+    setTimeout(() => {
+      const $sidebar = $('.layout-side-section');
+      if (!$sidebar.length) return;
+      $sidebar.hide();
+      const page = frappe.pages.print && frappe.pages.print.page;
+      page && page.update_sidebar_icon && page.update_sidebar_icon();
+    }, 300);
+  });
+}
+
 // "Create > Payment" on a Sales Invoice always builds a brand new mapped
 // Payment Entry with no check for one already in progress - clicking it
 // twice (e.g. the first draft was never saved/submitted, or the user just
