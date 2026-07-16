@@ -277,6 +277,33 @@ def get_nota_service_context(doc) -> Dict[str, Any]:
     }
 
 
+def _get_or_generate_spk_number(doc) -> str:
+    """Auto-fill Garage Service Order.spk_number the first time the "Surat
+    Perintah Kerja" print format is opened for this order - not at order
+    creation. Unlike SIKK/Nota Service, this doctype's own `name` is
+    already a proper work-order-shaped number (autoname
+    format:BGR-SPK-{YYYY}-{#####}), so there's no separate numbering
+    scheme to invent - spk_number just gets stamped with that same name,
+    with the blank-until-set field itself acting as the "has this been
+    printed yet" signal that start_repair() gates on."""
+
+    existing = frappe.db.get_value("Garage Service Order", doc.name, "spk_number")
+    if existing:
+        return existing
+
+    frappe.db.set_value("Garage Service Order", doc.name, "spk_number", doc.name, update_modified=False)
+    doc.spk_number = doc.name
+    return doc.name
+
+
+def get_service_order_print_context(doc) -> Dict[str, Any]:
+    """Context for the "Garage Service Order Print" (Surat Perintah Kerja)
+    format. Its only job right now is triggering spk_number generation as
+    a side effect of being called - see _get_or_generate_spk_number()."""
+
+    return {"spk_number": _get_or_generate_spk_number(doc)}
+
+
 def get_vehicle_handover_context(doc) -> Dict[str, Any]:
     """Assemble the branch, service-order timeline, mechanic and invoice
     reference info the "SIKK" (Surat Izin Keluar/Masuk Kendaraan) print

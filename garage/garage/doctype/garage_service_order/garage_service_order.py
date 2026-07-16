@@ -2,14 +2,83 @@
 
 from __future__ import annotations
 
+import re
 from typing import Iterable, Optional
 
 import frappe
-from frappe.utils import cstr, nowdate
+from frappe.utils import cstr, flt, nowdate
 
 from frappe.model.document import Document
 
 from garage.utils import naming
+
+
+def _slugify(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9]+", "-", (value or "").strip()).strip("-").upper()
+
+
+def _ensure_non_stock_item(item_code: str, item_name: str, item_group: str, stock_uom: str = "Nos") -> str:
+    """Get-or-create a non-stock Item used purely as a billing line.
+
+    Non-stock because the auto-generated Sales Invoice never sets
+    `update_stock`, so these Items never touch ERPNext's stock ledger -
+    real stock stays in this app's own Garage Spare Part / Garage Stock
+    Movement system.
+    """
+    if not frappe.db.exists("Item", item_code):
+        frappe.get_doc(
+            {
+                "doctype": "Item",
+                "item_code": item_code,
+                "item_name": item_name,
+                "item_group": item_group,
+                "stock_uom": stock_uom,
+                "is_stock_item": 0,
+                "include_item_in_manufacturing": 0,
+            }
+        ).insert(ignore_permissions=True)
+
+    return item_code
+
+
+def get_or_create_service_fee_item(service_type: str) -> str:
+    """Return the Item code for a Service Type's labor/service fee, creating
+    a dedicated non-stock Item the first time this service type is billed.
+
+    Keeping one Item per Service Type (instead of one generic item for all
+    labor charges) lets item-wise sales reports distinguish revenue per
+    service type.
+    """
+    item_code = f"JASA-{_slugify(service_type)}"[:140]
+    return _ensure_non_stock_item(item_code, f"Jasa {service_type}", "Services")
+
+
+def get_or_create_bundle_fee_item(bundle) -> str:
+    """Return the Item code for a Garage Service Bundle's own labor/service
+    fee (Biaya Jasa), creating a dedicated non-stock Item per bundle."""
+    bundle_name = getattr(bundle, "bundle_name", None) or bundle.name
+    item_code = f"JASA-PAKET-{_slugify(bundle_name)}"[:140]
+    return _ensure_non_stock_item(item_code, f"Jasa Paket {bundle_name}", "Services")
+
+
+def get_or_create_item_for_spare_part(part_code: str) -> str:
+    """Return the Item code for a Garage Spare Part, creating a bridging
+    Item the first time this part is billed via a service bundle.
+
+    Reuses `part_code` verbatim as the Item code: several other code paths
+    (spare part request, stock movement) already assume `Item.item_code ==
+    Garage Spare Part.part_code` without ever creating it, so this also
+    retroactively unblocks those for any part billed through a bundle.
+    """
+    part = frappe.db.get_value(
+        "Garage Spare Part", part_code, ["part_name", "uom"], as_dict=True
+    ) or {}
+    return _ensure_non_stock_item(
+        part_code,
+        part.get("part_name") or part_code,
+        "Products",
+        part.get("uom") or "Nos",
+    )
 
 
 PART_PENDING_STATUSES = {
@@ -26,8 +95,13 @@ PART_PENDING_STATUSES = {
     "request spare part",
 }
 PART_COMPLETED_STATUSES = {"received", "issued", "prepared", "approved"}
-PART_REJECTED_STATUSES = {"rejected"}
+PART_REJECTED_STATUSES = {"rejected", "out of stock"}
 PART_CANCELLED_STATUSES = {"cancelled"}
+
+# "request spare part" is deliberately excluded: it's the default status the moment an
+# item is picked, before it has actually been sent. Only a real Spare Part Request Item
+# link (checked via `sent_names` in `_guard_locked_part_rows`) proves a row was truly sent.
+PART_LOCKED_DELETE_STATUSES = PART_COMPLETED_STATUSES | PART_REJECTED_STATUSES
 
 
 class GarageServiceOrder(Document):
@@ -37,13 +111,64 @@ class GarageServiceOrder(Document):
         naming.make_branch_autoname(self, "SPK", include_year=True)
 
     def validate(self) -> None:
+        if not self.service_order_type and not self.service_package:
+            frappe.throw("Pilih minimal Service Type atau Paket Service.")
+        self._guard_locked_part_rows()
         self._update_display_fields()
         self._apply_bundle_items()
+        self._calculate_total_amount()
         self._update_part_charge_status()
-        self._sync_spare_part_request()
 
-    def on_update(self):  # pragma: no cover - frappe lifecycle hook
-        self._sync_spare_part_request()
+    def _guard_locked_part_rows(self) -> None:
+        """Prevent removal of part rows already sent to Spare Part Request."""
+
+        if self.is_new():
+            return
+
+        previous_rows = frappe.db.get_all(
+            "Garage Service Order Part",
+            filters={"parent": self.name, "parenttype": "Garage Service Order"},
+            fields=["name", "item_code", "item_name", "stock_status"],
+        )
+        if not previous_rows:
+            return
+
+        # Row names travel through raw SQL (int, for autoincrement child tables) and
+        # through Data-typed link fields (str) — normalize to str before comparing,
+        # otherwise `266 in {"266"}` silently evaluates to False.
+        sent_names = {
+            cstr(name) for name in frappe.db.get_all(
+                "Spare Part Request Item",
+                filters={"service_order_part": ["in", [row.name for row in previous_rows]]},
+                pluck="service_order_part",
+            )
+        }
+        previous_status = frappe.db.get_value("Garage Service Order", self.name, "status")
+        order_already_sent = bool(previous_status) and previous_status != "Open"
+        locked_names = {
+            cstr(row.name) for row in previous_rows
+            if cstr(row.name) in sent_names
+            or (
+                row.item_code
+                and cstr(row.stock_status).strip().lower() in PART_LOCKED_DELETE_STATUSES
+            )
+            or (not row.item_code and order_already_sent)
+        }
+        if not locked_names:
+            return
+
+        current_names = {cstr(row.name) for row in getattr(self, "required_parts", []) or []}
+        removed = locked_names - current_names
+        if removed:
+            removed_items = [
+                row.item_name or row.item_code
+                for row in previous_rows
+                if cstr(row.name) in removed
+            ]
+            frappe.throw(
+                "Item berikut sudah dikirim ke Spare Part Request dan tidak bisa dihapus: "
+                + ", ".join(removed_items)
+            )
 
     def _update_display_fields(self) -> None:
         customer_name: Optional[str] = None
@@ -52,12 +177,17 @@ class GarageServiceOrder(Document):
 
         self.customer_display = customer_name or self.customer
 
+        bundle_name: Optional[str] = None
+        if self.service_package:
+            bundle_name = frappe.db.get_value("Garage Service Bundle", self.service_package, "bundle_name")
+        self.service_package_display = bundle_name or self.service_package
+
         vehicle_parts: dict[str, object] = {}
         if self.vehicle:
             vehicle_parts = frappe.db.get_value(
                 "Garage Vehicle",
                 self.vehicle,
-                ["license_plate", "brand", "model", "vehicle_year"],
+                ["license_plate", "brand", "model", "vehicle_year", "color"],
                 as_dict=True,
             ) or {}
 
@@ -76,30 +206,106 @@ class GarageServiceOrder(Document):
         if vehicle_year:
             vehicle_bits.append(str(vehicle_year))
 
+        color = vehicle_parts.get("color")
+        if color:
+            vehicle_bits.append(str(color))
+
         display_value = " • ".join(vehicle_bits) if vehicle_bits else None
         self.vehicle_display = display_value or self.vehicle
 
-    def _apply_bundle_items(self) -> None:
-        if not getattr(self, "service_order_type", None):
-            return
+        if self.customer and not self.primary_contact:
+            phone = frappe.db.get_value("Garage Customer", self.customer, "phone")
+            if phone:
+                self.primary_contact = phone
 
+    def _calculate_total_amount(self) -> None:
+        total = 0.0
+        for row in getattr(self, "required_parts", []) or []:
+            rate = flt(getattr(row, "rate", 0))
+            qty = flt(getattr(row, "qty", 0))
+            discount = flt(getattr(row, "discount", 0))
+            tax = flt(getattr(row, "tax", 0))
+            subtotal = qty * rate
+            after_disc = subtotal * (1 - discount / 100)
+            row.amount = flt(after_disc * (1 + tax / 100), 2)
+            total += row.amount
+        self.total_amount = flt(total, 2)
+
+    def _apply_bundle_items(self) -> None:
         required_parts = list(getattr(self, "required_parts", []) or [])
+
+        self._backfill_service_fee_item_codes(required_parts)
+
         if required_parts:
             return
 
-        bundle_items = get_bundle_items_for_service_type(self.service_order_type)
-        if not bundle_items:
+        if getattr(self, "service_order_type", None):
+            service_fee = flt(frappe.db.get_value(
+                "Garage Service Type", self.service_order_type, "service_fee"
+            ))
+            if service_fee:
+                item_code = get_or_create_service_fee_item(self.service_order_type)
+                self.append(
+                    "required_parts",
+                    {
+                        "item_code": item_code,
+                        "item_name": f"Jasa {self.service_order_type}",
+                        "qty": 1,
+                        "rate": service_fee,
+                        "tax": 11,
+                        "amount": flt(service_fee * 1.11),
+                        "stock_status": "",
+                    },
+                )
+
+        bundle_name = getattr(self, "service_package", None)
+        if bundle_name:
+            bundle_items = get_garage_bundle_items(bundle_name)
+            for item in bundle_items:
+                rate = flt(item.get("rate"))
+                qty = item.get("qty") or 1
+                is_stock = item.get("is_stock_item", 1)
+                self.append(
+                    "required_parts",
+                    {
+                        "item_code": item.get("item_code"),
+                        "item_name": item.get("item_name") or "",
+                        "description": item.get("description") or "",
+                        "qty": qty,
+                        "rate": rate,
+                        "tax": 11,
+                        "amount": flt(qty * rate * 1.11),
+                        "stock_status": "Request Spare Part" if is_stock else "",
+                    },
+                )
+
+    def _backfill_service_fee_item_codes(self, rows) -> None:
+        """The client-side addServiceFeeRow() (garage_service_order.js) adds
+        the labor-fee row with item_name "Jasa {service_type}" but no
+        item_code - only the bootstrap branch below (when required_parts
+        starts empty) assigns one via get_or_create_service_fee_item(). Once
+        the client has already added the row, that branch never runs (guard
+        below returns early whenever required_parts is non-empty), so the
+        row stays without an item_code permanently.
+
+        _build_invoice_items() (repair_qc.py) silently drops any row with no
+        item_code, so this row - the labor charge - never reached the Sales
+        Invoice. Backfill it unconditionally so it's fixed regardless of
+        which path added the row.
+        """
+        if not self.service_order_type:
             return
 
-        for item in bundle_items:
-            self.append(
-                "required_parts",
-                {
-                    "item_code": item.get("item_code"),
-                    "qty": item.get("qty") or 1,
-                    "stock_status": "Request Spare Part",
-                },
-            )
+        item_code = None
+        for row in rows:
+            if getattr(row, "item_code", None):
+                continue
+            item_name = (getattr(row, "item_name", None) or "").strip()
+            if not item_name.startswith("Jasa "):
+                continue
+            if item_code is None:
+                item_code = get_or_create_service_fee_item(self.service_order_type)
+            row.item_code = item_code
 
     def _update_part_charge_status(self) -> None:
         """Derive the aggregated sparepart/material charge status."""
@@ -107,7 +313,7 @@ class GarageServiceOrder(Document):
         computed = self._compute_part_charge_status()
         current = getattr(self, "part_charge_status", None) or ""
 
-        if computed in {"Partial Approve", "Partial Reject", "Rejected"}:
+        if computed in {"Partial Prepared", "Partial Reject", "Rejected"}:
             self.part_charge_status = computed
             return
 
@@ -153,7 +359,11 @@ class GarageServiceOrder(Document):
         if self.is_new():
             return
 
-        required_parts = [row for row in getattr(self, "required_parts", []) if getattr(row, "item_code", None)]
+        required_parts = [
+            row for row in getattr(self, "required_parts", [])
+            if getattr(row, "item_code", None)
+            and frappe.db.get_value("Item", row.item_code, "is_stock_item")
+        ]
         if not required_parts:
             return
 
@@ -171,36 +381,39 @@ class GarageServiceOrder(Document):
         request.customer = self.customer
         request.vehicle = self.vehicle
 
-        existing_rows = {row.service_order_part: row for row in getattr(request, "items", [])}
-        prepared_by_code = {}
-        for row in getattr(request, "items", []) or []:
-            item_code = cstr(getattr(row, "item_code", "")).strip().lower()
-            if not item_code:
-                continue
-            status = cstr(getattr(row, "approval_status", "")).strip().lower()
-            if status == "prepared":
-                prepared_by_code[item_code] = row
+        # `service_order_part` is a Data field (always str), but `part.name` on an
+        # autoincrement child table comes back as int - normalize both to str or
+        # the lookup below silently misses every row, per the same gotcha already
+        # documented in `_guard_locked_part_rows`.
+        existing_rows = {
+            cstr(row.service_order_part): row for row in getattr(request, "items", [])
+        }
         request.set("items", [])
 
         for part in required_parts:
-            preserved = existing_rows.get(part.name)
-            part_code_key = cstr(getattr(part, "item_code", "")).strip().lower()
+            # Only preserve approval_status for the exact same row (edited, not new).
+            # A newly added row must always start unprepared, even if it happens to
+            # share an item_code with a part that was already prepared earlier.
+            preserved = existing_rows.get(cstr(part.name))
             approval_status = getattr(preserved, "approval_status", None)
-            if not approval_status and part_code_key:
-                prepared_row = prepared_by_code.get(part_code_key)
-                if prepared_row:
-                    approval_status = getattr(prepared_row, "approval_status", None)
+            item_code = getattr(part, "item_code", None)
+            bin_data = frappe.db.get_value(
+                "Bin", {"item_code": item_code}, ["actual_qty", "warehouse"], as_dict=True
+            ) if item_code else None
+
             request.append(
                 "items",
                 {
                     "service_order_part": part.name,
-                    "item_code": getattr(part, "item_code", None),
+                    "item_code": item_code,
                     "item_name": getattr(part, "item_name", None),
                     "description": getattr(part, "description", None),
                     "qty": getattr(part, "qty", None),
                     "uom": getattr(part, "uom", None),
+                    "stock_qty": flt(bin_data.actual_qty) if bin_data else 0,
+                    "warehouse": bin_data.warehouse if bin_data else "",
                     "source_warehouse": getattr(part, "warehouse", None),
-                    "approval_status": approval_status or "Pending",
+                    "approval_status": approval_status or "Request Part",
                     "stock_movement": getattr(preserved, "stock_movement", None),
                 },
             )
@@ -210,6 +423,17 @@ class GarageServiceOrder(Document):
             request.save(ignore_permissions=True)
         finally:
             frappe.flags.skip_spare_part_request_service_order_sync = False
+
+        try:
+            frappe.publish_realtime(
+                "garage_spare_part_request_updated",
+                {"name": request.name},
+            )
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                "Failed to publish Spare Part Request update",
+            )
 
 
 def derive_part_charge_status(
@@ -234,7 +458,7 @@ def derive_part_charge_status(
     if has_cancelled and not has_active:
         return "Rejected"
     if has_completed and has_pending:
-        return "Partial Approve"
+        return "Partial Prepared"
     if has_pending:
         return "Pending"
     if all(status in PART_COMPLETED_STATUSES or status in PART_CANCELLED_STATUSES for status in normalized):
@@ -244,50 +468,276 @@ def derive_part_charge_status(
     return base_status or "Not Started"
 
 
-def get_bundle_items_for_service_type(service_order_type: str) -> list[dict[str, object]]:
-    if not service_order_type:
-        return []
-
-    try:
-        service_type = frappe.get_doc("Garage Service Type", service_order_type)
-    except Exception:
-        return []
-
-    bundle_name = getattr(service_type, "product_bundle", None)
+def get_garage_bundle_items(bundle_name: str) -> list[dict[str, object]]:
+    """Expand a Garage Service Bundle into billing lines: its own labor fee
+    (Biaya Jasa) plus one row per spare part / material, each bridged to a
+    real Item via get_or_create_bundle_fee_item / get_or_create_item_for_spare_part
+    so they can flow into required_parts and, eventually, Sales Invoice.
+    """
     if not bundle_name:
         return []
 
     try:
-        bundle = frappe.get_doc("Product Bundle", bundle_name)
+        bundle = frappe.get_doc("Garage Service Bundle", bundle_name)
     except Exception:
         return []
 
-    items = []
-    for row in getattr(bundle, "items", []) or []:
-        item_code = getattr(row, "item_code", None)
-        if not item_code:
-            continue
+    items: list[dict[str, object]] = []
+
+    service_fee = flt(bundle.service_fee)
+    if service_fee:
         items.append(
             {
-                "item_code": item_code,
-                "qty": getattr(row, "qty", None) or 1,
+                "item_code": get_or_create_bundle_fee_item(bundle),
+                "item_name": f"Jasa Paket {bundle.bundle_name}",
+                "qty": 1,
+                "rate": service_fee,
+                "description": "",
+                # no stock_status - it's a labor line, not a physical part
+                "is_stock_item": 0,
             }
         )
+
+    for row in list(bundle.spare_parts or []) + list(bundle.materials or []):
+        part_code = row.get("spare_part") or row.get("material")
+        if not part_code:
+            continue
+        qty = flt(row.get("quantity") or 0) or 1
+        items.append(
+            {
+                "item_code": get_or_create_item_for_spare_part(part_code),
+                "item_name": row.get("item_name") or part_code,
+                "qty": qty,
+                "rate": flt(row.get("unit_price") or 0),
+                "description": "",
+                # always 1: these rows always need physical fulfillment,
+                # regardless of the bridged Item's own is_stock_item flag
+                "is_stock_item": 1,
+            }
+        )
+
     return items
 
 
 @frappe.whitelist()
-def get_bundle_items(service_order_type: str | None = None) -> dict[str, object]:
-    items = get_bundle_items_for_service_type(service_order_type or "")
-    bundle_name = None
+def get_service_type_fee(service_order_type: str | None = None) -> dict[str, object]:
+    service_fee = 0
     if service_order_type:
-        try:
-            service_type = frappe.get_doc("Garage Service Type", service_order_type)
-            bundle_name = getattr(service_type, "product_bundle", None)
-        except Exception:
-            bundle_name = None
+        service_fee = flt(frappe.db.get_value(
+            "Garage Service Type", service_order_type, "service_fee"
+        ))
+    return {"service_fee": service_fee}
 
-    return {
-        "bundle": bundle_name,
-        "items": items,
-    }
+
+@frappe.whitelist()
+def get_package_items(bundle_name: str | None = None) -> dict[str, object]:
+    items = get_garage_bundle_items(bundle_name or "")
+    return {"items": items}
+
+
+@frappe.whitelist()
+def get_stock_qty(item_code: str) -> dict[str, object]:
+    if not item_code:
+        return {"stock_qty": 0}
+    qty = flt(frappe.db.get_value("Bin", {"item_code": item_code}, "actual_qty"))
+    return {"stock_qty": qty}
+
+
+@frappe.whitelist()
+def item_query_with_stock(doctype, txt, searchfield, start, page_len, filters):
+    items = frappe.db.sql("""
+        SELECT
+            i.name,
+            i.item_name,
+            i.item_group,
+            COALESCE(b.actual_qty, 0) as stock_qty
+        FROM `tabItem` i
+        LEFT JOIN `tabBin` b ON b.item_code = i.name
+        WHERE i.disabled = 0
+          AND (i.name LIKE %(txt)s OR i.item_name LIKE %(txt)s)
+        GROUP BY i.name
+        ORDER BY i.name
+        LIMIT %(start)s, %(page_len)s
+    """, {
+        "txt": f"%{txt}%",
+        "start": start,
+        "page_len": 50,
+    }, as_list=True)
+
+    results = []
+    for row in items:
+        stock = flt(row[3])
+        if stock <= 0:
+            stock_label = '<span style="color:#dc2626;font-weight:700;">Stock: 0 ⛔</span>'
+            desc = f'<span style="color:#ccc;">{row[1]}, {row[2]}</span> | {stock_label}'
+        else:
+            stock_label = f'<span style="color:#059669;font-weight:700;">Stock: {int(stock)}</span>'
+            desc = f"{row[1]}, {row[2]} | {stock_label}"
+        results.append([row[0], desc])
+    return results
+
+
+@frappe.whitelist()
+def get_sent_part_row_names(service_order_name: str) -> list[str]:
+    """Return Required Parts row names that are already linked to a Spare Part Request."""
+
+    row_names = frappe.db.get_all(
+        "Garage Service Order Part",
+        filters={"parent": service_order_name, "parenttype": "Garage Service Order"},
+        pluck="name",
+    )
+    if not row_names:
+        return []
+
+    return frappe.db.get_all(
+        "Spare Part Request Item",
+        filters={"service_order_part": ["in", row_names]},
+        pluck="service_order_part",
+    )
+
+
+@frappe.whitelist()
+def send_order_part(service_order_name: str) -> dict[str, object]:
+    doc = frappe.get_doc("Garage Service Order", service_order_name)
+
+    if doc.status not in ("Open", "Waiting Part", "Prepared"):
+        frappe.throw("Order part hanya bisa dikirim saat status Open, Waiting Part, atau Prepared.")
+
+    required_parts = [row for row in getattr(doc, "required_parts", []) if getattr(row, "item_code", None)]
+    if not required_parts:
+        frappe.throw("Tidak ada item dengan Item Code di Required Parts.")
+
+    doc._sync_spare_part_request()
+
+    doc.status = "Waiting Part"
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {"status": "Waiting Part", "message": "Order part berhasil dikirim."}
+
+
+@frappe.whitelist()
+def start_repair(service_order_name: str) -> dict[str, object]:
+    doc = frappe.get_doc("Garage Service Order", service_order_name)
+
+    if doc.status not in ("Waiting Part", "Prepared"):
+        frappe.throw("Start Repair hanya bisa dilakukan saat status Waiting Part atau Prepared.")
+
+    if not doc.spk_number:
+        frappe.throw(
+            "Surat Perintah Kerja (SPK) untuk service order ini belum pernah dicetak. "
+            "Cetak SPK dulu sebelum memulai perbaikan."
+        )
+
+    parts_with_code = [row for row in getattr(doc, "required_parts", []) if getattr(row, "item_code", None)]
+    prepared_statuses = {"prepared", "received", "issued", "approved"}
+    any_prepared = any(
+        cstr(getattr(row, "stock_status", "")).strip().lower() in prepared_statuses
+        for row in parts_with_code
+    ) if parts_with_code else False
+
+    if not any_prepared:
+        frappe.throw("Minimal satu spare part harus sudah Prepared sebelum memulai perbaikan.")
+
+    doc.status = "In Progress"
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {"status": "In Progress", "message": "Perbaikan dimulai."}
+
+
+@frappe.whitelist()
+def send_additional_part(service_order_name: str) -> dict[str, object]:
+    doc = frappe.get_doc("Garage Service Order", service_order_name)
+
+    if doc.status != "In Progress":
+        frappe.throw("Kirim part tambahan hanya bisa saat status In Progress.")
+
+    new_parts = [
+        row for row in getattr(doc, "required_parts", [])
+        if getattr(row, "item_code", None)
+        and cstr(getattr(row, "stock_status", "")).strip().lower() == "request spare part"
+        and frappe.db.get_value("Item", row.item_code, "is_stock_item")
+    ]
+    if not new_parts:
+        frappe.throw("Tidak ada item baru dengan status Request Spare Part.")
+
+    doc._sync_spare_part_request()
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {"status": "In Progress", "message": "Part tambahan berhasil dikirim."}
+
+
+@frappe.whitelist()
+def finish_repair(service_order_name: str) -> dict[str, object]:
+    doc = frappe.get_doc("Garage Service Order", service_order_name)
+
+    if doc.status != "In Progress":
+        frappe.throw("Finish Repair hanya bisa saat status In Progress.")
+
+    resolved_statuses = {"prepared", "rejected", "out of stock", "issued", "received", "approved"}
+    unresolved = []
+    for row in getattr(doc, "required_parts", []):
+        if not getattr(row, "item_code", None):
+            continue
+        status = cstr(getattr(row, "stock_status", "")).strip().lower()
+        if not status:
+            continue
+        if status not in resolved_statuses:
+            unresolved.append(getattr(row, "item_name", None) or row.item_code)
+    if unresolved:
+        names = ", ".join(unresolved[:5])
+        frappe.throw(f"Masih ada part yang belum di-approve: {names}. Tunggu approval dari Spare Part.")
+
+    doc.status = "Finished"
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {"status": "Finished", "message": "Perbaikan selesai."}
+
+
+@frappe.whitelist()
+def submit_to_qc(service_order_name: str) -> dict[str, object]:
+    doc = frappe.get_doc("Garage Service Order", service_order_name)
+
+    if doc.status != "Finished":
+        frappe.throw("Submit to QC hanya bisa saat status Finished.")
+
+    doc.status = "QC Review"
+    doc.save(ignore_permissions=True)
+
+    from garage.utils.service_order_status import _ensure_repair_qc
+    _ensure_repair_qc(doc)
+
+    frappe.db.commit()
+
+    return {"status": "QC Review", "message": "Service Order masuk QC Review."}
+
+
+@frappe.whitelist()
+def complete_qc(service_order_name: str) -> dict[str, object]:
+    doc = frappe.get_doc("Garage Service Order", service_order_name)
+
+    if doc.status != "QC Review":
+        frappe.throw("Complete QC hanya bisa saat status QC Review.")
+
+    doc.status = "Waiting Payment"
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {"status": "Waiting Payment", "message": "QC selesai. Menunggu pembayaran."}
+
+
+@frappe.whitelist()
+def reopen_service_order(service_order_name: str) -> dict[str, object]:
+    doc = frappe.get_doc("Garage Service Order", service_order_name)
+
+    if doc.status not in ("Finished", "Waiting Payment", "QC Review"):
+        frappe.throw("Re-Open hanya bisa saat status Finished, Waiting Payment atau QC Review.")
+
+    doc.status = "In Progress"
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {"status": "In Progress", "message": "Service Order dibuka kembali."}

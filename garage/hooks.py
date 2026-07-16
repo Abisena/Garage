@@ -100,6 +100,7 @@ jinja = {
         "garage.utils.jinja.get_payment_receipt_context",
         "garage.utils.jinja.get_nota_service_context",
         "garage.utils.jinja.get_vehicle_handover_context",
+        "garage.utils.jinja.get_service_order_print_context",
     ]
 }
 
