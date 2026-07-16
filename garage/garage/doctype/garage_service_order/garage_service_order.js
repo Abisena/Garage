@@ -669,6 +669,21 @@ frappe.ui.form.on('Garage Service Order', {
         // the mechanic to act on - show no primary action at all rather than a
         // "Start Repair" button that looks clickable but isn't.
         frm.page.set_primary_action(__('Start Repair'), () => {
+          // spk_number is only ever set by get_service_order_print_context()
+          // (garage/utils/jinja.py), the first time the SPK print format is
+          // opened for this order - server-side start_repair() throws on a
+          // blank value too, but checking here avoids a round-trip just to
+          // hit that error, and lets us jump straight to the print view
+          // instead of leaving the user stuck on an error dialog with no
+          // obvious next step.
+          if (!frm.doc.spk_number) {
+            frappe.show_alert({
+              message: __('SPK belum pernah dicetak - membuka halaman cetak SPK dulu.'),
+              indicator: 'orange',
+            });
+            frm.print_doc();
+            return;
+          }
           frappe.call({
             method: 'garage.garage.doctype.garage_service_order.garage_service_order.start_repair',
             args: { service_order_name: frm.doc.name },
