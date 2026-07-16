@@ -386,6 +386,19 @@ if (
     if (this.frm.doctype !== 'Sales Invoice') {
       return original_make_mapped_payment_entry.call(this, args);
     }
+    // Payment can't be taken until the customer's Nota Service has
+    // actually been printed at least once - nota_service_number is only
+    // ever set by get_nota_service_context() (garage/utils/jinja.py) the
+    // first time that print format is opened for this invoice, so a blank
+    // value here means nobody has printed it yet.
+    if (this.frm.doc.service_order && !this.frm.doc.nota_service_number) {
+      frappe.msgprint({
+        title: __('Belum Bisa Diproses'),
+        message: __('Nota Service untuk invoice ini belum pernah dicetak. Buka & cetak Nota Service dulu sebelum membuat payment.'),
+        indicator: 'orange',
+      });
+      return;
+    }
     const me = this;
     return frappe.call({
       method: 'garage.utils.payment_hooks.get_draft_payment_entry_for_reference',

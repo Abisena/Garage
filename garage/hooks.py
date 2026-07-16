@@ -26,7 +26,7 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 app_include_css = "/assets/garage/css/garage_desk.css?v=130"
-app_include_js = ["/assets/garage/js/route_aliases.js?v=1", "/assets/garage/js/garage_theme.js?v=36"]
+app_include_js = ["/assets/garage/js/route_aliases.js?v=1", "/assets/garage/js/garage_theme.js?v=37"]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/garage/css/garage.css"
@@ -272,6 +272,7 @@ fixtures = [
             [
                 "Product Bundle-service_type",
                 "User-garage_branch",
+                "Sales Invoice-nota_service_number",
             ],
         ]],
     },

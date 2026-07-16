@@ -139,12 +139,44 @@ def _format_km(value: Optional[int]) -> Optional[str]:
     return f"{value:,}".replace(",", ".") + " km"
 
 
+def _get_or_generate_nota_service_number(doc) -> str:
+    """NOTA-{4-digit year}{5-digit sequence}, e.g. NOTA-202600001 - same
+    scheme as Vehicle Handover's SIKK number. Generated lazily the first
+    time the Nota Service print format is actually opened for this
+    invoice (not at invoice creation), so an invoice nobody has printed
+    yet stays blank - see garage_theme.js's Create > Payment guard, which
+    refuses to create a Payment Entry until this is set."""
+
+    existing = frappe.db.get_value("Sales Invoice", doc.name, "nota_service_number")
+    if existing:
+        return existing
+
+    year = str(frappe.utils.getdate(doc.posting_date or frappe.utils.nowdate()).year)
+    prefix = f"NOTA-{year}"
+    existing_count = frappe.db.count(
+        "Sales Invoice", filters={"nota_service_number": ["like", f"{prefix}%"]}
+    )
+
+    candidate_seq = existing_count + 1
+    while True:
+        candidate = f"{prefix}{candidate_seq:05d}"
+        if not frappe.db.exists("Sales Invoice", {"nota_service_number": candidate}):
+            break
+        candidate_seq += 1
+
+    frappe.db.set_value("Sales Invoice", doc.name, "nota_service_number", candidate, update_modified=False)
+    doc.nota_service_number = candidate
+    return candidate
+
+
 def get_nota_service_context(doc) -> Dict[str, Any]:
     """Assemble the branch, customer, vehicle and mechanic info a Sales
     Invoice "Nota Service" print format needs, plus items split into jasa
     (service) vs part subtotals. Sourced entirely from the linked Garage
     Service Order (via Sales Invoice.service_order) so the printed nota can
     never show data that didn't come from the source service order."""
+    nota_service_number = _get_or_generate_nota_service_number(doc)
+
     service_order = None
     if getattr(doc, "service_order", None):
         service_order = frappe.db.get_value(
@@ -227,6 +259,7 @@ def get_nota_service_context(doc) -> Dict[str, Any]:
         )
 
     return {
+        "nota_service_number": nota_service_number,
         "branch": branch,
         "service_order": service_order,
         "customer_phone": customer_phone,
@@ -269,14 +302,26 @@ def get_vehicle_handover_context(doc) -> Dict[str, Any]:
         branch = frappe.db.get_value("Garage Branch", {"is_active": 1}, branch_fields, as_dict=True)
 
     invoice_name = None
+    ref_nota = None
     jenis_service = None
     if getattr(doc, "service_order", None):
-        invoice_name = frappe.db.get_value(
+        invoice = frappe.db.get_value(
             "Sales Invoice",
             {"service_order": doc.service_order, "docstatus": ["<", 2]},
-            "name",
+            ["name", "nota_service_number"],
+            as_dict=True,
         )
-        if invoice_name:
+        if invoice:
+            invoice_name = invoice.name
+            # Prefer the Nota Service's own document number over the raw
+            # Sales Invoice name - by the time a SIKK exists, a Payment
+            # Entry must already exist too, which the Create > Payment
+            # guard in garage_theme.js only allows once Nota Service has
+            # been printed (and therefore has a number), so this should
+            # always be set in practice; falls back to the invoice name
+            # just in case (e.g. a handover created outside that flow).
+            ref_nota = invoice.nota_service_number or invoice.name
+
             service_item_names = []
             for row in frappe.get_all(
                 "Sales Invoice Item", filters={"parent": invoice_name}, fields=["item_code", "item_name"]
@@ -295,5 +340,5 @@ def get_vehicle_handover_context(doc) -> Dict[str, Any]:
         "mechanic_name": (service_order or {}).get("assigned_mechanic_name"),
         "mechanic_code": (service_order or {}).get("assigned_mechanic"),
         "jenis_service": jenis_service,
-        "ref_nota": invoice_name,
+        "ref_nota": ref_nota,
     }
