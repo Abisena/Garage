@@ -242,6 +242,35 @@ body[data-route^="Form"] .form-layout .form-tab-content {
   margin-bottom: 6px !important;
 }
 
+/* Address Line 1 & 2: inline label like the other Address fields, but
+   label width follows its own text so both stay on one line even in a
+   narrow column (unlike the fixed 160px used for Data/Link/etc). */
+.frappe-control[data-fieldname="address_line1"] .form-group,
+.frappe-control[data-fieldname="address_line2"] .form-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-bottom: 8px !important;
+}
+
+.frappe-control[data-fieldname="address_line1"] .form-group .clearfix,
+.frappe-control[data-fieldname="address_line2"] .form-group .clearfix {
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+}
+
+.frappe-control[data-fieldname="address_line1"] .control-label,
+.frappe-control[data-fieldname="address_line2"] .control-label {
+  white-space: nowrap !important;
+  margin-bottom: 0 !important;
+}
+
+.frappe-control[data-fieldname="address_line1"] .form-group .control-input-wrapper,
+.frappe-control[data-fieldname="address_line2"] .form-group .control-input-wrapper {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
 /* ── Text inputs ──────────────────────────────────────── */
 
 .frappe-control input[type="text"],
@@ -333,6 +362,13 @@ body[data-route^="Form"] .form-layout .form-tab-content {
 
 .frappe-control[data-fieldname="customer_number"] .control-input-wrapper {
   max-width: 180px !important;
+}
+
+.frappe-control[data-fieldname="address_line1"] textarea,
+.frappe-control[data-fieldname="address_line2"] textarea {
+  min-height: 40px !important;
+  max-height: 40px !important;
+  height: 40px !important;
 }
 
 /* ── Compact fields (Int, Select) ─────────────────────── */
@@ -1143,6 +1179,69 @@ body[data-route*="Repair QC"] [data-fieldname="spare_parts_verification"] .frapp
 .vhl-c-ago     { flex: 0.6 1 0%; font-size: 11px; color: var(--g-text-muted); text-align: right; }
 
 .vhl-hdr {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  background: none !important;
+  padding: 0 !important;
+}
+
+/* ── Garage Branch Card List View (garage_branch_list.js) ── */
+
+.gb-list .list-row {
+  border-left: none !important;
+  border-right: 1px solid var(--g-border-light) !important;
+  border-bottom: 1px solid var(--g-border-light) !important;
+  transition: background 0.15s ease !important;
+}
+
+.gb-list .list-row:first-of-type {
+  border-top: 1px solid var(--g-border-light) !important;
+  border-radius: var(--g-radius) var(--g-radius) 0 0 !important;
+}
+
+.gb-list .list-row:last-of-type {
+  border-radius: 0 0 var(--g-radius) var(--g-radius) !important;
+}
+
+.gb-list .list-row:nth-child(odd) .gb-card {
+  background: #ffffff !important;
+}
+
+.gb-list .list-row:nth-child(even) .gb-card {
+  background: #f0f1f3 !important;
+}
+
+.gb-list .list-row:hover .gb-card {
+  background: #e8edff !important;
+}
+
+.gb-c-code,
+.gb-c-name,
+.gb-c-city,
+.gb-c-phone,
+.gb-c-badge,
+.gb-c-ago {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--g-text);
+}
+
+.gb-c-code   { flex: 1.3 1 0%; font-weight: 600; letter-spacing: 0.03em; }
+.gb-c-name   { flex: 3 1 0%;   font-size: 13px; font-weight: 700; }
+.gb-c-city   { flex: 1.5 1 0%; color: var(--g-text-muted); }
+.gb-c-phone  { flex: 1.5 1 0%; color: var(--g-text-muted); }
+.gb-c-badge  { flex: 1.3 1 0%; font-size: 10.5px; font-weight: 700;
+               padding: 2px 10px; border-radius: 20px;
+               letter-spacing: 0.02em; text-align: left; }
+.gb-c-ago    { flex: 0.6 1 0%; font-size: 11px; color: var(--g-text-muted); text-align: right; }
+
+.gb-hdr {
   font-size: 10px !important;
   font-weight: 700 !important;
   color: #94a3b8 !important;
