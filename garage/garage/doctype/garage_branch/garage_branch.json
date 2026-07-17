@@ -17,6 +17,7 @@
     "branch_code",
     "column_break_basic",
     "is_active",
+    "default_warehouse",
     "section_break_address",
     "address_line1",
     "address_line2",
@@ -72,6 +73,13 @@
       "in_list_view": 1,
       "in_standard_filter": 1,
       "description": "Uncheck to disable this branch"
+    },
+    {
+      "fieldname": "default_warehouse",
+      "fieldtype": "Link",
+      "label": "Default Warehouse",
+      "options": "Warehouse",
+      "description": "Target warehouse auto-filled on Purchase Orders created by users of this branch"
     },
     {
       "fieldname": "section_break_address",
@@ -181,7 +189,7 @@
       "link_fieldname": "branch"
     }
   ],
-  "modified": "2024-06-02 00:00:00.000000",
+  "modified": "2026-07-17 15:50:00.000000",
   "module": "Garage",
   "name": "Garage Branch",
   "naming_rule": "By fieldname",

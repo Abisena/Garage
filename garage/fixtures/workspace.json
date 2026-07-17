@@ -1,6 +1,6 @@
 {
   "charts": [],
-  "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Master Data\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Customer\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Vehicle\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Brand\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Model\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Service Type\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Branch\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Branch Access\"}},{\"type\":\"spacer\",\"data\":{}},{\"type\":\"header\",\"data\":{\"text\":\"Operasional\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Registration\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Inspection & Diagnosis\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Service Order\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Spare Part Request\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Repair QC\"}},{\"type\":\"spacer\",\"data\":{}},{\"type\":\"header\",\"data\":{\"text\":\"Finance/Accounting\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Invoice\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Payment Entry\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Vehicle Handover\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Statement Import\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Transaction\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Reconciliation Tool\"}}]",
+  "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Master Data\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Customer\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Vehicle\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Brand\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Model\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Service Type\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Master Data Service Bundle\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Branch\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Branch Access\"}},{\"type\":\"spacer\",\"data\":{}},{\"type\":\"header\",\"data\":{\"text\":\"Operasional\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Registration\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Inspection & Diagnosis\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Garage Service Order\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Spare Part Request\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Repair QC\"}},{\"type\":\"spacer\",\"data\":{}},{\"type\":\"header\",\"data\":{\"text\":\"Finance/Accounting\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Invoice\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Payment Entry\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Vehicle Handover\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Statement Import\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Transaction\"}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Bank Reconciliation Tool\"}}]",
   "creation": "2024-07-02 00:00:00.000000",
   "docstatus": 0,
   "doctype": "Workspace",
@@ -66,6 +66,14 @@
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
       "idx": 5,
+      "label": "Master Data Service Bundle",
+      "link_to": "Garage Service Bundle",
+      "type": "DocType"
+    },
+    {
+      "docstatus": 0,
+      "doctype": "Workspace Shortcut",
+      "idx": 6,
       "label": "Garage Branch",
       "link_to": "Garage Branch",
       "type": "DocType"
@@ -73,7 +81,7 @@
     {
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
-      "idx": 6,
+      "idx": 7,
       "label": "Garage Branch Access",
       "link_to": "Garage Branch Access",
       "type": "DocType"
@@ -81,7 +89,7 @@
     {
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
-      "idx": 7,
+      "idx": 8,
       "label": "Customer Registration",
       "link_to": "Customer Registration",
       "type": "DocType"
@@ -89,7 +97,7 @@
     {
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
-      "idx": 8,
+      "idx": 9,
       "label": "Inspection & Diagnosis",
       "link_to": "Garage Vehicle Inspection",
       "type": "DocType"
@@ -97,7 +105,7 @@
     {
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
-      "idx": 9,
+      "idx": 10,
       "label": "Garage Service Order",
       "link_to": "Garage Service Order",
       "type": "DocType"
@@ -105,7 +113,7 @@
     {
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
-      "idx": 10,
+      "idx": 11,
       "label": "Spare Part Request",
       "link_to": "Spare Part Request",
       "type": "DocType"
@@ -113,7 +121,7 @@
     {
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
-      "idx": 11,
+      "idx": 12,
       "label": "Repair QC",
       "link_to": "Repair QC",
       "type": "DocType"
@@ -121,7 +129,7 @@
     {
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
-      "idx": 12,
+      "idx": 13,
       "label": "Vehicle Handover",
       "link_to": "Vehicle Handover",
       "type": "DocType"
@@ -129,7 +137,7 @@
     {
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
-      "idx": 13,
+      "idx": 14,
       "label": "Sales Invoice",
       "link_to": "Sales Invoice",
       "type": "DocType"
@@ -137,7 +145,7 @@
     {
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
-      "idx": 14,
+      "idx": 15,
       "label": "Payment Entry",
       "link_to": "Payment Entry",
       "type": "DocType"
@@ -145,7 +153,7 @@
     {
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
-      "idx": 15,
+      "idx": 16,
       "label": "Bank Statement Import",
       "link_to": "Bank Statement Import",
       "type": "DocType"
@@ -153,7 +161,7 @@
     {
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
-      "idx": 16,
+      "idx": 17,
       "label": "Bank Transaction",
       "link_to": "Bank Transaction",
       "type": "DocType"
@@ -161,7 +169,7 @@
     {
       "docstatus": 0,
       "doctype": "Workspace Shortcut",
-      "idx": 17,
+      "idx": 18,
       "label": "Bank Reconciliation Tool",
       "link_to": "Bank Reconciliation Tool",
       "type": "DocType"

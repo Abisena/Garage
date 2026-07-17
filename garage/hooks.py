@@ -248,7 +248,10 @@ scheduler_events = {
 # }
 
 fixtures = [
-    "Workspace",
+    {
+        "doctype": "Workspace",
+        "filters": [["module", "=", "Garage"]],
+    },
     {
         "doctype": "Print Format",
         "filters": [[
@@ -287,6 +290,9 @@ fixtures = [
                 "Sales Invoice-main-default_print_format",
                 "Payment Entry-main-links_order",
                 "Vehicle Handover-main-default_print_format",
+                "Purchase Order-accounting_dimensions_section-hidden",
+                "Purchase Order-currency_and_price_list-hidden",
+                "Purchase Order-scan_barcode-hidden",
             ],
         ]],
     },
@@ -338,5 +344,8 @@ doc_events = {
     },
     "Item": {
         "on_trash": "garage.utils.item_hooks.block_delete_if_spare_part_requested",
+    },
+    "Purchase Order": {
+        "validate": "garage.utils.purchase_order_hooks.set_default_warehouse",
     },
 }
