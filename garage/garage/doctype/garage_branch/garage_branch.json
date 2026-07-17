@@ -38,7 +38,7 @@
     {
       "fieldname": "basic_info_section",
       "fieldtype": "Section Break",
-      "label": "🏢 Branch Information",
+      "label": "Branch Information",
       "collapsible": 0
     },
     {
@@ -68,7 +68,7 @@
     {
       "fieldname": "is_active",
       "fieldtype": "Check",
-      "label": "✓ Active Branch",
+      "label": "Active Branch",
       "default": 1,
       "in_list_view": 1,
       "in_standard_filter": 1,
@@ -84,7 +84,7 @@
     {
       "fieldname": "section_break_address",
       "fieldtype": "Section Break",
-      "label": "📍 Branch Address",
+      "label": "Address",
       "collapsible": 0
     },
     {
@@ -126,7 +126,7 @@
     {
       "fieldname": "section_break_contact",
       "fieldtype": "Section Break",
-      "label": "📞 Contact Information",
+      "label": "Contact",
       "collapsible": 0
     },
     {
@@ -162,7 +162,7 @@
     {
       "fieldname": "section_break_notes",
       "fieldtype": "Section Break",
-      "label": "📝 Additional Information",
+      "label": "Notes",
       "collapsible": 1
     },
     {
@@ -175,21 +175,8 @@
   "has_web_view": 0,
   "hide_toolbar": 0,
   "index_web_pages_for_search": 1,
-  "links": [
-    {
-      "link_doctype": "Garage Service Order",
-      "link_fieldname": "branch"
-    },
-    {
-      "link_doctype": "Garage Customer",
-      "link_fieldname": "branch"
-    },
-    {
-      "link_doctype": "Garage Vehicle",
-      "link_fieldname": "branch"
-    }
-  ],
-  "modified": "2026-07-17 15:50:00.000000",
+  "links": [],
+  "modified": "2026-07-17 16:30:00.000000",
   "module": "Garage",
   "name": "Garage Branch",
   "naming_rule": "By fieldname",
