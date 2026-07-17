@@ -30,9 +30,7 @@
     "email",
     "column_break_contact",
     "manager_name",
-    "manager_contact",
-    "section_break_notes",
-    "notes"
+    "manager_contact"
   ],
   "fields": [
     {
@@ -47,8 +45,7 @@
       "label": "Branch Name",
       "in_list_view": 1,
       "reqd": 1,
-      "bold": 1,
-      "description": "Full name of the branch"
+      "bold": 1
     },
     {
       "fieldname": "branch_code",
@@ -71,15 +68,13 @@
       "label": "Active Branch",
       "default": 1,
       "in_list_view": 1,
-      "in_standard_filter": 1,
-      "description": "Uncheck to disable this branch"
+      "in_standard_filter": 1
     },
     {
       "fieldname": "default_warehouse",
       "fieldtype": "Link",
       "label": "Default Warehouse",
-      "options": "Warehouse",
-      "description": "Target warehouse auto-filled on Purchase Orders created by users of this branch"
+      "options": "Warehouse"
     },
     {
       "fieldname": "section_break_address",
@@ -108,8 +103,7 @@
       "fieldtype": "Data",
       "label": "City",
       "in_list_view": 1,
-      "in_standard_filter": 1,
-      "description": "City or locality"
+      "in_standard_filter": 1
     },
     {
       "fieldname": "state",
@@ -133,15 +127,13 @@
       "fieldname": "phone",
       "fieldtype": "Data",
       "label": "Branch Phone",
-      "in_list_view": 1,
-      "description": "Main branch contact number"
+      "in_list_view": 1
     },
     {
       "fieldname": "email",
       "fieldtype": "Data",
       "label": "Branch Email",
-      "options": "Email",
-      "description": "Official branch email address"
+      "options": "Email"
     },
     {
       "fieldname": "column_break_contact",
@@ -150,33 +142,19 @@
     {
       "fieldname": "manager_name",
       "fieldtype": "Data",
-      "label": "Branch Manager",
-      "description": "Name of branch manager"
+      "label": "Branch Manager"
     },
     {
       "fieldname": "manager_contact",
       "fieldtype": "Data",
-      "label": "Manager Contact",
-      "description": "Manager's contact number"
-    },
-    {
-      "fieldname": "section_break_notes",
-      "fieldtype": "Section Break",
-      "label": "Notes",
-      "collapsible": 1
-    },
-    {
-      "fieldname": "notes",
-      "fieldtype": "Small Text",
-      "label": "Notes",
-      "description": "Additional notes about this branch (operating hours, facilities, etc.)"
+      "label": "Manager Contact"
     }
   ],
   "has_web_view": 0,
   "hide_toolbar": 0,
   "index_web_pages_for_search": 1,
   "links": [],
-  "modified": "2026-07-17 16:30:00.000000",
+  "modified": "2026-07-17 16:40:00.000000",
   "module": "Garage",
   "name": "Garage Branch",
   "naming_rule": "By fieldname",
