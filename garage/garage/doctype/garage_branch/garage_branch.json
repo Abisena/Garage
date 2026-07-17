@@ -108,14 +108,12 @@
     {
       "fieldname": "state",
       "fieldtype": "Data",
-      "label": "State/Province",
-      "description": "State or province"
+      "label": "State/Province"
     },
     {
       "fieldname": "postal_code",
       "fieldtype": "Data",
-      "label": "Postal Code",
-      "description": "ZIP or postal code"
+      "label": "Postal Code"
     },
     {
       "fieldname": "section_break_contact",
@@ -154,7 +152,7 @@
   "hide_toolbar": 0,
   "index_web_pages_for_search": 1,
   "links": [],
-  "modified": "2026-07-17 16:40:00.000000",
+  "modified": "2026-07-17 16:45:00.000000",
   "module": "Garage",
   "name": "Garage Branch",
   "naming_rule": "By fieldname",
