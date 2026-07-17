@@ -7,22 +7,23 @@ from frappe.model.document import Document
 
 
 class GarageServiceType(Document):
-    """Service type master linked to available product bundles."""
+    """Service type master with optional product bundle link."""
 
     def validate(self):
-        """Enforce that exactly one of service type or product bundle is provided."""
-        has_service_type = bool(self.service_type)
-        has_product_bundle = bool(self.product_bundle)
+        # link_filters on the field only narrows the dropdown in the UI -
+        # it doesn't stop the value being set some other way (API, import,
+        # bulk edit), so re-check it here to keep the fee tied to a real
+        # priced service Item instead of drifting into a manual number.
+        if not self.item:
+            frappe.throw(_("Service Item wajib diisi."))
 
-        if has_service_type and has_product_bundle:
-            frappe.throw(_("Please fill either Service Type or Product Bundle, not both."))
-
-        if not has_service_type and not has_product_bundle:
-            frappe.throw(_("Service Type or Product Bundle is required."))
-
-        if not has_service_type and has_product_bundle:
-            # Use the bundle name as the document name when no service type is set.
-            self.service_type = self.product_bundle
+        item_group = frappe.db.get_value("Item", self.item, "item_group")
+        if item_group != "Services":
+            frappe.throw(
+                _("Service Item {0} harus dari Item Group 'Services', bukan '{1}'.").format(
+                    frappe.bold(self.item), item_group
+                )
+            )
 
     def autoname(self):
-        self.name = self.service_type or self.product_bundle
+        self.name = self.service_type

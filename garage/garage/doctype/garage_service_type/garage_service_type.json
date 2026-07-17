@@ -15,8 +15,10 @@
   "engine": "InnoDB",
   "field_order": [
     "service_type",
-    "product_bundle",
+    "item",
+    "service_fee",
     "bundle_description",
+    "column_break_info",
     "is_active"
   ],
   "fields": [
@@ -24,20 +26,34 @@
       "fieldname": "service_type",
       "fieldtype": "Data",
       "label": "Service Type",
+      "reqd": 1,
       "unique": 1,
       "in_list_view": 1
     },
     {
-      "fieldname": "product_bundle",
+      "fieldname": "item",
       "fieldtype": "Link",
-      "label": "Product Bundle",
-      "options": "Product Bundle",
-      "in_list_view": 1
+      "options": "Item",
+      "label": "Service Item",
+      "reqd": 1,
+      "link_filters": "[[\"Item\",\"item_group\",\"=\",\"Services\"]]"
+    },
+    {
+      "fieldname": "service_fee",
+      "fieldtype": "Currency",
+      "label": "Service Fee",
+      "in_list_view": 1,
+      "read_only": 1,
+      "fetch_from": "item.standard_rate"
     },
     {
       "fieldname": "bundle_description",
-      "fieldtype": "Small Text",
+      "fieldtype": "Data",
       "label": "Notes"
+    },
+    {
+      "fieldname": "column_break_info",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "is_active",
@@ -60,7 +76,7 @@
   "links": [],
   "make_attachments_public": 0,
   "max_attachments": 0,
-  "modified": "2024-06-18 00:00:00.000000",
+  "modified": "2026-07-17 17:55:00.000000",
   "module": "Garage",
   "name": "Garage Service Type",
   "naming_rule": "",
@@ -81,7 +97,7 @@
   "quick_entry": 0,
   "read_only": 0,
   "read_only_onload": 0,
-  "search_fields": "service_type,product_bundle",
+  "search_fields": "service_type",
   "show_name_in_global_search": 1,
   "show_preview_popup": 0,
   "sort_field": "modified",
@@ -93,5 +109,5 @@
   "track_seen": 0,
   "translated_doctype": 0,
   "migration_hash": "",
-  "description": "Master data for service types linked to product bundles."
+  "description": "Master data for service types."
 }
