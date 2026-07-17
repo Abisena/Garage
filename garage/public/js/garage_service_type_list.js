@@ -17,6 +17,7 @@
     ">
         <div style="flex:0 0 36px;"></div>
         <span class="gst-c-name gst-hdr">SERVICE TYPE</span>
+        <span class="gst-c-desc gst-hdr">DESCRIPTION</span>
         <span class="gst-c-fee gst-hdr">BIAYA JASA</span>
         <span class="gst-c-badge gst-hdr">STATUS</span>
         <span class="gst-c-ago gst-hdr"></span>
@@ -26,6 +27,7 @@
         const s = STATUS[String(cint(doc.is_active))] || STATUS["0"];
 
         const name = doc.service_type || doc.name;
+        const desc = doc.bundle_description || "";
         const fee  = format_currency(doc.service_fee || 0);
         const ago  = doc.modified ? frappe.datetime.comment_when(doc.modified, true) : "";
 
@@ -41,6 +43,7 @@
                 <input type="checkbox" class="list-row-checkbox" data-name="${esc(doc.name)}" style="cursor:pointer;">
             </div>
             <span class="gst-c-name">${esc(name)}</span>
+            <span class="gst-c-desc">${esc(desc)}</span>
             <span class="gst-c-fee">${fee}</span>
             <span class="gst-c-badge" style="background:${s.bg};color:${s.fg};">${s.label}</span>
             <span class="gst-c-ago">${ago}</span>
@@ -111,7 +114,7 @@
     frappe.listview_settings["Garage Service Type"] = {
         hide_name_column: true,
         add_fields: [
-            "service_type", "service_fee", "is_active",
+            "service_type", "bundle_description", "service_fee", "is_active",
         ],
         refresh(lv) {
             render(lv);
