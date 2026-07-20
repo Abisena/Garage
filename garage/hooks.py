@@ -25,8 +25,8 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = "/assets/garage/css/garage_desk.css?v=144"
-app_include_js = ["/assets/garage/js/route_aliases.js?v=1", "/assets/garage/js/garage_theme.js?v=37"]
+app_include_css = "/assets/garage/css/garage_desk.css?v=213"
+app_include_js = ["/assets/garage/js/route_aliases.js?v=1", "/assets/garage/js/garage_theme.js?v=39"]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/garage/css/garage.css"
@@ -46,17 +46,29 @@ app_include_js = ["/assets/garage/js/route_aliases.js?v=1", "/assets/garage/js/g
 doctype_js = {
     "Product Bundle": "public/js/product_bundle.js",
     "Payment Entry": "public/js/payment_entry.js",
+    "Bank Statement Import": "public/js/bank_statement_import.js",
+    "Bank Reconciliation Tool": "public/js/bank_reconciliation_tool.js",
+    "Bank Transaction": "public/js/bank_transaction.js",
 }
 doctype_list_js = {
     "Garage Branch": "public/js/garage_branch_list.js",
+    "Garage Brand": "public/js/garage_brand_list.js",
+    "Garage Model": "public/js/garage_model_list.js",
+    "Garage Service Bundle": "public/js/garage_service_bundle_list.js",
+    "Customer Registration": "public/js/customer_registration_list.js",
+    "Garage Vehicle Inspection": "public/js/garage_vehicle_inspection_list.js",
+    "Garage Branch Access": "public/js/garage_branch_access_list.js",
     "Garage Service Type": "public/js/garage_service_type_list.js",
     "Garage Vehicle": "public/js/garage_vehicle_list.js",
     "Garage Customer": "public/js/garage_customer_list.js",
     "Garage Service Order": "public/js/garage_service_order_list.js",
     "Vehicle Handover": "public/js/vehicle_handover_list.js",
+    "Spare Part Request": "public/js/spare_part_request_list.js",
+    "Payment Entry": "public/js/payment_entry_list.js",
     "Sales Invoice": "public/js/sales_invoice_list.js",
     "Repair QC": "public/js/repair_qc_list.js",
     "Bank Statement Import": "public/js/bca_bank_statement_import_list.js",
+    "Bank Transaction": "public/js/bank_transaction_list.js",
 }
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -279,6 +291,9 @@ fixtures = [
                 "Product Bundle-service_type",
                 "User-garage_branch",
                 "Sales Invoice-nota_service_number",
+                "Sales Invoice-no_polisi",
+                "Payment Entry-no_polisi",
+                "Bank Transaction-balance",
             ],
         ]],
     },
@@ -292,9 +307,26 @@ fixtures = [
                 "Sales Invoice-main-default_print_format",
                 "Payment Entry-main-links_order",
                 "Vehicle Handover-main-default_print_format",
+                "Sales Invoice-totals-hidden",
+                "Sales Order-accounting_dimensions_section-hidden",
+                "Sales Order-currency-default",
+                "Sales Order-currency-hidden",
+                "Sales Order-selling_price_list-default",
+                "Sales Order-selling_price_list-hidden",
                 "Purchase Order-accounting_dimensions_section-hidden",
                 "Purchase Order-currency_and_price_list-hidden",
                 "Purchase Order-scan_barcode-hidden",
+                "Sales Invoice-posting_time-hidden",
+                "Sales Invoice-set_posting_time-hidden",
+                "Sales Invoice-scan_barcode-hidden",
+                "Sales Invoice-taxes_section-hidden",
+                "Sales Invoice-time_sheet_list-hidden",
+                "Sales Invoice-taxes-hidden",
+                "Bank Statement Import-import_log_section-hidden",
+                "Journal Entry-multi_currency-hidden",
+                "Bank Reconciliation Tool-account_opening_balance-label",
+                "Bank Transaction-excluded_fee-description",
+                "Bank Transaction-currency-hidden",
             ],
         ]],
     },
@@ -315,6 +347,10 @@ fixtures = [
 doc_events = {
     "Bank Statement Import": {
         "autoname": "garage.utils.bca_bank_statement_import.set_import_naming",
+        "validate": "garage.utils.bca_bank_statement_import.clean_import_file",
+    },
+    "File": {
+        "validate": "garage.utils.bca_bank_statement_import.clean_attached_file",
     },
     "Garage Vehicle Inspection": {
         "on_update": "garage.utils.service_order_status.sync_from_inspection",
@@ -338,8 +374,13 @@ doc_events = {
         "on_update": "garage.utils.sales_invoice_handler.handle_sales_invoice_paid",
     },
     "Payment Entry": {
+        "validate": "garage.utils.payment_hooks.sync_no_polisi",
         "on_update": "garage.utils.vehicle_handover.handle_paid_payment_entry",
         "on_submit": "garage.utils.payment_hooks.handle_payment_entry_submit",
+        "before_cancel": "garage.utils.reconciliation_guard.block_cancel_if_reconciled",
+    },
+    "Journal Entry": {
+        "before_cancel": "garage.utils.reconciliation_guard.block_cancel_if_reconciled",
     },
     "Garage Service Order": {
         "on_update": "garage.utils.vehicle_handover.handle_completed_service_order",

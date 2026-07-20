@@ -63,6 +63,25 @@ DEMO_STOCK_QTY = 50
 DEMO_WAREHOUSE = "Stores - I"
 
 
+def _cancel_reconciled_bank_transactions() -> int:
+    """Unreconcile (clear payment_entries, same as the "Unreconcile
+    Transaction" button - bank_transaction.js) then cancel every submitted
+    Bank Transaction, before TRANSACTIONAL_DOCTYPES gets cancelled below.
+    garage.utils.reconciliation_guard.block_cancel_if_reconciled blocks
+    cancelling a Payment Entry/Journal Entry still linked to a submitted
+    Bank Transaction - without this step first, that guard would block
+    this reset itself on any Payment Entry created through the bank
+    reconciliation demo flow."""
+    names = frappe.get_all("Bank Transaction", filters={"docstatus": 1}, pluck="name")
+    for name in names:
+        doc = frappe.get_doc("Bank Transaction", name)
+        if doc.payment_entries:
+            doc.remove_payment_entries()
+            doc.reload()
+        doc.cancel()
+    return len(names)
+
+
 @frappe.whitelist()
 def reset_test_transactions(confirm: bool = False) -> dict[str, object]:
     if not cint(confirm):
@@ -74,6 +93,8 @@ def reset_test_transactions(confirm: bool = False) -> dict[str, object]:
 
     if frappe.session.user != "Administrator" and "System Manager" not in frappe.get_roles():
         frappe.throw("Only Administrator / System Manager can run this.")
+
+    bank_transactions_cancelled = _cancel_reconciled_bank_transactions()
 
     names_by_doctype: dict[str, list[str]] = {
         doctype: frappe.get_all(doctype, pluck="name") for doctype in TRANSACTIONAL_DOCTYPES
@@ -94,7 +115,9 @@ def reset_test_transactions(confirm: bool = False) -> dict[str, object]:
             if doc.meta.is_submittable and doc.docstatus == 1:
                 doc.cancel()
 
-    summary: dict[str, object] = {}
+    summary: dict[str, object] = {
+        "Bank Transaction (unreconciled + cancelled)": bank_transactions_cancelled,
+    }
     for doctype, names in names_by_doctype.items():
         for name in names:
             frappe.delete_doc(doctype, name, ignore_permissions=True, force=True)
