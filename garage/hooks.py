@@ -343,6 +343,18 @@ fixtures = [
         "filters": [["module", "=", "Garage"]],
     },
     {
+        # Employee Checkin listview badge text ("Off-Shift" -> "Non Shift")
+        # comes from hrms core's hardcoded __("Off-Shift") in
+        # employee_checkin_list.js, not the offshift field's label - a
+        # Property Setter on the field label (see below) doesn't touch it.
+        # Overriding the string via Translation is the only config-only way.
+        "doctype": "Translation",
+        "filters": [
+            ["source_text", "=", "Off-Shift"],
+            ["language", "=", "en"],
+        ],
+    },
+    {
         "doctype": "Print Format",
         "filters": [[
             "name",
