@@ -128,6 +128,7 @@ doctype_list_js = {
     "Activity Log": "public/js/activity_log_list.js",
     "Access Log": "public/js/access_log_list.js",
     "Attendance Request": "public/js/attendance_request_list.js",
+    "Attendance": "public/js/attendance_list.js",
     "Employee Checkin": "public/js/employee_checkin_list.js",
     "Shift Assignment": "public/js/shift_assignment_list.js",
     "Leave Allocation": "public/js/leave_allocation_list.js",
