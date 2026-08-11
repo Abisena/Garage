@@ -947,6 +947,7 @@ fixtures = [
                 "Customer-email_id-fieldtype",
                 "Customer-internal_customer_section-hidden",
                 "Customer-garage_profile_section-hidden",
+                "Employee Checkin-offshift-label",
             ],
         ]],
     },
