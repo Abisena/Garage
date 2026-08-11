@@ -1,18 +1,19 @@
 (() => {
     // Same card-list structure/technique as activity_log_list.js (see
-    // that file's own comments for the full reasoning on trying core's
-    // get_indicator first, falling back to a fuller mapping of this
-    // file's own) - explicit user request to match the rest of this
-    // app's own FORMAT. Core hrms ships its own listview_settings for
-    // Employee Checkin (hr/doctype/employee_checkin/employee_checkin_
-    // list.js: get_indicator returns a badge ONLY when `offshift` is set
-    // - every normal in/out checkin gets no badge at all from core) plus
-    // an onload bulk action "Fetch Shifts". This extends (not replaces)
-    // it, preserving that onload, and tries core's own get_indicator
-    // first (so the Off-Shift flag still takes priority when set) -
-    // falling back to this file's own Log Type badge (IN/OUT) otherwise,
-    // since that's what actually identifies a normal checkin at a
-    // glance. Column set: Employee Name/Time/Shift.
+    // that file's own comments for the original reasoning) - explicit
+    // user request to match the rest of this app's own FORMAT. Core hrms
+    // ships its own listview_settings for Employee Checkin (hr/doctype/
+    // employee_checkin/employee_checkin_list.js: get_indicator returns an
+    // "Off-Shift" badge instead of the real log_type whenever `offshift`
+    // is set) plus an onload bulk action "Fetch Shifts". This extends
+    // (not replaces) it, preserving that onload, but does NOT use core's
+    // get_indicator for the badge - the "LOG TYPE" column always shows
+    // the real doc.log_type (IN/OUT), matching what the record's own form
+    // shows, instead of silently swapping in an unrelated off-shift status
+    // under a column that says "LOG TYPE" (reported directly by the user
+    // against EMP-CKIN-...-000004). Off-shift status is still visible via
+    // the SHIFT column ("-" whenever offshift is set), so nothing is lost.
+    // Column set: Employee Name/Time/Shift.
     const LOG_TYPE = {
         "IN":  { bg: "#dcfce7", fg: "#15803d" },
         "OUT": { bg: "#dbeafe", fg: "#1d4ed8" },
@@ -47,18 +48,17 @@
     </div>`;
 
     function card(doc) {
-        // Tries core's own get_indicator first (Off-Shift flag takes
-        // priority), falls back to this file's own Log Type mapping.
-        const existing = frappe.listview_settings["Employee Checkin"];
-        const indicator = existing && existing.get_indicator ? existing.get_indicator(doc) : null;
-        let s, label;
-        if (indicator) {
-            label = indicator[0];
-            s = COLOR_MAP[indicator[1]] || COLOR_MAP.gray;
-        } else {
-            label = __(doc.log_type || "-");
-            s = LOG_TYPE[doc.log_type] || COLOR_MAP.gray;
-        }
+        // Always the real log_type (IN/OUT) - the column is literally
+        // headed "LOG TYPE", so it has to match doc.log_type, same value
+        // shown on the record's own form (see EMP-CKIN-...-000004: log_type
+        // "IN" on the form, but this badge used to show core's "Off-Shift"
+        // indicator instead whenever offshift was set, hiding the actual
+        // IN/OUT - reported directly by the user). Off-shift status is
+        // still visible via the SHIFT column next to it, which is already
+        // "-" whenever offshift is set, so nothing is lost by dropping
+        // core's get_indicator() override here.
+        const label = __(doc.log_type || "-");
+        const s = LOG_TYPE[doc.log_type] || COLOR_MAP.gray;
         const time = doc.time ? frappe.datetime.str_to_user(doc.time) : "-";
         const ago = doc.modified ? frappe.datetime.comment_when(doc.modified, true) : "";
 
