@@ -5416,6 +5416,73 @@ body[data-route*="Repair QC"] [data-fieldname="spare_parts_verification"] .frapp
   padding: 0 !important;
 }
 
+/* ── Attendance Card List View (attendance_list.js) ──
+   Same structure/rules as the Employee Checkin block above, just under
+   the att- prefix - Employee Name/Date/Shift, Status badge off core's
+   own get_indicator (Present/Absent/Half Day/dst) - see that file's own
+   comment. */
+
+.att-list .list-row {
+  border-left: none !important;
+  border-right: 1px solid var(--g-border-light) !important;
+  border-bottom: 1px solid var(--g-border-light) !important;
+  transition: background 0.15s ease !important;
+}
+
+.att-list .list-row:first-of-type {
+  border-top: 1px solid var(--g-border-light) !important;
+  border-radius: var(--g-radius) var(--g-radius) 0 0 !important;
+}
+
+.att-list .list-row:last-of-type {
+  border-radius: 0 0 var(--g-radius) var(--g-radius) !important;
+}
+
+.att-list .list-row:nth-child(odd) .att-card {
+  background: #ffffff !important;
+}
+
+.att-list .list-row:nth-child(even) .att-card {
+  background: #f0f1f3 !important;
+}
+
+.att-list .list-row:hover .att-card {
+  background: #e8edff !important;
+}
+
+.att-c-id,
+.att-c-emp,
+.att-c-date,
+.att-c-shift,
+.att-c-badge,
+.att-c-ago {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--g-text);
+}
+
+.att-c-id     { flex: 1.6 1 0%; font-weight: 700; }
+.att-c-emp    { flex: 1.8 1 0%; font-size: 13px; font-weight: 700; }
+.att-c-date   { flex: 0 0 150px; color: var(--g-text-muted); }
+.att-c-shift  { flex: 1.2 1 0%; color: var(--g-text-muted); }
+.att-c-badge  { flex: 0 0 100px; font-size: 10.5px; font-weight: 700;
+                padding: 2px 10px; border-radius: 20px;
+                letter-spacing: 0.02em; text-align: left; }
+.att-c-ago    { flex: 0 0 50px; font-size: 11px; color: var(--g-text-muted); text-align: right; }
+
+.att-hdr {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  background: none !important;
+  padding: 0 !important;
+}
+
 /* ── Shift Assignment Card List View (shift_assignment_list.js) ──
    Same structure/rules as the Employee Checkin block above, just under
    the sfa- prefix - Employee Name/Shift Type/Start Date/End Date, Status
