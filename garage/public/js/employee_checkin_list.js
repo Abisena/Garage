@@ -12,8 +12,9 @@
     // shows, instead of silently swapping in an unrelated off-shift status
     // under a column that says "LOG TYPE" (reported directly by the user
     // against EMP-CKIN-...-000004). Off-shift status is still visible via
-    // the SHIFT column ("-" whenever offshift is set), so nothing is lost.
-    // Column set: Employee Name/Time/Shift.
+    // the SHIFT column ("Non Shift" whenever offshift is set, since there's
+    // no Shift Assignment configured in this workshop at all), so nothing
+    // is lost. Column set: Employee Name/Time/Shift.
     const LOG_TYPE = {
         "IN":  { bg: "#dcfce7", fg: "#15803d" },
         "OUT": { bg: "#dbeafe", fg: "#1d4ed8" },
@@ -54,9 +55,9 @@
         // "IN" on the form, but this badge used to show core's "Off-Shift"
         // indicator instead whenever offshift was set, hiding the actual
         // IN/OUT - reported directly by the user). Off-shift status is
-        // still visible via the SHIFT column next to it, which is already
-        // "-" whenever offshift is set, so nothing is lost by dropping
-        // core's get_indicator() override here.
+        // still visible via the SHIFT column next to it, which shows
+        // "Non Shift" whenever offshift is set, so nothing is lost by
+        // dropping core's get_indicator() override here.
         const label = __(doc.log_type || "-");
         const s = LOG_TYPE[doc.log_type] || COLOR_MAP.gray;
         const time = doc.time ? frappe.datetime.str_to_user(doc.time) : "-";
@@ -76,7 +77,7 @@
             <span class="chk-c-id">${esc(doc.name)}</span>
             <span class="chk-c-emp">${esc(doc.employee_name) || "-"}</span>
             <span class="chk-c-time">${esc(time)}</span>
-            <span class="chk-c-shift">${esc(doc.shift) || "-"}</span>
+            <span class="chk-c-shift">${esc(doc.shift) || __("Non Shift")}</span>
             <span class="chk-c-badge" style="background:${s.bg};color:${s.fg};">${esc(label)}</span>
             <span class="chk-c-ago">${ago}</span>
         </div>`;
