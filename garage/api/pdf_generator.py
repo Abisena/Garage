@@ -40,7 +40,7 @@ def generate_service_estimate_pdf(order_id):
         customer_link = safe_get(order, 'customer', 'customer_id')
         if customer_link:
             try:
-                customer_doc = frappe.get_doc("Garage Customer", customer_link)
+                customer_doc = frappe.get_doc("Customer", customer_link)
                 customer_name = safe_get(customer_doc, 'customer_name', 'name') or customer_name
             except:
                 pass

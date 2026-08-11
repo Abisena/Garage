@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Iterable, Optional
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
@@ -11,8 +12,19 @@ class GarageServiceBundle(Document):
     """Aggregate spare part and material costs for a service bundle."""
 
     def validate(self) -> None:
+        self._validate_service_fee()
         self._sync_child_rows()
         self._compute_totals()
+
+    def _validate_service_fee(self) -> None:
+        # `reqd` on the field only blocks a genuinely empty value - 0 already
+        # "has content" as far as Frappe's mandatory check is concerned, so a
+        # bundle can otherwise be saved with no labor fee at all. That's how
+        # Service Orders ended up snapshotting a Rp 0 "Jasa Paket" line, which
+        # later forced the invoice builder to fall back to a meaningless
+        # hardcoded default. Reject it outright instead.
+        if flt(self.service_fee) <= 0:
+            frappe.throw(_("Biaya Jasa harus lebih dari 0."))
 
     def _sync_child_rows(self) -> None:
         for row in self.spare_parts or []:

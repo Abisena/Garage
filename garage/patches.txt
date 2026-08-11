@@ -17,3 +17,5 @@ garage.patches.post_model_sync.assign_branch_to_master_data
 garage.patches.post_model_sync.add_branch_portal_users
 garage.patches.post_model_sync.add_payment_modes
 garage.patches.post_model_sync.fix_garage_workspace_bank_statement_link
+garage.patches.post_model_sync.migrate_service_order_statuses
+garage.patches.post_model_sync.migrate_vehicle_schema

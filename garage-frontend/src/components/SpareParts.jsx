@@ -89,6 +89,25 @@ export function SpareParts() {
     };
   }, [loadSpareParts]);
 
+  // Re-fetch when the screen becomes active again (e.g. navigating back to it
+  // without a full page reload, or the app/tab regaining focus) so data sent
+  // from another screen (e.g. a newly sent spare part request) isn't stale.
+  useEffect(() => {
+    const handleActive = () => {
+      if (document.visibilityState === 'visible') {
+        loadSpareParts();
+      }
+    };
+
+    window.addEventListener('focus', handleActive);
+    document.addEventListener('visibilitychange', handleActive);
+
+    return () => {
+      window.removeEventListener('focus', handleActive);
+      document.removeEventListener('visibilitychange', handleActive);
+    };
+  }, [loadSpareParts]);
+
   const filteredParts = spareParts.filter((part) => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return true;

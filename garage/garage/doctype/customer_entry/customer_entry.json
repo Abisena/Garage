@@ -72,7 +72,7 @@
       "fieldname": "customer",
       "fieldtype": "Link",
       "label": "Customer",
-      "options": "Garage Customer",
+      "options": "Customer",
       "read_only": 1
     },
     {

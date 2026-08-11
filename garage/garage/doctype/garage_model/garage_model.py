@@ -5,4 +5,8 @@ from frappe.model.document import Document
 
 
 class GarageModel(Document):
-    pass
+    def validate(self) -> None:
+        self.model_name = (self.model_name or "").strip().upper()
+
+    def autoname(self) -> None:
+        self.name = (self.model_name or "").strip().upper()

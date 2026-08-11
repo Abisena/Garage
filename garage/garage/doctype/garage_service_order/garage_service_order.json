@@ -16,15 +16,16 @@
   "field_order": [
     "section_break_vehicle_detail",
     "vehicle",
+    "chassis_number",
     "vehicle_brand",
     "vehicle_model",
     "vehicle_type",
     "vehicle_transmission",
-    "vehicle_fuel_type",
     "column_break_header",
     "vehicle_color",
     "vehicle_year",
     "vehicle_mileage",
+    "vehicle_fuel_type",
     "column_break_header2",
     "customer",
     "customer_number",
@@ -76,6 +77,13 @@
       "reqd": 1,
       "in_list_view": 1,
       "in_standard_filter": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "chassis_number",
+      "fieldtype": "Data",
+      "label": "Nomor Rangka",
+      "fetch_from": "vehicle.vin",
       "bold": 1
     },
     {
@@ -191,7 +199,7 @@
       "fieldname": "customer",
       "fieldtype": "Link",
       "label": "Customer",
-      "options": "Garage Customer",
+      "options": "Customer",
       "reqd": 1,
       "in_standard_filter": 1,
       "fetch_from": "vehicle.customer",
@@ -223,7 +231,7 @@
       "fieldname": "primary_contact",
       "fieldtype": "Data",
       "label": "Phone",
-      "fetch_from": "customer.phone",
+      "fetch_from": "customer.mobile_no",
       "bold": 1,
       "depends_on": "eval:doc.vehicle"
     },
@@ -231,7 +239,7 @@
       "fieldname": "customer_email",
       "fieldtype": "Data",
       "label": "Email",
-      "fetch_from": "customer.email",
+      "fetch_from": "customer.email_id",
       "depends_on": "eval:doc.vehicle"
     },
     {
@@ -318,11 +326,6 @@
       "label": "Estimasi Selesai"
     },
     {
-      "fieldname": "section_break_complaint",
-      "fieldtype": "Section Break",
-      "label": "Keluhan Pelanggan"
-    },
-    {
       "fieldname": "section_break_service",
       "fieldtype": "Section Break",
       "label": "Work Order"
@@ -332,9 +335,14 @@
       "fieldtype": "Column Break"
     },
     {
+      "fieldname": "section_break_complaint",
+      "fieldtype": "Section Break",
+      "label": "Keluhan Pelanggan"
+    },
+    {
       "fieldname": "complaint",
       "fieldtype": "Text",
-      "label": "Complaint"
+      "label": ""
     },
     {
       "fieldname": "section_break_parts",
@@ -435,17 +443,13 @@
       "link_fieldname": "service_order"
     },
     {
-      "link_doctype": "Repair QC",
-      "link_fieldname": "service_order"
-    },
-    {
       "link_doctype": "Sales Invoice",
       "link_fieldname": "po_no"
     }
   ],
   "make_attachments_public": 0,
   "max_attachments": 10,
-  "modified": "2026-07-10 01:00:00.000000",
+  "modified": "2026-07-18 02:20:00.000000",
   "module": "Garage",
   "name": "Garage Service Order",
   "naming_rule": "By \"Naming Series\" field",

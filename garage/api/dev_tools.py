@@ -31,8 +31,59 @@ TRANSACTIONAL_DOCTYPES = [
     # that. Cancelling Vehicle Handover first (see the two-phase cancel/
     # delete split below) clears the block before Payment Entry's turn.
     "Vehicle Handover",
+    # Payment Entry can reference either a Sales Invoice or a Purchase
+    # Invoice (references child table, either party type) - it has to
+    # come before BOTH, not just Sales Invoice.
     "Payment Entry",
+    # Missing from this list entirely used to be an actual bug, same class
+    # as the Delivery Note one below: Bank Reconciliation Tool creates
+    # Journal Entry (voucher_type "Bank Entry") directly, and every single
+    # one stayed submitted, un-cancelled, through past resets while
+    # LEDGER_DOCTYPES below force-deleted its GL Entry rows out from under
+    # it via raw SQL - leaving a "submitted" Journal Entry with zero actual
+    # ledger effect, which then broke bank reconciliation with "Journal
+    # Entry X is not affecting bank account Y" (get_clearance_details,
+    # erpnext/accounts/doctype/bank_transaction/bank_transaction.py -
+    # gl_bank_account not found in that JE's own now-empty GL Entry set),
+    # reported directly by the user. _cancel_reconciled_bank_transactions()
+    # above already unlinks any Bank Transaction from its Journal Entry
+    # (remove_payment_entries() is generic across payment_document types,
+    # not Payment-Entry-specific) before this doctype's own turn, so
+    # nothing more is needed to cancel/delete it safely here.
+    "Journal Entry",
+    # Purchase-side chain: Purchase Invoice can reference both Purchase
+    # Order and Purchase Receipt directly (items.purchase_order/
+    # purchase_receipt), and Purchase Receipt references Purchase Order
+    # (items.purchase_order) - so the deletion order has to be Invoice,
+    # then Receipt, then Order, same "dependents before what they
+    # reference" rule as the rest of this list.
+    "Purchase Invoice",
+    "Purchase Receipt",
+    "Purchase Order",
+    # Sales Invoice Item can reference Delivery Note directly (dn_detail),
+    # so Sales Invoice (the dependent) has to be cancelled/deleted before
+    # Delivery Note itself - same rule as the Purchase-side chain above.
+    # Missing from this list entirely used to be the actual bug: Delivery
+    # Note stayed submitted, un-cancelled, while LEDGER_DOCTYPES below
+    # force-deleted its Stock Ledger Entries out from under it via raw
+    # SQL (bypassing the proper cancel flow that would have reversed
+    # their effect on Bin.actual_qty first) - leaving stock in an
+    # inconsistent state that then broke the closing "Material Receipt"
+    # Stock Entry's own negative-stock validation on the next reset,
+    # exactly the "units of Item X needed ... for Delivery Note Y"
+    # error reported directly by the user.
     "Sales Invoice",
+    "Delivery Note",
+    # Both Sales Invoice Item (sales_order) and Delivery Note Item
+    # (against_sales_order) can reference Sales Order directly - same
+    # "dependents before what they reference" rule, so Sales Order comes
+    # last in this chain. Explicit user request: the reset previously
+    # left every Sales Order (and any Payment Entry created against a
+    # Sales-Order-originated Sales Invoice - already covered above, since
+    # Payment Entry doesn't care what kind of Sales Invoice it's linked
+    # to) behind after a reset, instead of clearing that whole flow the
+    # same way the Garage Service Order flow already was.
+    "Sales Order",
     "Garage Stock Movement",
     "Stock Entry",
     "Garage Service Order",

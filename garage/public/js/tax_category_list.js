@@ -1,37 +1,43 @@
 (() => {
-    const TYPE = {
-        "Individual": { label: "Individual", bg: "#dbeafe", fg: "#1d4ed8", border: "#3b82f6" },
-        "Corporate":  { label: "Corporate",  bg: "#f3e8ff", fg: "#7c3aed", border: "#8b5cf6" },
+    // Same card-list structure/technique as fiscal_year_list.js (see that
+    // file's own comments for the full reasoning, including showing the
+    // autoname-source field as its own column even though it duplicates
+    // the ID today - explicit user follow-up request on Fiscal Year,
+    // applied proactively here too) - explicit user request to match the
+    // rest of this app's own FORMAT. Tax Category is core erpnext
+    // (Accounts module), plain master data (not a tree, not submittable,
+    // no core listview_settings of its own, no imogi_finance collision
+    // either) - just Title and a single `disabled` Check. Column set:
+    // Title, Status badge off `disabled` (Aktif/Nonaktif).
+    const STATUS = {
+        active:   { bg: "#dcfce7", fg: "#15803d" },
+        disabled: { bg: "#fee2e2", fg: "#b91c1c" },
     };
 
     function esc(v) { return frappe.utils.escape_html(v || ""); }
 
-    const HEADER_HTML = `<div class="gc-header" style="
+    const HEADER_HTML = `<div class="txc-header" style="
         display:flex !important;
         align-items:center;
         width:100%;
-        padding:9px 14px 9px 0;
+        padding:9px calc(14px + var(--padding-xs)) 9px var(--padding-xs);
         gap:10px;
         background:#1f2937;
-        border-radius:0 0 0 0;
     ">
         <div style="flex:0 0 36px;"></div>
-        <span class="gc-c-number gc-hdr">NO. PELANGGAN</span>
-        <span class="gc-c-name gc-hdr">NAMA PELANGGAN</span>
-        <span class="gc-c-phone gc-hdr">TELEPON</span>
-        <span class="gc-c-badge gc-hdr">TIPE</span>
-        <span class="gc-c-ago gc-hdr"></span>
+        <span class="txc-c-id txc-hdr">ID</span>
+        <span class="txc-c-title txc-hdr">TITLE</span>
+        <span class="txc-c-badge txc-hdr">STATUS</span>
+        <span class="txc-c-ago txc-hdr"></span>
     </div>`;
 
     function card(doc) {
-        const t = TYPE[doc.customer_type] || TYPE["Individual"];
+        const isDisabled = cint(doc.disabled);
+        const s = isDisabled ? STATUS.disabled : STATUS.active;
+        const label = isDisabled ? __("Nonaktif") : __("Aktif");
+        const ago = doc.modified ? frappe.datetime.comment_when(doc.modified, true) : "";
 
-        const number = doc.customer_number || "";
-        const name   = doc.customer_name || doc.name;
-        const phone  = doc.phone || "";
-        const ago    = doc.modified ? frappe.datetime.comment_when(doc.modified, true) : "";
-
-        return `<div class="gc-card" style="
+        return `<div class="txc-card" style="
             display:flex !important;
             align-items:center;
             width:100%;
@@ -42,25 +48,22 @@
             <div style="flex:0 0 36px; display:flex; align-items:center; justify-content:center;">
                 <input type="checkbox" class="list-row-checkbox" data-name="${esc(doc.name)}" style="cursor:pointer;">
             </div>
-            <span class="gc-c-number">${esc(number)}</span>
-            <span class="gc-c-name">${esc(name)}</span>
-            <span class="gc-c-phone">${esc(phone)}</span>
-            <span class="gc-c-badge" style="background:${t.bg};color:${t.fg};">${t.label}</span>
-            <span class="gc-c-ago">${ago}</span>
+            <span class="txc-c-id">${esc(doc.name)}</span>
+            <span class="txc-c-title">${esc(doc.title)}</span>
+            <span class="txc-c-badge" style="background:${s.bg};color:${s.fg};">${esc(label)}</span>
+            <span class="txc-c-ago">${ago}</span>
         </div>`;
     }
 
     function render(lv) {
         const $fl = lv.$result.closest(".frappe-list");
-        if (!$fl.hasClass("gc-list")) $fl.addClass("gc-list");
+        if (!$fl.hasClass("txc-list")) $fl.addClass("txc-list");
 
-        // Hide default column header via inline style
         lv.$result.find(".list-row-head").each(function () {
             this.style.setProperty("display", "none", "important");
         });
 
-        // Inject custom header once
-        if (!$fl.find(".gc-header").length) {
+        if (!$fl.find(".txc-header").length) {
             lv.$result.before(HEADER_HTML);
         }
 
@@ -68,54 +71,48 @@
         lv.$result.find(".list-row:not(.list-row-head)").each(function () {
             const row = this;
             const $row = $(row);
-            if ($row.hasClass("gc-ok")) return;
+            if ($row.hasClass("txc-ok")) return;
 
-            const name = $row.find("input.list-row-checkbox").data("name");
-            const doc  = (lv.data || []).find((d) => d.name === name);
+            const name = $row.find("input.list-row-checkbox").attr("data-name");
+            const doc = (lv.data || []).find((d) => d.name === name);
             if (!doc) return;
 
-            $row.addClass("gc-ok");
+            $row.addClass("txc-ok");
 
-            // Force-hide ALL old Frappe children via inline !important
             $row.children().each(function () {
                 this.style.setProperty("display", "none", "important");
             });
 
-            // Force row to auto height, transparent bg
             row.style.setProperty("height", "auto", "important");
             row.style.setProperty("min-height", "0", "important");
             row.style.setProperty("padding", "0", "important");
             row.style.setProperty("overflow", "visible", "important");
             row.style.setProperty("background", "transparent", "important");
 
-            // Append card with zebra bg
             const $card = $(card(doc));
             const bg = idx % 2 === 0 ? "#ffffff" : "#f0f1f3";
             $card[0].style.setProperty("background", bg, "important");
             $row.append($card);
 
-            // Hover effect
             $card.on("mouseenter", function () {
                 this.style.setProperty("background", "#e8edff", "important");
             }).on("mouseleave", function () {
                 this.style.setProperty("background", bg, "important");
             });
 
-            // Navigate on body click
             $card.on("click", function (e) {
                 if ($(e.target).is("input[type=checkbox]")) return;
-                frappe.set_route("Form", "Garage Customer", doc.name);
+                frappe.set_route("Form", "Tax Category", doc.name);
             });
 
             idx++;
         });
     }
 
-    frappe.listview_settings["Garage Customer"] = {
+    // No core listview_settings exists for Tax Category to extend.
+    frappe.listview_settings["Tax Category"] = {
         hide_name_column: true,
-        add_fields: [
-            "customer_number", "customer_name", "customer_type", "phone",
-        ],
+        add_fields: ["title", "disabled"],
         refresh(lv) {
             render(lv);
         },

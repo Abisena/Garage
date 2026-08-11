@@ -240,7 +240,7 @@ def _derive_customer_name(service_order: frappe.Document) -> str:
     if not customer_link:
         return ""
 
-    customer_doc = _safe_get_doc("Garage Customer", customer_link)
+    customer_doc = _safe_get_doc("Customer", customer_link)
     if not customer_doc:
         return customer_link
 
@@ -500,7 +500,7 @@ def build_service_estimate_context(service_order: frappe.Document) -> Dict[str, 
     """Build context dictionary for PDF template rendering."""
     
     # Get related documents
-    customer = _safe_get_doc("Garage Customer", getattr(service_order, "customer", None))
+    customer = _safe_get_doc("Customer", getattr(service_order, "customer", None))
     vehicle = _safe_get_doc("Garage Vehicle", getattr(service_order, "vehicle", None))
     branch_doc = _safe_get_doc("Garage Branch", getattr(service_order, "branch", None))
     branch_info = {
@@ -679,7 +679,7 @@ def build_service_estimate_context(service_order: frappe.Document) -> Dict[str, 
         "customer": getattr(customer, "customer_name", None) or getattr(service_order, "customer", "-"),
         "phone": (
             getattr(service_order, "primary_contact", None)
-            or getattr(customer, "phone", None)
+            or getattr(customer, "mobile_no", None)
             or "-"
         ),
         "contact_person": getattr(customer, "customer_name", None) or getattr(service_order, "customer", "-"),

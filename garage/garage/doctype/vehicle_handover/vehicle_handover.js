@@ -19,7 +19,7 @@ const renderQuickInfo = (frm) => {
   $el.html(`
     <div style="display:flex; flex-wrap:wrap; align-items:center; background:#f8f9fa; border:1px solid #e3e8ee; border-radius:8px; padding:4px 4px;">
       ${item('SIKK Number', frm.doc.sikk_number)}
-      ${item('Kendaraan', [frm.doc.license_plate, frm.doc.vehicle_brand, frm.doc.vehicle_model].filter(Boolean).join(' • '))}
+      ${item('Kendaraan', [frm.doc.vehicle, frm.doc.vehicle_brand, frm.doc.vehicle_model].filter(Boolean).join(' • '))}
       ${item('Pemilik', frm.doc.owner_name)}
       ${item('Service Order', frm.doc.service_order)}
       <div style="flex:0 0 auto; padding:6px 10px;">
@@ -57,6 +57,17 @@ const renderQuickInfo = (frm) => {
 frappe.ui.form.on('Vehicle Handover', {
   refresh(frm) {
     renderQuickInfo(frm);
+
+    if (frm.doc.service_order) {
+      frm.add_custom_button(frm.doc.service_order, () => {
+        frappe.set_route('Form', 'Garage Service Order', frm.doc.service_order);
+      }, __('View'));
+    }
+    if (frm.doc.payment_entry) {
+      frm.add_custom_button(frm.doc.payment_entry, () => {
+        frappe.set_route('Form', 'Payment Entry', frm.doc.payment_entry);
+      }, __('View'));
+    }
   },
   on_submit(frm) {
     // After Submit, jump straight to the print-ready view of the SIKK

@@ -14,13 +14,7 @@ from garage.garage.doctype.garage_service_order.garage_service_order import (
 
 TERMINAL_STATUSES = {"Completed", "Cancelled"}
 STATUS_FLOW = [
-    "Draft",
-    "Inspection",
-    "Estimate",
-    "Awaiting Approval",
-    "Approved",
-    "Request Part",
-    "Work In Progress",
+    "Open",
     "Waiting Payment",
     "Completed",
 ]
@@ -84,29 +78,11 @@ def _has_required_parts(service_order) -> bool:
 
 
 def sync_from_inspection(doc, method=None) -> None:  # pragma: no cover - frappe hook
-    if not getattr(doc, "service_order", None):
-        return
-    service_order = _get_service_order(doc.service_order)
-    if not service_order:
-        return
-    target_status = "Request Part" if _has_required_parts(service_order) else "Work In Progress"
-    _set_service_order_status(service_order, target_status)
+    pass
 
 
 def sync_from_spare_part_request(doc, method=None) -> None:  # pragma: no cover - frappe hook
-    if not getattr(doc, "service_order", None):
-        return
-    service_order = _get_service_order(doc.service_order)
-    if not service_order:
-        return
-
-    status = (getattr(doc, "status", None) or "").strip()
-    if status.lower() == "prepared":
-        target_status = "Work In Progress"
-        _ensure_repair_qc(service_order)
-    else:
-        target_status = "Request Part"
-    _set_service_order_status(service_order, target_status)
+    pass
 
 
 def sync_from_repair_qc(doc, method=None) -> None:  # pragma: no cover - frappe hook
@@ -123,17 +99,7 @@ def sync_from_repair_qc(doc, method=None) -> None:  # pragma: no cover - frappe 
 def sync_from_status_fields(
     service_order_name: str, statuses: Iterable[str], default_status: str
 ) -> None:
-    service_order = _get_service_order(service_order_name)
-    if not service_order:
-        return
-    normalized = [(status or "").strip().lower() for status in statuses if status is not None]
-    if any(status == "prepared" for status in normalized):
-        target_status = "Work In Progress"
-    elif normalized:
-        target_status = default_status
-    else:
-        target_status = default_status
-    _set_service_order_status(service_order, target_status)
+    pass
 
 
 def _ensure_repair_qc(service_order) -> None:
@@ -161,9 +127,6 @@ def _ensure_repair_qc(service_order) -> None:
     repair_qc.service_order = service_order.name
     repair_qc.flags.ignore_completion_validation = True
     repair_qc.flags.ignore_auto_status = True
-
-    _sync_repair_qc_spare_parts(repair_qc, required_parts)
-    _sync_repair_qc_parts_used(repair_qc, required_parts)
 
     if repair_qc.is_new():
         repair_qc.insert(ignore_permissions=True)

@@ -3024,7 +3024,7 @@ function cloneBrandModelMap(map) {
                 const serviceTimestamp = vehicle.last_service_logged_at || vehicle.last_service_date || vehicle.creation;
                 return [
                     this.renderLink(
-                        'Garage Customer',
+                        'Customer',
                         customer?.name || vehicle.customer,
                         customer?.customer_name || vehicle.customer || '-'
                     ),
@@ -3045,7 +3045,7 @@ function cloneBrandModelMap(map) {
                 customers.slice(0, 8).forEach((customer) => {
                     const contact = [customer.phone, customer.email].filter(Boolean).join(' / ');
                     combinedRows.push([
-                        this.renderLink('Garage Customer', customer.name, customer.customer_name || customer.name),
+                        this.renderLink('Customer', customer.name, customer.customer_name || customer.name),
                         customer.customer_type || '-',
                         contact || '-',
                         customer.is_vip ? 'Ya' : 'Tidak',

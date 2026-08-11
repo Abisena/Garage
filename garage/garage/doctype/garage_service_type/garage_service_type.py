@@ -10,6 +10,8 @@ class GarageServiceType(Document):
     """Service type master with optional product bundle link."""
 
     def validate(self):
+        self.bundle_description = (self.bundle_description or "").strip().upper()
+
         # link_filters on the field only narrows the dropdown in the UI -
         # it doesn't stop the value being set some other way (API, import,
         # bulk edit), so re-check it here to keep the fee tied to a real

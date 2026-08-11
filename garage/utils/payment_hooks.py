@@ -35,6 +35,40 @@ def get_draft_payment_entry_for_reference(
     )
 
 
+def sync_no_polisi(doc, method=None) -> None:
+    """Populate No. Polisi from the linked invoice's own vehicle info, so
+    the list view can show it as a plain column instead of a per-row
+    lookup. A Payment Entry can reference multiple invoices; the first
+    one with a resolvable vehicle wins."""
+
+    references = list(getattr(doc, "references", None) or [])
+    for reference in references:
+        reference_doctype = getattr(reference, "reference_doctype", None)
+        invoice_name = getattr(reference, "reference_name", None)
+        if not invoice_name:
+            continue
+
+        if reference_doctype == "Sales Invoice":
+            no_polisi = frappe.db.get_value("Sales Invoice", invoice_name, "no_polisi")
+        elif reference_doctype == "Garage Sales Invoice":
+            no_polisi = _resolve_vehicle_from_garage_sales_invoice(invoice_name)
+        else:
+            continue
+
+        if no_polisi:
+            doc.no_polisi = no_polisi
+            return
+
+
+def _resolve_vehicle_from_garage_sales_invoice(invoice_name: str) -> Optional[str]:
+    invoice = frappe.db.get_value(
+        "Garage Sales Invoice", invoice_name, ["source_type", "source_name"], as_dict=True
+    )
+    if not invoice or invoice.source_type != "Garage Service Order" or not invoice.source_name:
+        return None
+    return frappe.db.get_value("Garage Service Order", invoice.source_name, "vehicle")
+
+
 def handle_payment_entry_submit(doc, _method=None) -> None:
     """Complete service orders when Payment Entry fully pays linked invoices."""
 

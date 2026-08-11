@@ -36,6 +36,7 @@ const update_totals = (frm) => {
 
 frappe.ui.form.on("Garage Procurement Order", {
     refresh(frm) {
+    frm.$wrapper.find('input, select, textarea').css('background-color', '#eaeaea');
         update_totals(frm);
     },
 

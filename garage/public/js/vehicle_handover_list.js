@@ -20,7 +20,6 @@
         <span class="vhl-c-sikk vhl-hdr">SIKK NUMBER</span>
         <span class="vhl-c-plate vhl-hdr">NO. POLISI</span>
         <span class="vhl-c-owner vhl-hdr">PEMILIK</span>
-        <span class="vhl-c-permit vhl-hdr">JENIS PERIZINAN</span>
         <span class="vhl-c-date vhl-hdr">TANGGAL</span>
         <span class="vhl-c-badge vhl-hdr">STATUS</span>
         <span class="vhl-c-ago vhl-hdr"></span>
@@ -30,9 +29,8 @@
         const s = STATUS[String(doc.docstatus)] || STATUS["0"];
 
         const sikk   = doc.sikk_number || doc.name;
-        const plate  = doc.license_plate || "";
+        const plate  = doc.vehicle || "";
         const owner  = doc.owner_name || "";
-        const permit = doc.permit_type || "";
         const date   = doc.submission_date ? frappe.datetime.str_to_user(doc.submission_date) : "";
         const ago    = doc.modified ? frappe.datetime.comment_when(doc.modified, true) : "";
 
@@ -51,7 +49,6 @@
             <span class="vhl-c-sikk">${esc(sikk)}</span>
             <span class="vhl-c-plate">${esc(plate)}</span>
             <span class="vhl-c-owner">${esc(owner)}</span>
-            <span class="vhl-c-permit">${esc(permit)}</span>
             <span class="vhl-c-date">${esc(date)}</span>
             <span class="vhl-c-badge" style="background:${s.bg};color:${s.fg};">${s.label}</span>
             <span class="vhl-c-ago">${ago}</span>
@@ -122,7 +119,7 @@
     frappe.listview_settings["Vehicle Handover"] = {
         hide_name_column: true,
         add_fields: [
-            "sikk_number", "license_plate", "owner_name", "permit_type", "submission_date", "docstatus",
+            "sikk_number", "vehicle", "owner_name", "submission_date", "docstatus",
         ],
         refresh(lv) {
             render(lv);

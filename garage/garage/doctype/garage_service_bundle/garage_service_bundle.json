@@ -15,8 +15,11 @@
   "engine": "InnoDB",
   "field_order": [
     "bundle_name",
-    "service_fee",
+    "column_break_bundle_name",
     "is_active",
+    "section_break_details",
+    "service_type",
+    "service_fee",
     "description",
     "section_totals",
     "total_spare_amount",
@@ -36,12 +39,8 @@
       "in_list_view": 1
     },
     {
-      "fieldname": "service_fee",
-      "fieldtype": "Currency",
-      "label": "Biaya Jasa",
-      "default": 0,
-      "reqd": 1,
-      "in_list_view": 1
+      "fieldname": "column_break_bundle_name",
+      "fieldtype": "Column Break"
     },
     {
       "fieldname": "is_active",
@@ -51,8 +50,28 @@
       "in_list_view": 1
     },
     {
+      "fieldname": "section_break_details",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "service_type",
+      "fieldtype": "Link",
+      "label": "Jenis Servis",
+      "options": "Garage Service Type",
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "service_fee",
+      "fieldtype": "Currency",
+      "label": "Biaya Jasa",
+      "default": 0,
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
       "fieldname": "description",
-      "fieldtype": "Small Text",
+      "fieldtype": "Data",
       "label": "Deskripsi"
     },
     {
@@ -115,7 +134,7 @@
   "links": [],
   "make_attachments_public": 0,
   "max_attachments": 0,
-  "modified": "2024-06-02 00:00:00.000000",
+  "modified": "2026-07-10 01:00:00.000000",
   "module": "Garage",
   "name": "Garage Service Bundle",
   "naming_rule": "",

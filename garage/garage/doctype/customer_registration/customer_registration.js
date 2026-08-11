@@ -1,5 +1,11 @@
 frappe.ui.form.on('Customer Registration', {
   setup(frm) {
+    // Datetime controls always append the system timezone (e.g. "Asia/Jakarta")
+    // to their description unless df.hide_timezone is set - it's not a real
+    // synced DocField property, so this has to happen client-side.
+    frm.set_df_property('registration_date', 'hide_timezone', 1);
+    frm.set_df_property('service_booking_date', 'hide_timezone', 1);
+
     frm.set_query('model', () => {
       const filters = {};
       if (frm.doc.brand) {
@@ -32,6 +38,7 @@ frappe.ui.form.on('Customer Registration', {
   },
 
   refresh(frm) {
+    frm.$wrapper.find('input, select, textarea').css('background-color', '#eaeaea');
     if (frm.doc.service_order_type) {
       return;
     }

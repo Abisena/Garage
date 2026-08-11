@@ -49,7 +49,7 @@
     {
       "fieldname": "bundle_description",
       "fieldtype": "Data",
-      "label": "Notes"
+      "label": "Description"
     },
     {
       "fieldname": "column_break_info",
@@ -76,7 +76,7 @@
   "links": [],
   "make_attachments_public": 0,
   "max_attachments": 0,
-  "modified": "2026-07-17 17:55:00.000000",
+  "modified": "2026-07-17 18:05:00.000000",
   "module": "Garage",
   "name": "Garage Service Type",
   "naming_rule": "",

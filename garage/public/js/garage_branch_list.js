@@ -74,7 +74,10 @@
             const $row = $(row);
             if ($row.hasClass("gb-ok")) return;
 
-            const name = $row.find("input.list-row-checkbox").data("name");
+            // .attr(), not .data() - jQuery's .data() type-coerces a
+            // purely-numeric docname into a JS number, which then never
+            // strictly-equals the string doc.name below.
+            const name = $row.find("input.list-row-checkbox").attr("data-name");
             const doc  = (lv.data || []).find((d) => d.name === name);
             if (!doc) return;
 
@@ -120,6 +123,15 @@
         add_fields: [
             "branch_code", "branch_name", "city", "phone", "is_active",
         ],
+        onload(lv) {
+            // A realtime "list_update" rebuilds rows via render_list()
+            // directly, bypassing this refresh hook - watch for that and
+            // re-render so rows don't get stuck in the default Frappe layout.
+            if (!lv.__gb_observer) {
+                lv.__gb_observer = new MutationObserver(() => render(lv));
+                lv.__gb_observer.observe(lv.$result[0], { childList: true });
+            }
+        },
         refresh(lv) {
             render(lv);
         },

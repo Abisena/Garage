@@ -55,7 +55,7 @@
       "fieldname": "customer",
       "fieldtype": "Link",
       "label": "Customer",
-      "options": "Garage Customer",
+      "options": "Customer",
       "in_list_view": 1
     },
     {

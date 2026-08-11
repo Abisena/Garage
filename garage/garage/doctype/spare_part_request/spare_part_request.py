@@ -12,9 +12,10 @@ from garage.garage.doctype.garage_service_order.garage_service_order import (
     derive_part_charge_status,
 )
 
-ITEM_PENDING = "Pending"
+ITEM_PENDING = "Request Part"
 ITEM_PREPARED = "Prepared"
 ITEM_REJECTED = "Rejected"
+ITEM_OUT_OF_STOCK = "Out of Stock"
 ITEM_APPROVED_LEGACY = "Approved"
 ITEM_APPROVED = ITEM_PREPARED
 
@@ -26,6 +27,7 @@ class SparePartRequest(Document):
         ITEM_PENDING: "Request Spare Part",
         ITEM_PREPARED: "Prepared",
         ITEM_REJECTED: "Rejected",
+        ITEM_OUT_OF_STOCK: "Out of Stock",
         ITEM_APPROVED_LEGACY: "Prepared",
     }
 
@@ -36,14 +38,19 @@ class SparePartRequest(Document):
             self.status = ITEM_PENDING
 
     def validate(self) -> None:  # pragma: no cover - frappe lifecycle hook
+        # name is already resolved by this point (autoname runs before
+        # validate), so this just mirrors it into a labeled field - the
+        # docname itself has no visible label anywhere on the form.
+        self.document_number = self.name
         self._sync_status_from_items()
-        self._sync_service_order_parts()
+        if not getattr(self.flags, "skip_service_order_sync", False):
+            self._sync_service_order_parts()
 
     def update_items_status(self, item_names: Sequence[str], status: str) -> None:
 	    """Update the approval status for specific items."""
 	
 	    normalized_status = normalize_approval_status(status)
-	    if normalized_status not in {ITEM_PREPARED, ITEM_REJECTED}:
+	    if normalized_status not in {ITEM_PREPARED, ITEM_REJECTED, ITEM_OUT_OF_STOCK}:
 	        frappe.throw(_("Status {0} tidak diizinkan.").format(status))
 	
 	    # Convert item_names to strings for comparison
@@ -59,7 +66,10 @@ class SparePartRequest(Document):
 	        return
 	
 	    self._sync_status_from_items()
+	    self.flags.skip_service_order_sync = True
 	    self.save(ignore_permissions=True)
+	    self.flags.skip_service_order_sync = False
+	    self._sync_service_order_parts()
 
     # internal helpers
     def _sync_status_from_items(self) -> None:
@@ -139,6 +149,21 @@ class SparePartRequest(Document):
             getattr(service_doc, "part_charge_status", None),
         )
 
+        resolved_statuses = {"prepared", "rejected", "out of stock", "issued", "received", "approved"}
+        if service_doc.status == "Waiting Part":
+            stock_parts = [
+                row for row in service_doc.required_parts or []
+                if getattr(row, "item_code", None)
+                and cstr(getattr(row, "stock_status", "")).strip()
+                and frappe.db.get_value("Item", row.item_code, "is_stock_item")
+            ]
+            all_resolved = stock_parts and all(
+                cstr(getattr(row, "stock_status", "")).strip().lower() in resolved_statuses
+                for row in stock_parts
+            )
+            if all_resolved:
+                service_doc.status = "Prepared"
+
         frappe.flags.skip_service_order_spare_part_request_sync = True
         try:
             service_doc.save(ignore_permissions=True)
@@ -172,7 +197,7 @@ class SparePartRequest(Document):
         movement.reference_name = self.name
         movement.posting_date = self.request_date or nowdate()
         movement.warehouse = row.source_warehouse
-        movement.remarks = self.remarks or _("Issue for {0}").format(self.service_order or self.name)
+        movement.remarks = _("Issue for {0}").format(self.service_order or self.name)
 
         movement.append(
             "items",
@@ -207,7 +232,14 @@ def normalize_approval_status(status: str) -> str:
     normalized = status.strip().title()
     if normalized == ITEM_APPROVED_LEGACY:
         return ITEM_PREPARED
+    if normalized == "Out Of Stock":
+        return ITEM_OUT_OF_STOCK
+    if normalized == "Pending":
+        return ITEM_PENDING
     return normalized
+
+
+REJECTED_STATUSES = {ITEM_REJECTED.lower(), ITEM_OUT_OF_STOCK.lower()}
 
 
 def derive_request_status(statuses: Iterable[str], base_status: str | None = None) -> str:
@@ -217,16 +249,16 @@ def derive_request_status(statuses: Iterable[str], base_status: str | None = Non
 
     normalized = [status.lower() for status in collected]
 
-    has_rejected = any(status == ITEM_REJECTED.lower() for status in normalized)
+    has_rejected = any(status in REJECTED_STATUSES for status in normalized)
     has_prepared = any(status == ITEM_PREPARED.lower() for status in normalized)
-    has_pending = any(status not in {ITEM_REJECTED.lower(), ITEM_PREPARED.lower()} for status in normalized)
+    has_pending = any(status not in REJECTED_STATUSES and status != ITEM_PREPARED.lower() for status in normalized)
 
     if has_rejected and (has_prepared or has_pending):
         return "Partial Reject"
     if has_rejected and not (has_prepared or has_pending):
         return "Rejected"
     if has_prepared and has_pending:
-        return "Partial Approve"
+        return "Partial Prepared"
     if has_pending:
         return ITEM_PENDING
     if has_prepared:

@@ -189,10 +189,21 @@ def fetch_by_plate(license_plate: str, branch: Optional[str] = None) -> Dict[str
 
     customer_name = vehicle.get("customer")
     if customer_name:
+        # Customer's own field names (mobile_no/email_id) differ from
+        # CUSTOMER_FIELDS' "phone"/"email" - those match Customer
+        # Registration's own portal-form fields (see _as_portal_payload()
+        # above, which reads CUSTOMER_FIELDS straight off `self`), so the
+        # response here is remapped back to that same "phone"/"email"
+        # shape the portal's own auto-fill JS already expects, rather than
+        # changing every caller to know about the swap.
+        customer_db_fields = [f for f in CUSTOMER_FIELDS if f not in ("phone", "email")]
+        customer_db_fields += ["mobile_no", "email_id"]
         customer = frappe.db.get_value(
-            "Garage Customer", customer_name, CUSTOMER_FIELDS + ("name",), as_dict=True
+            "Customer", customer_name, customer_db_fields + ["name"], as_dict=True
         )
         if customer:
+            customer["phone"] = customer.pop("mobile_no", None)
+            customer["email"] = customer.pop("email_id", None)
             response["customer"] = customer
 
     return response

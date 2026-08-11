@@ -26,6 +26,7 @@ const DEFAULT_INSPECTION_ITEMS = [
 
 frappe.ui.form.on("Garage Vehicle Inspection", {
   refresh(frm) {
+    frm.$wrapper.find('input, select, textarea').css('background-color', '#eaeaea');
     const grid = frm.fields_dict?.inspection_items?.grid;
     if (grid) {
       grid.update_docfield_property(

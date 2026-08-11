@@ -79,6 +79,24 @@ def _handover_exists(service_order_name: str) -> bool:
     return bool(frappe.db.exists("Vehicle Handover", {"service_order": service_order_name}))
 
 
+def _resolve_ref_nota(service_order_name: str) -> str | None:
+    """Nota Service number for the invoice tied to this service order - a
+    reverse lookup (Sales Invoice -> service_order), so it can't be filled
+    via a plain fetch_from chain like the doc's other snapshot fields.
+
+    The Nota Service print format shows the Sales Invoice's own standard
+    document number now (see jinja.py's _mark_nota_service_printed
+    docstring) - there's no separate nota number to prefer anymore, just
+    the invoice name."""
+
+    invoice = frappe.db.get_value(
+        "Sales Invoice",
+        {"service_order": service_order_name, "docstatus": ["<", 2]},
+        "name",
+    )
+    return invoice or None
+
+
 def _extract_permit_details(doc) -> tuple[str | None, str | None]:
     permit_number = getattr(doc, "permit_number", None) or getattr(
         doc, "exit_permit_number", None
@@ -189,6 +207,7 @@ def _create_handover(
         handover.permit_number = permit_number
     if sikk_number:
         handover.sikk_number = sikk_number
+    handover.ref_nota = _resolve_ref_nota(service_order_name)
 
     payment_entry_doc = None
     if payment_entry:

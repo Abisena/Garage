@@ -669,26 +669,29 @@ frappe.ui.form.on('Garage Service Order', {
         // the mechanic to act on - show no primary action at all rather than a
         // "Start Repair" button that looks clickable but isn't.
         frm.page.set_primary_action(__('Start Repair'), () => {
-          // spk_number is only ever set by get_service_order_print_context()
-          // (garage/utils/jinja.py), the first time the SPK print format is
-          // opened for this order - server-side start_repair() throws on a
-          // blank value too, but checking here avoids a round-trip just to
-          // hit that error, and lets us jump straight to the print view
-          // instead of leaving the user stuck on an error dialog with no
-          // obvious next step.
-          if (!frm.doc.spk_number) {
-            frappe.show_alert({
-              message: __('SPK belum pernah dicetak - membuka halaman cetak SPK dulu.'),
-              indicator: 'orange',
-            });
-            frm.print_doc();
-            return;
-          }
+          // Always ask the server - it reads spk_number fresh from the DB on
+          // every call. Don't pre-check frm.doc.spk_number client-side: that
+          // field is only ever populated as a side effect of opening the SPK
+          // print format (garage/utils/jinja.py), a plain navigation the
+          // in-memory frm.doc doesn't reliably pick up on return, which was
+          // sending users back to the print screen in a loop even after
+          // they'd already printed it.
           frappe.call({
             method: 'garage.garage.doctype.garage_service_order.garage_service_order.start_repair',
             args: { service_order_name: frm.doc.name },
             freeze: true,
             freeze_message: 'Memulai perbaikan...',
+            error(r) {
+              const msg = r?.exc_type === 'ValidationError' ? (r?._server_messages && JSON.parse(r._server_messages)[0]) : null;
+              const text = msg ? JSON.parse(msg).message : '';
+              if (text && text.includes('belum pernah dicetak')) {
+                frappe.show_alert({
+                  message: __('SPK belum pernah dicetak - membuka halaman cetak SPK dulu.'),
+                  indicator: 'orange',
+                });
+                frm.print_doc();
+              }
+            },
             callback(r) {
               if (r.message) {
                 const sd = new frappe.ui.Dialog({
@@ -949,7 +952,7 @@ frappe.ui.form.on('Garage Service Order', {
     }
 
     if (frm.doc.status === 'Finished' && !frm.is_new()) {
-      frm.page.set_primary_action(__('Submit to QC'), () => {
+      frm.page.set_primary_action(__('Selesai & Kirim ke Pembayaran'), () => {
         const d = new frappe.ui.Dialog({
           title: ' ',
           fields: [{
@@ -963,11 +966,11 @@ frappe.ui.form.on('Garage Service Order', {
                     <path d="M9 14l2 2 4-4"/>
                   </svg>
                 </div>
-                <div style="font-size:15px;font-weight:700;color:#1f2937;margin-bottom:6px;">Submit to QC Review?</div>
-                <div style="font-size:12px;color:#6b7280;">Pekerjaan akan di-review sebelum lanjut ke pembayaran.</div>
+                <div style="font-size:15px;font-weight:700;color:#1f2937;margin-bottom:6px;">Selesai & lanjut ke pembayaran?</div>
+                <div style="font-size:12px;color:#6b7280;">Service order akan langsung masuk status Waiting Payment.</div>
               </div>`
           }],
-          primary_action_label: 'Submit QC',
+          primary_action_label: 'Lanjut',
           primary_action() {
             d.hide();
             frappe.call({
@@ -976,7 +979,7 @@ frappe.ui.form.on('Garage Service Order', {
               freeze: true,
               callback(r) {
                 if (r.message) {
-                  frappe.show_alert({ message: r.message.message, indicator: 'purple' });
+                  frappe.show_alert({ message: r.message.message, indicator: 'green' });
                   frm.reload_doc();
                 }
               },

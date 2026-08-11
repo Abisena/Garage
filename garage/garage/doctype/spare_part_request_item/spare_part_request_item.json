@@ -11,7 +11,7 @@
   "disable_prepared_report": 0,
   "docstatus": 0,
   "doctype": "DocType",
-  "editable_grid": 1,
+  "editable_grid": 0,
   "engine": "InnoDB",
   "field_order": [
     "service_order_part",
@@ -19,6 +19,8 @@
     "item_name",
     "description",
     "qty",
+    "stock_qty",
+    "warehouse",
     "uom",
     "source_warehouse",
     "approval_status",
@@ -36,13 +38,15 @@
       "fieldtype": "Data",
       "label": "Item Code",
       "reqd": 1,
-      "in_list_view": 1
+      "in_list_view": 1,
+      "columns": 2
     },
     {
       "fieldname": "item_name",
       "fieldtype": "Data",
       "label": "Item Name",
-      "in_list_view": 1
+      "in_list_view": 1,
+      "columns": 3
     },
     {
       "fieldname": "description",
@@ -54,7 +58,24 @@
       "fieldtype": "Float",
       "label": "Quantity",
       "default": 1,
-      "in_list_view": 1
+      "in_list_view": 1,
+      "columns": 1
+    },
+    {
+      "fieldname": "stock_qty",
+      "fieldtype": "Float",
+      "label": "Stock",
+      "read_only": 1,
+      "in_list_view": 1,
+      "columns": 1
+    },
+    {
+      "fieldname": "warehouse",
+      "fieldtype": "Data",
+      "label": "Location",
+      "read_only": 1,
+      "in_list_view": 1,
+      "columns": 1
     },
     {
       "fieldname": "uom",
@@ -70,9 +91,10 @@
       "fieldname": "approval_status",
       "fieldtype": "Select",
       "label": "Approval Status",
-      "options": "Pending\nPrepared\nApproved\nRejected",
-      "default": "Pending",
-      "in_list_view": 1
+      "options": "Request Part\nPrepared\nOut of Stock\nRejected",
+      "default": "Request Part",
+      "in_list_view": 1,
+      "columns": 2
     },
     {
       "fieldname": "stock_movement",

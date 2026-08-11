@@ -4,7 +4,7 @@
   "allow_guest_to_view": 0,
   "allow_import": 1,
   "allow_rename": 0,
-  "autoname": "autoincrement",
+  "autoname": "field:sikk_number",
   "beta": 0,
   "creation": "2024-10-23 00:00:00.000000",
   "default_view": "Form",
@@ -12,225 +12,111 @@
   "editable_grid": 1,
   "engine": "InnoDB",
   "field_order": [
-    "header_section",
+    "info_section",
     "sikk_number",
-    "permit_type",
-    "column_break_header",
-    "branch",
+    "vehicle",
+    "chassis_number",
+    "engine_number",
+    "jenis_service",
+    "column_break_info",
     "submission_date",
-    "section_break_quick_info",
-    "quick_info_html",
-    "reference_section",
+    "owner_name",
+    "customer_number",
+    "mechanic_name",
+    "ref_nota",
+    "section_break_hidden",
     "service_order",
-    "column_break_ref",
+    "branch",
     "payment_entry",
     "receipt_number",
-    "vehicle_section",
-    "vehicle",
-    "license_plate",
-    "vehicle_brand",
-    "column_break_vehicle",
-    "vehicle_model",
-    "vehicle_year",
-    "owner_section",
-    "owner_name",
-    "column_break_owner",
-    "owner_phone",
-    "body_notes_section",
-    "body_notes",
-    "section_break_hidden",
     "branch_code"
   ],
   "fields": [
     {
-      "fieldname": "header_section",
+      "fieldname": "info_section",
       "fieldtype": "Section Break",
-      "label": "🚗 Vehicle Handover / SIKK",
       "collapsible": 0
     },
     {
       "fieldname": "sikk_number",
       "fieldtype": "Data",
-      "label": "SIKK Number",
+      "label": "Nomor SIKK",
       "in_list_view": 1,
       "in_standard_filter": 1,
       "bold": 1,
-      "read_only": 1,
-      "description": "Auto-generated SIKK number"
-    },
-    {
-      "fieldname": "permit_type",
-      "fieldtype": "Select",
-      "label": "Jenis Perizinan",
-      "options": "Keluar Workshop\nMasuk Workshop",
-      "default": "Keluar Workshop",
-      "reqd": 1,
-      "in_list_view": 1,
-      "in_standard_filter": 1,
-      "bold": 1,
-      "permlevel": 1,
-      "description": "Type of vehicle movement"
-    },
-    {
-      "fieldname": "column_break_header",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "branch",
-      "fieldtype": "Link",
-      "label": "Branch",
-      "options": "Garage Branch",
-      "reqd": 1,
-      "in_standard_filter": 1,
-      "bold": 1,
-      "permlevel": 1,
-      "description": "Workshop branch location"
-    },
-    {
-      "fieldname": "submission_date",
-      "fieldtype": "Date",
-      "label": "Tanggal Pengajuan",
-      "default": "Today",
-      "reqd": 1,
-      "in_list_view": 1,
-      "bold": 1,
-      "permlevel": 1
-    },
-    {
-      "fieldname": "section_break_quick_info",
-      "fieldtype": "Section Break",
-      "label": "",
-      "collapsible": 0
-    },
-    {
-      "fieldname": "quick_info_html",
-      "fieldtype": "HTML",
-      "label": "Quick Info",
-      "options": "<div id='vehicle-handover-quick-info'></div>"
-    },
-    {
-      "fieldname": "reference_section",
-      "fieldtype": "Section Break",
-      "label": "🔗 Reference Information",
-      "collapsible": 1
-    },
-    {
-      "fieldname": "service_order",
-      "fieldtype": "Link",
-      "label": "Service Order",
-      "options": "Garage Service Order",
-      "reqd": 1,
-      "bold": 1,
-      "in_standard_filter": 1,
-      "permlevel": 1,
-      "description": "Source service order - vehicle and owner data below are pulled from here"
-    },
-    {
-      "fieldname": "column_break_ref",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "payment_entry",
-      "fieldtype": "Link",
-      "label": "Payment Entry",
-      "options": "Payment Entry",
-      "permlevel": 1,
-      "description": "Link to payment entry (if applicable)"
-    },
-    {
-      "fieldname": "receipt_number",
-      "fieldtype": "Data",
-      "label": "Receipt Number",
-      "permlevel": 1,
-      "description": "Payment receipt number"
-    },
-    {
-      "fieldname": "vehicle_section",
-      "fieldtype": "Section Break",
-      "label": "🚙 Informasi Kendaraan",
-      "collapsible": 0
+      "read_only": 1
     },
     {
       "fieldname": "vehicle",
       "fieldtype": "Link",
-      "label": "Kendaraan",
+      "label": "No. Polisi",
       "options": "Garage Vehicle",
       "fetch_from": "service_order.vehicle",
-      "read_only": 1,
-      "bold": 1,
-      "permlevel": 1,
-      "description": "Auto-filled from Service Order"
-    },
-    {
-      "fieldname": "license_plate",
-      "fieldtype": "Data",
-      "label": "No. Polisi",
-      "fetch_from": "vehicle.license_plate",
       "read_only": 1,
       "in_list_view": 1,
       "bold": 1
     },
     {
-      "fieldname": "vehicle_brand",
+      "fieldname": "chassis_number",
       "fieldtype": "Data",
-      "label": "Merk",
-      "fetch_from": "vehicle.brand",
+      "label": "Nomor Rangka",
+      "fetch_from": "vehicle.vin",
       "read_only": 1
     },
     {
-      "fieldname": "column_break_vehicle",
+      "fieldname": "engine_number",
+      "fieldtype": "Data",
+      "label": "Nomor Engine",
+      "fetch_from": "vehicle.engine_number",
+      "read_only": 1
+    },
+    {
+      "fieldname": "jenis_service",
+      "fieldtype": "Data",
+      "label": "Jenis Service",
+      "fetch_from": "service_order.service_order_type",
+      "read_only": 1
+    },
+    {
+      "fieldname": "column_break_info",
       "fieldtype": "Column Break"
     },
     {
-      "fieldname": "vehicle_model",
-      "fieldtype": "Data",
-      "label": "Model",
-      "fetch_from": "vehicle.model",
-      "read_only": 1
-    },
-    {
-      "fieldname": "vehicle_year",
-      "fieldtype": "Data",
-      "label": "Tahun",
-      "fetch_from": "vehicle.vehicle_year",
-      "read_only": 1
-    },
-    {
-      "fieldname": "owner_section",
-      "fieldtype": "Section Break",
-      "label": "👤 Pemilik Kendaraan",
-      "collapsible": 0
+      "fieldname": "submission_date",
+      "fieldtype": "Date",
+      "label": "Tgl Cetak SIKK",
+      "default": "Today",
+      "reqd": 1,
+      "in_list_view": 1,
+      "bold": 1
     },
     {
       "fieldname": "owner_name",
       "fieldtype": "Data",
-      "label": "Nama Pemilik",
+      "label": "Pemilik Kendaraan",
       "fetch_from": "service_order.customer_display",
       "read_only": 1,
       "bold": 1
     },
     {
-      "fieldname": "column_break_owner",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "owner_phone",
+      "fieldname": "customer_number",
       "fieldtype": "Data",
-      "label": "No. Telepon",
-      "fetch_from": "service_order.primary_contact",
+      "label": "Nomor Customer",
+      "fetch_from": "service_order.customer_number",
       "read_only": 1
     },
     {
-      "fieldname": "body_notes_section",
-      "fieldtype": "Section Break",
-      "label": "📝 Body Condition Notes",
-      "collapsible": 1
+      "fieldname": "mechanic_name",
+      "fieldtype": "Data",
+      "label": "Mekanik",
+      "fetch_from": "service_order.assigned_mechanic_name",
+      "read_only": 1
     },
     {
-      "fieldname": "body_notes",
-      "fieldtype": "Text Editor",
-      "label": "Catatan Bodi",
-      "description": "Notes on vehicle body condition, scratches, dents, etc."
+      "fieldname": "ref_nota",
+      "fieldtype": "Data",
+      "label": "Ref. Nota",
+      "read_only": 1
     },
     {
       "fieldname": "section_break_hidden",
@@ -238,6 +124,43 @@
       "label": "Hidden Fields",
       "collapsible": 1,
       "collapsed": 1
+    },
+    {
+      "fieldname": "service_order",
+      "fieldtype": "Link",
+      "label": "Service Order",
+      "options": "Garage Service Order",
+      "reqd": 1,
+      "hidden": 1,
+      "permlevel": 1,
+      "description": "Source service order - vehicle, owner and service data above are pulled from here"
+    },
+    {
+      "fieldname": "branch",
+      "fieldtype": "Link",
+      "label": "Branch",
+      "options": "Garage Branch",
+      "reqd": 1,
+      "hidden": 1,
+      "permlevel": 1,
+      "description": "Workshop branch location"
+    },
+    {
+      "fieldname": "payment_entry",
+      "fieldtype": "Link",
+      "label": "Payment Entry",
+      "options": "Payment Entry",
+      "hidden": 1,
+      "permlevel": 1,
+      "description": "Link to payment entry (if applicable)"
+    },
+    {
+      "fieldname": "receipt_number",
+      "fieldtype": "Data",
+      "label": "Receipt Number",
+      "hidden": 1,
+      "permlevel": 1,
+      "description": "Payment receipt number"
     },
     {
       "fieldname": "branch_code",
@@ -252,21 +175,12 @@
   "hide_toolbar": 0,
   "index_web_pages_for_search": 1,
   "is_submittable": 1,
-  "links": [
-    {
-      "link_doctype": "Garage Service Order",
-      "link_fieldname": "name"
-    },
-    {
-      "link_doctype": "Payment Entry",
-      "link_fieldname": "name"
-    }
-  ],
+  "links": [],
   "max_attachments": 10,
   "modified": "2024-10-23 00:00:00.000000",
   "module": "Garage",
   "name": "Vehicle Handover",
-  "naming_rule": "Autoincrement",
+  "naming_rule": "By fieldname",
   "owner": "Administrator",
   "permissions": [
     {

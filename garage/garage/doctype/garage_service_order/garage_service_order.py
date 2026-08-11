@@ -6,7 +6,7 @@ import re
 from typing import Iterable, Optional
 
 import frappe
-from frappe.utils import cstr, flt, nowdate
+from frappe.utils import cstr, flt, getdate, nowdate
 
 from frappe.model.document import Document
 
@@ -173,7 +173,7 @@ class GarageServiceOrder(Document):
     def _update_display_fields(self) -> None:
         customer_name: Optional[str] = None
         if self.customer:
-            customer_name = frappe.db.get_value("Garage Customer", self.customer, "customer_name")
+            customer_name = frappe.db.get_value("Customer", self.customer, "customer_name")
 
         self.customer_display = customer_name or self.customer
 
@@ -214,7 +214,7 @@ class GarageServiceOrder(Document):
         self.vehicle_display = display_value or self.vehicle
 
         if self.customer and not self.primary_contact:
-            phone = frappe.db.get_value("Garage Customer", self.customer, "phone")
+            phone = frappe.db.get_value("Customer", self.customer, "mobile_no")
             if phone:
                 self.primary_contact = phone
 
@@ -697,22 +697,187 @@ def finish_repair(service_order_name: str) -> dict[str, object]:
     return {"status": "Finished", "message": "Perbaikan selesai."}
 
 
+def _build_invoice_items_for_service_order(doc) -> list[dict]:
+    """Mirror of Repair QC's required_parts fallback branch in
+    _build_invoice_items() - kept as its own copy here (rather than shared)
+    so Repair QC's own invoice flow stays completely untouched."""
+
+    items: list[dict] = []
+    for row in doc.required_parts or []:
+        item_code = (row.item_code or "").strip()
+        if not item_code:
+            continue
+
+        qty = flt(row.qty or 0)
+        if qty <= 0:
+            continue
+
+        amount = flt(row.amount or 0)
+        rate = flt(row.rate or 0)
+        discount_pct = flt(row.discount or 0)
+
+        if not rate and amount:
+            rate = amount / qty
+
+        if not rate and item_code.startswith("JASA-PAKET-"):
+            if doc.service_package:
+                rate = flt(frappe.db.get_value("Garage Service Bundle", doc.service_package, "service_fee"))
+
+        if not rate:
+            rate = flt(frappe.db.get_value("Item", item_code, "standard_rate") or 0)
+        if not rate:
+            rate = 100000
+
+        price_list_rate = rate
+        if discount_pct:
+            rate = flt(rate * (1 - discount_pct / 100))
+
+        item_defaults = frappe.db.get_value(
+            "Item", item_code, ["item_name", "stock_uom", "description"], as_dict=True
+        ) or {}
+
+        items.append({
+            "item_code": item_code,
+            "item_name": row.item_name or item_defaults.get("item_name") or item_code,
+            "description": row.description or item_defaults.get("description") or item_code,
+            "qty": qty,
+            "uom": row.uom or item_defaults.get("stock_uom") or "Nos",
+            "rate": rate,
+            "amount": flt(rate * qty),
+            "price_list_rate": price_list_rate,
+            "discount_percentage": discount_pct,
+        })
+
+    if not items:
+        service_type = doc.service_order_type or "General Service"
+        items.append({
+            "item_code": "SERVICE-GENERAL",
+            "item_name": f"Service - {service_type}",
+            "description": f"Service for {service_type}",
+            "qty": 1,
+            "uom": "Nos",
+            "rate": 500000,
+            "amount": 500000,
+        })
+
+    return items
+
+
+def _create_draft_sales_invoice(doc) -> Optional[str]:
+    """Auto-create a draft Sales Invoice from a Service Order, linked via
+    `po_no` (the field the Garage Service Order -> Sales Invoice Connection
+    already uses). Left as a draft - staff review/adjust it before
+    submitting and collecting payment, unlike Repair QC's own flow which
+    auto-submits."""
+
+    existing = frappe.db.get_value(
+        "Sales Invoice", {"po_no": doc.name, "docstatus": ["!=", 2]}, "name"
+    )
+    if existing:
+        return existing
+
+    if not doc.customer:
+        return None
+
+    items = _build_invoice_items_for_service_order(doc)
+    if not items:
+        return None
+
+    from garage.api.portal import _apply_ppn_pricing, _ensure_erp_customer
+
+    try:
+        customer_name = _ensure_erp_customer(doc.customer, doc.branch)
+    except Exception:
+        frappe.clear_last_message()
+        customer_name = None
+
+    if not customer_name:
+        return None
+
+    company = frappe.db.get_single_value("Global Defaults", "default_company")
+    if not company:
+        companies = frappe.get_all("Company", limit=1)
+        company = companies[0].name if companies else None
+    if not company:
+        return None
+
+    posting_date = getdate(nowdate())
+
+    si = frappe.new_doc("Sales Invoice")
+    si.customer = customer_name
+    si.company = company
+    si.posting_date = posting_date
+    si.set_posting_time = 1
+    si.due_date = posting_date
+    si.po_no = doc.name
+    si.remarks = f"Auto-generated from Service Order {doc.name}"
+
+    si_meta = frappe.get_meta("Sales Invoice")
+    if si_meta.has_field("branch"):
+        si.branch = doc.branch
+
+    for fieldname in ("service_order", "service_order_ref", "garage_service_order", "garage_service_order_ref"):
+        if si_meta.has_field(fieldname):
+            setattr(si, fieldname, doc.name)
+            break
+
+    if si_meta.has_field("no_polisi"):
+        si.no_polisi = doc.vehicle
+
+    for item in items:
+        si.append("items", item)
+
+    base_total = sum(flt(item.get("rate") or 0) * flt(item.get("qty") or 0) for item in items)
+
+    si.run_method("set_missing_values")
+    _apply_ppn_pricing(si, base_total)
+    si.calculate_taxes_and_totals()
+
+    if not si.posting_date:
+        si.posting_date = posting_date
+    if not si.due_date:
+        si.due_date = posting_date
+
+    si.base_write_off_amount = flt(si.base_write_off_amount or 0)
+    si.write_off_amount = flt(si.write_off_amount or 0)
+
+    si.insert(ignore_permissions=True)
+
+    return si.name
+
+
 @frappe.whitelist()
 def submit_to_qc(service_order_name: str) -> dict[str, object]:
+    """Despite the name, this now skips QC Review entirely and goes
+    straight to Waiting Payment - the Service Order flow no longer routes
+    through Repair QC. The Repair QC doctype itself is untouched; nothing
+    stops a QC record being created and linked by hand elsewhere."""
+
     doc = frappe.get_doc("Garage Service Order", service_order_name)
 
     if doc.status != "Finished":
         frappe.throw("Submit to QC hanya bisa saat status Finished.")
 
-    doc.status = "QC Review"
+    doc.status = "Waiting Payment"
     doc.save(ignore_permissions=True)
 
-    from garage.utils.service_order_status import _ensure_repair_qc
-    _ensure_repair_qc(doc)
+    invoice_name = None
+    try:
+        invoice_name = _create_draft_sales_invoice(doc)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Garage Service Order - Sales Invoice")
 
     frappe.db.commit()
 
-    return {"status": "QC Review", "message": "Service Order masuk QC Review."}
+    message = "Perbaikan selesai. Menunggu pembayaran."
+    if invoice_name:
+        message += f" Draft Sales Invoice {invoice_name} telah dibuat."
+
+    return {
+        "status": "Waiting Payment",
+        "message": message,
+        "sales_invoice": invoice_name,
+    }
 
 
 @frappe.whitelist()

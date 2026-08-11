@@ -19,6 +19,8 @@ class GarageBranch(Document):
         if not self.branch_name:
             frappe.throw(_("Nama cabang wajib diisi."))
 
+        self.city = (self.city or "").strip().upper()
+
     def autoname(self) -> None:
         """Use the branch code as the primary identifier."""
 

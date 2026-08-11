@@ -7,34 +7,33 @@
   "track_changes": 1,
   "title_field": "license_plate",
   "description": "Quick customer and vehicle registration for service intake",
+  "modified": "2026-07-18 01:20:00.000000",
 
   "field_order": [
     "info_section",
     "branch",
     "intake_type",
+    "column_break_info",
     "registration_date",
-    
+
+    "vehicle_section",
+    "license_plate",
+    "brand",
+    "vehicle_type",
+    "chassiss_number",
+    "column_break_v1",
+    "model",
+    "mileage",
+    "vehicle_year",
+    "engine_number",
+
     "customer_section",
     "customer_name",
     "phone",
     "column_break_c1",
     "email",
     "is_vip",
-    
-    "vehicle_section",
-    "license_plate",
-    "brand",
-    "column_break_v1",
-    "model",
-    "mileage",
-    
-    "vehicle_details_section",
-    "vehicle_type",
-    "vehicle_year",
-    "column_break_v2",
-    "chassiss_number",
-    "engine_number",
-    
+
     "service_section",
     "service_order_type",
     "priority",
@@ -42,12 +41,9 @@
     "estimated_duration",
     "service_booking_date",
     "preferred_date",
-    
+
     "complaint_section",
     "complaint",
-    
-    "notes_section",
-    "service_notes",
 
     "system_section",
     "vehicle",
@@ -60,7 +56,7 @@
     {
       "fieldname": "info_section",
       "fieldtype": "Section Break",
-      "label": "📋 Registration Info"
+      "label": "Registration Info"
     },
     {
       "fieldname": "branch",
@@ -69,8 +65,7 @@
       "options": "Garage Branch",
       "in_list_view": 1,
       "reqd": 1,
-      "bold": 1,
-      "description": "Select service branch"
+      "bold": 1
     },
     {
       "fieldname": "intake_type",
@@ -82,6 +77,10 @@
       "bold": 1
     },
     {
+      "fieldname": "column_break_info",
+      "fieldtype": "Column Break"
+    },
+    {
       "fieldname": "registration_date",
       "fieldtype": "Datetime",
       "label": "Registration Time",
@@ -89,12 +88,11 @@
       "read_only": 1,
       "in_list_view": 1
     },
-    
+
     {
       "fieldname": "customer_section",
       "fieldtype": "Section Break",
-      "label": "👤 Customer Details",
-      "description": "Customer contact information"
+      "label": "Customer Details"
     },
     {
       "fieldname": "customer_name",
@@ -103,8 +101,7 @@
       "in_list_view": 1,
       "in_global_search": 1,
       "bold": 1,
-      "reqd": 1,
-      "description": "Vehicle owner's full name"
+      "reqd": 1
     },
     {
       "fieldname": "phone",
@@ -113,8 +110,7 @@
       "options": "Phone",
       "in_list_view": 1,
       "reqd": 1,
-      "bold": 1,
-      "description": "Primary contact (WhatsApp preferred)"
+      "bold": 1
     },
     {
       "fieldname": "column_break_c1",
@@ -124,21 +120,18 @@
       "fieldname": "email",
       "fieldtype": "Data",
       "label": "Email",
-      "options": "Email",
-      "description": "Optional - for invoice delivery"
+      "options": "Email"
     },
     {
       "fieldname": "is_vip",
       "fieldtype": "Check",
-      "label": "⭐ VIP Customer",
-      "description": "Special priority service"
+      "label": "VIP Customer"
     },
 
     {
       "fieldname": "vehicle_section",
       "fieldtype": "Section Break",
-      "label": "🚗 Vehicle Information",
-      "description": "Basic vehicle details (required)"
+      "label": "Vehicle Information"
     },
     {
       "fieldname": "license_plate",
@@ -147,8 +140,7 @@
       "in_list_view": 1,
       "in_global_search": 1,
       "bold": 1,
-      "reqd": 1,
-      "description": "e.g., B 1234 ABC"
+      "reqd": 1
     },
     {
       "fieldname": "brand",
@@ -156,8 +148,7 @@
       "label": "Brand",
       "options": "Garage Brand",
       "in_standard_filter": 1,
-      "reqd": 1,
-      "description": "e.g., Toyota, Honda, Suzuki"
+      "reqd": 1
     },
     {
       "fieldname": "column_break_v1",
@@ -168,25 +159,25 @@
       "fieldtype": "Link",
       "label": "Model",
       "options": "Garage Model",
-      "reqd": 1,
-      "description": "e.g., Avanza, Jazz, Ertiga"
+      "reqd": 1
     },
     {
       "fieldname": "mileage",
       "fieldtype": "Int",
       "label": "Current Mileage (KM)",
-      "bold": 1,
-      "description": "Odometer reading"
+      "bold": 1
     },
-    
     {
-      "fieldname": "vehicle_details_section",
-      "fieldtype": "Section Break",
-      "label": "Additional Vehicle Details",
-      "collapsible": 1,
-      "collapsible_depends_on": "eval:!doc.__islocal",
-      "description": "Optional - fill if available"
+      "fieldname": "vehicle_year",
+      "fieldtype": "Int",
+      "label": "Manufacturing Year"
     },
+    {
+      "fieldname": "engine_number",
+      "fieldtype": "Data",
+      "label": "Engine Number"
+    },
+
     {
       "fieldname": "vehicle_type",
       "fieldtype": "Select",
@@ -194,32 +185,15 @@
       "options": "\nSedan\nHatchback\nSUV\nMPV\nTruck\nVan\nCoupe\nWagon"
     },
     {
-      "fieldname": "vehicle_year",
-      "fieldtype": "Int",
-      "label": "Manufacturing Year",
-      "description": "e.g., 2020"
-    },
-    {
-      "fieldname": "column_break_v2",
-      "fieldtype": "Column Break"
-    },
-    {
       "fieldname": "chassiss_number",
       "fieldtype": "Data",
-      "label": "Chassis Number",
-      "description": "17-digit VIN"
+      "label": "Chassis Number"
     },
-    {
-      "fieldname": "engine_number",
-      "fieldtype": "Data",
-      "label": "Engine Number"
-    },
-    
+
     {
       "fieldname": "service_section",
       "fieldtype": "Section Break",
-      "label": "🔧 Service Request",
-      "description": "What service is needed?"
+      "label": "Service Request"
     },
     {
       "fieldname": "service_order_type",
@@ -228,8 +202,7 @@
       "options": "Garage Service Type",
       "in_list_view": 1,
       "bold": 1,
-      "reqd": 1,
-      "description": "e.g., Oil Change, Tire Service, General Repair"
+      "reqd": 1
     },
     {
       "fieldname": "priority",
@@ -238,8 +211,7 @@
       "options": "Normal\nHigh\nUrgent\nCritical",
       "default": "Normal",
       "in_list_view": 1,
-      "bold": 1,
-      "description": "Service urgency"
+      "bold": 1
     },
     {
       "fieldname": "column_break_s1",
@@ -249,59 +221,39 @@
       "fieldname": "estimated_duration",
       "fieldtype": "Select",
       "label": "Estimated Duration",
-      "options": "\n30 Minutes\n1 Hour\n2 Hours\n3 Hours\n4+ Hours\nFull Day",
-      "description": "Approximate service time"
+      "options": "\n30 Minutes\n1 Hour\n2 Hours\n3 Hours\n4+ Hours\nFull Day"
     },
     {
       "fieldname": "service_booking_date",
       "fieldtype": "Datetime",
       "label": "Booking Date & Time",
       "depends_on": "eval:doc.intake_type=='Booking'",
-      "mandatory_depends_on": "eval:doc.intake_type=='Booking'",
-      "description": "Scheduled appointment time for booking"
+      "mandatory_depends_on": "eval:doc.intake_type=='Booking'"
     },
     {
       "fieldname": "preferred_date",
       "fieldtype": "Date",
       "label": "Preferred Service Date",
-      "default": "Today",
-      "description": "When should we service this?"
+      "default": "Today"
     },
-    
+
     {
       "fieldname": "complaint_section",
       "fieldtype": "Section Break",
-      "label": "💬 Customer Complaint / Service Notes",
-      "description": "What's the problem? What does the customer need?"
+      "label": "Customer Complaint / Service Notes"
     },
     {
       "fieldname": "complaint",
       "fieldtype": "Text Editor",
-      "label": "Customer's Complaint",
-      "description": "Describe the issue or service request in detail"
-    },
-    
-    {
-      "fieldname": "notes_section",
-      "fieldtype": "Section Break",
-      "label": "📝 Internal Notes",
-      "collapsible": 1,
-      "description": "Staff notes (not visible to customer)"
-    },
-    {
-      "fieldname": "service_notes",
-      "fieldtype": "Text Editor",
-      "label": "Internal Notes",
-      "description": "Additional observations, special instructions, or reminders"
+      "label": ""
     },
 
     {
       "fieldname": "system_section",
       "fieldtype": "Section Break",
-      "label": "🔗 System Links",
-      "collapsible": 1,
-      "collapsible_depends_on": "eval:doc.vehicle || doc.customer || doc.service_order",
-      "description": "Auto-generated records"
+      "label": "System Links",
+      "depends_on": "eval:doc.vehicle || doc.customer || doc.service_order",
+      "collapsible": 1
     },
     {
       "fieldname": "vehicle",
@@ -314,7 +266,7 @@
       "fieldname": "customer",
       "fieldtype": "Link",
       "label": "Customer Master",
-      "options": "Garage Customer",
+      "options": "Customer",
       "read_only": 1
     },
     {
@@ -359,11 +311,11 @@
       "print": 1
     }
   ],
-  
+
   "sort_field": "modified",
   "sort_order": "DESC",
   "track_seen": 1,
   "show_name_in_global_search": 1,
-  "quick_entry": 1,
+  "quick_entry": 0,
   "is_submittable": 0
 }

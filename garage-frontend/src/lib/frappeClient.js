@@ -599,7 +599,7 @@ class FrappeClient {
       const fields = [
         'name',
         'service_type',
-        'product_bundle',
+        'service_fee',
         'bundle_description',
         'is_active',
       ];

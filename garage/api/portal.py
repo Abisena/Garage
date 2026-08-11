@@ -51,7 +51,7 @@ BRANCH_FILTER_FIELDS: Mapping[str, str] = {
     "Garage Sales Invoice": "branch",
     "Garage Payment Entry": "branch",
     "Garage Receipt Document": "branch",
-    "Garage Customer": "branch",
+    "Customer": "branch",
     "Garage Vehicle": "branch",
     "Customer Registration": "branch",
     "Garage Technician": "branch",
@@ -519,7 +519,15 @@ def _assert_branch_access(doc: frappe.Document) -> frappe.Document:
 # the permitted fields. The definition intentionally mirrors the JSON DocType schema
 # so the website can drive the same flow as the Desk (Pravenya) implementation.
 ALLOWED_DOCS: Mapping[str, Dict[str, Any]] = {
-    "Garage Customer": {
+    # Field NAMES here still match the portal form's own vocabulary
+    # ("phone"/"email", see _as_portal_payload() in customer_registration.py
+    # and Customer Registration's own DocType fields of the same names),
+    # not Customer's native field names (mobile_no/email_id) - _new_document/
+    # _update_document funnel every doctype's incoming payload through
+    # _normalize_doc_fields(), which special-cases "Customer" to translate
+    # these portal-vocabulary keys (and the customer_type value) to
+    # Customer's real ones right before doc.update()/doc.set().
+    "Customer": {
         "fields": {
             "customer_name",
             "customer_type",
@@ -1838,11 +1846,31 @@ def _coerce_date_value(value: Any, *, date_only: bool = False) -> Optional[str]:
     return None
 
 
+# ALLOWED_DOCS["Customer"] still whitelists incoming payload keys using the
+# portal form's own vocabulary ("phone"/"email" - see that dict's own
+# comment), which doesn't match Customer's real field names. Translated
+# here rather than by renaming the whitelist, since every OTHER caller of
+# this same payload dict (registration lookups, _as_portal_payload()) also
+# keys off "phone"/"email" and would need updating too if the vocabulary
+# itself changed instead of just the final write target.
+_CUSTOMER_FIELD_ALIASES = {"phone": "mobile_no", "email": "email_id"}
+# Garage Customer's own customer_type options ("Individual"/"Corporate")
+# don't match Customer's native ones ("Company"/"Individual"/"Partnership") -
+# ERPNext's own Select validation rejects "Corporate" outright, so it's
+# translated to the nearest equivalent rather than passed through as-is.
+_CUSTOMER_TYPE_ALIASES = {"Corporate": "Company"}
+
+
 def _normalize_doc_fields(doctype: str, values: Mapping[str, Any]) -> Dict[str, Any]:
     meta = _get_meta(doctype)
     normalized: Dict[str, Any] = {}
 
     for fieldname, value in values.items():
+        if doctype == "Customer":
+            fieldname = _CUSTOMER_FIELD_ALIASES.get(fieldname, fieldname)
+            if fieldname == "customer_type":
+                value = _CUSTOMER_TYPE_ALIASES.get(value, value)
+
         df = meta.get_field(fieldname) if meta else None
         if df and df.fieldtype in {"Date", "Datetime"}:
             coerced = _coerce_date_value(value, date_only=df.fieldtype == "Date")
@@ -2597,16 +2625,14 @@ def _customer_display_map(customer_ids: Iterable[str]) -> Dict[str, Dict[str, An
     try:
         with _ignoring_permissions():
             rows = frappe.db.get_all(
-                "Garage Customer",
+                "Customer",
                 filters=[["name", "in", unique_ids]],
                 fields=[
                     "name",
                     "customer_name",
                     "customer_type",
-                    "phone",
-                    "mobile",
                     "mobile_no",
-                    "email",
+                    "email_id",
                 ],
             )
     except Exception:
@@ -2616,16 +2642,11 @@ def _customer_display_map(customer_ids: Iterable[str]) -> Dict[str, Dict[str, An
     for row in rows:
         record = dict(row)
         record.setdefault("customer_name", record.get("name"))
-
-        phone_candidates = [
-            record.get("phone"),
-            record.get("mobile"),
-            record.get("mobile_no"),
-        ]
-        for candidate in phone_candidates:
-            if candidate:
-                record["phone"] = candidate
-                break
+        # Callers read "phone"/"email" (the portal's own vocabulary, see
+        # ALLOWED_DOCS/_as_portal_payload()), not Customer's native
+        # mobile_no/email_id field names.
+        record["phone"] = record.pop("mobile_no", None)
+        record["email"] = record.pop("email_id", None)
 
         display_map[record.get("name")] = record
 
@@ -3351,21 +3372,27 @@ def portal_bootstrap(
         "name",
         "customer_name",
         "customer_type",
-        "phone",
-        "email",
+        "mobile_no",
+        "email_id",
         "preferred_contact_method",
         "marketing_source",
         "is_vip",
     ]
-    if _doctype_has_field("Garage Customer", "branch"):
+    if _doctype_has_field("Customer", "branch"):
         customer_fields.append("branch")
 
     customers = _list_dicts(
-        "Garage Customer",
+        "Customer",
         customer_fields,
         limit=100,
         branch=branch_filter,
     )
+    # Portal API response keeps the "phone"/"email" contract consumers
+    # already expect (see ALLOWED_DOCS/_as_portal_payload()), even though
+    # Customer's own field names are mobile_no/email_id.
+    for row in customers:
+        row["phone"] = row.pop("mobile_no", None)
+        row["email"] = row.pop("email_id", None)
     vehicle_fields = [
         "name",
         "customer",
@@ -4106,15 +4133,15 @@ def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, An
             "name",
             "customer_name",
             "customer_type",
-            "phone",
-            "email",
+            "mobile_no",
+            "email_id",
             "preferred_contact_method",
             "marketing_source",
             "is_vip",
         ]
         with _ignoring_permissions():
             customer_doc = frappe.db.get_value(
-                "Garage Customer",
+                "Customer",
                 customer_name,
                 customer_fields,
                 as_dict=True,
@@ -4126,6 +4153,10 @@ def lookup_vehicle_by_plate(license_plate: Optional[str] = None) -> Dict[str, An
             # always present.
             customer_doc = dict(customer_doc)
             customer_doc.setdefault("name", customer_name)
+            # Keep the "phone"/"email" contract client-side helpers already
+            # expect (see ALLOWED_DOCS/_as_portal_payload()).
+            customer_doc["phone"] = customer_doc.pop("mobile_no", None)
+            customer_doc["email"] = customer_doc.pop("email_id", None)
 
     return {"vehicle": vehicle, "customer": customer_doc}
 
@@ -4164,10 +4195,13 @@ def _normalize_status(status: Any) -> str:
 def _ensure_erp_customer(
     customer_link: str, branch: Optional[str] = None
 ) -> Optional[str]:
-    """Guarantee existence of a standard ERPNext Customer from a Garage Customer.
+    """Guarantee a standard ERPNext Customer exists for the given name.
 
-    This is reused by billing helpers and customer registration to keep the
-    accounting module in sync with portal records.
+    Every portal write path now creates the Customer directly, so this is
+    normally a same-name passthrough - kept as a defensive fallback for any
+    caller that only has a bare customer name string on hand (e.g. one that
+    doesn't yet back a real Customer record), in which case a minimal
+    Customer is created from just that name.
     """
 
     name = cstr(customer_link or "").strip()
@@ -4177,30 +4211,19 @@ def _ensure_erp_customer(
     if frappe.db.exists("Customer", name):
         return name
 
-    # Create Customer from Garage Customer record
-    try:
-        g = _get_doc("Garage Customer", name)
-    except Exception:
-        return None
-
-    customer_name_value = getattr(g, "customer_name", None) or name
-
-    # `name` above is the Garage Customer's own id (e.g. "0000000015"), which
-    # never matches a Customer's primary key (Customer is named after
-    # customer_name by default). Without this lookup by customer_name, every
-    # call for the same repeat customer falls through to frappe.new_doc()
-    # below and ERPNext silently dedupes the name with a " - 1", " - 2", ...
-    # suffix - producing a fresh duplicate Customer on every QC completion.
-    existing_by_name = frappe.db.get_value("Customer", {"customer_name": customer_name_value})
+    # `name` above may be a plain customer name rather than an existing
+    # Customer's own primary key (Customer is named after customer_name by
+    # default). Without this lookup by customer_name, every call for the
+    # same repeat customer falls through to frappe.new_doc() below and
+    # ERPNext silently dedupes the name with a " - 1", " - 2", ... suffix -
+    # producing a fresh duplicate Customer on every QC completion.
+    existing_by_name = frappe.db.get_value("Customer", {"customer_name": name})
     if existing_by_name:
         return existing_by_name
 
     cust = frappe.new_doc("Customer")
-    cust.customer_name = customer_name_value
-    cust.customer_number = getattr(g, "customer_number", None)
-    cust.customer_type = getattr(g, "customer_type", None) or "Individual"
-    cust.mobile_no = getattr(g, "phone", None)
-    cust.email_id = getattr(g, "email", None)
+    cust.customer_name = name
+    cust.customer_type = "Individual"
     default_customer_group = (
         frappe.defaults.get_user_default("customer_group")
         or frappe.defaults.get_global_default("customer_group")
@@ -5079,15 +5102,15 @@ def list_service_orders(filters: Optional[Any] = None) -> Dict[str, Any]:
         if order.get("customer"):
             try:
                 customer = frappe.db.get_value(
-                    "Garage Customer",
+                    "Customer",
                     order["customer"],
-                    ["customer_name", "phone", "email"],
+                    ["customer_name", "mobile_no", "email_id"],
                     as_dict=True
                 )
                 if customer:
                     order["customer_name"] = customer.get("customer_name")
-                    order["customer_phone"] = customer.get("phone")
-                    order["customer_email"] = customer.get("email")
+                    order["customer_phone"] = customer.get("mobile_no")
+                    order["customer_email"] = customer.get("email_id")
             except Exception:
                 pass  # Skip if customer not found
         
@@ -6041,13 +6064,13 @@ def get_service_order_details(order_id: str) -> Dict[str, Any]:
     # Get customer details
     if doc.customer:
         try:
-            customer = frappe.get_doc("Garage Customer", doc.customer)
+            customer = frappe.get_doc("Customer", doc.customer)
             result["customer_details"] = {
                 "name": customer.name,
                 "customer_name": customer.customer_name,
                 "customer_type": customer.customer_type,
-                "phone": customer.phone,
-                "email": customer.email,
+                "phone": customer.mobile_no,
+                "email": customer.email_id,
                 "is_vip": customer.is_vip
             }
         except Exception:
@@ -6638,15 +6661,15 @@ def list_handover_orders(branch: Optional[str] = None) -> Dict[str, Any]:
         if order.get("customer"):
             try:
                 customer = frappe.db.get_value(
-                    "Garage Customer",
+                    "Customer",
                     order["customer"],
-                    ["customer_name", "phone", "email"],
+                    ["customer_name", "mobile_no", "email_id"],
                     as_dict=True,
                 )
                 if customer:
                     order["customer_name"] = customer.get("customer_name")
-                    order["customer_phone"] = customer.get("phone")
-                    order["customer_email"] = customer.get("email")
+                    order["customer_phone"] = customer.get("mobile_no")
+                    order["customer_email"] = customer.get("email_id")
             except Exception:
                 pass
 
@@ -6864,13 +6887,13 @@ def lookup_customer(
         "name",
         "customer_name",
         "customer_type",
-        "phone",
-        "email",
+        "mobile_no",
+        "email_id",
         "preferred_contact_method",
         "marketing_source",
         "is_vip",
     ]
-    if _doctype_has_field("Garage Customer", "branch"):
+    if _doctype_has_field("Customer", "branch"):
         customer_fields.append("branch")
 
     customer_doc: Optional[Dict[str, Any]] = None
@@ -6900,7 +6923,7 @@ def lookup_customer(
 
                 if matched_vehicle and matched_vehicle.get("customer"):
                     customer_doc = frappe.db.get_value(
-                        "Garage Customer",
+                        "Customer",
                         matched_vehicle["customer"],
                         customer_fields,
                         as_dict=True,
@@ -6913,7 +6936,7 @@ def lookup_customer(
 
         if not customer_doc:
             customer_doc = frappe.db.get_value(
-                "Garage Customer",
+                "Customer",
                 identifier,
                 customer_fields,
                 as_dict=True,
@@ -6926,7 +6949,7 @@ def lookup_customer(
 
         if not customer_doc:
             customer_doc = frappe.db.get_value(
-                "Garage Customer",
+                "Customer",
                 {"customer_name": identifier, "branch": branch_value} if branch_value else {"customer_name": identifier},
                 customer_fields,
                 as_dict=True,
@@ -6942,7 +6965,7 @@ def lookup_customer(
             if branch_value:
                 filters["branch"] = branch_value
             matches = frappe.get_all(
-                "Garage Customer",
+                "Customer",
                 filters=filters,
                 fields=customer_fields,
                 order_by="modified desc",
@@ -6955,6 +6978,12 @@ def lookup_customer(
 
     if not customer_doc and not matched_vehicle:
         return {}
+
+    if customer_doc:
+        # Keep the "phone"/"email" contract this endpoint's own callers
+        # already expect (see ALLOWED_DOCS/_as_portal_payload()).
+        customer_doc["phone"] = customer_doc.pop("mobile_no", None)
+        customer_doc["email"] = customer_doc.pop("email_id", None)
 
     vehicles: List[Dict[str, Any]] = []
     if customer_doc:
@@ -7081,7 +7110,7 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
             if user_email:
                 with _ignoring_permissions():
                     matched_customer = frappe.db.get_value(
-                        "Garage Customer", {"email": user_email}, "name"
+                        "Customer", {"email_id": user_email}, "name"
                     )
                 if matched_customer:
                     existing_customer = matched_customer
@@ -7092,7 +7121,7 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
                         continue
                     with _ignoring_permissions():
                         matched_customer = frappe.db.get_value(
-                            "Garage Customer", {"phone": phone}, "name"
+                            "Customer", {"mobile_no": phone}, "name"
                         )
                     if matched_customer:
                         existing_customer = matched_customer
@@ -7105,7 +7134,7 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
             if branch_name:
                 filters["branch"] = branch_name
             matched_customer = frappe.db.get_value(
-                "Garage Customer",
+                "Customer",
                 filters,
                 "name",
             )
@@ -7114,7 +7143,7 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
             customer_name = matched_customer
 
     if not existing_customer:
-        customer_payload = _filter_fields(data, ALLOWED_DOCS["Garage Customer"]["fields"])
+        customer_payload = _filter_fields(data, ALLOWED_DOCS["Customer"]["fields"])
         if manual_customer_name and not customer_payload.get("customer_name"):
             customer_payload["customer_name"] = manual_customer_name
         if user_email and not customer_payload.get("email"):
@@ -7129,15 +7158,11 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
             customer_payload["branch"] = branch_name
         if not customer_payload.get("customer_name"):
             frappe.throw(_("Nama customer wajib diisi."))
-        customer_doc = _insert_document("Garage Customer", customer_payload)
+        customer_doc = _insert_document("Customer", customer_payload)
         customer_name = customer_doc.name
         created["customer"] = customer_doc.name
-
-        # Immediately provision an ERPNext Customer so billing can proceed
-        # without waiting for QC/payment automation.
-        _ensure_erp_customer(customer_name, branch_name)
     else:
-        customer_doc = _get_doc("Garage Customer", existing_customer)
+        customer_doc = _get_doc("Customer", existing_customer)
         customer_branch = cstr(getattr(customer_doc, "branch", "")).strip()
         if customer_branch and customer_branch != branch_name:
             frappe.throw(
@@ -7146,8 +7171,6 @@ def register_customer_vehicle(payload: Optional[Any] = None) -> Dict[str, Any]:
                     customer_branch,
                 )
             )
-
-        _ensure_erp_customer(existing_customer, branch_name)
 
     vehicle_fields = ALLOWED_DOCS["Garage Vehicle"]["fields"] - {"customer"}
     vehicle_payload = _filter_fields(data, vehicle_fields)
@@ -7329,8 +7352,8 @@ def build_master_data_snapshot(
         "name",
         "customer_name",
         "customer_type",
-        "phone",
-        "email",
+        "mobile_no",
+        "email_id",
         "preferred_contact_method",
         "id_number",
         "address_line1",
@@ -7387,7 +7410,7 @@ def build_master_data_snapshot(
         customer_name = cstr(vehicle_doc.get("customer") or "").strip()
 
     customer_doc = (
-        frappe.db.get_value("Garage Customer", customer_name, customer_fields, as_dict=True)
+        frappe.db.get_value("Customer", customer_name, customer_fields, as_dict=True)
         if customer_name
         else None
     )
@@ -7399,11 +7422,15 @@ def build_master_data_snapshot(
         linked_customer = cstr(vehicle_doc.get("customer") or "").strip()
         if linked_customer:
             customer_doc = frappe.db.get_value(
-                "Garage Customer", linked_customer, customer_fields, as_dict=True
+                "Customer", linked_customer, customer_fields, as_dict=True
             )
 
     if not customer_doc:
         frappe.throw(_("Customer tidak ditemukan atau tidak dapat diakses."))
+
+    customer_doc = dict(customer_doc)
+    customer_doc["phone"] = customer_doc.pop("mobile_no", None)
+    customer_doc["email"] = customer_doc.pop("email_id", None)
 
     branch_filters: Dict[str, Any] = {}
     if allowed_branches is not None:
@@ -7556,8 +7583,8 @@ def get_master_data(
         "name",
         "customer_name",
         "customer_type",
-        "phone",
-        "email",
+        "mobile_no",
+        "email_id",
         "preferred_contact_method",
         "id_number",
         "address_line1",
@@ -7614,7 +7641,7 @@ def get_master_data(
         customer_name = cstr(vehicle_doc.get("customer") or "").strip()
 
     customer_doc = (
-        frappe.db.get_value("Garage Customer", customer_name, customer_fields, as_dict=True)
+        frappe.db.get_value("Customer", customer_name, customer_fields, as_dict=True)
         if customer_name
         else None
     )
@@ -7626,11 +7653,15 @@ def get_master_data(
         linked_customer = cstr(vehicle_doc.get("customer") or "").strip()
         if linked_customer:
             customer_doc = frappe.db.get_value(
-                "Garage Customer", linked_customer, customer_fields, as_dict=True
+                "Customer", linked_customer, customer_fields, as_dict=True
             )
 
     if not customer_doc:
         frappe.throw(_("Customer tidak ditemukan atau tidak dapat diakses."))
+
+    customer_doc = dict(customer_doc)
+    customer_doc["phone"] = customer_doc.pop("mobile_no", None)
+    customer_doc["email"] = customer_doc.pop("email_id", None)
 
     branch_filters: Dict[str, Any] = {}
     if allowed_branches is not None:
@@ -8540,7 +8571,7 @@ def create_service_intake(data):
         # Cek apakah pilih customer existing
         existing_customer = data.get('existing_customer')
         if existing_customer:
-            customer_doc = _get_doc('Garage Customer', existing_customer)
+            customer_doc = _get_doc('Customer', existing_customer)
             existing_branch = cstr(getattr(customer_doc, 'branch', '') or '').strip()
             if existing_branch and existing_branch != branch_name:
                 frappe.throw(
@@ -8560,17 +8591,21 @@ def create_service_intake(data):
             customer_filters = {'customer_name': new_customer_name}
             if branch_name:
                 customer_filters['branch'] = branch_name
-            existing = frappe.db.exists('Garage Customer', customer_filters)
+            existing = frappe.db.exists('Customer', customer_filters)
             if existing:
                 customer_name = existing
             else:
-                # Buat customer baru
+                # Buat customer baru - customer_type value translated
+                # (Corporate -> Company) since Customer's own Select options
+                # don't include "Corporate" (see _CUSTOMER_TYPE_ALIASES).
                 customer = frappe.get_doc({
-                    'doctype': 'Garage Customer',
+                    'doctype': 'Customer',
                     'customer_name': new_customer_name,
-                    'customer_type': data.get('customer_type', 'Individual'),
-                    'phone': data.get('phone', ''),
-                    'email': data.get('email', ''),
+                    'customer_type': _CUSTOMER_TYPE_ALIASES.get(
+                        data.get('customer_type', 'Individual'), data.get('customer_type', 'Individual')
+                    ),
+                    'mobile_no': data.get('phone', ''),
+                    'email_id': data.get('email', ''),
                     'preferred_contact_method': data.get('preferred_contact_method', 'Phone'),
                     'is_vip': int(data.get('is_vip', 0)),
                     'marketing_source': data.get('marketing_source', ''),
@@ -8729,7 +8764,7 @@ def create_service_intake(data):
                 frappe.logger().warning(f"Failed to load bundle: {str(e)}")
         
         # 3. Create Service Order
-        customer_doc = _get_doc('Garage Customer', customer_name)
+        customer_doc = _get_doc('Customer', customer_name)
         service_order = frappe.get_doc({
             'doctype': 'Garage Service Order',
             'customer': customer_name,

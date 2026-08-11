@@ -92,8 +92,8 @@
     {
       "fieldname": "customer",
       "fieldtype": "Link",
-      "label": "No. Customer",
-      "options": "Garage Customer",
+      "label": "Customer",
+      "options": "Customer",
       "reqd": 1,
       "bold": 1,
       "in_list_view": 1,
@@ -115,7 +115,7 @@
       "fieldtype": "Data",
       "label": "Phone",
       "read_only": 1,
-      "fetch_from": "customer.phone",
+      "fetch_from": "customer.mobile_no",
       "hidden": 1
     },
     {
@@ -129,8 +129,7 @@
       "options": "Garage Brand",
       "reqd": 1,
       "in_list_view": 1,
-      "bold": 1,
-      "in_standard_filter": 1
+      "bold": 1
     },
     {
       "fieldname": "model",
@@ -139,15 +138,13 @@
       "options": "Garage Model",
       "reqd": 1,
       "in_list_view": 1,
-      "bold": 1,
-      "in_standard_filter": 1
+      "bold": 1
     },
     {
       "fieldname": "vehicle_type",
       "fieldtype": "Select",
       "label": "Vehicle Type",
       "options": "\nSedan\nHatchback\nSUV\nMPV\nTruck\nVan\nCoupe\nWagon\nPickup",
-      "in_standard_filter": 1,
       "reqd": 1
     },
     {
@@ -219,21 +216,8 @@
   "has_web_view": 0,
   "hide_toolbar": 0,
   "index_web_pages_for_search": 1,
-  "links": [
-    {
-      "link_doctype": "Garage Service Order",
-      "link_fieldname": "vehicle"
-    },
-    {
-      "link_doctype": "Garage Vehicle Inspection",
-      "link_fieldname": "vehicle"
-    },
-    {
-      "link_doctype": "Vehicle Handover",
-      "link_fieldname": "vehicle"
-    }
-  ],
-  "modified": "2024-06-02 00:00:00.000000",
+  "links": [],
+  "modified": "2026-07-17 22:25:00.000000",
   "module": "Garage",
   "name": "Garage Vehicle",
   "naming_rule": "By fieldname",

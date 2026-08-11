@@ -91,11 +91,6 @@ class GarageVehicleInspection(Document):
                 order.inspection_summary = self.inspection_summary
                 updated = True
 
-        if hasattr(order, "service_notes") and (order.service_notes or self.service_notes):
-            if order.service_notes != self.service_notes:
-                order.service_notes = self.service_notes
-                updated = True
-
         if hasattr(order, "inspection_items"):
             order.inspection_items = []
             for item in getattr(self, "inspection_items", []) or []:
