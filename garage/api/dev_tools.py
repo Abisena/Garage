@@ -1,12 +1,12 @@
 """Internal testing utility.
 
 Wipes transactional test data (orders, invoices, payments, vehicle
-handovers/SIKK, stock moves and their GL/stock ledger side effects) while
-leaving master data (customers, vehicles, service types, bundles, spare
-parts) untouched, so the workshop setup doesn't have to be rebuilt between
-test rounds. Also resets every Garage Spare Part's stock_qty to
-DEMO_STOCK_QTY so parts are immediately orderable again for the next round
-of demo transactions.
+handovers/SIKK, stock moves and their GL/stock ledger side effects,
+employee attendance/checkins) while leaving master data (customers,
+vehicles, service types, bundles, spare parts) untouched, so the workshop
+setup doesn't have to be rebuilt between test rounds. Also resets every
+Garage Spare Part's stock_qty to DEMO_STOCK_QTY so parts are immediately
+orderable again for the next round of demo transactions.
 
 Exposed to the desk via a System Manager-only navbar button (see
 garage_theme.js); can also be run directly via bench:
@@ -87,6 +87,17 @@ TRANSACTIONAL_DOCTYPES = [
     "Garage Stock Movement",
     "Stock Entry",
     "Garage Service Order",
+    # Employee Checkin (payroll_indonesia's /checkin page) before Attendance:
+    # Employee Checkin.attendance links TO Attendance, so it has to go first
+    # to avoid "Cannot delete because Attendance is linked" - same
+    # dependents-before-what-they-reference rule as the rest of this list.
+    # Matters now more than before a reset used to: payroll_indonesia's
+    # boot_session checkin gate blocks Desk access for any Employee with
+    # "Wajib Absen Sebelum Masuk" checked until they check in *that day* -
+    # leaving today's checkins behind after a reset would keep those
+    # testers un-gated (looks "passed" already) for the next test round.
+    "Employee Checkin",
+    "Attendance",
 ]
 
 # Belt-and-suspenders cleanup for ledger rows that should already be gone
