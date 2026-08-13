@@ -1,0 +1,187 @@
+{% set required_roles = required_roles or [] %}
+{% if frappe.session.user == "Guest" %}
+    <script>
+        window.location.href = "/garage/login?redirect={{ frappe.request.path | urlencode }}";
+    </script>
+{% else %}
+    <script>
+        (function () {
+            var KEEP_ALIVE_INTERVAL = 5 * 60 * 1000; // 5 minutes
+            var keepAliveTimer = null;
+
+            function readCsrfToken() {
+                if (window.frappe && window.frappe.csrf_token) {
+                    return window.frappe.csrf_token;
+                }
+
+                var meta = document.querySelector('meta[name="csrf-token"], meta[name="csrf_token"]');
+                if (meta && meta.content) {
+                    return meta.content;
+                }
+
+                var cookieMatch = document.cookie && document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+                if (cookieMatch) {
+                    try {
+                        return decodeURIComponent(cookieMatch[1]);
+                    } catch (error) {
+                        return cookieMatch[1];
+                    }
+                }
+
+                return null;
+            }
+
+            function sendKeepAlivePing() {
+                var headers = { 'Content-Type': 'application/json' };
+                var token = readCsrfToken();
+
+                if (token) {
+                    headers['X-Frappe-CSRF-Token'] = token;
+                }
+
+                fetch('/api/method/garage.api.auth.keep_portal_session_alive', {
+                    method: 'POST',
+                    headers: headers,
+                    body: '{}',
+                    credentials: 'same-origin'
+                }).catch(function (error) {
+                    if (window.console && typeof window.console.debug === 'function') {
+                        console.debug('Portal keep-alive ping failed:', error);
+                    }
+                });
+            }
+
+            function startKeepAliveLoop() {
+                if (window.__garagePortalKeepAliveTimer) {
+                    return;
+                }
+
+                sendKeepAlivePing();
+                keepAliveTimer = window.setInterval(sendKeepAlivePing, KEEP_ALIVE_INTERVAL);
+                window.__garagePortalKeepAliveTimer = keepAliveTimer;
+
+                document.addEventListener('visibilitychange', function () {
+                    if (document.visibilityState === 'visible') {
+                        sendKeepAlivePing();
+                    }
+                });
+            }
+
+            startKeepAliveLoop();
+
+            window.addEventListener('DOMContentLoaded', function () {
+                var requiredRoles = {{ required_roles | tojson }};
+
+                var requestBody = {
+                    cmd: 'garage.api.auth.check_portal_access',
+                    required_roles: requiredRoles
+                };
+
+                function disablePortalNav() {
+                    var navWrappers = document.querySelectorAll('.portal-nav-wrapper');
+                    if (!navWrappers.length) {
+                        return;
+                    }
+
+                    var disableClick = function (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    };
+
+                    navWrappers.forEach(function (wrapper) {
+                        wrapper.classList.add('portal-nav-disabled');
+
+                        var navLinks = wrapper.querySelectorAll('.portal-nav__link');
+                        navLinks.forEach(function (link) {
+                            if (link.dataset.portalNavDisabled === 'true') {
+                                return;
+                            }
+
+                            var originalHref = link.getAttribute('href');
+                            if (originalHref) {
+                                link.dataset.portalNavOriginalHref = originalHref;
+                                link.removeAttribute('href');
+                            }
+
+                            link.classList.add('is-disabled');
+                            link.setAttribute('aria-disabled', 'true');
+                            link.setAttribute('tabindex', '-1');
+                            link.dataset.portalNavDisabled = 'true';
+
+                            link.addEventListener('click', disableClick, true);
+                            link.addEventListener('keydown', function (event) {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                    disableClick(event);
+                                }
+                            }, true);
+                        });
+                    });
+                }
+
+                function showAccessDeniedMessage() {
+                    var message = 'Kamu tidak memiliki otorisasi untuk mengakses halaman ini.';
+
+                    if (window.frappe && frappe.msgprint) {
+                        frappe.msgprint({
+                            message: message,
+                            title: 'Akses ditolak',
+                            indicator: 'red',
+                        });
+                    } else {
+                        window.alert(message);
+                    }
+                }
+
+                function redirectToHome() {
+                    fetch('/api/method/garage.api.auth.get_portal_home')
+                        .then(function (response) { return response.json(); })
+                        .then(function (data) {
+                            var route = data && data.message && data.message.route;
+                            if (!route) {
+                                return;
+                            }
+
+                            try {
+                                var currentUrl = new URL(window.location.href);
+                                var targetUrl = new URL(route, window.location.origin);
+
+                                if (currentUrl.pathname !== targetUrl.pathname || currentUrl.search !== targetUrl.search) {
+                                    window.location.href = targetUrl.toString();
+                                }
+                            } catch (error) {
+                                window.location.href = route;
+                            }
+                        })
+                        .catch(function () {
+                            // Fall back to a hard refresh so the server can decide what to do.
+                            window.location.reload();
+                        });
+                }
+
+                function handleDeniedAccess() {
+                    disablePortalNav();
+                    showAccessDeniedMessage();
+                    redirectToHome();
+                }
+
+                fetch('/api/method/garage.api.auth.check_portal_access', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                })
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        var hasAccess = data && data.message && data.message.has_access;
+                        if (!hasAccess) {
+                            handleDeniedAccess();
+                        }
+                    })
+                    .catch(function () {
+                        handleDeniedAccess();
+                    });
+            });
+        })();
+    </script>
+{% endif %}

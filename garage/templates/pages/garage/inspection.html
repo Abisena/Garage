@@ -1,0 +1,4069 @@
+{% extends "templates/web.html" %}
+
+{% set inspection_mode = (frappe.form_dict.get('mode') or '').lower() %}
+{% set is_partial_reject_mode = inspection_mode == 'partial-reject' %}
+{% set is_parts_detail_mode = inspection_mode == 'parts-detail' %}
+
+{% block title %}{% if is_partial_reject_mode %}Inspeksi Partial Reject - Garage{% elif is_parts_detail_mode %}Detail Sparepart - Garage{% else %}Inspeksi Service Order - Garage{% endif %}{% endblock %}
+
+{% set required_roles = ['Service', 'Servis', 'Service Advisor', 'Technician', 'Teknisi', 'Mechanic', 'Mekanik'] %}
+{% include "garage/templates/includes/role_guard.html" %}
+
+{% block head_include %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    /* Brand */
+    --primary: #0066FF;
+    --primary-dark: #0052CC;
+    --primary-darker: #003D99;
+    --primary-subtle: #F0F7FF;
+    --primary-soft: #E3F2FD;
+
+    /* Status */
+    --status-pending: #FFB300;
+    --status-pending-light: #FFF8E1;
+    --status-progress: #0066FF;
+    --status-progress-light: #E3F2FD;
+    --status-completed: #00C853;
+    --status-completed-light: #E8F5E9;
+    --status-cancelled: #FF3D00;
+    --status-cancelled-light: #FFEBE6;
+
+    /* Neutral */
+    --gray-25: #F9FAFB;
+    --gray-50: #FAFBFC;
+    --gray-100: #F5F7FA;
+    --gray-200: #E9ECF1;
+    --gray-300: #D4DAE4;
+    --gray-400: #B8C1D3;
+    --gray-500: #8896AB;
+    --gray-600: #5E6C84;
+    --gray-700: #3E4C5E;
+    --gray-800: #2A3647;
+    --gray-900: #1A2332;
+
+    --text-primary: #1A2332;
+    --text-secondary: #5E6C84;
+    --text-muted: #8896AB;
+    --text-inverse: #FFFFFF;
+
+    --bg-body: #F5F7FA;
+    --bg-surface: #FFFFFF;
+
+    --border-light: #E9ECF1;
+    --border-base: #D4DAE4;
+
+    --shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.08);
+    --shadow-md: 0 8px 24px rgba(16, 24, 40, 0.12);
+    --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.16);
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-sans) !important;
+    background: var(--bg-body) !important;
+    color: var(--text-primary) !important;
+    line-height: 1.6;
+}
+
+body.parts-detail-mode .btn[disabled] {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+body.parts-detail-mode .btn.btn-primary[disabled] {
+    background: var(--gray-300);
+    border-color: var(--gray-300);
+    color: var(--text-muted);
+}
+
+a {
+    color: inherit;
+}
+
+a:hover {
+    color: var(--primary);
+}
+
+.page-scaffold {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 24px 16px 72px;
+    position: relative;
+}
+
+.hero-section {
+    background: linear-gradient(135deg, rgba(0, 102, 255, 0.05) 0%, rgba(255, 255, 255, 0.9) 100%);
+    padding: 20px 24px;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    margin-bottom: 24px;
+}
+
+.hero-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.hero-top__status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    color: var(--primary);
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 10px 18px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(0, 102, 255, 0.15);
+    transition: all 0.2s ease;
+}
+
+.back-link:hover {
+    transform: translateX(-2px);
+    background: white;
+    box-shadow: 0 12px 24px rgba(0, 102, 255, 0.16);
+}
+
+.section-tags {
+    display: none !important;
+}
+
+/* Atau hanya untuk badge service type */
+.service-type-badge {
+    display: none !important;
+}
+
+.parts-table textarea {
+    width: 100%;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 8px 10px;
+    font-size: 14px;
+    background: var(--gray-50);
+    font-family: var(--font-sans);
+    resize: vertical;
+    min-height: 40px; /* Ubah dari 72px menjadi 40px */
+    max-height: 120px; /* Tambahkan max height agar tidak terlalu besar */
+}
+
+/* Atau lebih kecil lagi */
+.parts-table textarea {
+    min-height: 36px; /* Lebih kecil lagi */
+    padding: 6px 10px; /* Kurangi padding */
+    font-size: 13px; /* Kurangi font size */
+    line-height: 1.4; /* Atur line height */
+}
+
+/* Reset styling untuk item mekanik agar label tidak keluar */
+.intake-meta__item--no-card {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.intake-meta__item--no-card .intake-meta__label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.6px;
+    margin-bottom: 0;
+}
+
+.intake-meta__item--no-card .intake-meta__control {
+    width: 100%;
+}
+
+.intake-meta__item--no-card select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background-color: var(--bg-surface);
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border: 1px solid rgba(23, 50, 89, 0.08);
+    min-width: 120px;
+}
+
+.status-draft {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.status-inspection {
+    background: var(--status-pending-light);
+    color: var(--status-pending);
+}
+
+.status-estimate {
+    background: var(--status-pending-light);
+    color: var(--status-pending);
+}
+
+.status-awaiting-approval {
+    background: var(--status-pending-light);
+    color: var(--status-pending);
+}
+
+.status-request-part {
+    background: var(--status-pending-light);
+    color: var(--status-pending);
+}
+
+.status-approved {
+    background: var(--status-progress-light);
+    color: var(--status-progress);
+}
+
+.status-in-progress {
+    background: var(--status-progress-light);
+    color: var(--status-progress);
+}
+
+.status-work-in-progress {
+    background: var(--status-progress-light);
+    color: var(--status-progress);
+}
+
+.status-waiting-payment {
+    background: var(--status-pending-light);
+    color: var(--status-pending);
+}
+
+.status-completed {
+    background: var(--status-completed-light);
+    color: var(--status-completed);
+}
+
+.status-cancelled {
+    background: var(--status-cancelled-light);
+    color: var(--status-cancelled);
+}
+
+.hero-body {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.hero-text h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--gray-900);
+}
+
+.hero-text p {
+    color: var(--text-secondary);
+    max-width: 480px;
+    font-size: 15px;
+}
+
+.hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.meta-item {
+    background: rgba(255, 255, 255, 0.8);
+    padding: 16px;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(0, 102, 255, 0.12);
+    min-width: 180px;
+}
+
+.meta-item.is-hidden {
+    display: none !important;
+}
+
+.meta-label {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.6px;
+    margin-bottom: 4px;
+}
+
+.meta-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+
+.content-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+.main-column {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.side-column {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.intake-meta {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.intake-meta__list {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(3, 1fr);
+}
+
+/* Styling default untuk card dengan border */
+.intake-meta__item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 14px 16px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+}
+
+/* KHUSUS untuk mekanik select: TANPA card/border */
+.intake-meta__item--no-card {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+}
+
+/* Service/Repair span 2 kolom */
+.intake-meta__item--service {
+    grid-column: span 2;
+}
+
+/* Responsive */
+@media (min-width: 769px) and (max-width: 1023px) {
+    .intake-meta__list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .intake-meta__list {
+        grid-template-columns: 1fr;
+    }
+    
+    .intake-meta__item--service {
+        grid-column: span 1;
+    }
+}
+
+.intake-meta__item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 14px 16px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+}
+
+.intake-meta__label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.6px;
+}
+
+.intake-meta__value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gray-900);
+    word-break: break-word;
+    text-align: left;
+    width: 100%;
+}
+
+.intake-meta__control {
+    width: 100%;
+}
+
+.intake-meta__control select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background-color: var(--bg-surface);
+}
+
+.intake-meta__control select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.12);
+}
+
+.intake-meta__item--service .intake-summary-list {
+    margin-top: 6px;
+    width: 100%;
+}
+
+@media (min-width: 1024px) {
+    .intake-meta__item--field,
+    .intake-meta__item--service {
+        grid-column: span 2;
+    }
+}
+
+.technician-status {
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-600);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.technician-status::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--gray-400);
+}
+
+.technician-status.is-available {
+    color: var(--success-600, #047857);
+}
+
+.technician-status.is-available::before {
+    background: var(--success-500, #10b981);
+}
+
+.technician-status.is-full {
+    color: var(--danger-600, #dc2626);
+}
+
+.technician-status.is-full::before {
+    background: var(--danger-500, #ef4444);
+}
+
+.technician-status.is-unknown {
+    color: var(--gray-600);
+}
+
+.technician-roster {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 0 0;
+}
+
+.technician-roster__item {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    background: var(--bg-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.technician-roster__item.is-available {
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
+.technician-roster__item.is-full {
+    border-color: rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.06);
+}
+
+.technician-roster__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.technician-roster__name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.technician-roster__badge {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: var(--gray-200);
+    color: var(--gray-700);
+}
+
+.technician-roster__badge.is-available {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success-700, #047857);
+}
+
+.technician-roster__badge.is-full {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--danger-700, #b91c1c);
+}
+
+.technician-roster__details {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--gray-600);
+}
+
+.technician-roster__load {
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.technician-roster__capacity {
+    font-weight: 500;
+}
+
+.technician-roster__item.is-available .technician-roster__capacity {
+    color: var(--success-700, #047857);
+}
+
+.technician-roster__item.is-full .technician-roster__capacity {
+    color: var(--danger-700, #b91c1c);
+}
+
+.technician-roster__skills {
+    color: var(--gray-600);
+}
+
+.technician-roster__contact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.technician-roster__contact span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.technician-roster__empty {
+    font-size: 12px;
+    color: var(--gray-600);
+    padding: 12px 14px;
+    border: 1px dashed var(--border-light);
+    border-radius: var(--radius-md);
+    background: var(--bg-muted);
+}
+
+.intake-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.intake-summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.intake-summary-header strong {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.intake-summary-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.intake-summary-list li {
+    position: relative;
+    padding-left: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.intake-summary-list .item-label {
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+.intake-summary-list li::before {
+    content: '–';
+    position: absolute;
+    left: 0;
+    color: var(--text-muted);
+}
+
+.intake-summary-list li small {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.intake-summary-list .placeholder {
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+.intake-summary-footer {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.intake-summary-footer strong {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.intake-notes {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.action-tags {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+}
+
+.action-tags .tag {
+    margin-left: auto;
+}
+
+.section-card {
+    background: white;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    padding: 16px 24px;
+    border: 1px solid var(--border-light);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.section-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.section-header p {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.section-actions {
+    margin-top: 24px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.section-actions .btn {
+    min-width: 180px;
+}
+
+.section-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.service-type-badge {
+    background: #FFEBEE;
+    color: #C62828;
+}
+
+.service-type-badge--service-repair {
+    background: #FFEBEE;
+    color: #C62828;
+}
+
+.service-type-badge--body-repair {
+    background: #E3F2FD;
+    color: #1565C0;
+}
+
+.service-type-badge--warranty {
+    background: #F3E5F5;
+    color: #7B1FA2;
+}
+
+.priority-badge {
+    background: var(--primary-subtle);
+    color: var(--primary-dark);
+}
+
+.priority-high {
+    background: #FFF1E6;
+    color: #D35400;
+}
+
+.priority-urgent {
+    background: #FFE8E8;
+    color: #C62828;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+    font-size: 14px;
+    font-family: var(--font-sans);
+    background: var(--gray-50);
+    transition: all 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.12);
+    background: white;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 96px;
+}
+
+.form-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.form-group input[readonly] {
+    background: var(--gray-100);
+    cursor: not-allowed;
+}
+
+.repeating-list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.repeating-item {
+    background: var(--gray-25);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.parts-table-wrapper {
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    background: var(--gray-25);
+    overflow: hidden;
+}
+
+.parts-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 0;
+    table-layout: fixed;
+}
+
+.parts-table th:first-child,
+.parts-table td:first-child {
+    width: 26%;
+}
+
+.parts-table th:nth-child(2),
+.parts-table td:nth-child(2) {
+    width: 18%;
+}
+
+.parts-table th:nth-child(3),
+.parts-table td:nth-child(3) {
+    width: 9%;
+}
+
+.parts-table th:nth-child(4),
+.parts-table td:nth-child(4) {
+    width: 9%;
+}
+
+.parts-table th:nth-child(5),
+.parts-table td:nth-child(5) {
+    width: 11%;
+}
+
+.parts-table th:nth-child(6),
+.parts-table td:nth-child(6) {
+    width: 9%;
+}
+
+.parts-table th:nth-child(7),
+.parts-table td:nth-child(7) {
+    width: 10%;
+}
+
+.parts-table th:nth-child(8),
+.parts-table td:nth-child(8) {
+    width: 8%;
+}
+
+.parts-table thead {
+    background: var(--gray-100);
+}
+
+.parts-table th,
+.parts-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    vertical-align: top;
+    word-break: break-word;
+}
+
+.parts-table th {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gray-700);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.parts-table td {
+    background: white;
+}
+
+.parts-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.parts-table select,
+.parts-table input,
+.parts-table textarea {
+    width: 100%;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 8px 10px;
+    font-size: 14px;
+    background: var(--gray-50);
+    font-family: var(--font-sans);
+}
+
+.parts-table textarea {
+    resize: vertical;
+    min-height: 56px;
+}
+
+.parts-table .numeric {
+    font-weight: 600;
+    color: var(--gray-900);
+    white-space: nowrap;
+}
+
+.part-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.item-code-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: var(--radius-md);
+    background: var(--gray-100);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--gray-800);
+    width: fit-content;
+}
+
+.part-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.part-summary strong {
+    font-size: 15px;
+    color: var(--gray-900);
+}
+
+.part-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.part-meta-row span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.part-select {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.part-select select {
+    background: #fff;
+}
+
+.parts-table .actions {
+    width: auto;
+    white-space: nowrap;
+    display: flex;
+    justify-content: center;
+}
+
+.parts-table .actions .btn-remove {
+    padding: 6px 10px;
+}
+
+.parts-table .actions .btn-remove[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+body.parts-detail-mode .parts-table th.actions,
+body.parts-detail-mode .parts-table td.actions {
+    display: none;
+}
+
+.part-row--locked {
+    opacity: 0.7;
+}
+
+.part-row--rejected {
+    background: rgba(255, 61, 0, 0.08);
+}
+
+.part-row--re-request {
+    background: rgba(255, 179, 0, 0.08);
+}
+
+.part-status-note {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.partial-reject-banner {
+    border: 1px solid rgba(255, 179, 0, 0.4);
+    background: rgba(255, 179, 0, 0.12);
+    color: var(--text-primary);
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.partial-reject-banner strong {
+    font-weight: 600;
+}
+
+.item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.item-number {
+    font-weight: 700;
+    color: var(--gray-800);
+}
+
+.sparepart-item {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.sparepart-selection select {
+    width: 100%;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    font-size: 14px;
+    background: #fff;
+}
+
+.sparepart-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.sparepart-summary {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.part-thumbnail {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--gray-100);
+    border: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: var(--text-secondary);
+}
+
+.part-thumbnail.is-empty {
+    color: var(--text-muted);
+}
+
+.sparepart-summary__text {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sparepart-title {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--gray-900);
+}
+
+.sparepart-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.sparepart-hint {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--status-pending);
+}
+
+.form-grid.compact {
+    gap: 12px;
+}
+
+.form-grid.compact .form-group {
+    min-width: 0;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    padding: 12px 22px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    box-shadow: 0 12px 30px rgba(0, 102, 255, 0.25);
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 32px rgba(0, 102, 255, 0.35);
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-light);
+}
+
+.btn-secondary:hover {
+    background: var(--gray-50);
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--border-light);
+    color: var(--text-secondary);
+}
+
+.btn-outline:hover {
+    background: var(--gray-50);
+}
+
+.btn-add {
+    background: rgba(0, 102, 255, 0.08);
+    color: var(--primary-dark);
+    border: 1px dashed rgba(0, 102, 255, 0.4);
+}
+
+.btn-add:hover {
+    background: rgba(0, 102, 255, 0.12);
+}
+
+.btn-remove {
+    background: rgba(255, 61, 0, 0.12);
+    color: #B71C1C;
+    border-radius: 999px;
+    border: none;
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+.btn-remove:hover {
+    background: rgba(255, 61, 0, 0.18);
+    transform: translateY(-1px);
+}
+
+.calculated-value {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 36px 24px;
+    border-radius: var(--radius-lg);
+    border: 1px dashed var(--gray-300);
+    background: rgba(245, 247, 250, 0.6);
+    color: var(--text-secondary);
+}
+
+.empty-state strong {
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.side-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.detail-card {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: 24px;
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-sm);
+}
+
+.detail-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--gray-900);
+}
+
+.detail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.detail-list dt {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.6px;
+}
+
+.detail-list dd {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-left: 0;
+    word-break: break-word;
+}
+
+.detail-link {
+    color: var(--primary-dark);
+    text-decoration: none;
+}
+
+.detail-link:hover {
+    text-decoration: underline;
+}
+
+.vip-pill {
+    display: none;
+    margin-top: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: #FFE8A3;
+    color: #7A4B00;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.action-bar {
+    position: relative;
+    margin-top: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 24px 28px;
+    border-radius: var(--radius-xl);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-md);
+    z-index: 1;
+}
+
+.action-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-left: auto;
+    align-items: flex-end;
+    text-align: right;
+}
+
+.action-tax {
+    display: grid;
+    gap: 4px;
+    justify-items: end;
+}
+
+.action-tax-row {
+    display: flex;
+    gap: 16px;
+    font-size: 18px;
+    color: var(--gray-800);
+}
+
+.action-tax-row strong {
+    font-size: 20px;
+    color: var(--gray-900);
+}
+
+.action-label {
+    font-size: 15px;
+    color: var(--gray-700);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.action-amount {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 16px;
+}
+
+.action-buttons .btn {
+    font-size: 18px;
+    padding: 16px 32px;
+}
+
+@media (max-width: 1024px) {
+    .content-grid {
+        gap: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-scaffold {
+        padding: 24px 16px 100px;
+    }
+
+    .hero-section {
+        padding: 24px;
+    }
+
+    .hero-body {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .hero-meta {
+        width: 100%;
+    }
+
+    .meta-item {
+        flex: 1;
+    }
+
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .section-tags {
+        justify-content: flex-start;
+    }
+
+    .action-bar {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .action-info {
+        margin-left: 0;
+        align-items: flex-start;
+        text-align: left;
+        width: 100%;
+    }
+
+    .action-tax {
+        justify-items: start;
+        width: 100%;
+    }
+
+    .action-tax-row {
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .action-buttons {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .action-buttons .btn {
+        width: 100%;
+    }
+
+    .section-actions {
+        justify-content: center;
+    }
+
+    .section-actions .btn {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-scaffold">
+    <header class="hero-section">
+        <div class="hero-top">
+            <a href="/garage/service" class="back-link">← Kembali ke Service Management</a>
+            <div class="hero-top__status">
+                <span class="status-badge status-draft" id="display_status">Draft</span>
+                <span class="tag priority-badge" id="display_priority">-</span>
+            </div>
+        </div>
+        <div class="hero-body">
+            <div class="hero-text">
+                <h1 data-role="inspection-title">
+                    {% if is_partial_reject_mode %}
+                        🛠️ Inspeksi Partial Reject
+                    {% elif is_parts_detail_mode %}
+                        🧾 Detail Sparepart
+                    {% else %}
+                        🔍 Inspeksi Service Order
+                    {% endif %}
+                </h1>
+                <p data-role="inspection-subtitle">
+                    {% if is_partial_reject_mode %}
+                        Beberapa permintaan sparepart ditolak. Hapus item yang ditolak, kemudian ajukan pengganti sebelum mengirim ulang.
+                    {% elif is_parts_detail_mode %}
+                        Permintaan sparepart telah aman. Gunakan halaman ini untuk meninjau detail tanpa melakukan perubahan.
+                    {% else %}
+                        Lengkapi hasil pemeriksaan kendaraan dan bagikan update terbaru untuk tim bengkel.
+                    {% endif %}
+                </p>
+            </div>
+            <div class="hero-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Jenis Registrasi</span>
+                    <span class="meta-value" id="display_intake_type">-</span>
+                </div>
+                <div class="meta-item is-hidden" id="meta_booking_channel">
+                    <span class="meta-label">Channel Booking</span>
+                    <span class="meta-value" id="display_booking_channel">-</span>
+                </div>
+                <div class="meta-item is-hidden" id="meta_booking_reference">
+                    <span class="meta-label">Referensi Booking</span>
+                    <span class="meta-value" id="display_booking_reference">-</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Tanggal</span>
+                    <span class="meta-value" id="display_booking_date">-</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Estimasi Selesai</span>
+                    <span class="meta-value" id="display_estimated_delivery">-</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="content-grid">
+        <main class="main-column">
+            <aside class="side-column">
+            <section class="section-card intake-summary-card">
+                <div class="section-header">
+                    <div>
+                        <h2>📦 Ringkasan Intake</h2>
+                        <p>Detail paket servis yang dipilih saat registrasi.</p>
+                    </div>
+                    <div class="section-tags">
+                        <span class="tag service-type-badge" id="display_service_type">-</span>
+                    </div>
+                </div>
+                <div class="intake-summary">
+                    <div class="intake-summary">
+                        <div class="intake-meta__list">
+                            <!-- Baris 1: Order ID, Customer, Kendaraan -->
+                            <div class="intake-meta__item">
+                                <span class="intake-meta__label">Order ID</span>
+                                <span class="intake-meta__value" id="display_order_id">-</span>
+                            </div>
+                            <div class="intake-meta__item">
+                                <span class="intake-meta__label">Customer</span>
+                                <span class="intake-meta__value" id="display_customer">-</span>
+                            </div>
+                            <div class="intake-meta__item">
+                                <span class="intake-meta__label">Kendaraan</span>
+                                <span class="intake-meta__value" id="display_vehicle">-</span>
+                            </div>
+                            
+                            <!-- Baris 2: Mekanik (PINDAHKAN LABEL KE DALAM) -->
+                            <div class="intake-meta__item intake-meta__item--no-card">
+                                <span class="intake-meta__label">Mekanik</span> <!-- Label di dalam -->
+                                <div class="intake-meta__control">
+                                    <select id="assigned_mechanic" name="assigned_mechanic" required>
+                                        <option value="">Pilih mekanik tersedia</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Service/Repair -->
+                            <div class="intake-meta__item intake-meta__item--service">
+                                <span class="intake-meta__label">Service/Repair</span>
+                                <ul class="intake-summary-list" id="intake_summary_service_list">
+                                    <li class="placeholder">Belum ada jasa terdaftar.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </aside>
+            <form id="inspectionForm" class="inspection-form">
+                <section class="section-card">
+                    <div class="section-header">
+                        <div>
+                            <h2>🔩 Sparepart &amp; Bahan</h2>
+                            <p>Catat kebutuhan part atau bahan agar tim procurement siap menyediakan.</p>
+                        </div>
+                    </div>
+
+                    <div class="partial-reject-banner" role="status" data-role="partial-reject-banner"{% if not (is_partial_reject_mode and not is_parts_detail_mode) %} hidden{% endif %}>
+                        <strong>Partial Reject</strong>
+                        <span>Beberapa item ditolak oleh tim sparepart. Gunakan tombol <strong>Trash</strong> pada baris berstatus <em>Rejected</em>, lalu tambahkan item pengganti sebelum mengirim ulang.</span>
+                    </div>
+
+                    <div class="repeating-list" id="requiredPartsList">
+                        <div class="empty-state">
+                            <strong>
+                                {% if is_partial_reject_mode %}
+                                    Belum ada item pengganti.
+                                {% elif is_parts_detail_mode %}
+                                    Belum ada sparepart untuk ditampilkan.
+                                {% else %}
+                                    Belum ada sparepart atau bahan.
+                                {% endif %}
+                            </strong>
+                            <span>
+                                {% if is_partial_reject_mode %}
+                                    Tambahkan pengganti untuk item yang ditolak sebelum melanjutkan.
+                                {% elif is_parts_detail_mode %}
+                                    Semua sparepart aman. Tidak ada tindakan yang perlu dilakukan.
+                                {% else %}
+                                    Tambahkan kebutuhan untuk perbaikan.
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="section-actions">
+                        <button type="button" class="btn btn-add" data-role="parts-add-button" onclick="addRequiredPart()"{% if is_parts_detail_mode %} disabled aria-disabled="true"{% endif %}>{{ '➕ Tambah Pengganti' if is_partial_reject_mode else '+ Tambah Part' }}</button>
+                    </div>
+                </section>
+            </form>
+        </main>
+    </div>
+
+    <div class="action-bar">
+        <div class="action-buttons">
+            <a href="/garage/service" class="btn btn-secondary">Batal</a>
+            <button type="button" class="btn btn-primary" data-role="parts-save-button" onclick="submitInspection()"{% if is_parts_detail_mode %} disabled aria-disabled="true"{% endif %}>Save</button>
+            {% if not is_partial_reject_mode %}
+            <button type="button" class="btn btn-outline" id="print_spk_button" disabled onclick="printSpkDocument()">Print SPK</button>
+            {% endif %}
+        </div>
+        <div class="action-info">
+            <div class="action-tags">
+                <span class="tag priority-badge" id="display_priority_secondary">-</span>
+            </div>
+            <div class="action-tax">
+                <div class="action-tax-row"><span>DPP</span><strong id="action_dpp">Rp 0</strong></div>
+                <div class="action-tax-row"><span>PPN (11%)</span><strong id="action_ppn">Rp 0</strong></div>
+                <div class="action-tax-row"><span>PPH (2,5%)</span><strong id="action_pph">Rp 0</strong></div>
+            </div>
+            <div>
+                <span class="action-label">Total Estimasi</span>
+                <span class="action-amount" id="action_total_estimate">Rp 0</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+(() => {
+    const DEFAULT_SERVICE_FEE = 50000;
+    const DEFAULT_TECHNICIAN_CAPACITY = 3;
+    const SERVICE_PAGE_URL = '/garage/service';
+    const SPK_REDIRECT_DELAY = 1200;
+    const TAX_RATES = {
+        ppn: 0.11,
+        pph: 0.025
+    };
+    const currencyFormatter = new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0
+    });
+
+    function formatCurrency(value) {
+        if (value === undefined || value === null || value === '') {
+            return 'Rp 0';
+        }
+        const number = Number(value);
+        if (Number.isNaN(number)) {
+            return 'Rp 0';
+        }
+        return currencyFormatter.format(number);
+    }
+
+    function downloadBase64Pdf(content, filename) {
+        if (!content) {
+            frappe.msgprint('Konten PDF tidak tersedia.');
+            return;
+        }
+
+        try {
+            const sanitized = String(content).replace(/^data:[^,]+,/, '').trim();
+            const binary = atob(sanitized);
+            const length = binary.length;
+            const bytes = new Uint8Array(length);
+            for (let i = 0; i < length; i += 1) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            const blob = new Blob([bytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename || 'dokumen.pdf';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Gagal menyiapkan PDF', error);
+            frappe.msgprint('Gagal menyiapkan file PDF untuk diunduh.');
+        }
+    }
+
+    function escapeHtml(value) {
+        if (value === undefined || value === null) {
+            return '';
+        }
+        return value
+            .toString()
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatNumber(value) {
+        const numeric = Number(value);
+        if (Number.isNaN(numeric)) {
+            return '0';
+        }
+        if (Number.isInteger(numeric)) {
+            return numeric.toLocaleString('id-ID');
+        }
+        return numeric.toLocaleString('id-ID', { maximumFractionDigits: 2 });
+    }
+
+    function formatServiceOrderId(value) {
+        if (value === undefined || value === null) {
+            return '-';
+        }
+
+        const raw = String(value).trim();
+        if (!raw) {
+            return '-';
+        }
+
+        const sequenceMatch = raw.match(/(\d{3,})$/);
+        const digits = sequenceMatch ? sequenceMatch[1] : (raw.match(/\d+/) || [])[0];
+        const padded = digits ? String(digits).padStart(5, '0') : '';
+
+        return padded ? `SPK-${padded}` : raw;
+    }
+
+
+    // ========== GLOBAL VARIABLES (MOVED HERE FOR SCOPE ACCESS) ==========
+    let sparePartCatalog = [];
+    let sparePartIndex = new Map();
+    let catalogLoadedFromOrder = false;
+    let technicianRoster = [];
+    let baseTechnicianRoster = [];
+    let currentAssignedMechanic = '';
+    let currentAssignedMechanicDisplay = '';
+    let isPartChargeApproved = false;
+    let shouldHideSpkButton = false;
+    let shouldHideSpkDueToStatus = false;
+    let shouldHideSpkForReRequest = false;
+    let hasShownApprovedAlert = false;
+    // ====================================================================
+
+    function setSparePartCatalog(parts) {
+        console.log('🔧 === setSparePartCatalog CALLED ===');
+        console.log('📦 Parts received:', parts);
+        console.log('📊 Is array?', Array.isArray(parts));
+        console.log('📊 Length:', parts?.length || 0);
+
+        sparePartCatalog = Array.isArray(parts) ? parts : [];
+
+        console.log('✅ sparePartCatalog set to:', sparePartCatalog);
+        console.log('✅ Final length:', sparePartCatalog.length);
+
+        sparePartIndex.clear();
+        for (const part of sparePartCatalog) {
+            console.log('  → Adding to index:', part.part_code, part.part_name);
+            if (part.name) sparePartIndex.set(part.name, part);
+            if (part.part_code) {
+                const code = String(part.part_code);
+                sparePartIndex.set(code, part);
+                sparePartIndex.set(code.toLowerCase(), part);
+            }
+            if (part.part_name) sparePartIndex.set(part.part_name.toLowerCase(), part);
+        }
+
+        console.log('✅ Index size:', sparePartIndex.size);
+    }
+
+    function lookupSparePart(identifier) {
+        if (!identifier) {
+            return null;
+        }
+        const key = String(identifier).trim();
+        if (!key) {
+            return null;
+        }
+        return (
+            sparePartIndex.get(key)
+            || sparePartIndex.get(key.toLowerCase())
+            || sparePartIndex.get(key.toUpperCase())
+            || null
+        );
+    }
+
+    function mergeRequiredPartWithCatalog(part, catalogPart) {
+        if (!catalogPart) {
+            return part;
+        }
+        const merged = { ...part };
+        merged.catalog_name = catalogPart.name;
+        merged.catalog_part_code = catalogPart.part_code;
+        merged.catalog_stock_qty = catalogPart.stock_qty;
+        merged.catalog_reserved_qty = catalogPart.reserved_qty;
+        merged.catalog_managed_by = catalogPart.managed_by;
+        merged.catalog_image = catalogPart.image;
+        const catalogDescription = catalogPart.description || catalogPart.notes || '';
+        const catalogName = catalogPart.part_name || '';
+        const fallbackDescription = catalogName || catalogDescription;
+        merged.catalog_description = catalogDescription;
+        if (!merged.description || !merged.description.trim() || merged.description.trim() === catalogDescription.trim()) {
+            merged.description = fallbackDescription;
+        }
+        const unitPrice = Number(catalogPart.unit_price);
+        const normalizedUnitPrice = Number.isNaN(unitPrice) ? Number(part?.rate ?? 0) || 0 : unitPrice;
+        merged.catalog_unit_price = normalizedUnitPrice;
+        merged.item_code = catalogPart.part_code || merged.item_code || '';
+        merged.item_name = catalogName || merged.item_name || '';
+        merged.uom = merged.uom || catalogPart.uom || 'Unit';
+        merged.rate = normalizedUnitPrice;
+        if (merged.qty === undefined || merged.qty === null || merged.qty === '') {
+            merged.qty = 1;
+        }
+        merged.warehouse = merged.warehouse || catalogPart.warehouse_location || '';
+        return merged;
+    }
+
+    function normalizeTechnicianEntry(entry) {
+        if (!entry || typeof entry !== 'object') {
+            return null;
+        }
+
+        const identifierRaw = entry.employee || entry.name || entry.identifier;
+        const identifier = identifierRaw ? String(identifierRaw).trim() : '';
+        if (!identifier) {
+            return null;
+        }
+
+        const nameRaw = entry.employee_name || entry.employee || entry.name || identifier;
+        const employeeName = String(nameRaw || identifier).trim() || identifier;
+        const statusRaw = entry.status ? String(entry.status).trim() : 'Active';
+        const status = statusRaw || 'Active';
+
+        const maxJobsNumeric = Number(entry.max_active_jobs);
+        const resolvedMaxJobs = Number.isFinite(maxJobsNumeric) && maxJobsNumeric > 0
+            ? Math.floor(maxJobsNumeric)
+            : DEFAULT_TECHNICIAN_CAPACITY;
+
+        const loadNumeric = Number(entry.active_task_count);
+        const resolvedLoad = Number.isFinite(loadNumeric) && loadNumeric > 0
+            ? Math.floor(loadNumeric)
+            : 0;
+
+        const availableCapacity = Math.max(0, resolvedMaxJobs - resolvedLoad);
+
+        return {
+            ...entry,
+            identifier,
+            employee: entry.employee || identifier,
+            employee_name: employeeName,
+            status,
+            max_active_jobs: resolvedMaxJobs,
+            active_task_count: resolvedLoad,
+            base_active_task_count: resolvedLoad,
+            available_capacity: availableCapacity,
+            is_available: status === 'Active' && resolvedLoad < resolvedMaxJobs,
+            skill_tags: entry.skill_tags || '',
+            phone: entry.phone || '',
+            email: entry.email || '',
+            notes: entry.notes || '',
+        };
+    }
+
+    function sortTechnicians(roster) {
+        return (roster || []).slice().sort((a, b) => {
+            if (a.is_available !== b.is_available) {
+                return a.is_available ? -1 : 1;
+            }
+            if (a.available_capacity !== b.available_capacity) {
+                return b.available_capacity - a.available_capacity;
+            }
+            if (a.active_task_count !== b.active_task_count) {
+                return a.active_task_count - b.active_task_count;
+            }
+            const aName = (a.employee_name || a.identifier || '').toLowerCase();
+            const bName = (b.employee_name || b.identifier || '').toLowerCase();
+            return aName.localeCompare(bName, 'id');
+        });
+    }
+
+    function findTechnicianByIdentifier(identifier) {
+        if (!identifier) {
+            return null;
+        }
+        const normalized = String(identifier).trim();
+        if (!normalized) {
+            return null;
+        }
+        return technicianRoster.find((tech) => tech.identifier === normalized) || null;
+    }
+
+    function updateTechnicianStatusHint() {
+        const statusElement = document.getElementById('assigned_mechanic_status');
+        const select = document.getElementById('assigned_mechanic');
+        if (!statusElement || !select) {
+            return;
+        }
+
+        statusElement.className = 'technician-status';
+
+        const value = select.value || '';
+        if (!value) {
+            statusElement.textContent = 'Belum ada mekanik ditugaskan.';
+            return;
+        }
+
+        const technician = findTechnicianByIdentifier(value);
+        const displayName = select.dataset.currentDisplay || value;
+
+        if (!technician) {
+            statusElement.textContent = `${displayName} (tidak ditemukan di daftar mekanik).`;
+            statusElement.classList.add('is-unknown');
+            return;
+        }
+
+        // const loadText = `${technician.active_task_count} dari ${technician.max_active_jobs} tugas aktif`;
+        // if (technician.available_capacity > 0) {
+        //     const slotText = `${technician.available_capacity} slot tersisa`;
+        //     statusElement.textContent = `${technician.employee_name} • ${loadText} • ${slotText}.`;
+        //     statusElement.classList.add('is-available');
+        // } else {
+        //     statusElement.textContent = `${technician.employee_name} • ${loadText} • Mekanik sudah penuh.`;
+        //     statusElement.classList.add('is-full');
+        // }
+    }
+
+    function updateTechnicianSelect(selectedValue) {
+        const select = document.getElementById('assigned_mechanic');
+        if (!select) {
+            return;
+        }
+
+        let targetValue = selectedValue;
+        if (targetValue === undefined || targetValue === null) {
+            targetValue = select.dataset.currentValue || select.value || '';
+        }
+        targetValue = String(targetValue || '').trim();
+
+        const previousDisplay = select.dataset.currentDisplay || '';
+
+        select.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Pilih mekanik tersedia';
+        select.appendChild(placeholder);
+
+        const sortedRoster = sortTechnicians(technicianRoster);
+        let matchedOption = null;
+
+        for (const technician of sortedRoster) {
+            const option = document.createElement('option');
+            option.value = technician.identifier;
+            const loadText = `${technician.active_task_count}/${technician.max_active_jobs} tugas aktif`;
+            const capacityText = technician.available_capacity > 0
+                ? `${technician.available_capacity} slot tersisa`
+                : 'Penuh';
+            option.textContent = technician.employee_name;
+            option.dataset.displayName = technician.employee_name;
+            const isCurrentSelection = targetValue && technician.identifier === targetValue;
+            option.disabled = !technician.is_available && !isCurrentSelection;
+            if (technician.skill_tags) {
+                option.title = `${technician.employee_name} • ${loadText} • ${capacityText} • Keahlian: ${technician.skill_tags}`;
+            } else {
+                option.title = `${technician.employee_name} • ${loadText} • ${capacityText}`;
+            }
+            select.appendChild(option);
+
+            if (!matchedOption && isCurrentSelection) {
+                matchedOption = option;
+            }
+        }
+
+        if (matchedOption) {
+            select.value = matchedOption.value;
+        } else if (targetValue) {
+            const fallbackOption = document.createElement('option');
+            fallbackOption.value = targetValue;
+            const fallbackLabel = previousDisplay || targetValue;
+            fallbackOption.textContent = `${fallbackLabel} (di luar daftar mekanik)`;
+            fallbackOption.dataset.displayName = fallbackLabel;
+            select.appendChild(fallbackOption);
+            select.value = targetValue;
+        } else {
+            select.value = '';
+        }
+
+        const selectedOption = select.options[select.selectedIndex];
+        select.dataset.currentValue = select.value || '';
+        select.dataset.currentDisplay = selectedOption
+            ? (selectedOption.dataset.displayName || selectedOption.textContent)
+            : '';
+
+        updateTechnicianStatusHint();
+    }
+
+    function renderTechnicianRoster() {
+        const container = document.getElementById('technician_roster');
+        if (!container) {
+            return;
+        }
+
+        container.innerHTML = '';
+
+        if (!technicianRoster.length) {
+            const emptyState = document.createElement('div');
+            emptyState.className = 'technician-roster__empty';
+            emptyState.textContent = 'Belum ada mekanik yang terdaftar.';
+            container.appendChild(emptyState);
+            return;
+        }
+
+        const sortedRoster = sortTechnicians(technicianRoster);
+
+        for (const technician of sortedRoster) {
+            const card = document.createElement('div');
+            card.className = 'technician-roster__item';
+            card.classList.add(technician.is_available ? 'is-available' : 'is-full');
+
+            const header = document.createElement('div');
+            header.className = 'technician-roster__header';
+
+            const name = document.createElement('div');
+            name.className = 'technician-roster__name';
+            name.textContent = technician.employee_name;
+
+            const badge = document.createElement('span');
+            badge.className = 'technician-roster__badge';
+            badge.classList.add(technician.is_available ? 'is-available' : 'is-full');
+            badge.textContent = technician.is_available ? 'Tersedia' : 'Penuh';
+
+            header.appendChild(name);
+            header.appendChild(badge);
+            card.appendChild(header);
+
+            const details = document.createElement('div');
+            details.className = 'technician-roster__details';
+
+            const loadLine = document.createElement('div');
+            loadLine.className = 'technician-roster__load';
+            loadLine.textContent = `${technician.active_task_count} dari ${technician.max_active_jobs} tugas aktif`;
+            details.appendChild(loadLine);
+
+            const capacityLine = document.createElement('div');
+            capacityLine.className = 'technician-roster__capacity';
+            capacityLine.textContent = technician.available_capacity > 0
+                ? `${technician.available_capacity} slot tersisa`
+                : 'Slot tugas penuh';
+            details.appendChild(capacityLine);
+
+            if (technician.skill_tags) {
+                const skillsLine = document.createElement('div');
+                skillsLine.className = 'technician-roster__skills';
+                skillsLine.textContent = `Keahlian: ${technician.skill_tags}`;
+                details.appendChild(skillsLine);
+            }
+
+            const contactPieces = [];
+            if (technician.phone) {
+                contactPieces.push(`📞 ${technician.phone}`);
+            }
+            if (technician.email) {
+                contactPieces.push(`✉️ ${technician.email}`);
+            }
+            if (contactPieces.length) {
+                const contactLine = document.createElement('div');
+                contactLine.className = 'technician-roster__contact';
+                for (const piece of contactPieces) {
+                    const span = document.createElement('span');
+                    span.textContent = piece;
+                    contactLine.appendChild(span);
+                }
+                details.appendChild(contactLine);
+            }
+
+            card.appendChild(details);
+            container.appendChild(card);
+        }
+    }
+
+    function setTechnicianRoster(roster) {
+        if (Array.isArray(roster)) {
+            baseTechnicianRoster = roster.map(normalizeTechnicianEntry).filter(Boolean);
+        } else {
+            baseTechnicianRoster = [];
+        }
+
+        refreshTechnicianRosterState();
+    }
+
+    function refreshTechnicianRosterState() {
+        const select = document.getElementById('assigned_mechanic');
+        const normalizedSelection = (currentAssignedMechanic || '').trim();
+        const baseRoster = Array.isArray(baseTechnicianRoster) ? baseTechnicianRoster : [];
+
+        if (baseRoster.length) {
+            technicianRoster = baseRoster.map((entry) => {
+                if (!entry) {
+                    return null;
+                }
+
+                const baseLoad = Number(entry.base_active_task_count ?? entry.active_task_count ?? 0);
+                const maxJobsNumeric = Number(entry.max_active_jobs);
+                const resolvedMaxJobs = Number.isFinite(maxJobsNumeric) && maxJobsNumeric > 0
+                    ? Math.floor(maxJobsNumeric)
+                    : DEFAULT_TECHNICIAN_CAPACITY;
+
+                const clone = { ...entry };
+                clone.max_active_jobs = resolvedMaxJobs;
+                clone.active_task_count = baseLoad;
+                clone.available_capacity = Math.max(0, resolvedMaxJobs - baseLoad);
+                clone.is_available = clone.status === 'Active' && baseLoad < resolvedMaxJobs;
+
+                if (normalizedSelection && clone.identifier === normalizedSelection) {
+                    const adjustedLoad = baseLoad + 1;
+                    clone.active_task_count = adjustedLoad;
+                    clone.available_capacity = Math.max(0, resolvedMaxJobs - adjustedLoad);
+                    clone.is_available = clone.status === 'Active' && adjustedLoad < resolvedMaxJobs;
+                }
+
+                return clone;
+            }).filter(Boolean);
+        } else {
+            technicianRoster = [];
+        }
+
+        const targetValue = normalizedSelection
+            || (select ? (select.dataset.currentValue || select.value || '') : '');
+
+        if (select) {
+            select.dataset.currentValue = targetValue;
+            if (targetValue) {
+                select.dataset.currentDisplay = currentAssignedMechanicDisplay
+                    || select.dataset.currentDisplay
+                    || '';
+            } else {
+                select.dataset.currentDisplay = '';
+            }
+        }
+
+        updateTechnicianSelect(targetValue);
+
+        const updatedSelect = document.getElementById('assigned_mechanic');
+        if (updatedSelect) {
+            const selectedOption = updatedSelect.options[updatedSelect.selectedIndex];
+            if (targetValue) {
+                const nextDisplay = selectedOption
+                    ? (selectedOption.dataset.displayName || selectedOption.textContent)
+                    : '';
+                currentAssignedMechanic = targetValue;
+                currentAssignedMechanicDisplay = nextDisplay;
+                updatedSelect.dataset.currentValue = targetValue;
+                updatedSelect.dataset.currentDisplay = nextDisplay;
+            } else {
+                currentAssignedMechanic = '';
+                currentAssignedMechanicDisplay = '';
+                updatedSelect.dataset.currentValue = '';
+                updatedSelect.dataset.currentDisplay = '';
+            }
+        } else {
+            currentAssignedMechanic = targetValue || '';
+            if (!targetValue) {
+                currentAssignedMechanicDisplay = '';
+            }
+        }
+
+        renderTechnicianRoster();
+    }
+
+    function syncAssignedMechanicSelection(identifier, displayName) {
+        const select = document.getElementById('assigned_mechanic');
+        const normalizedValue = identifier ? String(identifier).trim() : '';
+        const rosterEntry = normalizedValue ? findTechnicianByIdentifier(normalizedValue) : null;
+        const resolvedDisplay = displayName
+            ? String(displayName).trim()
+            : (rosterEntry ? rosterEntry.employee_name : normalizedValue);
+
+        currentAssignedMechanic = normalizedValue;
+        currentAssignedMechanicDisplay = resolvedDisplay || '';
+
+        if (select) {
+            select.dataset.currentValue = normalizedValue;
+            select.dataset.currentDisplay = currentAssignedMechanicDisplay;
+        }
+
+        refreshTechnicianRosterState();
+    }
+
+    function bindTechnicianSelect() {
+        const select = document.getElementById('assigned_mechanic');
+        if (!select || select.dataset.bound === '1') {
+            return;
+        }
+
+        select.dataset.bound = '1';
+        select.dataset.currentValue = select.value || '';
+        select.dataset.currentDisplay = '';
+
+        select.addEventListener('change', () => {
+            const option = select.options[select.selectedIndex];
+            const value = select.value || '';
+            const display = option
+                ? (option.dataset.displayName || option.textContent)
+                : '';
+
+            select.dataset.currentValue = value;
+            select.dataset.currentDisplay = display;
+
+            if (value) {
+                select.setCustomValidity('');
+            }
+
+            currentAssignedMechanic = value ? String(value).trim() : '';
+            currentAssignedMechanicDisplay = currentAssignedMechanic ? display : '';
+
+            refreshTechnicianRosterState();
+        });
+    }
+
+    function safeDateParse(value) {
+        if (!value) {
+            return null;
+        }
+        if (value instanceof Date) {
+            return Number.isNaN(value.getTime()) ? null : value;
+        }
+        if (typeof value === 'string') {
+            const normalized = value.replace(' ', 'T');
+            const parsed = new Date(normalized);
+            if (!Number.isNaN(parsed.getTime())) {
+                return parsed;
+            }
+            const fallback = new Date(value.split(' ')[0]);
+            if (!Number.isNaN(fallback.getTime())) {
+                return fallback;
+            }
+        }
+        return null;
+    }
+
+    function formatDisplayDate(value) {
+        const parsed = safeDateParse(value);
+        if (!parsed) {
+            return '-';
+        }
+        return parsed.toLocaleString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function formatMileage(value) {
+        if (value === undefined || value === null || value === '') {
+            return '-';
+        }
+        const number = Number(value);
+        if (Number.isNaN(number)) {
+            return '-';
+        }
+        return `${new Intl.NumberFormat('id-ID').format(number)} km`;
+    }
+
+    function normaliseDateInput(value) {
+        const parsed = safeDateParse(value);
+        if (!parsed) {
+            return '';
+        }
+        return parsed.toISOString().split('T')[0];
+    }
+
+    function applyStatusBadge(status) {
+        const element = document.getElementById('display_status');
+        if (!element) {
+            return;
+        }
+        const value = status || 'Draft';
+        const slug = value.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        element.textContent = value;
+        element.className = `status-badge ${slug ? `status-${slug}` : 'status-draft'}`;
+    }
+
+    function applyPriorityBadge(priority) {
+        const primary = document.getElementById('display_priority');
+        const secondary = document.getElementById('display_priority_secondary');
+        const valueDisplay = document.getElementById('display_priority_value');
+        const value = priority || '-';
+        const slug = (priority || '').toLowerCase();
+        const className = slug ? `tag priority-badge priority-${slug}` : 'tag priority-badge';
+
+        if (primary) {
+            primary.textContent = value;
+            primary.className = className;
+        }
+        if (secondary) {
+            secondary.textContent = value;
+            secondary.className = className;
+        }
+        if (valueDisplay) {
+            valueDisplay.textContent = value;
+        }
+    }
+
+    function applyServiceTypeBadge(serviceType) {
+        const element = document.getElementById('display_service_type');
+        const valueDisplay = document.getElementById('display_service_type_value');
+        if (!element) {
+            if (valueDisplay) {
+                valueDisplay.textContent = (serviceType || '').trim() || '-';
+            }
+            return;
+        }
+
+        const baseClass = 'tag service-type-badge';
+        const value = (serviceType || '').trim();
+        element.textContent = value || '-';
+        element.className = baseClass;
+
+        if (valueDisplay) {
+            valueDisplay.textContent = value || '-';
+        }
+
+        if (!value) {
+            return;
+        }
+
+        const slug = value
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '');
+
+        if (slug) {
+            element.className = `${baseClass} service-type-badge--${slug}`;
+        }
+    }
+
+    function updateTotalEstimateDisplay(value) {
+        const totals = typeof value === 'number' ? { dpp: Math.max(0, Math.round(value)) } : (value || {});
+        const dpp = Math.max(0, Math.round(totals.dpp ?? 0));
+        const ppn = Math.max(0, Math.round(totals.ppn ?? dpp * TAX_RATES.ppn));
+        const pph = Math.max(0, Math.round(totals.pph ?? dpp * TAX_RATES.pph));
+        const totalWithTax = Math.max(0, Math.round(totals.totalWithTax ?? (dpp + ppn + pph)));
+
+        const action = document.getElementById('action_total_estimate');
+        if (action) {
+            action.textContent = formatCurrency(totalWithTax);
+        }
+
+        const actionDpp = document.getElementById('action_dpp');
+        if (actionDpp) {
+            actionDpp.textContent = formatCurrency(dpp);
+        }
+        const actionPpn = document.getElementById('action_ppn');
+        if (actionPpn) {
+            actionPpn.textContent = formatCurrency(ppn);
+        }
+        const actionPph = document.getElementById('action_pph');
+        if (actionPph) {
+            actionPph.textContent = formatCurrency(pph);
+        }
+    }
+
+    function updateEstimatedDeliveryDisplay() {
+        const display = document.getElementById('display_estimated_delivery');
+        if (display) {
+            display.textContent = formatDisplayDate(new Date());
+        }
+    }
+
+    let cachedCSRFToken = null;
+
+    function cacheCSRFToken(token) {
+        if (!token) {
+            return null;
+        }
+
+        cachedCSRFToken = token;
+
+        if (typeof window !== 'undefined') {
+            window.csrf_token = token;
+
+            if (window.frappe) {
+                window.frappe.csrf_token = token;
+            }
+        }
+
+        return token;
+    }
+
+    function resolveCSRFToken() {
+        const tokenReaders = [
+            () => {
+                if (typeof window === 'undefined') {
+                    return null;
+                }
+
+                if (window.frappe && window.frappe.csrf_token) {
+                    return window.frappe.csrf_token;
+                }
+
+                if (window.csrf_token) {
+                    return window.csrf_token;
+                }
+
+                if (window.frappe && window.frappe.boot && window.frappe.boot.csrf_token) {
+                    return window.frappe.boot.csrf_token;
+                }
+
+                return null;
+            },
+            () => {
+                const meta = document.querySelector('meta[name="csrf-token"], meta[name="csrf_token"]');
+                return meta && meta.content ? meta.content : null;
+            },
+            () => {
+                const cookieMatch = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+                return cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
+            }
+        ];
+
+        let fallbackToken = null;
+
+        for (const readToken of tokenReaders) {
+            const token = readToken();
+
+            if (!token) {
+                continue;
+            }
+
+            fallbackToken = token;
+
+            if (token !== cachedCSRFToken) {
+                return cacheCSRFToken(token);
+            }
+        }
+
+        if (cachedCSRFToken) {
+            return cachedCSRFToken;
+        }
+
+        if (fallbackToken) {
+            return cacheCSRFToken(fallbackToken);
+        }
+
+        return null;
+    }
+
+    async function requestFreshCSRFToken() {
+        try {
+            const response = await fetch('/api/method/frappe.sessions.get_csrf_token', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch CSRF token');
+            }
+
+            const payload = await response.json();
+            if (payload && payload.message) {
+                return cacheCSRFToken(payload.message);
+            }
+        } catch (error) {
+            console.error('Unable to refresh CSRF token:', error);
+        }
+
+        return null;
+    }
+
+    async function ensureCSRFToken(maxAttempts = 10, delay = 200) {
+        let token = resolveCSRFToken();
+
+        if (token) {
+            return token;
+        }
+
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            token = resolveCSRFToken();
+            if (token) {
+                return token;
+            }
+        }
+
+        token = await requestFreshCSRFToken();
+        if (token) {
+            return token;
+        }
+
+        throw new Error('CSRF token not available');
+    }
+
+    function withCSRF(options = {}) {
+        const token = resolveCSRFToken();
+
+        if (!token) {
+            return options;
+        }
+
+        return Object.assign({}, options, {
+            args: Object.assign({}, options.args, { csrf_token: token }),
+            headers: Object.assign({}, options.headers, {
+                'X-Frappe-CSRF-Token': token
+            })
+        });
+    }
+
+    function boot() {
+        'use strict';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('order_id');
+        const requestedMode = (urlParams.get('mode') || '').toLowerCase();
+        const sourceContext = (urlParams.get('source') || '').toLowerCase();
+        const shouldStayOnPageAfterSave = sourceContext === 'waiting-entry';
+        let isPartialRejectMode = requestedMode === 'partial-reject';
+        let isPartsDetailMode = requestedMode === 'parts-detail';
+
+        if (typeof document !== 'undefined' && document.body && document.body.classList) {
+            document.body.classList.toggle('partial-reject-mode', isPartialRejectMode);
+            document.body.classList.toggle('parts-detail-mode', isPartsDetailMode);
+        }
+
+        if (!orderId) {
+            frappe.show_alert({
+                message: '❌ Order ID tidak ditemukan!',
+                indicator: 'red'
+            }, 5);
+            setTimeout(() => window.location.href = SERVICE_PAGE_URL, 2000);
+            return;
+        }
+
+        let requiredParts = [];
+        let preserveServerEstimate = false;
+        let catalogLoadedFromOrder = false;
+        let totalEstimatedAmount = 0;
+        let latestOrder = null;
+        let baseServiceFee = 0;
+        let serviceSummaryItems = [];
+        let isInitializing = true;
+        let autoSaveTimer = null;
+        let autoSaveInFlight = false;
+        let autoSaveQueued = false;
+        const LOCKED_PART_MESSAGE = 'Item ini tidak dapat diubah karena sudah diproses oleh tim sparepart. Tambahkan part baru bila diperlukan.';
+        const EDITABLE_PART_STATUSES = new Set(['', 'draft', 'planned', 'request', 'pending', 'pending check', 'available', 'to order', 'ordered', 'in transit', 'backordered', 're-request']);
+        const EDITABLE_PART_STATUSES_PARTIAL_REJECT = new Set(['', 'draft', 'planned', 'request', 'pending', 'pending check', 'available', 'to order', 'ordered', 'in transit', 'backordered', 're-request', 'rejected']);
+        let spkButton = null;
+        let spkButtonLabel = 'Print SPK';
+
+        spkButton = document.getElementById('print_spk_button');
+        if (spkButton) {
+            spkButtonLabel = spkButton.textContent || spkButtonLabel;
+        }
+        updateSpkButtonVisibility();
+        setSpkButtonState(false);
+
+        bindTechnicianSelect();
+        setTechnicianRoster([]);
+
+        updateModeCopy();
+        applyReadOnlyState();
+
+        function resolveBaseServiceFee(partsTotal) {
+            const normalizedBase = Math.max(0, Math.round(baseServiceFee || 0));
+
+            if (normalizedBase > 0) {
+                return normalizedBase;
+            }
+
+            if (!latestOrder && partsTotal > 0) {
+                return Math.max(0, Math.round(DEFAULT_SERVICE_FEE));
+            }
+
+            return 0;
+        }
+
+        function calculateRequiredPartsTotal() {
+            return requiredParts.reduce((sum, part) => {
+                const amount = computePartAmount(part);
+                if (Number.isNaN(amount)) {
+                    return sum;
+                }
+                return sum + amount;
+            }, 0);
+        }
+
+        function normalizeStatusValue(value) {
+            if (value === undefined || value === null) {
+                return '';
+            }
+            return String(value).trim().toLowerCase();
+        }
+
+        function resolvePartStatusLabel(status) {
+            const normalized = normalizeStatusValue(status);
+            const labels = {
+                rejected: 'Rejected',
+                're-request': 'Request Ulang',
+                'pending check': 'Pending Check',
+                pending: 'Pending',
+                available: 'Available',
+                'to order': 'To Order',
+                ordered: 'Ordered',
+                'in transit': 'In Transit',
+                received: 'Received',
+                issued: 'Issued',
+                approved: 'Approved',
+                cancelled: 'Cancelled',
+            };
+            if (!normalized) {
+                return 'Draft';
+            }
+            return labels[normalized] || status || 'Draft';
+        }
+
+        function canModifyPart(part) {
+            if (isPartsDetailMode) {
+                return false;
+            }
+
+            const normalizedStatus = normalizeStatusValue(part?.stock_status);
+            const editableStatuses = isPartialRejectMode
+                ? EDITABLE_PART_STATUSES_PARTIAL_REJECT
+                : EDITABLE_PART_STATUSES;
+
+            return editableStatuses.has(normalizedStatus);
+        }
+
+        function isPartLocked(part) {
+            if (!part) {
+                return false;
+            }
+            if (isPartsDetailMode) {
+                return true;
+            }
+            return !canModifyPart(part);
+        }
+
+        function showLockedPartAlert() {
+            if (window.frappe && typeof frappe.show_alert === 'function') {
+                frappe.show_alert({ message: LOCKED_PART_MESSAGE, indicator: 'orange' }, 5);
+            }
+        }
+
+        function renderSummaryList(elementId, items, placeholder) {
+            const element = document.getElementById(elementId);
+            if (!element) {
+                return;
+            }
+
+            if (!items || !items.length) {
+                element.innerHTML = `<li class="placeholder">${escapeHtml(placeholder)}</li>`;
+                return;
+            }
+
+            element.innerHTML = items
+                .map((item) => {
+                    const label = escapeHtml(item.label || '-');
+                    const meta = item.meta ? `<small>${escapeHtml(item.meta)}</small>` : '';
+                    return `<li><span class="item-label">${label}</span>${meta}</li>`;
+                })
+                .join('');
+        }
+
+        function updateSpkButtonVisibility() {
+            if (!spkButton) {
+                return;
+            }
+
+            if (shouldHideSpkButton) {
+                spkButton.style.display = 'none';
+            } else {
+                spkButton.style.display = '';
+            }
+        }
+
+        function setShouldHideSpkButton(hidden) {
+            const next = Boolean(hidden);
+            if (next !== shouldHideSpkButton) {
+                shouldHideSpkButton = next;
+            }
+            updateSpkButtonVisibility();
+        }
+
+        function refreshSpkVisibilityContext() {
+            setShouldHideSpkButton(
+                isPartialRejectMode
+                || shouldHideSpkDueToStatus
+                || shouldHideSpkForReRequest
+            );
+        }
+
+        function setSpkButtonState(enabled) {
+            if (!spkButton) {
+                return;
+            }
+
+            if (enabled) {
+                spkButton.disabled = false;
+                spkButton.removeAttribute('aria-disabled');
+            } else {
+                spkButton.disabled = true;
+                spkButton.setAttribute('aria-disabled', 'true');
+            }
+
+            updateSpkButtonVisibility();
+        }
+
+        function updateModeCopy() {
+            const titleEl = document.querySelector('[data-role="inspection-title"]');
+            const subtitleEl = document.querySelector('[data-role="inspection-subtitle"]');
+            const addButton = document.querySelector('[data-role="parts-add-button"]');
+            const saveButton = document.querySelector('[data-role="parts-save-button"]');
+            const partialBanner = document.querySelector('[data-role="partial-reject-banner"]');
+
+            if (titleEl) {
+                const titleText = isPartialRejectMode
+                    ? '🛠️ Inspeksi Partial Reject'
+                    : (isPartsDetailMode ? '🧾 Detail Sparepart' : '🔍 Inspeksi Service Order');
+                titleEl.textContent = titleText;
+            }
+
+            if (subtitleEl) {
+                const subtitleText = isPartialRejectMode
+                    ? 'Beberapa permintaan sparepart ditolak. Hapus item yang ditolak, kemudian ajukan pengganti sebelum mengirim ulang.'
+                    : (isPartsDetailMode
+                        ? 'Permintaan sparepart telah aman. Gunakan halaman ini untuk meninjau detail tanpa melakukan perubahan.'
+                        : (isPartChargeApproved
+                            ? 'Sparepart yang sudah disetujui akan dikunci. Tambahkan part baru bila membutuhkan request ulang.'
+                            : 'Lengkapi hasil pemeriksaan kendaraan dan bagikan update terbaru untuk tim bengkel.'));
+                subtitleEl.textContent = subtitleText;
+            }
+
+            if (addButton) {
+                const shouldDisableAdd = isPartsDetailMode;
+                if (shouldDisableAdd) {
+                    addButton.disabled = true;
+                    addButton.setAttribute('aria-disabled', 'true');
+                    addButton.removeAttribute('title');
+                } else {
+                    addButton.disabled = false;
+                    addButton.removeAttribute('aria-disabled');
+                    if (isPartChargeApproved) {
+                        addButton.title = 'Sparepart lama dikunci. Tambahkan part baru untuk request ulang.';
+                    } else {
+                        addButton.removeAttribute('title');
+                    }
+                }
+            }
+
+            if (saveButton) {
+                const originalLabel = saveButton.dataset.originalLabel || saveButton.textContent;
+                if (!saveButton.dataset.originalLabel) {
+                    saveButton.dataset.originalLabel = originalLabel;
+                }
+                if (isPartsDetailMode) {
+                    saveButton.disabled = true;
+                    saveButton.setAttribute('aria-disabled', 'true');
+                    saveButton.removeAttribute('title');
+                    saveButton.textContent = saveButton.dataset.originalLabel;
+                } else {
+                    saveButton.disabled = false;
+                    saveButton.removeAttribute('aria-disabled');
+                    if (isPartChargeApproved) {
+                        saveButton.textContent = 'Request Ulang';
+                        saveButton.title = 'Simpan perubahan untuk mengajukan permintaan baru.';
+                    } else {
+                        saveButton.removeAttribute('title');
+                        if (saveButton.dataset.originalLabel) {
+                            saveButton.textContent = saveButton.dataset.originalLabel;
+                        }
+                    }
+                }
+            }
+
+            if (partialBanner) {
+                partialBanner.hidden = !isPartialRejectMode;
+            }
+
+            if (typeof document !== 'undefined') {
+                const nextTitle = isPartialRejectMode
+                    ? 'Inspeksi Partial Reject - Garage'
+                    : (isPartsDetailMode ? 'Detail Sparepart - Garage' : 'Inspeksi Service Order - Garage');
+                document.title = nextTitle;
+            }
+        }
+
+        function applyReadOnlyState() {
+            const form = document.getElementById('inspectionForm');
+            if (!form) {
+                return;
+            }
+
+            const controls = form.querySelectorAll('input, select, textarea');
+            controls.forEach((control) => {
+                if (!control.dataset.initialDisabled) {
+                    control.dataset.initialDisabled = control.disabled ? 'true' : 'false';
+                }
+
+                if (isPartsDetailMode) {
+                    control.disabled = true;
+                    control.setAttribute('aria-disabled', 'true');
+                } else if (control.dataset.initialDisabled === 'false') {
+                    control.disabled = false;
+                    control.removeAttribute('aria-disabled');
+                }
+            });
+        }
+
+        function setPageMode(mode) {
+            if (mode === 'partial-reject') {
+                isPartialRejectMode = true;
+                isPartsDetailMode = false;
+            } else if (mode === 'parts-detail') {
+                isPartialRejectMode = false;
+                isPartsDetailMode = true;
+            } else {
+                isPartialRejectMode = false;
+                isPartsDetailMode = false;
+            }
+
+            if (typeof document !== 'undefined' && document.body && document.body.classList) {
+                document.body.classList.toggle('partial-reject-mode', isPartialRejectMode);
+                document.body.classList.toggle('parts-detail-mode', isPartsDetailMode);
+            }
+
+            updateModeCopy();
+            renderRequiredParts();
+            applyReadOnlyState();
+            refreshSpkVisibilityContext();
+
+            if (isPartsDetailMode) {
+                setSpkButtonState(false);
+            }
+        }
+
+        function updateIntakeSummaryDisplay(summary) {
+            const serviceItems = summary?.serviceItems || [];
+            const totals = summary?.totals || {};
+
+            renderSummaryList('intake_summary_service_list', serviceItems, 'Belum ada jasa terdaftar.');
+
+            const serviceTotalNode = document.getElementById('intake_summary_service_total');
+            if (serviceTotalNode) {
+                serviceTotalNode.textContent = formatCurrency(totals.service || 0);
+            }
+        }
+
+        function deriveServiceSummaryItems(order) {
+            const items = [];
+            const bundleDetails = order?.service_bundle_details || {};
+            const serviceType = order?.service_order_type || '';
+            const bundleName = order?.service_bundle_name
+                || bundleDetails.bundle_name
+                || bundleDetails.name
+                || '';
+            const bundleDescription = bundleDetails.description
+                || bundleDetails.notes
+                || '';
+
+            const labelParts = [];
+            if (serviceType) {
+                labelParts.push(serviceType);
+            }
+            if (bundleName) {
+                if (labelParts.length) {
+                    const lastIndex = labelParts.length - 1;
+                    labelParts[lastIndex] = `${labelParts[lastIndex]} (${bundleName})`;
+                } else {
+                    labelParts.push(bundleName);
+                }
+            }
+
+            const primaryLabel = labelParts.join(' ').trim();
+            if (primaryLabel) {
+                const metaPieces = [];
+                if (bundleDescription && bundleDescription !== bundleName) {
+                    metaPieces.push(bundleDescription);
+                }
+                const meta = metaPieces.join(' • ');
+                items.push({
+                    label: primaryLabel,
+                    meta: meta || undefined,
+                });
+            }
+
+            const candidateKeys = [
+                'stages',
+                'service_stages',
+                'serviceStages',
+                'services',
+                'service_items',
+                'serviceItems',
+                'packages',
+                'package_items',
+                'packageItems',
+            ];
+            const packageEntries = [];
+            candidateKeys.forEach((key) => {
+                const value = bundleDetails[key];
+                if (Array.isArray(value)) {
+                    packageEntries.push(...value);
+                }
+            });
+
+            const normalizedPackages = [];
+            const seenPackages = new Set();
+            packageEntries.forEach((entry) => {
+                if (!entry && entry !== 0) {
+                    return;
+                }
+
+                let label = '';
+                const metaPieces = [];
+
+                if (typeof entry === 'string' || typeof entry === 'number') {
+                    label = String(entry).trim();
+                } else if (typeof entry === 'object') {
+                    label = String(
+                        entry.label
+                        || entry.name
+                        || entry.stage_name
+                        || entry.stage
+                        || entry.title
+                        || entry.description
+                        || entry.service
+                        || entry.task
+                        || entry.item
+                        || entry.item_name
+                        || '',
+                    ).trim();
+
+                    const details = [
+                        entry.description,
+                        entry.detail,
+                        entry.notes,
+                        entry.meta,
+                    ];
+                    details.forEach((value) => {
+                        if (!value) {
+                            return;
+                        }
+                        const text = String(value).trim();
+                        if (text && text !== label) {
+                            metaPieces.push(text);
+                        }
+                    });
+                }
+
+                if (!label) {
+                    return;
+                }
+
+                const meta = metaPieces.filter(Boolean).join(' • ');
+                const signature = `${label}|${meta}`;
+                if (seenPackages.has(signature)) {
+                    return;
+                }
+                seenPackages.add(signature);
+                normalizedPackages.push({
+                    label,
+                    meta: meta || undefined,
+                });
+            });
+
+            if (normalizedPackages.length) {
+                items.push(...normalizedPackages);
+            } else {
+                const tasks = Array.isArray(order?.service_tasks) ? order.service_tasks : [];
+                tasks.forEach((task) => {
+                    const label = task.task || task.description;
+                    if (!label) {
+                        return;
+                    }
+                    const metaPieces = [];
+                    if (task.description && task.description !== label) {
+                        metaPieces.push(task.description);
+                    }
+                    if (task.technician_name) {
+                        metaPieces.push(`Mekanik: ${task.technician_name}`);
+                    }
+                    const meta = metaPieces.join(' • ');
+                    items.push({
+                        label,
+                        meta: meta || undefined,
+                    });
+                });
+            }
+
+            if (!items.length && (serviceType || bundleName)) {
+                items.push({ label: serviceType || bundleName });
+            }
+
+            return items;
+        }
+
+        function refreshIntakeSummary(serviceFeeOverride) {
+            const serviceItems = (serviceSummaryItems && serviceSummaryItems.length)
+                ? serviceSummaryItems
+                : (latestOrder?.service_order_type ? [{ label: latestOrder.service_order_type }] : []);
+            const normalizedServiceFee = Math.max(0, Math.round(serviceFeeOverride ?? baseServiceFee ?? 0));
+
+            updateIntakeSummaryDisplay({
+                serviceItems,
+                totals: {
+                    service: normalizedServiceFee,
+                },
+            });
+        }
+
+        function updateEstimateBreakdown(partsTotal, serviceFee) {
+            const normalizedServiceFee = Math.max(0, Math.round(serviceFee || 0));
+            const normalizedPartsTotal = Math.max(0, Math.round(partsTotal || 0));
+            const breakdown = document.getElementById('display_estimate_breakdown');
+            // if (breakdown) {
+            //     breakdown.textContent = `Jasa ${formatCurrency(normalizedServiceFee)} + Sparepart & Bahan ${formatCurrency(normalizedPartsTotal)}`;
+            // }
+        }
+
+        function recalculateTotals() {
+            const partsTotal = Math.max(0, Math.round(calculateRequiredPartsTotal()));
+            let appliedServiceFee = resolveBaseServiceFee(partsTotal);
+            totalEstimatedAmount = appliedServiceFee + partsTotal;
+
+            if (preserveServerEstimate && partsTotal === 0 && totalEstimatedAmount === 0) {
+                const fallback = Math.max(0, Math.round(Number(latestOrder?.total_estimated_amount || 0)));
+                totalEstimatedAmount = fallback;
+                appliedServiceFee = Math.max(0, totalEstimatedAmount - partsTotal);
+            }
+
+            const dpp = Math.max(0, Math.round(totalEstimatedAmount));
+            const ppn = Math.max(0, Math.round(dpp * TAX_RATES.ppn));
+            const pph = Math.max(0, Math.round(dpp * TAX_RATES.pph));
+            const totalWithTax = dpp + ppn + pph;
+
+            updateTotalEstimateDisplay({
+                dpp,
+                ppn,
+                pph,
+                totalWithTax
+            });
+            updateEstimateBreakdown(partsTotal, appliedServiceFee);
+            refreshIntakeSummary(appliedServiceFee);
+        }
+
+        function normaliseCurrencyInput(value) {
+            if (value === undefined || value === null) {
+                return 0;
+            }
+            if (typeof value === 'number') {
+                return Math.max(0, value);
+            }
+            const sanitized = value
+                .toString()
+                .replace(/[^0-9,.-]/g, '')
+                .replace(/\./g, '')
+                .replace(',', '.');
+            const numeric = Number(sanitized);
+            if (Number.isNaN(numeric)) {
+                return 0;
+            }
+            return Math.max(0, numeric);
+        }
+
+        function normalizeDiscount(part, discountValue) {
+            const qty = Number(part?.qty) || 0;
+            const rate = Number(part?.rate) || 0;
+            const subtotal = Math.max(0, qty * rate);
+            const numericDiscount = Number(discountValue);
+            if (Number.isNaN(numericDiscount)) {
+                return 0;
+            }
+            return Math.max(0, Math.min(subtotal, numericDiscount));
+        }
+
+        function normalizeStockStatus(value) {
+            if (isPartialRejectMode && !isPartsDetailMode) {
+                const normalized = value === undefined || value === null ? '' : String(value).trim();
+                if (!normalized) {
+                    return 'Re-Request';
+                }
+                const lowered = normalized.toLowerCase();
+                if (['draft', 'planned', 'pending check', 'pending', 're-request'].includes(lowered)) {
+                    return 'Re-Request';
+                }
+                return normalized;
+            }
+            if (value === undefined || value === null) {
+                return 'Pending Check';
+            }
+            const status = String(value).trim();
+            if (!status) {
+                return 'Pending Check';
+            }
+            const lowered = status.toLowerCase();
+            if (lowered === 'draft' || lowered === 'planned') {
+                return 'Pending Check';
+            }
+            return status;
+        }
+
+        function computePartAmount(part) {
+            const qty = Number(part?.qty) || 0;
+            const rate = Number(part?.rate) || 0;
+            const subtotal = Math.max(0, qty * rate);
+            const discount = normalizeDiscount(part, part?.discount_amount ?? part?.discount ?? 0);
+            return Math.max(0, subtotal - discount);
+        }
+
+        function buildInspectionPayload({ includeStatus = false } = {}) {
+            recalculateTotals();
+            const sanitizedParts = requiredParts.map((part) => {
+                const qty = Number(part.qty) || 0;
+                const rate = Number(part.rate) || 0;
+                const discountAmount = normalizeDiscount({ qty, rate }, part.discount_amount || part.discount || 0);
+                const amount = Math.max(0, qty * rate - discountAmount);
+                return {
+                    item_code: part.item_code,
+                    item_name: part.item_name,
+                    description: part.description,
+                    qty,
+                    rate,
+                    discount_amount: discountAmount,
+                    amount,
+                    uom: part.uom || 'Unit',
+                    stock_status: normalizeStockStatus(part.stock_status),
+                    source: part.source || 'On Hand',
+                    warehouse: part.warehouse || ''
+                };
+            });
+
+            const assignedMechanicInput = document.getElementById('assigned_mechanic');
+
+            const payload = {
+                order_id: orderId,
+                priority: priorityInput ? priorityInput.value : (latestOrder?.priority || null),
+                estimated_delivery_date: estimatedDateInput ? estimatedDateInput.value : (latestOrder?.estimated_delivery_date || null),
+                total_estimated_amount: totalEstimatedAmount,
+                inspection_summary: summaryInput ? summaryInput.value : (latestOrder?.inspection_summary || ''),
+                service_notes: notesInput ? notesInput.value : (latestOrder?.service_notes || ''),
+                assigned_mechanic: assignedMechanicInput ? assignedMechanicInput.value.trim() : (latestOrder?.assigned_mechanic || ''),
+                required_parts: sanitizedParts
+            };
+
+            if (includeStatus) {
+                payload.status = 'Request Part';
+            }
+
+            return payload;
+        }
+
+        function scheduleAutoSave() {
+            if (isPartsDetailMode || isInitializing) {
+                return;
+            }
+            if (autoSaveTimer) {
+                clearTimeout(autoSaveTimer);
+            }
+            autoSaveTimer = setTimeout(() => {
+                autoSaveInspection();
+            }, 1200);
+        }
+
+        async function autoSaveInspection() {
+            if (isPartsDetailMode || isInitializing) {
+                return;
+            }
+            if (autoSaveInFlight) {
+                autoSaveQueued = true;
+                return;
+            }
+            autoSaveInFlight = true;
+            try {
+                const payload = buildInspectionPayload();
+                await ensureCSRFToken();
+                const response = await frappe.call(withCSRF({
+                    method: 'garage.api.portal.update_service_order_inspection',
+                    args: { order_id: orderId, inspection_data: payload },
+                    type: 'POST'
+                }));
+                const updated = response?.message || {};
+                if (updated.status) {
+                    applyStatusBadge(updated.status);
+                    latestOrder = Object.assign({}, latestOrder || {}, { status: updated.status });
+                }
+            } catch (error) {
+                console.error('Auto save error:', error);
+            } finally {
+                autoSaveInFlight = false;
+                if (autoSaveQueued) {
+                    autoSaveQueued = false;
+                    scheduleAutoSave();
+                }
+            }
+        }
+
+        function renderRequiredParts() {
+            const container = document.getElementById('requiredPartsList');
+            if (!container) {
+                return;
+            }
+            shouldHideSpkForReRequest = false;
+            refreshSpkVisibilityContext();
+            if (requiredParts.length === 0) {
+                const emptyTitle = isPartialRejectMode
+                    ? 'Belum ada item pengganti.'
+                    : (isPartsDetailMode ? 'Belum ada sparepart untuk ditampilkan.' : 'Belum ada sparepart atau bahan.');
+                const emptyMessage = isPartialRejectMode
+                    ? 'Tambahkan pengganti untuk item yang ditolak sebelum melanjutkan.'
+                    : (isPartsDetailMode
+                        ? 'Semua sparepart aman. Tidak ada tindakan yang perlu dilakukan.'
+                        : 'Tambahkan kebutuhan untuk perbaikan.');
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <strong>${escapeHtml(emptyTitle)}</strong>
+                        <span>${escapeHtml(emptyMessage)}</span>
+                    </div>
+                `;
+                recalculateTotals();
+                return;
+            }
+
+            requiredParts = requiredParts.map((part) => {
+                const catalogRef = lookupSparePart(part.catalog_name || part.catalog_part_code || part.item_code || part.item_name);
+                const merged = catalogRef ? mergeRequiredPartWithCatalog(part, catalogRef) : { ...part };
+                const qty = Number(merged.qty);
+                const rate = Number(merged.rate);
+                const normalizedQty = Number.isNaN(qty) ? 0 : Math.max(0, qty);
+                const normalizedRate = Number.isNaN(rate) ? 0 : Math.max(0, rate);
+                const normalizedDiscount = normalizeDiscount(
+                    { qty: normalizedQty, rate: normalizedRate },
+                    merged.discount_amount ?? merged.discount ?? 0
+                );
+                let currentStatus = merged.stock_status || '';
+                const statusNormalized = normalizeStatusValue(currentStatus);
+                if (isPartialRejectMode && !isPartsDetailMode) {
+                    if (!statusNormalized || ['draft', 'planned', 'pending check', 'pending'].includes(statusNormalized)) {
+                        currentStatus = 'Re-Request';
+                    }
+                }
+                return {
+                    ...merged,
+                    qty: normalizedQty,
+                    rate: normalizedRate,
+                    discount_amount: normalizedDiscount,
+                    stock_status: currentStatus,
+                    amount: computePartAmount({
+                        ...merged,
+                        qty: normalizedQty,
+                        rate: normalizedRate,
+                        discount_amount: normalizedDiscount
+                    })
+                };
+            });
+
+            const hasReRequestParts = requiredParts.some((part) => normalizeStatusValue(part.stock_status) === 're-request');
+            shouldHideSpkForReRequest = hasReRequestParts;
+            refreshSpkVisibilityContext();
+
+            const rows = requiredParts.map((part, i) => {
+                const normalizedStatus = normalizeStatusValue(part.stock_status);
+                const locked = isPartLocked(part);
+                const rowClasses = ['part-row'];
+                if (normalizedStatus === 'rejected') {
+                    rowClasses.push('part-row--rejected');
+                }
+                if (normalizedStatus === 're-request') {
+                    rowClasses.push('part-row--re-request');
+                }
+                if (locked) {
+                    rowClasses.push('part-row--locked');
+                }
+                const rowClassAttr = rowClasses.join(' ');
+
+                const selectDisabledAttr = locked ? ' disabled' : '';
+                const selectRequiredAttr = part.catalog_name || part.item_code ? '' : ' required';
+                const inputDisabledAttr = locked ? ' disabled' : '';
+                const removeDisabledAttr = locked ? ' disabled' : '';
+                const removeTitleAttr = locked && !isPartsDetailMode ? ' title="Item tidak dapat dihapus"' : '';
+                const actionButton = canModifyPart(part)
+                    ? `<button type="button" class="btn-remove" onclick="removeRequiredPart(${i})"${removeDisabledAttr}${removeTitleAttr}>🗑️ Trash</button>`
+                    : '';
+
+                const catalogOptions = sparePartCatalog
+                    .map((catalog) => {
+                        const isSelected = catalog.name === part.catalog_name;
+                        const stockQty = Number(catalog.stock_qty) || 0;
+                        const isOutOfStock = stockQty <= 0;
+                        const disabledAttr = !isSelected && isOutOfStock ? ' disabled' : '';
+                        const selectedAttr = isSelected ? ' selected' : '';
+                        const labelSuffix = isOutOfStock ? ' (Stok Habis)' : '';
+                        const optionLabel = `${escapeHtml(catalog.part_code || catalog.part_name || catalog.name)} — ${escapeHtml(catalog.part_name || '')}${labelSuffix}`;
+                        return `
+                            <option value="${escapeHtml(catalog.name)}"${selectedAttr}${disabledAttr}>
+                                ${optionLabel}
+                            </option>
+                        `;
+                    })
+                    .join('');
+                const manualLabel = part.item_name || part.description || '';
+                const manualCode = part.item_code || manualLabel;
+                const manualDisplay = manualLabel && manualCode && manualLabel !== manualCode
+                    ? `${escapeHtml(manualCode)} — ${escapeHtml(manualLabel)}`
+                    : `${escapeHtml(manualCode)}`;
+                const manualOption = !part.catalog_name && manualCode
+                    ? `<option value="__manual__${i}" selected>${manualDisplay}</option>`
+                    : '';
+                const catalogHint = sparePartCatalog.length ? '' : '<p class="sparepart-hint">Katalog sparepart masih kosong. Tambahkan data di halaman Sparepart.</p>';
+                const availableStock = Number(part.catalog_stock_qty ?? part.stock_qty ?? 0);
+                const stockWarning = availableStock <= 0 && part.catalog_name
+                    ? '<p class="sparepart-hint">Stok gudang habis. Pilih sumber lain atau lakukan pemesanan.</p>'
+                    : '';
+                const statusNote = isPartialRejectMode && !isPartsDetailMode
+                    ? `<div class="part-status-note">Status: ${escapeHtml(resolvePartStatusLabel(part.stock_status))}</div>`
+                    : '';
+
+                return `
+                    <tr class="${rowClassAttr}">
+                        <td>
+                            <div class="part-details">
+                                <div class="part-select">
+                                    <select onchange="selectRequiredPart(${i}, this.value)"${selectDisabledAttr}${selectRequiredAttr}>
+                                        <option value="">— Pilih sparepart atau bahan —</option>
+                                        ${manualOption}
+                                        ${catalogOptions}
+                                    </select>
+                                    ${catalogHint}
+                                    ${stockWarning}
+                                    ${statusNote}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <textarea onchange="updateRequiredPartDescription(${i}, this.value)"${inputDisabledAttr}>${escapeHtml(part.description || '')}</textarea>
+                        </td>
+                        <td><input type="number" value="${part.qty}" min="0" step="0.01" onchange="updateRequiredPartQty(${i}, this.value)" required${inputDisabledAttr}></td>
+                        <td><input type="text" value="${escapeHtml(part.uom || '')}" onchange="updateRequiredPartUom(${i}, this.value)"${inputDisabledAttr}></td>
+                        <td><input type="text" value="${escapeHtml(formatCurrency(part.rate || 0))}" inputmode="numeric" onchange="updateRequiredPartRate(${i}, this.value)"${inputDisabledAttr}></td>
+                        <td><input type="text" value="${escapeHtml(formatCurrency(part.discount_amount || 0))}" inputmode="numeric" onchange="updateRequiredPartDiscount(${i}, this.value)"${inputDisabledAttr}></td>
+                        <td class="numeric">${formatCurrency(part.amount || 0)}</td>
+                        <td class="actions">${actionButton}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="parts-table-wrapper">
+                    <table class="parts-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Deskripsi</th>
+                                <th>Qty</th>
+                                <th>UOM</th>
+                                <th>Harga Satuan</th>
+                                <th>Diskon</th>
+                                <th>Total</th>
+                                <th class="actions">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
+            recalculateTotals();
+        }
+
+        window.addRequiredPart = function() {
+            if (isPartsDetailMode) {
+                if (window.frappe && typeof frappe.show_alert === 'function') {
+                    frappe.show_alert({ message: 'Order ini sudah aman. Tidak perlu menambah sparepart.', indicator: 'blue' }, 5);
+                }
+                return;
+            }
+            requiredParts.push({
+                item_code: 'Oli Mesin',
+                item_name: 'Oli Mesin',
+                description: 'Oli Mesin',
+                qty: 1,
+                rate: 0,
+                uom: 'Unit',
+                stock_status: isPartialRejectMode ? 'Re-Request' : 'Draft',
+                source: 'On Hand',
+                warehouse: '',
+                catalog_name: null,
+                catalog_part_code: '',
+                catalog_stock_qty: null,
+                catalog_reserved_qty: null,
+                catalog_managed_by: '',
+                catalog_image: '',
+                catalog_unit_price: null,
+                discount_amount: 0,
+                amount: 0
+            });
+            renderRequiredParts();
+            scheduleAutoSave();
+        };
+
+        window.removeRequiredPart = function(index) {
+            if (isPartsDetailMode) {
+                return;
+            }
+            const part = requiredParts[index];
+            if (!part) {
+                return;
+            }
+            if (isPartLocked(part)) {
+                showLockedPartAlert();
+                return;
+            }
+            requiredParts.splice(index, 1);
+            renderRequiredParts();
+            scheduleAutoSave();
+        };
+
+        window.selectRequiredPart = function(index, value) {
+            if (isPartsDetailMode) {
+                return;
+            }
+            const part = requiredParts[index];
+            if (!part) {
+                return;
+            }
+            if (isPartLocked(part)) {
+                showLockedPartAlert();
+                renderRequiredParts();
+                return;
+            }
+            if (!value || value.startsWith('__manual__')) {
+                return;
+            }
+            const catalog = lookupSparePart(value);
+            if (!catalog) {
+                return;
+            }
+            const previousCatalogName = part.catalog_name || '';
+            const nextCatalogName = catalog.name || '';
+            const previousCode = part.item_code ? String(part.item_code) : '';
+            const nextCode = catalog.part_code ? String(catalog.part_code) : '';
+            const isDifferentSelection = (previousCatalogName && previousCatalogName !== nextCatalogName)
+                || (previousCode && previousCode !== nextCode);
+            const availableStock = Number(catalog.stock_qty) || 0;
+            const defaultSource = availableStock > 0 ? 'On Hand' : 'To Order';
+            const selectedSource = availableStock > 0 ? (part.source || defaultSource) : 'To Order';
+            requiredParts[index] = mergeRequiredPartWithCatalog({
+                ...part,
+                catalog_name: catalog.name,
+                catalog_part_code: catalog.part_code,
+                source: selectedSource
+            }, catalog);
+            if (isDifferentSelection || !part.description || !part.description.trim()) {
+                requiredParts[index].description = catalog.part_name || requiredParts[index].description;
+            }
+            renderRequiredParts();
+            scheduleAutoSave();
+        };
+
+        window.updateRequiredPartQty = function(index, value) {
+            if (isPartsDetailMode) {
+                return;
+            }
+            if (!requiredParts[index]) {
+                return;
+            }
+            if (isPartLocked(requiredParts[index])) {
+                showLockedPartAlert();
+                renderRequiredParts();
+                return;
+            }
+            const qty = Number(value);
+            requiredParts[index].qty = Number.isNaN(qty) ? 0 : Math.max(0, qty);
+            requiredParts[index].discount_amount = normalizeDiscount(requiredParts[index], requiredParts[index].discount_amount || 0);
+            requiredParts[index].amount = computePartAmount(requiredParts[index]);
+            renderRequiredParts();
+            scheduleAutoSave();
+        };
+
+        window.updateRequiredPartRate = function(index, value) {
+            if (isPartsDetailMode) {
+                return;
+            }
+            if (!requiredParts[index]) {
+                return;
+            }
+            if (isPartLocked(requiredParts[index])) {
+                showLockedPartAlert();
+                renderRequiredParts();
+                return;
+            }
+            const rate = normaliseCurrencyInput(value);
+            requiredParts[index].rate = rate;
+            requiredParts[index].discount_amount = normalizeDiscount(requiredParts[index], requiredParts[index].discount_amount || 0);
+            requiredParts[index].amount = computePartAmount(requiredParts[index]);
+            renderRequiredParts();
+            scheduleAutoSave();
+        };
+
+        window.updateRequiredPartDiscount = function(index, value) {
+            if (isPartsDetailMode) {
+                return;
+            }
+            if (!requiredParts[index]) {
+                return;
+            }
+            if (isPartLocked(requiredParts[index])) {
+                showLockedPartAlert();
+                renderRequiredParts();
+                return;
+            }
+            const discount = normaliseCurrencyInput(value);
+            requiredParts[index].discount_amount = normalizeDiscount(requiredParts[index], discount);
+            requiredParts[index].amount = computePartAmount(requiredParts[index]);
+            renderRequiredParts();
+            scheduleAutoSave();
+        };
+
+        window.updateRequiredPartDescription = function(index, value) {
+            if (isPartsDetailMode) {
+                return;
+            }
+            const part = requiredParts[index];
+            if (!part) {
+                return;
+            }
+            if (isPartLocked(part)) {
+                showLockedPartAlert();
+                renderRequiredParts();
+                return;
+            }
+            part.description = value;
+            if (!part.catalog_name) {
+                const trimmed = typeof value === 'string' ? value.trim() : '';
+                if (trimmed) {
+                    part.item_name = trimmed;
+                    part.item_code = trimmed;
+                }
+            }
+            renderRequiredParts();
+            scheduleAutoSave();
+        };
+
+        window.updateRequiredPartUom = function(index, value) {
+            if (isPartsDetailMode) {
+                return;
+            }
+            if (!requiredParts[index]) {
+                return;
+            }
+            if (isPartLocked(requiredParts[index])) {
+                showLockedPartAlert();
+                renderRequiredParts();
+                return;
+            }
+            requiredParts[index].uom = value;
+            scheduleAutoSave();
+        };
+
+        async function fetchSparePartCatalog() {
+            try {
+                await ensureCSRFToken();
+                const response = await frappe.call(withCSRF({
+                    method: 'garage.api.portal.list_spare_parts',
+                    args: { filters: { status: 'Active' } },
+                    type: 'POST'
+                }));
+                const parts = response.message?.spare_parts || [];
+                setSparePartCatalog(parts);
+                renderRequiredParts();
+                if (parts.length > 0) {
+                    catalogLoadedFromOrder = true;
+                }
+            } catch (error) {
+                console.error('Error loading spare part catalog:', error);
+                if (window.frappe && typeof frappe.show_alert === 'function') {
+                    const isCSRFError = error && error.message === 'CSRF token not available';
+                    frappe.show_alert({
+                        message: isCSRFError
+                            ? '❌ Sesi berakhir. Silakan muat ulang halaman dan coba lagi.'
+                            : '⚠️ Gagal memuat katalog sparepart.',
+                        indicator: isCSRFError ? 'red' : 'orange'
+                    }, 5);
+                }
+            }
+        }
+
+        async function loadOrderData() {
+            try {
+                await ensureCSRFToken();
+                const response = await frappe.call(withCSRF({
+                    method: 'garage.api.portal.get_service_order_details',
+                    args: { order_id: orderId },
+                    type: 'POST'
+                }));
+
+                if (response.message) {
+                    populateOrderInfo(response.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                const message = error && error.message === 'CSRF token not available'
+                    ? '❌ Sesi berakhir. Silakan muat ulang halaman.'
+                    : '❌ Gagal load data order';
+                frappe.show_alert({
+                    message,
+                    indicator: 'red'
+                }, 5);
+            } finally {
+                if (!catalogLoadedFromOrder) {
+                    await fetchSparePartCatalog();
+                }
+            }
+        }
+
+        function populateOrderInfo(order) {
+            latestOrder = order || null;
+            serviceSummaryItems = deriveServiceSummaryItems(order || {});
+            const customerDetails = order.customer_details || {};
+            const vehicleDetails = order.vehicle_details || {};
+
+            const normalizedPartCharge = normalizeStatusValue(order?.part_charge_status);
+            isPartChargeApproved = normalizedPartCharge === 'approved';
+            shouldHideSpkDueToStatus = isPartChargeApproved
+                || (normalizedPartCharge && normalizedPartCharge !== 'not started');
+
+            if (isPartChargeApproved && !hasShownApprovedAlert) {
+                hasShownApprovedAlert = true;
+                if (window.frappe && typeof frappe.show_alert === 'function') {
+                    frappe.show_alert({
+                        message: '✅ Permintaan sparepart sudah approved. Item yang disetujui akan dikunci. Tambahkan part baru bila diperlukan.',
+                        indicator: 'blue'
+                    }, 5);
+                }
+            }
+
+            if (normalizedPartCharge === 'partial reject') {
+                setPageMode('partial-reject');
+            } else if (isPartialRejectMode || isPartsDetailMode) {
+                setPageMode('parts-detail');
+            } else {
+                setPageMode('default');
+            }
+
+            updateModeCopy();
+            refreshSpkVisibilityContext();
+
+            document.getElementById('display_order_id').textContent = formatServiceOrderId(order.name || order.order_id);
+
+            const statusValue = order.status || order.workflow_state || order.job_card_status || 'Draft';
+            applyStatusBadge(statusValue);
+
+            const spkReadyStatuses = ['Work In Progress', 'Waiting Payment', 'Completed'];
+            if (isPartsDetailMode) {
+                setSpkButtonState(false);
+            } else {
+                setSpkButtonState(spkReadyStatuses.includes(statusValue));
+            }
+
+            const intakeType = (order.intake_type || 'Walk-In').toLowerCase() === 'booking' ? 'Booking' : 'Walk-In';
+            document.getElementById('display_intake_type').textContent = intakeType;
+
+            const channelMeta = document.getElementById('meta_booking_channel');
+            const channelValue = document.getElementById('display_booking_channel');
+            const referenceMeta = document.getElementById('meta_booking_reference');
+            const referenceValue = document.getElementById('display_booking_reference');
+            const isBooking = intakeType === 'Booking';
+
+            if (channelMeta && channelValue) {
+                if (isBooking) {
+                    channelMeta.classList.remove('is-hidden');
+                    channelValue.textContent = order.booking_channel || '-';
+                } else {
+                    channelMeta.classList.add('is-hidden');
+                    channelValue.textContent = '-';
+                }
+            }
+
+            if (referenceMeta && referenceValue) {
+                if (isBooking) {
+                    referenceMeta.classList.remove('is-hidden');
+                    referenceValue.textContent = order.booking_reference || '-';
+                } else {
+                    referenceMeta.classList.add('is-hidden');
+                    referenceValue.textContent = '-';
+                }
+            }
+
+            document.getElementById('display_booking_date').textContent = formatDisplayDate(order.service_booking_date);
+
+            const customerName = order.customer_name
+                || customerDetails.customer_name
+                || customerDetails.name
+                || order.customer
+                || '-';
+            document.getElementById('display_customer').textContent = customerName;
+            const customerNameDisplay = document.getElementById('display_customer_name');
+            if (customerNameDisplay) {
+                customerNameDisplay.textContent = customerName;
+            }
+
+            const customerTypeDisplay = document.getElementById('display_customer_type');
+            if (customerTypeDisplay) {
+                customerTypeDisplay.textContent = customerDetails.customer_type || '-';
+            }
+
+            const vipPill = document.getElementById('display_customer_vip');
+            if (vipPill) {
+                vipPill.style.display = customerDetails.is_vip ? 'inline-flex' : 'none';
+            }
+
+            const phone = customerDetails.phone || order.primary_contact || order.customer_phone || '';
+            const phoneLink = document.getElementById('display_customer_phone');
+            if (phoneLink) {
+                if (phone) {
+                    phoneLink.textContent = phone;
+                    phoneLink.href = `tel:${phone}`;
+                } else {
+                    phoneLink.textContent = '-';
+                    phoneLink.removeAttribute('href');
+                }
+            }
+
+            const email = customerDetails.email || order.customer_email || '';
+            const emailLink = document.getElementById('display_customer_email');
+            if (emailLink) {
+                if (email) {
+                    emailLink.textContent = email;
+                    emailLink.href = `mailto:${email}`;
+                } else {
+                    emailLink.textContent = '-';
+                    emailLink.removeAttribute('href');
+                }
+            }
+
+            const licensePlate = order.vehicle_plate || vehicleDetails.license_plate || '';
+            const brandModel = [
+                order.vehicle_brand || vehicleDetails.brand,
+                order.vehicle_model || vehicleDetails.model,
+                order.vehicle_model_variant || vehicleDetails.model_variant,
+            ]
+                .filter(Boolean)
+                .join(' ')
+                .trim();
+
+            const vehicleParts = [];
+            if (licensePlate) vehicleParts.push(licensePlate);
+            if (brandModel) vehicleParts.push(brandModel);
+            const vehicleDisplay = vehicleParts.join(' • ');
+
+            document.getElementById('display_vehicle').textContent = vehicleDisplay || '-';
+
+            const vehiclePlateDisplay = document.getElementById('display_vehicle_plate');
+            if (vehiclePlateDisplay) {
+                vehiclePlateDisplay.textContent = licensePlate || '-';
+            }
+
+            const vehicleBrandModelDisplay = document.getElementById('display_vehicle_brand_model');
+            if (vehicleBrandModelDisplay) {
+                vehicleBrandModelDisplay.textContent = brandModel || '-';
+            }
+
+            const vehicleYearDisplay = document.getElementById('display_vehicle_year');
+            if (vehicleYearDisplay) {
+                vehicleYearDisplay.textContent = vehicleDetails.vehicle_year || order.vehicle_year || '-';
+            }
+
+            const vehicleColorDisplay = document.getElementById('display_vehicle_color');
+            if (vehicleColorDisplay) {
+                vehicleColorDisplay.textContent = vehicleDetails.color || order.vehicle_color || '-';
+            }
+
+            const vehicleTransmissionDisplay = document.getElementById('display_vehicle_transmission');
+            if (vehicleTransmissionDisplay) {
+                vehicleTransmissionDisplay.textContent = vehicleDetails.transmission || order.vehicle_transmission || '-';
+            }
+
+            const vehicleFuelDisplay = document.getElementById('display_vehicle_fuel');
+            if (vehicleFuelDisplay) {
+                vehicleFuelDisplay.textContent = vehicleDetails.fuel_type || order.vehicle_fuel_type || '-';
+            }
+
+            const vehicleMileageDisplay = document.getElementById('display_vehicle_mileage');
+            if (vehicleMileageDisplay) {
+                vehicleMileageDisplay.textContent = formatMileage(vehicleDetails.mileage || order.vehicle_mileage);
+            }
+
+            const intakeNotes = order.intake_notes || order.inspection_summary || order.service_notes;
+            const intakeNotesDisplay = document.getElementById('display_intake_notes');
+            if (intakeNotesDisplay) {
+                intakeNotesDisplay.textContent = intakeNotes || 'Belum ada catatan tambahan dari intake.';
+            }
+
+            const rosterData = Array.isArray(order.available_technicians)
+                ? order.available_technicians
+                : [];
+            setTechnicianRoster(rosterData);
+            const assignedMechanic = order.assigned_mechanic || order.mechanic_in_charge || '';
+            const assignedMechanicName = order.assigned_mechanic_name
+                || order.mechanic_in_charge_name
+                || '';
+            syncAssignedMechanicSelection(assignedMechanic, assignedMechanicName);
+
+            applyServiceTypeBadge(order.service_order_type || '-');
+
+            updateEstimatedDeliveryDisplay();
+            applyPriorityBadge(order.priority || '-');
+
+            const summaryInput = document.getElementById('inspection_summary');
+            if (summaryInput) {
+                summaryInput.value = order.inspection_summary || '';
+            }
+
+            const notesInput = document.getElementById('service_notes');
+            if (notesInput) {
+                notesInput.value = order.service_notes || '';
+            }
+
+            const rawRequiredParts = Array.isArray(order.required_parts) ? order.required_parts : [];
+            const bundleRequiredParts = Array.isArray(order.bundle_required_parts) ? order.bundle_required_parts : [];
+            const sourceParts = rawRequiredParts.length ? rawRequiredParts : bundleRequiredParts;
+            const totalEstimateFromServer = Number(order.total_estimated_amount);
+
+            preserveServerEstimate = !sourceParts.length && !Number.isNaN(totalEstimateFromServer) && totalEstimateFromServer > 0;
+
+            if (sourceParts.length) {
+                requiredParts = sourceParts.map((part) => {
+                    const base = {
+                        item_code: part.item_code || part.part_code || '',
+                        item_name: part.item_name || part.part_name || '',
+                        description: part.description || '',
+                        qty: Number(part.qty ?? part.quantity ?? 1) || 0,
+                        rate: Number(part.rate ?? part.price ?? part.unit_price ?? 0) || 0,
+                        discount_amount: Number(part.discount_amount ?? part.discount ?? 0) || 0,
+                        uom: part.uom || part.unit || 'Unit',
+                        stock_status: part.stock_status || 'Draft',
+                        source: part.source || part.part_source || 'On Hand',
+                        warehouse: part.warehouse || part.warehouse_location || '',
+                        catalog_name: part.catalog_name || null,
+                        catalog_part_code: part.catalog_part_code || part.catalog_code || null,
+                        catalog_stock_qty: part.catalog_stock_qty ?? part.stock_qty ?? null,
+                        catalog_reserved_qty: part.catalog_reserved_qty ?? part.reserved_qty ?? null,
+                        catalog_managed_by: part.catalog_managed_by || part.managed_by || '',
+                        catalog_unit_price: part.catalog_unit_price ?? part.unit_price ?? null,
+                        catalog_image: part.catalog_image || '',
+                    };
+                    const catalogPart =
+                        lookupSparePart(base.item_code)
+                        || lookupSparePart(part.catalog_name)
+                        || lookupSparePart(part.catalog_part_code)
+                        || lookupSparePart(part.item_name);
+                    return catalogPart ? mergeRequiredPartWithCatalog(base, catalogPart) : base;
+                });
+            } else {
+                requiredParts = [];
+            }
+
+            const explicitServiceFee = Number(order.estimated_service_fee ?? order.service_fee ?? order.service_amount);
+            if (!Number.isNaN(explicitServiceFee) && explicitServiceFee > 0) {
+                baseServiceFee = Math.max(0, Math.round(explicitServiceFee));
+            } else {
+                const initialPartsTotal = requiredParts.reduce((sum, part) => {
+                    const amount = computePartAmount(part);
+                    if (Number.isNaN(amount)) {
+                        return sum;
+                    }
+                    return sum + amount;
+                }, 0);
+                const derivedServiceFee = Math.max(0, Math.round(Number(latestOrder?.total_estimated_amount || order.total_estimated_amount || 0) - initialPartsTotal));
+                baseServiceFee = derivedServiceFee > 0 ? derivedServiceFee : 0;
+            }
+
+            const availableCatalog = Array.isArray(order.available_spare_parts) ? order.available_spare_parts : [];
+            if (availableCatalog.length > 0) {
+                setSparePartCatalog(availableCatalog);
+                catalogLoadedFromOrder = true;
+            }
+
+            refreshIntakeSummary(baseServiceFee);
+            renderRequiredParts();
+            recalculateTotals();
+            isInitializing = false;
+        }
+
+        window.submitInspection = async function() {
+            if (isPartsDetailMode) {
+                if (window.frappe && typeof frappe.show_alert === 'function') {
+                    frappe.show_alert({ message: 'Sparepart sudah aman. Tidak ada aksi yang diperlukan.', indicator: 'blue' }, 5);
+                }
+                return;
+            }
+            const form = document.getElementById('inspectionForm');
+            if (form && !form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const invalidPartIndex = requiredParts.findIndex((part) => !part.item_code);
+            if (invalidPartIndex !== -1) {
+                frappe.show_alert({ message: `⚠️ Pilih sparepart untuk Part #${invalidPartIndex + 1}`, indicator: 'orange' }, 5);
+                return;
+            }
+
+            const priorityInput = document.getElementById('priority');
+            const estimatedDateInput = document.getElementById('estimated_delivery_date');
+            const summaryInput = document.getElementById('inspection_summary');
+            const notesInput = document.getElementById('service_notes');
+            const assignedMechanicInput = document.getElementById('assigned_mechanic');
+
+            if (assignedMechanicInput) {
+                const mechanicValue = assignedMechanicInput.value.trim();
+                if (!mechanicValue) {
+                    assignedMechanicInput.setCustomValidity('Pilih mekanik terlebih dahulu.');
+                    assignedMechanicInput.reportValidity();
+                    return;
+                }
+                assignedMechanicInput.setCustomValidity('');
+            }
+
+            const data = buildInspectionPayload({ includeStatus: true });
+
+            try {
+                await ensureCSRFToken();
+                await frappe.call(withCSRF({
+                    method: 'garage.api.portal.update_service_order_inspection',
+                    args: { order_id: orderId, inspection_data: data },
+                    type: 'POST'
+                }));
+
+                frappe.show_alert({ message: '✅ Permintaan part berhasil disimpan.', indicator: 'green' }, 5);
+                applyStatusBadge('Request Part');
+                latestOrder = Object.assign({}, latestOrder || {}, { status: 'Request Part' });
+                setSpkButtonState(false);
+
+                if (!shouldStayOnPageAfterSave) {
+                    setTimeout(() => window.location.reload(), 1200);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                const message = error && error.message === 'CSRF token not available'
+                    ? '❌ Sesi berakhir. Silakan muat ulang halaman dan coba lagi.'
+                    : '❌ Error: ' + (error.message || 'Gagal menyimpan');
+                frappe.show_alert({ message, indicator: 'red' }, 5);
+            }
+        };
+
+        window.printSpkDocument = async function() {
+            if (!orderId) {
+                frappe.show_alert({ message: '❌ Order tidak valid.', indicator: 'red' }, 5);
+                return;
+            }
+
+            if (spkButton) {
+                spkButton.disabled = true;
+                spkButton.textContent = 'Menyiapkan SPK…';
+            }
+
+            let shouldRedirectToService = false;
+
+            try {
+                await ensureCSRFToken();
+                const response = await frappe.call(withCSRF({
+                    method: 'garage.api.portal.generate_service_order_spk',
+                    args: { service_order: orderId },
+                    type: 'POST'
+                }));
+
+                const payload = response?.message || {};
+                const pdf = payload.spk_pdf || payload.pdf;
+                if (pdf && pdf.content) {
+                    downloadBase64Pdf(pdf.content, pdf.filename || `SPK-${orderId}.pdf`);
+                    shouldRedirectToService = true;
+                } else {
+                    frappe.msgprint('Dokumen SPK tidak tersedia.');
+                }
+
+                if (payload.message) {
+                    frappe.show_alert({ message: payload.message, indicator: payload.indicator || 'green' }, 5);
+                }
+            } catch (error) {
+                console.error('Error generating SPK:', error);
+                frappe.show_alert({ message: '❌ Gagal membuat dokumen SPK.', indicator: 'red' }, 5);
+            } finally {
+                if (spkButton) {
+                    if (shouldRedirectToService) {
+                        spkButton.textContent = spkButtonLabel;
+                    } else {
+                        spkButton.disabled = false;
+                        spkButton.textContent = spkButtonLabel;
+                    }
+                }
+
+                if (shouldRedirectToService) {
+                    setTimeout(() => {
+                        window.location.href = SERVICE_PAGE_URL;
+                    }, SPK_REDIRECT_DELAY);
+                }
+            }
+        };
+
+        function bindAutoSaveControls() {
+            const inputs = [
+                document.getElementById('inspection_summary'),
+                document.getElementById('service_notes'),
+                document.getElementById('priority'),
+                document.getElementById('estimated_delivery_date'),
+                document.getElementById('assigned_mechanic')
+            ];
+
+            inputs.forEach((input) => {
+                if (!input) {
+                    return;
+                }
+                input.addEventListener('input', scheduleAutoSave);
+                input.addEventListener('change', scheduleAutoSave);
+            });
+        }
+
+        bindAutoSaveControls();
+        loadOrderData();
+        recalculateTotals();
+
+        console.log('✅ Inspection page loaded!');
+    }
+    if (typeof frappe !== 'undefined' && typeof frappe.ready === 'function') {
+        frappe.ready(boot);
+    } else {
+        document.addEventListener('DOMContentLoaded', boot);
+    }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% set nav_items = get_portal_nav_items() %}
+
+<div class="portal-nav-wrapper">
+    <div class="container">
+        <nav class="portal-nav">
+            {% for item in nav_items %}
+                <a
+                    href="{{ item.route }}"
+                    class="portal-nav__link {{ 'is-hidden' if item.roles else '' }} {{ 'active' if active_page == item.key else '' }}"
+                    data-nav-key="{{ item.key }}"
+                    data-requires-role="{{ 1 if item.roles else 0 }}"
+                    {% if item.roles %}aria-hidden="true"{% endif %}
+                >
+                    {{ item.label }}
+                </a>
+            {% endfor %}
+        </nav>
+    </div>
+</div>
+
+<style>
+    .portal-nav__link.is-hidden {
+        display: none;
+    }
+
+    .portal-nav-wrapper.portal-nav-disabled {
+        pointer-events: none;
+    }
+
+    .portal-nav-wrapper.portal-nav-disabled .portal-nav__link {
+        cursor: not-allowed;
+        opacity: 0.45;
+        pointer-events: none;
+    }
+
+    .portal-nav__link.is-disabled {
+        cursor: not-allowed;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var navWrapper = document.querySelector('.portal-nav-wrapper');
+        if (!navWrapper) {
+            return;
+        }
+
+        var navLinks = navWrapper.querySelectorAll('[data-nav-key]');
+        if (!navLinks.length) {
+            return;
+        }
+
+        function toggleLinks(allowedMap) {
+            navLinks.forEach(function (link) {
+                var key = link.getAttribute('data-nav-key');
+                var requiresRole = link.getAttribute('data-requires-role') === '1';
+                var hasAllowedEntry = allowedMap && Object.prototype.hasOwnProperty.call(allowedMap, key);
+                var isAllowed = requiresRole ? !!(hasAllowedEntry && allowedMap[key]) : true;
+
+                if (isAllowed) {
+                    link.classList.remove('is-hidden');
+                    link.removeAttribute('aria-hidden');
+                } else {
+                    link.classList.add('is-hidden');
+                    link.setAttribute('aria-hidden', 'true');
+                }
+            });
+        }
+
+        fetch('/api/method/garage.api.auth.get_portal_navigation')
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                var allowedMap = {};
+                var items = data && data.message && data.message.items ? data.message.items : [];
+
+                items.forEach(function (item) {
+                    allowedMap[item.key] = !!item.allowed;
+                });
+
+                toggleLinks(allowedMap);
+            })
+            .catch(function () {
+                toggleLinks({});
+            });
+    });
+</script>

@@ -1,0 +1,21 @@
+[pre_model_sync]
+# Patches added in this section will be executed before doctypes are migrated
+# Read docs to understand patches: https://frappeframework.com/docs/v14/user/en/database-migrations
+garage.patches.pre_model_sync.rename_repair_qc_doctype
+
+[post_model_sync]
+# Patches added in this section will be executed after doctypes are migrated
+garage.patches.post_model_sync.add_default_roles
+garage.patches.post_model_sync.reapply_default_roles
+garage.patches.post_model_sync.add_default_branches
+garage.patches.post_model_sync.fix_service_order_name_column
+garage.patches.post_model_sync.fix_sales_invoice_name_column
+garage.patches.post_model_sync.fix_payment_entry_name_column
+garage.patches.post_model_sync.fix_vehicle_name_column
+garage.patches.post_model_sync.fix_vehicle_inspection_name_column
+garage.patches.post_model_sync.assign_branch_to_master_data
+garage.patches.post_model_sync.add_branch_portal_users
+garage.patches.post_model_sync.add_payment_modes
+garage.patches.post_model_sync.fix_garage_workspace_bank_statement_link
+garage.patches.post_model_sync.migrate_service_order_statuses
+garage.patches.post_model_sync.migrate_vehicle_schema

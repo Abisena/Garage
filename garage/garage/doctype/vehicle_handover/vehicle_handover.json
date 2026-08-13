@@ -1,0 +1,264 @@
+{
+  "actions": [],
+  "allow_guest_to_edit": 0,
+  "allow_guest_to_view": 0,
+  "allow_import": 1,
+  "allow_rename": 0,
+  "autoname": "field:sikk_number",
+  "beta": 0,
+  "creation": "2024-10-23 00:00:00.000000",
+  "default_view": "Form",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "info_section",
+    "sikk_number",
+    "vehicle",
+    "chassis_number",
+    "engine_number",
+    "jenis_service",
+    "column_break_info",
+    "submission_date",
+    "owner_name",
+    "customer_number",
+    "mechanic_name",
+    "ref_nota",
+    "section_break_hidden",
+    "service_order",
+    "branch",
+    "payment_entry",
+    "receipt_number",
+    "branch_code"
+  ],
+  "fields": [
+    {
+      "fieldname": "info_section",
+      "fieldtype": "Section Break",
+      "collapsible": 0
+    },
+    {
+      "fieldname": "sikk_number",
+      "fieldtype": "Data",
+      "label": "Nomor SIKK",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "bold": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "vehicle",
+      "fieldtype": "Link",
+      "label": "No. Polisi",
+      "options": "Garage Vehicle",
+      "fetch_from": "service_order.vehicle",
+      "read_only": 1,
+      "in_list_view": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "chassis_number",
+      "fieldtype": "Data",
+      "label": "Nomor Rangka",
+      "fetch_from": "vehicle.vin",
+      "read_only": 1
+    },
+    {
+      "fieldname": "engine_number",
+      "fieldtype": "Data",
+      "label": "Nomor Engine",
+      "fetch_from": "vehicle.engine_number",
+      "read_only": 1
+    },
+    {
+      "fieldname": "jenis_service",
+      "fieldtype": "Data",
+      "label": "Jenis Service",
+      "fetch_from": "service_order.service_order_type",
+      "read_only": 1
+    },
+    {
+      "fieldname": "column_break_info",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "submission_date",
+      "fieldtype": "Date",
+      "label": "Tgl Cetak SIKK",
+      "default": "Today",
+      "reqd": 1,
+      "in_list_view": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "owner_name",
+      "fieldtype": "Data",
+      "label": "Pemilik Kendaraan",
+      "fetch_from": "service_order.customer_display",
+      "read_only": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "customer_number",
+      "fieldtype": "Data",
+      "label": "Nomor Customer",
+      "fetch_from": "service_order.customer_number",
+      "read_only": 1
+    },
+    {
+      "fieldname": "mechanic_name",
+      "fieldtype": "Data",
+      "label": "Mekanik",
+      "fetch_from": "service_order.assigned_mechanic_name",
+      "read_only": 1
+    },
+    {
+      "fieldname": "ref_nota",
+      "fieldtype": "Data",
+      "label": "Ref. Nota",
+      "read_only": 1
+    },
+    {
+      "fieldname": "section_break_hidden",
+      "fieldtype": "Section Break",
+      "label": "Hidden Fields",
+      "collapsible": 1,
+      "collapsed": 1
+    },
+    {
+      "fieldname": "service_order",
+      "fieldtype": "Link",
+      "label": "Service Order",
+      "options": "Garage Service Order",
+      "reqd": 1,
+      "hidden": 1,
+      "permlevel": 1,
+      "description": "Source service order - vehicle, owner and service data above are pulled from here"
+    },
+    {
+      "fieldname": "branch",
+      "fieldtype": "Link",
+      "label": "Branch",
+      "options": "Garage Branch",
+      "reqd": 1,
+      "hidden": 1,
+      "permlevel": 1,
+      "description": "Workshop branch location"
+    },
+    {
+      "fieldname": "payment_entry",
+      "fieldtype": "Link",
+      "label": "Payment Entry",
+      "options": "Payment Entry",
+      "hidden": 1,
+      "permlevel": 1,
+      "description": "Link to payment entry (if applicable)"
+    },
+    {
+      "fieldname": "receipt_number",
+      "fieldtype": "Data",
+      "label": "Receipt Number",
+      "hidden": 1,
+      "permlevel": 1,
+      "description": "Payment receipt number"
+    },
+    {
+      "fieldname": "branch_code",
+      "fieldtype": "Data",
+      "label": "Branch Code",
+      "fetch_from": "branch.branch_code",
+      "read_only": 1,
+      "hidden": 1
+    }
+  ],
+  "has_web_view": 0,
+  "hide_toolbar": 0,
+  "index_web_pages_for_search": 1,
+  "is_submittable": 1,
+  "links": [],
+  "max_attachments": 10,
+  "modified": "2024-10-23 00:00:00.000000",
+  "module": "Garage",
+  "name": "Vehicle Handover",
+  "naming_rule": "By fieldname",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "submit": 1,
+      "cancel": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1,
+      "export": 1
+    },
+    {
+      "role": "Garage Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "submit": 1,
+      "cancel": 1,
+      "email": 1,
+      "print": 1
+    },
+    {
+      "role": "Garage User",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 0,
+      "submit": 1,
+      "email": 1,
+      "print": 1
+    },
+    {
+      "role": "Security User",
+      "create": 0,
+      "read": 1,
+      "write": 1,
+      "delete": 0,
+      "submit": 1,
+      "print": 1
+    },
+    {
+      "role": "System Manager",
+      "permlevel": 1,
+      "read": 1,
+      "write": 1
+    },
+    {
+      "role": "Garage Manager",
+      "permlevel": 1,
+      "read": 1,
+      "write": 1
+    },
+    {
+      "role": "Garage User",
+      "permlevel": 1,
+      "read": 1,
+      "write": 1
+    },
+    {
+      "role": "Security User",
+      "permlevel": 1,
+      "read": 1,
+      "write": 0
+    }
+  ],
+  "quick_entry": 0,
+  "show_name_in_global_search": 1,
+  "show_preview_popup": 1,
+  "show_title_field_in_link": 1,
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "title_field": "sikk_number",
+  "track_changes": 1,
+  "track_seen": 1,
+  "description": "SIKK (Surat Izin Keluar/Masuk Kendaraan) - vehicle exit/entry permit printed after service, auto-filled from the source Service Order"
+}

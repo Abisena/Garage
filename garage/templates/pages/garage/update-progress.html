@@ -1,0 +1,1062 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Update Progress Service Order - Garage{% endblock %}
+
+{% set required_roles = ['Service', 'Servis', 'Service Advisor', 'Technician', 'Teknisi', 'Mechanic', 'Mekanik'] %}
+{% include "garage/templates/includes/role_guard.html" %}
+
+{% block head_include %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --primary: #0066FF;
+    --primary-dark: #0052CC;
+    --primary-light: rgba(0, 102, 255, 0.08);
+    --gray-25: #FCFCFD;
+    --gray-50: #F8FAFC;
+    --gray-100: #F1F5F9;
+    --gray-200: #E2E8F0;
+    --gray-300: #CBD5E1;
+    --gray-400: #94A3B8;
+    --gray-500: #64748B;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1E293B;
+    --success: #0F9D58;
+    --warning: #FFB020;
+    --danger: #E11D48;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --shadow-md: 0 12px 30px rgba(15, 23, 42, 0.14);
+    --shadow-sm: 0 6px 18px rgba(15, 23, 42, 0.08);
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+body {
+    font-family: var(--font-sans) !important;
+    background: var(--gray-50) !important;
+    color: var(--gray-800) !important;
+}
+
+.page-wrapper {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 36px 20px 96px;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    background: white;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    color: var(--primary);
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.back-link:hover {
+    transform: translateX(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.status-pill.progress {
+    background: rgba(0, 102, 255, 0.1);
+    color: var(--primary-dark);
+    border-color: rgba(0, 102, 255, 0.25);
+}
+
+.status-pill.completed {
+    background: rgba(15, 157, 88, 0.12);
+    color: var(--success);
+    border-color: rgba(15, 157, 88, 0.24);
+}
+
+    .status-pill.waiting-payment {
+        background: rgba(255, 176, 32, 0.18);
+        color: var(--warning);
+        border-color: rgba(255, 176, 32, 0.32);
+    }
+
+.content-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+}
+
+@media (min-width: 960px) {
+    .content-grid {
+        grid-template-columns: 5fr 4fr;
+    }
+}
+
+.card {
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.card-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gray-800);
+}
+
+.card-header p {
+    color: var(--gray-500);
+    font-size: 14px;
+}
+
+.meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.meta-item {
+    background: var(--gray-25);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.meta-item .label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: var(--gray-500);
+    margin-bottom: 8px;
+}
+
+.meta-item .value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--gray-600);
+}
+
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    padding: 12px 14px;
+    font-size: 14px;
+    color: var(--gray-700);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background: white;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    text-transform: none;
+}
+
+.status-chip--idle {
+    background: rgba(148, 163, 184, 0.12);
+    color: var(--gray-600);
+    border-color: rgba(148, 163, 184, 0.28);
+}
+
+.status-chip--pending {
+    background: rgba(255, 176, 32, 0.16);
+    color: #b45309;
+    border-color: rgba(255, 176, 32, 0.28);
+}
+
+.status-chip--warning {
+    background: rgba(250, 204, 21, 0.2);
+    color: #92400e;
+    border-color: rgba(250, 204, 21, 0.34);
+}
+
+.status-chip--success {
+    background: rgba(15, 157, 88, 0.15);
+    color: #0f9d58;
+    border-color: rgba(15, 157, 88, 0.28);
+}
+
+.status-chip--danger {
+    background: rgba(225, 29, 72, 0.16);
+    color: #be123c;
+    border-color: rgba(225, 29, 72, 0.3);
+}
+
+.status-chip--muted {
+    background: rgba(100, 116, 139, 0.12);
+    color: #475569;
+    border-color: rgba(100, 116, 139, 0.28);
+}
+
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.15);
+}
+
+.helper-text {
+    font-size: 12px;
+    color: var(--gray-500);
+}
+
+.helper-text--warning {
+    color: var(--warning);
+    font-weight: 500;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    padding: 12px 18px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:disabled {
+    background: var(--gray-300);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 24px;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--primary);
+    box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.14);
+}
+
+.timeline-item::after {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 26px;
+    width: 2px;
+    height: calc(100% - 26px);
+    background: rgba(148, 163, 184, 0.35);
+}
+
+.timeline-item:last-child::after {
+    display: none;
+}
+
+.timeline-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.timeline-date {
+    font-size: 13px;
+    color: var(--gray-500);
+    font-weight: 600;
+}
+
+.timeline-status {
+    padding: 4px 10px;
+    background: rgba(0, 102, 255, 0.12);
+    color: var(--primary-dark);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.timeline-notes {
+    font-size: 14px;
+    color: var(--gray-600);
+    line-height: 1.6;
+}
+
+.empty-state {
+    background: var(--gray-25);
+    border: 1px dashed rgba(148, 163, 184, 0.45);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    text-align: center;
+    color: var(--gray-500);
+    font-size: 14px;
+}
+
+.page-state {
+    text-align: center;
+    padding: 48px 24px;
+    background: white;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    color: var(--gray-500);
+    margin-bottom: 24px;
+}
+
+.page-state strong {
+    display: block;
+    font-size: 18px;
+    color: var(--gray-700);
+    margin-bottom: 8px;
+}
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="page-wrapper">
+    <div class="page-header">
+        <a class="back-link" href="/garage/service">⬅ Kembali ke Service Overview</a>
+        <div>
+            <div id="order-id" class="order-id">Service Order: -</div>
+            <div id="status-pill" class="status-pill">Status Tidak Diketahui</div>
+        </div>
+    </div>
+
+    <div id="page-loading" class="page-state" hidden>
+        <strong>Memuat data service order...</strong>
+        Mohon tunggu sebentar.
+    </div>
+
+    <div id="page-error" class="page-state" hidden>
+        <strong>Service order tidak ditemukan.</strong>
+        Periksa kembali tautan yang Anda gunakan atau kembali ke halaman sebelumnya.
+    </div>
+
+    <div id="page-content" hidden>
+        <div class="content-grid">
+            <div class="card" id="summary-card">
+                <div class="card-header">
+                    <h2>Ringkasan Service Order</h2>
+                    <p>Informasi singkat mengenai customer dan kendaraan.</p>
+                </div>
+
+                <div class="meta-grid">
+                    <div class="meta-item">
+                        <div class="label">Customer</div>
+                        <div class="value" id="summary-customer">-</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="label">Kontak</div>
+                        <div class="value" id="summary-contact">-</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="label">Kendaraan</div>
+                        <div class="value" id="summary-vehicle">-</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="label">Service</div>
+                        <div class="value" id="summary-service-type">-</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="label">Prioritas</div>
+                        <div class="value" id="summary-priority">-</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="label">Estimasi Selesai</div>
+                        <div class="value" id="summary-estimate">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Update Progress</h2>
+                    <p>Perbarui status pengerjaan dan catatan progres terbaru.</p>
+                </div>
+
+                <form id="progress-form" class="form-grid">
+                    <div class="form-group">
+                        <label for="progress-status">Status Pengerjaan</label>
+                        <select id="progress-status"></select>
+                        <div id="completion-locked-message" class="helper-text helper-text--warning" hidden>
+                            Status <strong>Completed</strong> akan aktif setelah semua permintaan sparepart disetujui.
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Status Pembebanan Sparepart &amp; Bahan</label>
+                        <div id="part-charge-status-display" class="status-chip status-chip--idle">Not Started</div>
+                        <span class="helper-text">Status diperbarui otomatis dari permintaan sparepart.</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="note-status">Status Nota</label>
+                        <select id="note-status"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="invoice-status">Status Invoice</label>
+                        <select id="invoice-status"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="sikk-status">Status SIKK</label>
+                        <select id="sikk-status"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="progress-notes">Catatan Progress</label>
+                        <textarea id="progress-notes" placeholder="Tulis catatan perkembangan terkini..." maxlength="500"></textarea>
+                        <span class="helper-text">Catatan akan disimpan ke log progress beserta tanggal hari ini.</span>
+                    </div>
+                    <div>
+                        <button id="progress-submit" type="submit" class="btn-primary">💾 Simpan Perubahan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Riwayat Progress</h2>
+                <p>Catatan kronologis perkembangan pekerjaan.</p>
+            </div>
+
+            <div id="progress-history" class="timeline"></div>
+            <div id="progress-empty" class="empty-state" hidden>
+                Belum ada catatan progress untuk service order ini. Tambahkan catatan pertama Anda pada formulir di atas.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+(function() {
+    'use strict';
+
+    const API_CONFIG = {
+        getServiceOrderDetails: 'garage.api.portal.get_service_order_details',
+        updateServiceOrder: 'garage.api.portal.update_service_order',
+        appendProgressLog: 'garage.api.portal.append_service_progress'
+    };
+
+    const state = {
+        orderId: null,
+        order: null
+    };
+
+    const ui = {
+        loading: document.getElementById('page-loading'),
+        error: document.getElementById('page-error'),
+        content: document.getElementById('page-content'),
+        orderId: document.getElementById('order-id'),
+        statusPill: document.getElementById('status-pill'),
+        summary: {
+            customer: document.getElementById('summary-customer'),
+            contact: document.getElementById('summary-contact'),
+            vehicle: document.getElementById('summary-vehicle'),
+            serviceType: document.getElementById('summary-service-type'),
+            priority: document.getElementById('summary-priority'),
+            estimate: document.getElementById('summary-estimate')
+        },
+        form: {
+            element: document.getElementById('progress-form'),
+            status: document.getElementById('progress-status'),
+            notes: document.getElementById('progress-notes'),
+            submit: document.getElementById('progress-submit'),
+            noteStatus: document.getElementById('note-status'),
+            invoiceStatus: document.getElementById('invoice-status'),
+            sikkStatus: document.getElementById('sikk-status'),
+            partStatus: document.getElementById('part-charge-status-display'),
+            completionWarning: document.getElementById('completion-locked-message')
+        },
+        history: document.getElementById('progress-history'),
+        historyEmpty: document.getElementById('progress-empty')
+    };
+
+    const STATUS_OPTIONS = [
+        { value: 'Work In Progress', label: 'Work In Progress' },
+        { value: 'Waiting Payment', label: 'Waiting Payment' },
+        { value: 'Completed', label: 'Completed' },
+        { value: 'Cancelled', label: 'Cancelled' }
+    ];
+
+    const DEFAULT_TRACKING_STATUS = 'Not Started';
+    const TRACKING_STATUS_OPTIONS = [
+        { value: 'Not Started', label: 'Not Started' },
+        { value: 'Pending', label: 'Pending' },
+        { value: 'Partial Reject', label: 'Partial Reject' },
+        { value: 'Re-Request', label: 'Request Ulang' },
+        { value: 'Approved', label: 'Approved' },
+        { value: 'Completed', label: 'Completed' },
+        { value: 'Cancelled', label: 'Cancelled' },
+    ];
+
+    const PART_STATUS_META = {
+        default: { label: 'Not Started', className: 'status-chip status-chip--idle' },
+        'not started': { label: 'Not Started', className: 'status-chip status-chip--idle' },
+        pending: { label: 'Pending', className: 'status-chip status-chip--pending' },
+        'partial approve': { label: 'Partial Approve', className: 'status-chip status-chip--warning' },
+        'partial reject': { label: 'Partial Reject', className: 'status-chip status-chip--danger' },
+        're-request': { label: 'Request Ulang', className: 'status-chip status-chip--warning' },
+        'request ulang': { label: 'Request Ulang', className: 'status-chip status-chip--warning' },
+        approved: { label: 'Approved', className: 'status-chip status-chip--success' },
+        completed: { label: 'Completed', className: 'status-chip status-chip--success' },
+        rejected: { label: 'Rejected', className: 'status-chip status-chip--danger' },
+        cancelled: { label: 'Cancelled', className: 'status-chip status-chip--muted' },
+    };
+
+    function setPageState({ loading = false, error = false }) {
+        if (ui.loading) {
+            ui.loading.hidden = !loading;
+        }
+        if (ui.error) {
+            ui.error.hidden = !error;
+        }
+        if (ui.content) {
+            ui.content.hidden = loading || error;
+        }
+    }
+
+    function parseQueryOrderId() {
+        const params = new URLSearchParams(window.location.search || '');
+        return params.get('order') || params.get('name') || '';
+    }
+
+    function formatDate(value) {
+        if (!value) {
+            return '-';
+        }
+
+        try {
+            const date = frappe.datetime ? frappe.datetime.moment(value) : null;
+            if (date && date.isValid && date.isValid()) {
+                return date.format('DD MMM YYYY');
+            }
+
+            const parsed = new Date(value);
+            if (!isNaN(parsed.getTime())) {
+                return parsed.toLocaleDateString('id-ID', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                });
+            }
+        } catch (error) {
+            console.warn('Tidak dapat memformat tanggal:', value, error);
+        }
+
+        return value;
+    }
+
+    function escapeHTML(value) {
+        if (value === null || value === undefined) {
+            return '';
+        }
+
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatServiceOrderId(value) {
+        if (value === undefined || value === null) {
+            return '-';
+        }
+
+        const raw = String(value).trim();
+        if (!raw) {
+            return '-';
+        }
+
+        const sequenceMatch = raw.match(/(\d{3,})$/);
+        const digits = sequenceMatch ? sequenceMatch[1] : (raw.match(/\d+/) || [])[0];
+        const padded = digits ? String(digits).padStart(5, '0') : '';
+
+        return padded ? `SO-${padded}` : raw;
+    }
+
+    function buildVehicleSummary(details) {
+        if (!details) {
+            return '-';
+        }
+
+        const parts = [];
+        if (details.license_plate) {
+            parts.push(details.license_plate);
+        }
+        const brandModel = [details.brand, details.model, details.model_variant].filter(Boolean).join(' ').trim();
+        if (brandModel) {
+            parts.push(brandModel);
+        }
+        if (details.vehicle_year) {
+            parts.push(details.vehicle_year);
+        }
+        return parts.length ? parts.join(' • ') : '-';
+    }
+
+    function updateStatusBadge(status) {
+        if (!ui.statusPill) {
+            return;
+        }
+
+        const pill = ui.statusPill;
+        pill.textContent = status ? `Status: ${status}` : 'Status Tidak Diketahui';
+        pill.classList.remove('progress', 'completed', 'waiting-payment');
+
+        if (status === 'Work In Progress') {
+            pill.classList.add('progress');
+        } else if (status === 'Waiting Payment') {
+            pill.classList.add('waiting-payment');
+        } else if (status === 'Completed') {
+            pill.classList.add('completed');
+        }
+    }
+
+    function populateStatusOptions(order) {
+        if (!ui.form.status) {
+            return;
+        }
+
+        ui.form.status.innerHTML = '';
+
+        const currentStatus = order && order.status ? order.status : '';
+        const partStatus = order && order.part_charge_status ? order.part_charge_status.toLowerCase() : '';
+        const shouldDisableCompleted = ['partial approve', 'partial reject'].includes(partStatus) && currentStatus !== 'Completed';
+
+        STATUS_OPTIONS.forEach((option) => {
+            const element = document.createElement('option');
+            element.value = option.value;
+            element.textContent = option.label;
+            if (option.value === currentStatus) {
+                element.selected = true;
+            }
+            if (option.value === 'Completed' && shouldDisableCompleted) {
+                element.disabled = true;
+                element.textContent = `${option.label} (Menunggu approval sparepart)`;
+            }
+            ui.form.status.appendChild(element);
+        });
+
+        if (!ui.form.status.value && STATUS_OPTIONS.length) {
+            ui.form.status.selectedIndex = 0;
+        }
+
+        if (ui.form.completionWarning) {
+            ui.form.completionWarning.hidden = !shouldDisableCompleted;
+        }
+    }
+
+    function updatePartChargeDisplay(status) {
+        if (!ui.form.partStatus) {
+            return;
+        }
+
+        const normalized = (status || DEFAULT_TRACKING_STATUS).toLowerCase();
+        const meta = PART_STATUS_META[normalized] || PART_STATUS_META.default;
+        ui.form.partStatus.textContent = meta.label;
+        ui.form.partStatus.className = meta.className || PART_STATUS_META.default.className;
+    }
+
+    function populateTrackingSelect(select, value) {
+        if (!select) {
+            return;
+        }
+
+        const normalizedValue = value || DEFAULT_TRACKING_STATUS;
+        const hasOption = TRACKING_STATUS_OPTIONS.some(option => option.value === normalizedValue);
+        const options = hasOption
+            ? TRACKING_STATUS_OPTIONS
+            : [...TRACKING_STATUS_OPTIONS, { value: normalizedValue, label: normalizedValue }];
+
+        select.innerHTML = '';
+        options.forEach(option => {
+            const element = document.createElement('option');
+            element.value = option.value;
+            element.textContent = option.label;
+            if (option.value === normalizedValue) {
+                element.selected = true;
+            }
+            select.appendChild(element);
+        });
+
+        if (!select.value && options.length) {
+            select.selectedIndex = 0;
+        }
+    }
+
+    function renderTrackingStatuses(order) {
+        if (!order) {
+            updatePartChargeDisplay(DEFAULT_TRACKING_STATUS);
+            populateTrackingSelect(ui.form.noteStatus, DEFAULT_TRACKING_STATUS);
+            populateTrackingSelect(ui.form.invoiceStatus, DEFAULT_TRACKING_STATUS);
+            populateTrackingSelect(ui.form.sikkStatus, DEFAULT_TRACKING_STATUS);
+            return;
+        }
+
+        updatePartChargeDisplay(order.part_charge_status || DEFAULT_TRACKING_STATUS);
+        populateTrackingSelect(ui.form.noteStatus, order.note_status || DEFAULT_TRACKING_STATUS);
+        populateTrackingSelect(ui.form.invoiceStatus, order.invoice_status || DEFAULT_TRACKING_STATUS);
+        populateTrackingSelect(ui.form.sikkStatus, order.sikk_status || DEFAULT_TRACKING_STATUS);
+    }
+
+    function renderSummary(order) {
+        if (!order) {
+            return;
+        }
+
+        if (ui.orderId) {
+            ui.orderId.textContent = `Service Order: ${formatServiceOrderId(order.name)}`;
+        }
+
+        const customer = order.customer_details || {};
+        if (ui.summary.customer) {
+            ui.summary.customer.textContent = customer.customer_name || customer.name || '-';
+        }
+        if (ui.summary.contact) {
+            const contactParts = [];
+            if (customer.phone) {
+                contactParts.push(customer.phone);
+            }
+            if (customer.email) {
+                contactParts.push(customer.email);
+            }
+            ui.summary.contact.textContent = contactParts.length ? contactParts.join(' • ') : '-';
+        }
+        if (ui.summary.vehicle) {
+            ui.summary.vehicle.textContent = buildVehicleSummary(order.vehicle_details);
+        }
+        if (ui.summary.serviceType) {
+            const typeParts = [order.service_order_type, order.order_category].filter(Boolean);
+            ui.summary.serviceType.textContent = typeParts.length ? typeParts.join(' • ') : '-';
+        }
+        if (ui.summary.priority) {
+            ui.summary.priority.textContent = order.priority || '-';
+        }
+        if (ui.summary.estimate) {
+            ui.summary.estimate.textContent = formatDate(order.estimated_delivery_date) || '-';
+        }
+
+        updateStatusBadge(order.status);
+        populateStatusOptions(order);
+        renderTrackingStatuses(order);
+    }
+
+    function renderProgressHistory(progressLogs) {
+        if (!ui.history || !ui.historyEmpty) {
+            return;
+        }
+
+        if (!progressLogs || progressLogs.length === 0) {
+            ui.history.innerHTML = '';
+            ui.historyEmpty.hidden = false;
+            return;
+        }
+
+        const sortedLogs = [...progressLogs].sort((a, b) => {
+            const dateA = new Date(a.log_date || a.creation || a.modified || 0).getTime();
+            const dateB = new Date(b.log_date || b.creation || b.modified || 0).getTime();
+            return dateB - dateA;
+        });
+
+        ui.history.innerHTML = sortedLogs.map((log) => {
+            const dateLabel = formatDate(log.log_date || log.creation || log.modified);
+            const statusLabel = log.status ? `<span class="timeline-status">${escapeHTML(log.status)}</span>` : '';
+            const notes = log.progress_notes ? escapeHTML(log.progress_notes) : 'Tidak ada catatan tambahan.';
+
+            return `
+                <div class="timeline-item">
+                    <div class="timeline-meta">
+                        <span class="timeline-date">${dateLabel}</span>
+                        ${statusLabel}
+                    </div>
+                    <div class="timeline-notes">${notes.replace(/\n/g, '<br>')}</div>
+                </div>
+            `;
+        }).join('');
+
+        ui.historyEmpty.hidden = true;
+    }
+
+    async function loadOrder(orderId) {
+        try {
+            setPageState({ loading: true, error: false });
+
+            const response = await frappe.call({
+                method: API_CONFIG.getServiceOrderDetails,
+                args: { order_id: orderId }
+            });
+
+            const order = response && response.message ? response.message : response;
+
+            if (!order || !order.name) {
+                throw new Error('Data service order tidak ditemukan.');
+            }
+
+            state.order = order;
+            renderSummary(order);
+            renderProgressHistory(order.progress_logs || []);
+
+            if (ui.form.notes) {
+                ui.form.notes.value = '';
+            }
+
+            setPageState({ loading: false, error: false });
+        } catch (error) {
+            console.error('[UpdateProgress] Gagal memuat data service order:', error);
+            setPageState({ loading: false, error: true });
+            const message = error && error.message ? error.message : 'Terjadi kesalahan saat memuat data service order.';
+            if (frappe.msgprint) {
+                frappe.msgprint({ title: 'Gagal Memuat', message, indicator: 'red' });
+            }
+        }
+    }
+
+    async function handleSubmit(event) {
+        event.preventDefault();
+
+        if (!state.orderId) {
+            frappe.msgprint({
+                title: 'Service order tidak ditemukan',
+                message: 'Tidak ada service order yang dipilih untuk diperbarui.',
+                indicator: 'red'
+            });
+            return;
+        }
+
+        const newStatus = ui.form.status ? ui.form.status.value : '';
+        const notes = ui.form.notes ? ui.form.notes.value.trim() : '';
+        const currentStatus = state.order ? state.order.status : '';
+        const noteStatus = ui.form.noteStatus ? ui.form.noteStatus.value || DEFAULT_TRACKING_STATUS : DEFAULT_TRACKING_STATUS;
+        const invoiceStatus = ui.form.invoiceStatus ? ui.form.invoiceStatus.value || DEFAULT_TRACKING_STATUS : DEFAULT_TRACKING_STATUS;
+        const sikkStatus = ui.form.sikkStatus ? ui.form.sikkStatus.value || DEFAULT_TRACKING_STATUS : DEFAULT_TRACKING_STATUS;
+        const currentNoteStatus = state.order && state.order.note_status ? state.order.note_status : DEFAULT_TRACKING_STATUS;
+        const currentInvoiceStatus = state.order && state.order.invoice_status ? state.order.invoice_status : DEFAULT_TRACKING_STATUS;
+        const currentSikkStatus = state.order && state.order.sikk_status ? state.order.sikk_status : DEFAULT_TRACKING_STATUS;
+
+        const updates = {};
+        if (newStatus && newStatus !== currentStatus) {
+            updates.status = newStatus;
+        }
+        if (noteStatus !== currentNoteStatus) {
+            updates.note_status = noteStatus;
+        }
+        if (invoiceStatus !== currentInvoiceStatus) {
+            updates.invoice_status = invoiceStatus;
+        }
+        if (sikkStatus !== currentSikkStatus) {
+            updates.sikk_status = sikkStatus;
+        }
+
+        if (!notes && Object.keys(updates).length === 0) {
+            frappe.msgprint({
+                title: 'Tidak ada perubahan',
+                message: 'Ubah status atau tulis catatan progress sebelum menyimpan.',
+                indicator: 'orange'
+            });
+            return;
+        }
+
+        try {
+            if (ui.form.submit) {
+                ui.form.submit.disabled = true;
+                ui.form.submit.textContent = '⏳ Menyimpan...';
+            }
+
+            if (frappe.dom && typeof frappe.dom.freeze === 'function') {
+                frappe.dom.freeze('Menyimpan update progress...');
+            }
+
+            if (Object.keys(updates).length) {
+                await frappe.call({
+                    method: API_CONFIG.updateServiceOrder,
+                    args: {
+                        name: state.orderId,
+                        updates
+                    }
+                });
+            }
+
+            if (notes) {
+                const today = frappe.datetime && typeof frappe.datetime.get_today === 'function'
+                    ? frappe.datetime.get_today()
+                    : new Date().toISOString().slice(0, 10);
+
+                const logPayload = {
+                    log_date: today,
+                    progress_notes: notes
+                };
+
+                if (newStatus) {
+                    logPayload.status = newStatus;
+                }
+
+                await frappe.call({
+                    method: API_CONFIG.appendProgressLog,
+                    args: {
+                        name: state.orderId,
+                        log_entry: logPayload
+                    }
+                });
+            }
+
+            if (frappe.dom && typeof frappe.dom.unfreeze === 'function') {
+                frappe.dom.unfreeze();
+            }
+
+            const successMessage = [];
+            if (updates.status) {
+                successMessage.push(`Status diperbarui ke <b>${escapeHTML(newStatus)}</b>`);
+            }
+            if (updates.note_status) {
+                successMessage.push(`Status nota diperbarui ke <b>${escapeHTML(noteStatus)}</b>`);
+            }
+            if (updates.invoice_status) {
+                successMessage.push(`Status invoice diperbarui ke <b>${escapeHTML(invoiceStatus)}</b>`);
+            }
+            if (updates.sikk_status) {
+                successMessage.push(`Status SIKK diperbarui ke <b>${escapeHTML(sikkStatus)}</b>`);
+            }
+            if (notes) {
+                successMessage.push('Catatan progress tersimpan');
+            }
+
+            if (frappe.show_alert) {
+                frappe.show_alert({
+                    message: successMessage.join(' dan ') + '.',
+                    indicator: 'green'
+                });
+            } else {
+                frappe.msgprint({
+                    title: 'Berhasil',
+                    message: successMessage.join(' dan ') + '.',
+                    indicator: 'green'
+                });
+            }
+
+            await loadOrder(state.orderId);
+        } catch (error) {
+            console.error('[UpdateProgress] Gagal menyimpan update progress:', error);
+            if (frappe.dom && typeof frappe.dom.unfreeze === 'function') {
+                frappe.dom.unfreeze();
+            }
+            const message = error && error.message ? error.message : 'Terjadi kesalahan saat menyimpan update progress.';
+            frappe.msgprint({ title: 'Gagal Menyimpan', message, indicator: 'red' });
+        } finally {
+            if (ui.form.submit) {
+                ui.form.submit.disabled = false;
+                ui.form.submit.textContent = '💾 Simpan Perubahan';
+            }
+        }
+    }
+
+    async function init() {
+        state.orderId = parseQueryOrderId();
+
+        if (!state.orderId) {
+            setPageState({ loading: false, error: true });
+            if (ui.orderId) {
+                ui.orderId.textContent = 'Service Order tidak valid';
+            }
+            frappe.msgprint({
+                title: 'Order tidak ditemukan',
+                message: 'Parameter order pada URL tidak tersedia. Gunakan tombol Update dari halaman Service.',
+                indicator: 'red'
+            });
+            return;
+        }
+
+        setPageState({ loading: true, error: false });
+        await loadOrder(state.orderId);
+    }
+
+    if (ui.form.element) {
+        ui.form.element.addEventListener('submit', handleSubmit);
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+{% endblock %}

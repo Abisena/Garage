@@ -1,0 +1,541 @@
+{
+  "actions": [],
+  "allow_guest_to_edit": 0,
+  "allow_guest_to_view": 0,
+  "allow_import": 1,
+  "allow_rename": 0,
+  "autoname": "format:BGR-SPK-{YYYY}-{#####}",
+  "beta": 0,
+  "creation": "2024-06-02 00:00:00.000000",
+  "default_view": "Form",
+  "disable_prepared_report": 0,
+  "docstatus": 0,
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "section_break_vehicle_detail",
+    "vehicle",
+    "chassis_number",
+    "vehicle_brand",
+    "vehicle_model",
+    "vehicle_type",
+    "vehicle_transmission",
+    "column_break_header",
+    "vehicle_color",
+    "vehicle_year",
+    "vehicle_mileage",
+    "vehicle_fuel_type",
+    "column_break_header2",
+    "customer",
+    "customer_number",
+    "customer_display",
+    "customer_type",
+    "primary_contact",
+    "customer_email",
+    "customer_address",
+    "customer_city",
+    "section_break_service",
+    "order_date",
+    "service_order_type",
+    "service_package",
+    "service_package_display",
+    "priority",
+    "column_break_service",
+    "status",
+    "spk_number",
+    "assigned_mechanic",
+    "assigned_mechanic_name",
+    "estimated_completion",
+    "section_break_parts",
+    "required_parts",
+    "section_break_parts_total",
+    "total_amount",
+    "section_break_complaint",
+    "complaint",
+    "section_break_hidden",
+    "service_notes",
+    "branch",
+    "branch_code",
+    "part_charge_status",
+    "job_card_status",
+    "qc_status",
+    "work_order_status",
+    "actual_delivery_date",
+    "rejection_reason"
+  ],
+  "fields": [
+    {
+      "fieldname": "header_section",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "vehicle",
+      "fieldtype": "Link",
+      "label": "No. Polisi",
+      "options": "Garage Vehicle",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "chassis_number",
+      "fieldtype": "Data",
+      "label": "Nomor Rangka",
+      "fetch_from": "vehicle.vin",
+      "bold": 1
+    },
+    {
+      "fieldname": "vehicle_display",
+      "fieldtype": "Data",
+      "label": "Vehicle Details",
+      "read_only": 1,
+      "bold": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "section_break_vehicle_detail",
+      "fieldtype": "Section Break",
+      "label": "Vehicle & Customer"
+    },
+    {
+      "fieldname": "vehicle_brand",
+      "fieldtype": "Data",
+      "label": "Brand",
+      "fetch_from": "vehicle.brand",
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "vehicle_model",
+      "fieldtype": "Data",
+      "label": "Model",
+      "fetch_from": "vehicle.model",
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "vehicle_year",
+      "fieldtype": "Data",
+      "label": "Year",
+      "fetch_from": "vehicle.vehicle_year",
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "vehicle_color",
+      "fieldtype": "Data",
+      "label": "Color",
+      "fetch_from": "vehicle.color",
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "column_break_header2",
+      "fieldtype": "Column Break",
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "vehicle_type",
+      "fieldtype": "Data",
+      "label": "Vehicle Type",
+      "fetch_from": "vehicle.vehicle_type",
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "vehicle_transmission",
+      "fieldtype": "Data",
+      "label": "Transmission",
+      "fetch_from": "vehicle.transmission",
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "vehicle_fuel_type",
+      "fieldtype": "Data",
+      "label": "Fuel Type",
+      "fetch_from": "vehicle.fuel_type",
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "vehicle_mileage",
+      "fieldtype": "Data",
+      "label": "Mileage (KM)",
+      "fetch_from": "vehicle.mileage",
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "column_break_header",
+      "fieldtype": "Column Break",
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Open\nWaiting Part\nPrepared\nIn Progress\nFinished\nQC Review\nWaiting Payment\nCompleted\nCancelled",
+      "default": "Open",
+      "read_only": 1,
+      "in_list_view": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "spk_number",
+      "fieldtype": "Data",
+      "label": "Nomor SPK",
+      "read_only": 1,
+      "bold": 1,
+      "description": "Auto-filled the first time the Surat Perintah Kerja (work order) is printed. Repair can't start until this is set."
+    },
+    {
+      "fieldname": "priority",
+      "fieldtype": "Select",
+      "label": "Priority",
+      "options": "Normal\nHigh\nCritical",
+      "default": "Normal",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "section_break_customer",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Customer",
+      "options": "Customer",
+      "reqd": 1,
+      "in_standard_filter": 1,
+      "fetch_from": "vehicle.customer",
+      "hidden": 1
+    },
+    {
+      "fieldname": "customer_display",
+      "fieldtype": "Data",
+      "label": "Customer Name",
+      "fetch_from": "customer.customer_name",
+      "bold": 1,
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "customer_number",
+      "fieldtype": "Data",
+      "label": "Customer No.",
+      "fetch_from": "customer.customer_number",
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "customer_type",
+      "fieldtype": "Data",
+      "label": "Type",
+      "fetch_from": "customer.customer_type",
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "primary_contact",
+      "fieldtype": "Data",
+      "label": "Phone",
+      "fetch_from": "customer.mobile_no",
+      "bold": 1,
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "customer_email",
+      "fieldtype": "Data",
+      "label": "Email",
+      "fetch_from": "customer.email_id",
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "customer_id_number",
+      "fieldtype": "Data",
+      "label": "KTP/SIM",
+      "fetch_from": "customer.id_number",
+      "depends_on": "eval:doc.vehicle",
+      "hidden": 1
+    },
+    {
+      "fieldname": "customer_address",
+      "fieldtype": "Data",
+      "label": "Address",
+      "fetch_from": "customer.address_line1",
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "customer_city",
+      "fieldtype": "Data",
+      "label": "City",
+      "fetch_from": "customer.city",
+      "depends_on": "eval:doc.vehicle"
+    },
+    {
+      "fieldname": "column_break_customer",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "branch",
+      "fieldtype": "Link",
+      "label": "Branch",
+      "options": "Garage Branch",
+      "hidden": 1
+    },
+    {
+      "fieldname": "order_date",
+      "fieldtype": "Date",
+      "label": "Tanggal",
+      "default": "Today",
+      "read_only": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "service_order_type",
+      "fieldtype": "Link",
+      "label": "Service Type",
+      "options": "Garage Service Type",
+      "in_list_view": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "service_package",
+      "fieldtype": "Link",
+      "label": "Paket Service",
+      "options": "Garage Service Bundle"
+    },
+    {
+      "fieldname": "service_package_display",
+      "fieldtype": "Data",
+      "label": "Nama Paket",
+      "fetch_from": "service_package.bundle_name",
+      "read_only": 1,
+      "depends_on": "eval:doc.service_package"
+    },
+    {
+      "fieldname": "assigned_mechanic",
+      "fieldtype": "Link",
+      "label": "Mechanic",
+      "options": "Employee",
+      "reqd": 1
+    },
+    {
+      "fieldname": "assigned_mechanic_name",
+      "fieldtype": "Data",
+      "label": "Mechanic Name",
+      "fetch_from": "assigned_mechanic.employee_name",
+      "read_only": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "estimated_completion",
+      "fieldtype": "Date",
+      "label": "Estimasi Selesai"
+    },
+    {
+      "fieldname": "section_break_service",
+      "fieldtype": "Section Break",
+      "label": "Work Order"
+    },
+    {
+      "fieldname": "column_break_service",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "section_break_complaint",
+      "fieldtype": "Section Break",
+      "label": "Keluhan Pelanggan"
+    },
+    {
+      "fieldname": "complaint",
+      "fieldtype": "Text",
+      "label": ""
+    },
+    {
+      "fieldname": "section_break_parts",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "required_parts",
+      "fieldtype": "Table",
+      "label": "Required Parts",
+      "options": "Garage Service Order Part"
+    },
+    {
+      "fieldname": "section_break_parts_total",
+      "fieldtype": "Section Break",
+      "hidden": 1
+    },
+    {
+      "fieldname": "total_amount",
+      "fieldtype": "Currency",
+      "label": "Total Amount",
+      "read_only": 1,
+      "bold": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "section_break_notes",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "service_notes",
+      "fieldtype": "Text Editor",
+      "label": "Notes",
+      "hidden": 1
+    },
+    {
+      "fieldname": "section_break_hidden",
+      "fieldtype": "Section Break",
+      "hidden": 1
+    },
+    {
+      "fieldname": "branch_code",
+      "fieldtype": "Data",
+      "label": "Branch Code",
+      "read_only": 1,
+      "hidden": 1,
+      "fetch_from": "branch.branch_code"
+    },
+    {
+      "fieldname": "part_charge_status",
+      "fieldtype": "Data",
+      "label": "Part Charge Status",
+      "hidden": 1
+    },
+    {
+      "fieldname": "job_card_status",
+      "fieldtype": "Data",
+      "label": "Job Card Status",
+      "hidden": 1
+    },
+    {
+      "fieldname": "qc_status",
+      "fieldtype": "Data",
+      "label": "QC Status",
+      "hidden": 1
+    },
+    {
+      "fieldname": "work_order_status",
+      "fieldtype": "Data",
+      "label": "Work Order Status",
+      "hidden": 1
+    },
+    {
+      "fieldname": "actual_delivery_date",
+      "fieldtype": "Date",
+      "label": "Actual Delivery Date",
+      "hidden": 1
+    },
+    {
+      "fieldname": "rejection_reason",
+      "fieldtype": "Small Text",
+      "label": "Rejection Reason",
+      "hidden": 1
+    }
+  ],
+  "has_web_view": 0,
+  "hide_heading": 0,
+  "hide_toolbar": 0,
+  "idx": 0,
+  "image_field": "",
+  "in_create": 0,
+  "info_fields": [],
+  "is_submittable": 0,
+  "issingle": 0,
+  "istable": 0,
+  "links": [
+    {
+      "link_doctype": "Spare Part Request",
+      "link_fieldname": "service_order"
+    },
+    {
+      "link_doctype": "Sales Invoice",
+      "link_fieldname": "po_no"
+    }
+  ],
+  "make_attachments_public": 0,
+  "max_attachments": 10,
+  "modified": "2026-07-18 02:20:00.000000",
+  "module": "Garage",
+  "name": "Garage Service Order",
+  "naming_rule": "By \"Naming Series\" field",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1,
+      "export": 1
+    },
+    {
+      "role": "Garage Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1,
+      "export": 1
+    },
+    {
+      "role": "Garage User",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 0,
+      "email": 1,
+      "print": 1,
+      "share": 0,
+      "export": 0
+    }
+  ],
+  "quick_entry": 0,
+  "read_only": 0,
+  "read_only_onload": 0,
+  "show_name_in_global_search": 1,
+  "show_preview_popup": 1,
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [
+    {
+      "title": "Open",
+      "color": "Blue"
+    },
+    {
+      "title": "Waiting Part",
+      "color": "Yellow"
+    },
+    {
+      "title": "In Progress",
+      "color": "Light Blue"
+    },
+    {
+      "title": "Finished",
+      "color": "Cyan"
+    },
+    {
+      "title": "QC Review",
+      "color": "Purple"
+    },
+    {
+      "title": "Waiting Payment",
+      "color": "Orange"
+    },
+    {
+      "title": "Completed",
+      "color": "Green"
+    },
+    {
+      "title": "Cancelled",
+      "color": "Red"
+    }
+  ],
+  "default_print_format": "Garage Service Order Print",
+  "subject": "",
+  "title_field": "customer_display",
+  "track_changes": 1,
+  "track_seen": 1,
+  "translated_doctype": 0,
+  "migration_hash": "",
+  "description": "Complete workshop service management from customer intake to job completion"
+}

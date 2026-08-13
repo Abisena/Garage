@@ -1,0 +1,4038 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Registrasi Customer & Kendaraan{% endblock %}
+
+{% set required_roles = ['Admin', 'Registrasi', 'Customer Service', 'Front Desk'] %}
+{% include "garage/templates/includes/role_guard.html" %}
+
+{% block head_include %}
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================================
+   GARAGE INTAKE PAGE - PREMIUM ELEGANT DESIGN
+   Modern Form Layout with Perfect Visual Hierarchy
+   ============================================================================ */
+
+/* === DESIGN TOKENS === */
+:root {
+    /* Brand Colors - Refined Blue Palette */
+    --primary: #0066FF;
+    --primary-dark: #0052CC;
+    --primary-darker: #003D99;
+    --primary-light: #4D94FF;
+    --primary-lightest: #E6F2FF;
+    --primary-subtle: #F0F7FF;
+    
+    /* Accent Colors */
+    --accent-success: #00C853;
+    --accent-warning: #FFB300;
+    --accent-danger: #FF3D00;
+    --accent-info: #00B8D4;
+    
+    /* Neutral Palette - Sophisticated Grays */
+    --gray-50: #FAFBFC;
+    --gray-100: #F5F7FA;
+    --gray-200: #E9ECF1;
+    --gray-300: #D4DAE4;
+    --gray-400: #B8C1D3;
+    --gray-500: #8896AB;
+    --gray-600: #5E6C84;
+    --gray-700: #3E4C5E;
+    --gray-800: #2A3647;
+    --gray-900: #1A2332;
+    
+    /* Semantic Colors */
+    --text-primary: #1A2332;
+    --text-secondary: #5E6C84;
+    --text-muted: #8896AB;
+    --text-inverse: #FFFFFF;
+    
+    --bg-body: #F5F7FA;
+    --bg-surface: #FFFFFF;
+    --bg-elevated: #FAFBFC;
+    --bg-overlay: rgba(26, 35, 50, 0.8);
+    
+    --border-light: #E9ECF1;
+    --border-base: #D4DAE4;
+    --border-strong: #B8C1D3;
+    
+    /* Shadows - Layered Depth */
+    --shadow-xs: 0 1px 2px rgba(26, 35, 50, 0.04);
+    --shadow-sm: 0 2px 4px rgba(26, 35, 50, 0.06), 0 1px 2px rgba(26, 35, 50, 0.04);
+    --shadow-md: 0 4px 8px rgba(26, 35, 50, 0.08), 0 2px 4px rgba(26, 35, 50, 0.04);
+    --shadow-lg: 0 8px 16px rgba(26, 35, 50, 0.12), 0 4px 8px rgba(26, 35, 50, 0.06);
+    --shadow-xl: 0 16px 32px rgba(26, 35, 50, 0.16), 0 8px 16px rgba(26, 35, 50, 0.08);
+    --shadow-2xl: 0 24px 48px rgba(26, 35, 50, 0.2), 0 12px 24px rgba(26, 35, 50, 0.1);
+    
+    /* Border Radius */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-2xl: 20px;
+    --radius-full: 9999px;
+    
+    /* Spacing Scale */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-20: 80px;
+    --space-24: 96px;
+    
+    /* Typography */
+    --font-sans: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    
+    --font-size-xs: 0.75rem;      /* 12px */
+    --font-size-sm: 0.975rem;     /* 14px */
+    --font-size-base: 0.9375rem;  /* 15px */
+    --font-size-lg: 1.0625rem;    /* 17px */
+    --font-size-xl: 1.25rem;      /* 20px */
+    --font-size-2xl: 1.5rem;      /* 24px */
+    --font-size-3xl: 1.875rem;    /* 30px */
+    --font-size-4xl: 2.25rem;     /* 36px */
+    --font-size-5xl: 3rem;        /* 48px */
+    
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    
+    --line-height-tight: 1.25;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.625;
+    --line-height-loose: 1.75;
+    
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    
+    /* Z-index Scale */
+    --z-base: 0;
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-popover: 1060;
+    --z-tooltip: 1070;
+}
+
+/* === BASE RESETS === */
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-sans) !important;
+    font-size: var(--font-size-base) !important;
+    line-height: var(--line-height-normal) !important;
+    color: var(--text-primary) !important;
+    background: var(--bg-body) !important;
+    overflow-x: hidden;
+}
+
+/* Hide default Frappe navbar styling */
+.navbar {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.navbar-default {
+    background-color: transparent !important;
+    border-color: transparent !important;
+}
+
+/* Remove blue background from hamburger menu */
+.navbar-toggle {
+    background-color: transparent !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+.navbar-toggle:hover,
+.navbar-toggle:focus {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Remove blue background from active/selected navbar items */
+.navbar-nav > li > a {
+    background-color: transparent !important;
+}
+
+.navbar-nav > li.active > a,
+.navbar-nav > li.active > a:hover,
+.navbar-nav > li.active > a:focus {
+    background-color: transparent !important;
+    color: inherit !important;
+}
+
+/* Remove any default blue backgrounds */
+.navbar-default .navbar-nav > .active > a,
+.navbar-default .navbar-nav > .active > a:hover,
+.navbar-default .navbar-nav > .active > a:focus {
+    background-color: transparent !important;
+}
+
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+    background-color: transparent !important;
+    border-color: transparent !important;
+}
+
+/* Target any blue background in navbar area */
+header .navbar-nav li a,
+header .navbar-nav li button {
+    background-color: transparent !important;
+}
+
+/* === CONTAINER === */
+.container {
+    max-width: 1440px !important;
+    margin: 0 auto !important;
+    padding-left: var(--space-6) !important;
+    padding-right: var(--space-6) !important;
+}
+
+@media (min-width: 1200px) {
+    .container {
+        padding-left: var(--space-12) !important;
+        padding-right: var(--space-12) !important;
+    }
+}
+
+/* === HEADER SECTION === */
+.portal-hero--sub {
+    position: relative;
+    background: linear-gradient(160deg, 
+        var(--primary-darker) 0%, 
+        var(--primary-dark) 40%, 
+        var(--primary) 100%);
+    padding: var(--space-6) 0 var(--space-4) 0;
+    margin-top: var(--space-6);
+    overflow: hidden;
+}
+
+/* Animated Background Pattern */
+.portal-hero--sub::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: 
+        radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+    z-index: 0;
+}
+
+.portal-hero--sub .container {
+    position: relative;
+    z-index: 1;
+}
+
+.portal-hero__brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+}
+
+.portal-hero__icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.portal-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-xs) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.8) !important;
+    margin-bottom: var(--space-3) !important;
+    background: rgba(255, 255, 255, 0.1);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    backdrop-filter: blur(10px);
+}
+
+.portal-hero--sub h1 {
+    font-size: var(--font-size-2xl) !important;
+    font-weight: var(--font-weight-bold) !important;
+    line-height: var(--line-height-tight) !important;
+    color: var(--text-inverse) !important;
+    margin: 0 !important;
+    letter-spacing: -0.02em;
+}
+
+.portal-hero--sub p {
+    font-size: var(--font-size-sm) !important;
+    line-height: var(--line-height-relaxed) !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    margin: 0 !important;
+}
+
+/* === NAVIGATION WRAPPER === */
+.portal-nav-wrapper {
+    background: linear-gradient(160deg, 
+        var(--primary-darker) 0%, 
+        var(--primary-dark) 40%, 
+        var(--primary) 100%);
+    padding: 0 0 var(--space-6) 0;
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 0;
+}
+
+/* === NAVIGATION === */
+.portal-nav {
+    display: flex !important;
+    justify-content: center !important;
+    gap: var(--space-2) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(20px) !important;
+    padding: var(--space-2) !important;
+    border-radius: var(--radius-lg) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    overflow-x: auto !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    max-width: fit-content;
+    margin: 0 auto;
+}
+
+.portal-nav::-webkit-scrollbar {
+    height: 6px;
+}
+
+.portal-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.portal-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-full);
+}
+
+.portal-nav a {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: var(--space-2) !important;
+    padding: var(--space-3) var(--space-5) !important;
+    border-radius: var(--radius-md) !important;
+    font-size: var(--font-size-sm) !important;
+    font-weight: var(--font-weight-medium) !important;
+    text-decoration: none !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    transition: all var(--transition-base) !important;
+    white-space: nowrap !important;
+    position: relative;
+}
+
+.portal-nav a::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+
+.portal-nav a:hover::before {
+    opacity: 1;
+}
+
+.portal-nav a:hover {
+    color: var(--text-inverse) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    transform: translateY(-1px);
+}
+
+.portal-nav a.active {
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: var(--primary) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.portal-nav a.active::before {
+    display: none;
+}
+
+/* === NEW DASHBOARD LAYOUT === */
+.intake-shell {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    min-height: calc(100vh - var(--space-6));
+    background: var(--bg-body);
+}
+
+.intake-sidebar {
+    background: var(--gray-900);
+    color: rgba(255, 255, 255, 0.85);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    border-radius: 0 var(--radius-2xl) var(--radius-2xl) 0;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), var(--shadow-2xl);
+    position: sticky;
+    top: 0;
+    min-height: 100vh;
+    z-index: 2;
+}
+
+.intake-sidebar__brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.logo-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-2xl);
+    background: rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.intake-sidebar__brand p {
+    font-size: var(--font-size-sm);
+    margin: 0;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.intake-sidebar__brand strong {
+    font-size: var(--font-size-lg);
+    color: #fff;
+}
+
+.intake-sidebar__nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.intake-sidebar__nav a {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    font-weight: var(--font-weight-medium);
+    transition: all var(--transition-base);
+    border: 1px solid transparent;
+}
+
+.intake-sidebar__nav a:hover {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.intake-sidebar__nav a.active {
+    background: linear-gradient(120deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
+    color: var(--primary);
+    border-color: transparent;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+}
+
+.intake-sidebar__footer {
+    margin-top: auto;
+    padding: var(--space-4);
+    border-radius: var(--radius-xl);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.intake-sidebar__footer span {
+    display: block;
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.intake-sidebar__footer strong {
+    font-size: var(--font-size-2xl);
+    color: #fff;
+}
+
+.intake-main {
+    background: var(--bg-body);
+    min-height: 100vh;
+}
+
+.intake-main__inner {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: var(--space-10);
+}
+
+.intake-header {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-6);
+    padding: var(--space-8);
+    border-radius: var(--radius-2xl);
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+    color: #fff;
+    box-shadow: var(--shadow-xl);
+}
+
+.intake-header h1 {
+    margin-bottom: var(--space-2);
+}
+
+.intake-header p {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.intake-header__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.branch-pill {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-xl);
+    padding: var(--space-3) var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    min-width: 160px;
+}
+
+.branch-pill span {
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.branch-pill strong {
+    font-size: var(--font-size-lg);
+    color: #fff;
+}
+
+.header-help {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-xl);
+    padding: var(--space-3) var(--space-5);
+    font-weight: var(--font-weight-semibold);
+}
+
+.intake-content-grid {
+    margin-top: var(--space-10);
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1.35fr);
+    gap: var(--space-8);
+    align-items: flex-start;
+}
+
+.intake-content-grid__primary .portal-section {
+    padding: 0;
+}
+
+.intake-content-grid__primary .container {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    max-width: 100% !important;
+}
+
+.registration-card {
+    box-shadow: var(--shadow-lg);
+}
+
+.intake-queue-card {
+    position: sticky;
+    top: var(--space-10);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    padding: var(--space-6);
+    border-radius: var(--radius-2xl);
+    background: linear-gradient(165deg, var(--primary), var(--primary-dark));
+    color: #fff;
+    box-shadow: var(--shadow-2xl);
+}
+
+.intake-queue-card__header {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+    align-items: flex-start;
+}
+
+.intake-queue-card__header h3 {
+    font-size: var(--font-size-3xl);
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+}
+
+.intake-queue-card__header small {
+    font-size: var(--font-size-sm);
+    opacity: 0.8;
+    text-transform: uppercase;
+}
+
+.intake-queue-card__meta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: flex-end;
+}
+
+.queue-branch {
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.15);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+}
+
+.intake-queue-card__meta time {
+    font-size: var(--font-size-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.intake-queue-card__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: var(--space-1);
+}
+
+.queue-empty {
+    padding: var(--space-5);
+    border-radius: var(--radius-xl);
+    background: rgba(255, 255, 255, 0.08);
+    text-align: center;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.queue-empty small {
+    display: block;
+    margin-top: var(--space-2);
+    font-size: var(--font-size-xs);
+    opacity: 0.8;
+}
+
+.queue-item {
+    width: 100%;
+    border: none;
+    border-radius: var(--radius-xl);
+    padding: var(--space-4);
+    display: flex;
+    gap: var(--space-4);
+    align-items: center;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    text-align: left;
+    transition: transform var(--transition-base), background var(--transition-base);
+}
+
+.queue-item:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.queue-item__code {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    min-width: 96px;
+}
+
+.queue-item__content {
+    flex: 1;
+}
+
+.queue-item__customer {
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-1);
+}
+
+.queue-item__vehicle {
+    font-size: var(--font-size-sm);
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0;
+}
+
+.queue-item__meta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: flex-end;
+}
+
+.queue-status {
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.queue-status--success {
+    background: rgba(0, 200, 83, 0.2);
+    color: #9ef1c5;
+}
+
+.queue-status--warning {
+    background: rgba(255, 179, 0, 0.2);
+    color: #ffe0a3;
+}
+
+.queue-status--danger {
+    background: rgba(255, 61, 0, 0.2);
+    color: #ffb39a;
+}
+
+.queue-item__meta time {
+    font-size: var(--font-size-xs);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.queue-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-overlay);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-base);
+    padding: var(--space-4);
+    z-index: var(--z-modal);
+}
+
+.queue-modal.is-open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.queue-modal__overlay {
+    position: absolute;
+    inset: 0;
+}
+
+.queue-modal__dialog {
+    position: relative;
+    background: var(--bg-surface);
+    border-radius: var(--radius-2xl);
+    width: min(520px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-2xl);
+    transform: translateY(24px);
+    transition: transform var(--transition-base);
+}
+
+.queue-modal.is-open .queue-modal__dialog {
+    transform: translateY(0);
+}
+
+.queue-modal__header,
+.queue-modal__footer {
+    padding: var(--space-5) var(--space-6);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.queue-modal__footer {
+    border-top: 1px solid var(--border-light);
+    border-bottom: none;
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-3);
+}
+
+.queue-modal__body {
+    padding: var(--space-6);
+}
+
+.queue-modal__close {
+    background: transparent;
+    color: var(--text-primary);
+    border-radius: var(--radius-full);
+    width: 36px;
+    height: 36px;
+    font-size: 1.25rem;
+}
+
+.queue-ticket {
+    background: linear-gradient(135deg, var(--primary-lightest), #fff);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-md);
+}
+
+.queue-ticket__badge {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-secondary);
+}
+
+.queue-ticket__reg {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+.queue-ticket__number {
+    font-size: var(--font-size-4xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--primary);
+}
+
+.queue-ticket__subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.queue-ticket__info {
+    background: #fff;
+    border-radius: var(--radius-xl);
+    padding: var(--space-4);
+    border: 1px solid var(--border-light);
+}
+
+.queue-ticket__info dl {
+    margin: 0;
+    display: grid;
+    gap: var(--space-3);
+}
+
+.queue-ticket__info dt {
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+.queue-ticket__info dd {
+    margin: 0;
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+}
+
+.queue-ticket__status {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--space-4);
+    text-align: center;
+}
+
+.queue-ticket__status span {
+    display: block;
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.queue-ticket__status strong {
+    font-size: var(--font-size-lg);
+    color: var(--text-primary);
+}
+
+.queue-ticket__steps ul {
+    margin: 0;
+    padding-left: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.queue-ticket__notes {
+    background: #fff;
+    border-radius: var(--radius-xl);
+    padding: var(--space-4);
+    border: 1px dashed var(--border-light);
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+/* === SECTION SPACING === */
+.portal-section {
+    padding: var(--space-12) 0 var(--space-16) !important;
+}
+
+.portal-section:first-of-type {
+    padding-top: var(--space-8) !important;
+}
+
+/* === GRID SYSTEM === */
+.portal-grid {
+    display: grid !important;
+    gap: var(--space-8) !important;
+    
+}
+
+.portal-grid.two-column {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+    .portal-grid.two-column {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+        align-items: flex-start;
+        gap: var(--space-10) !important;
+    }
+
+    .portal-grid.two-column > *:only-child {
+        grid-column: 1 / -1;
+    }
+}
+
+/* === CARDS === */
+.portal-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border-light) !important;
+    border-radius: var(--radius-xl) !important;
+    padding: var(--space-8) !important;
+    box-shadow: var(--shadow-sm) !important;
+    transition: all var(--transition-slow) !important;
+    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(32px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.portal-card__header {
+    margin-bottom: var(--space-6) !important;
+}
+
+.portal-card__header h2 {
+    font-size: var(--font-size-2xl) !important;
+    font-weight: var(--font-weight-bold) !important;
+    line-height: var(--line-height-tight) !important;
+    color: var(--text-primary) !important;
+    margin-bottom: var(--space-3) !important;
+    letter-spacing: -0.01em;
+}
+
+.portal-card__header .lead,
+.lead {
+    font-size: var(--font-size-base) !important;
+    line-height: var(--line-height-relaxed) !important;
+    color: var(--text-secondary) !important;
+    margin: 0;
+}
+
+.estimate-card {
+    position: sticky;
+    top: var(--space-8);
+    align-self: flex-start;
+    gap: var(--space-4);
+}
+
+.estimate-card__subtitle {
+    font-size: var(--font-size-sm) !important;
+    color: var(--text-secondary) !important;
+    margin-bottom: 0 !important;
+}
+
+.estimate-breakdown {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.estimate-breakdown__row {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--font-size-sm) !important;
+    color: var(--text-secondary) !important;
+}
+
+.estimate-breakdown__row strong {
+    color: var(--text-primary) !important;
+    font-weight: var(--font-weight-semibold) !important;
+}
+
+.estimate-total {
+    margin-top: var(--space-3);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    background: var(--gray-100);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--font-size-base) !important;
+    font-weight: var(--font-weight-semibold) !important;
+}
+
+.estimate-note {
+    font-size: var(--font-size-xs) !important;
+    color: var(--text-muted) !important;
+    line-height: var(--line-height-relaxed) !important;
+    margin: 0 !important;
+}
+
+/* === FORM BANNER === */
+.form-banner {
+    background: linear-gradient(135deg, var(--primary-darker), var(--primary-dark)) !important;
+    color: var(--text-inverse) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: var(--space-6) !important;
+    margin-bottom: var(--space-8) !important;
+    box-shadow: var(--shadow-md);
+}
+
+.form-banner strong {
+    display: block;
+    font-size: var(--font-size-lg) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    margin-bottom: var(--space-4) !important;
+}
+
+.form-banner__steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-6);
+}
+
+.form-banner__steps li {
+    position: relative;
+    font-size: var(--font-size-xs) !important;
+    font-weight: var(--font-weight-medium) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.8);
+    padding-left: var(--space-5);
+}
+
+.form-banner__steps li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+/* === FORM GRID LAYOUT === */
+.form-grid {
+    display: flex !important;
+    flex-direction: column;
+    gap: var(--space-6) !important;
+}
+
+.form-grid .form-section {
+    width: 100%;
+    margin-bottom: 0 !important;
+}
+
+/* === FORM SECTIONS === */
+.form-section {
+    background: var(--gray-50) !important;
+    border: 1px solid var(--border-light) !important;
+    border-radius: var(--radius-xl) !important;
+    padding: var(--space-8) !important;
+    margin-bottom: var(--space-6) !important;
+    transition: all var(--transition-base);
+}
+
+.form-section:hover {
+    box-shadow: var(--shadow-sm);
+    border-color: var(--border-base);
+}
+
+.form-section__header {
+    margin-bottom: var(--space-6) !important;
+    padding-bottom: var(--space-5);
+    border-bottom: 2px solid var(--border-light);
+}
+
+.form-section__tag {
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--font-size-xs) !important;
+    font-weight: var(--font-weight-bold) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--primary) !important;
+    background: var(--primary-lightest);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    margin-bottom: var(--space-3) !important;
+}
+
+.form-section__title {
+    font-size: var(--font-size-2xl) !important;
+    font-weight: var(--font-weight-bold) !important;
+    line-height: var(--line-height-tight) !important;
+    color: var(--text-primary) !important;
+    margin-bottom: var(--space-2) !important;
+    letter-spacing: -0.01em;
+}
+
+.form-section__subtitle {
+    font-size: var(--font-size-base) !important;
+    line-height: var(--line-height-relaxed) !important;
+    color: var(--text-secondary) !important;
+    margin: 0;
+}
+
+.form-section__grid {
+    display: grid !important;
+    gap: var(--space-6) !important;
+}
+
+.form-section__grid.two-column {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .form-section__grid.two-column {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-5) var(--space-6) !important;
+    }
+}
+
+/* === FORM FIELDS === */
+.form-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-field.is-hidden {
+    display: none !important;
+}
+
+.form-field label {
+    display: block;
+    font-size: var(--font-size-sm) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    color: var(--text-primary) !important;
+    margin-bottom: var(--space-2) !important;
+    letter-spacing: -0.01em;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+    width: 100%;
+    font-family: var(--font-sans);
+    font-size: var(--font-size-base) !important;
+    color: var(--text-primary) !important;
+    background: var(--bg-surface) !important;
+    border: 1.5px solid var(--border-base) !important;
+    border-radius: var(--radius-md) !important;
+    padding: var(--space-3) var(--space-4) !important;
+    transition: all var(--transition-base) !important;
+    appearance: none;
+}
+
+.form-field__value {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    padding: var(--space-3) var(--space-4) !important;
+    border-radius: var(--radius-md) !important;
+    border: 1.5px dashed var(--border-base) !important;
+    background: var(--gray-100) !important;
+    color: var(--text-secondary) !important;
+    font-size: var(--font-size-base) !important;
+    font-weight: var(--font-weight-medium) !important;
+    letter-spacing: -0.01em;
+}
+
+.form-field__value--readonly {
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.form-field input[type="checkbox"],
+.form-field input[type="radio"] {
+    width: auto;
+    min-width: 16px;
+    height: auto;
+    margin: 0;
+    appearance: auto !important;
+    cursor: pointer;
+}
+
+.form-field input[type="datetime-local"],
+.form-field input[type="date"],
+.form-field input[type="time"] {
+    appearance: auto !important;
+}
+
+.option-toggle__item input {
+    width: 16px;
+    height: 16px;
+}
+
+.datetime-group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.datetime-group input[type="date"],
+.datetime-group input[type="time"] {
+    flex: 1;
+}
+
+.datetime-group__separator {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+.form-field input::placeholder,
+.form-field textarea::placeholder {
+    color: var(--text-muted);
+}
+
+.form-field input:hover,
+.form-field select:hover,
+.form-field textarea:hover {
+    border-color: var(--border-strong) !important;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+    outline: none !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 4px var(--primary-subtle) !important;
+    background: var(--bg-surface) !important;
+}
+
+.form-field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235E6C84' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--space-4) center;
+    padding-right: var(--space-10) !important;
+    cursor: pointer;
+}
+
+.form-field textarea {
+    min-height: 120px;
+    resize: vertical;
+    line-height: var(--line-height-relaxed) !important;
+}
+
+.form-field--full {
+    grid-column: 1 / -1;
+}
+
+.option-toggle {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    align-items: center;
+}
+
+.option-toggle__item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border: 1.5px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.option-toggle__item:hover {
+    border-color: var(--border-base);
+    background: var(--gray-100);
+}
+
+.option-toggle__item.is-active {
+    border-color: var(--primary);
+    background: var(--primary-lightest);
+    color: var(--primary-darker);
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.08);
+}
+
+.option-toggle__item input {
+    accent-color: var(--primary);
+}
+
+.option-toggle__item span {
+    display: inline-block;
+}
+
+.form-static-value {
+    display: block;
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    border: 1.5px dashed var(--border-base);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-relaxed);
+}
+
+.form-hint {
+    font-size: var(--font-size-xs) !important;
+    line-height: var(--line-height-relaxed) !important;
+    color: var(--text-muted) !important;
+    margin-top: var(--space-2) !important;
+}
+
+/* === FORM ACTIONS === */
+.form-actions {
+    display: flex;
+    gap: var(--space-3) !important;
+    margin-top: var(--space-8) !important;
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--border-light);
+}
+
+/* === BUTTONS === */
+button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--font-size-sm) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    line-height: 1;
+    padding: var(--space-4) var(--space-6) !important;
+    border: none;
+    border-radius: var(--radius-lg) !important;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--transition-base) !important;
+    overflow: hidden;
+}
+
+button::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent);
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+button:hover::before {
+    opacity: 1;
+}
+
+button.primary,
+button[type="submit"] {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+    color: var(--text-inverse) !important;
+    box-shadow: var(--shadow-md), 0 0 0 0 rgba(0, 102, 255, 0.4) !important;
+}
+
+button.primary:hover,
+button[type="submit"]:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg), 0 0 0 4px rgba(0, 102, 255, 0.15) !important;
+}
+
+button.primary:active,
+button[type="submit"]:active {
+    transform: translateY(0);
+}
+
+button.secondary {
+    background: var(--bg-surface) !important;
+    color: var(--text-primary) !important;
+    border: 1.5px solid var(--border-base) !important;
+    box-shadow: var(--shadow-xs) !important;
+}
+
+button.secondary:hover {
+    background: var(--gray-50) !important;
+    border-color: var(--border-strong) !important;
+    box-shadow: var(--shadow-sm) !important;
+    transform: translateY(-1px);
+}
+
+button:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* === SECTION SUBTITLE === */
+.section-subtitle {
+    font-size: var(--font-size-lg) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    color: var(--text-primary) !important;
+    margin: var(--space-8) 0 var(--space-4) 0 !important;
+    letter-spacing: -0.01em;
+}
+
+/* === TABLES === */
+.simple-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: var(--font-size-sm) !important;
+    border: 1px solid var(--border-light) !important;
+    border-radius: var(--radius-lg) !important;
+    overflow: hidden;
+    box-shadow: var(--shadow-xs);
+    margin-top: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.simple-table thead {
+    background: var(--gray-50) !important;
+}
+
+.simple-table th {
+    padding: var(--space-4) var(--space-5) !important;
+    text-align: left;
+    font-size: var(--font-size-xs) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted) !important;
+    border-bottom: 1px solid var(--border-light) !important;
+}
+
+.simple-table td {
+    padding: var(--space-4) var(--space-5) !important;
+    border-bottom: 1px solid var(--border-light) !important;
+    color: var(--text-primary) !important;
+    transition: background var(--transition-fast);
+}
+
+.simple-table tbody tr {
+    transition: all var(--transition-fast);
+    cursor: pointer;
+}
+
+.simple-table tbody tr:hover {
+    background: var(--gray-50) !important;
+}
+
+.simple-table tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+/* === TABLE LINKS === */
+.table-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3) !important;
+    margin-bottom: var(--space-6) !important;
+}
+
+.table-links--flush {
+    margin-top: 0 !important;
+    margin-bottom: var(--space-6) !important;
+}
+
+.table-links a {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-sm) !important;
+    font-weight: var(--font-weight-medium) !important;
+    color: var(--primary) !important;
+    text-decoration: none !important;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--primary-subtle);
+    transition: all var(--transition-base);
+}
+
+.table-links a::after {
+    content: '↗';
+    font-size: 0.875em;
+    opacity: 0.7;
+    transition: transform var(--transition-fast);
+}
+
+.table-links a:hover {
+    background: var(--primary-lightest);
+    color: var(--primary-dark) !important;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.table-links a:hover::after {
+    transform: translate(2px, -2px);
+    opacity: 1;
+}
+
+/* === LIST EMPTY === */
+.list-empty {
+    display: none;
+    padding: var(--space-6) !important;
+    text-align: center;
+    color: var(--text-muted) !important;
+    font-style: italic;
+    font-size: var(--font-size-sm) !important;
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-4);
+}
+
+/* === SCROLLBAR === */
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--gray-100);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--gray-100);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+}
+
+/* === RESPONSIVE BREAKPOINTS === */
+@media (max-width: 1023px) {
+    .portal-hero--sub h1 {
+        font-size: var(--font-size-3xl) !important;
+    }
+
+    .estimate-card {
+        position: static;
+    }
+
+    .intake-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .intake-sidebar {
+        position: relative;
+        top: auto;
+        min-height: auto;
+        border-radius: 0 0 var(--radius-2xl) var(--radius-2xl);
+        flex-direction: column;
+    }
+
+    .intake-sidebar__nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+
+    .intake-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .intake-content-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .intake-queue-card {
+        position: relative;
+        top: 0;
+    }
+}
+
+@media (max-width: 767px) {
+    .container {
+        padding-left: var(--space-4) !important;
+        padding-right: var(--space-4) !important;
+    }
+    
+    .portal-hero--sub {
+        padding: var(--space-5) 0 var(--space-3) 0;
+    }
+    
+    .portal-hero--sub h1 {
+        font-size: var(--font-size-2xl) !important;
+    }
+    
+    .portal-hero--sub p {
+        font-size: var(--font-size-sm) !important;
+    }
+    
+    .portal-nav {
+        
+        padding: var(--space-2) !important;
+        gap: var(--space-1) !important;
+    }
+    
+    .portal-nav a {
+        padding: var(--space-2) var(--space-4) !important;
+        font-size: var(--font-size-xs) !important;
+    }
+
+    .portal-section {
+        padding: var(--space-8) 0 var(--space-12) !important;
+    }
+
+    .portal-card {
+        padding: var(--space-6) !important;
+    }
+
+    .intake-sidebar {
+        padding: var(--space-4);
+    }
+
+    .intake-sidebar__nav {
+        overflow-x: auto;
+    }
+
+    .intake-header {
+        padding: var(--space-6);
+    }
+
+    .intake-queue-card__header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .portal-card__header h2 {
+        font-size: var(--font-size-xl) !important;
+    }
+
+    .form-banner {
+        padding: var(--space-5) !important;
+    }
+    
+    .form-section {
+        padding: var(--space-6) !important;
+    }
+    
+    .form-section__title {
+        font-size: var(--font-size-xl) !important;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .form-actions button {
+        width: 100%;
+    }
+    
+    .table-links {
+        flex-direction: column;
+    }
+    
+    .table-links a {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 479px) {
+    .portal-hero--sub h1 {
+        font-size: var(--font-size-xl) !important;
+    }
+    
+    .portal-nav {
+        width: 100%;
+    }
+    
+    .portal-card {
+        padding: var(--space-5) !important;
+    }
+    
+    .form-section {
+        padding: var(--space-5) !important;
+    }
+    
+    .simple-table {
+        font-size: var(--font-size-xs) !important;
+    }
+    
+    .simple-table th,
+    .simple-table td {
+        padding: var(--space-3) !important;
+    }
+}
+
+/* === PRINT STYLES === */
+@media print {
+    .portal-hero--sub,
+    .portal-nav-wrapper,
+    .portal-nav,
+    .intake-sidebar,
+    .intake-queue-card,
+    .queue-modal,
+    button,
+    .table-links {
+        display: none !important;
+    }
+
+    .portal-card,
+    .form-section {
+        box-shadow: none !important;
+        border: 1px solid var(--border-base) !important;
+        page-break-inside: avoid;
+    }
+}
+
+/* === ACCESSIBILITY === */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* === UTILITY CLASSES === */
+.text-center {
+    text-align: center !important;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+.mt-0 { margin-top: 0 !important; }
+.mt-2 { margin-top: var(--space-2) !important; }
+.mt-4 { margin-top: var(--space-4) !important; }
+.mt-6 { margin-top: var(--space-6) !important; }
+.mt-8 { margin-top: var(--space-8) !important; }
+
+.mb-0 { margin-bottom: 0 !important; }
+.mb-2 { margin-bottom: var(--space-2) !important; }
+.mb-4 { margin-bottom: var(--space-4) !important; }
+.mb-6 { margin-bottom: var(--space-6) !important; }
+.mb-8 { margin-bottom: var(--space-8) !important; }
+
+.combo-control--search {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.combo-control--search input[list] {
+    width: 100%;
+}
+
+.combo-control__hidden-select {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    border: 0;
+    padding: 0;
+    clip: rect(0, 0, 0, 0);
+    overflow: hidden;
+}
+
+.estimate-summary-container {
+    margin-top: var(--space-6);
+}
+
+.estimate-summary-card {
+    padding: var(--space-6);
+    background: var(--portal-surface-alt, #f9fafb);
+    border: 1px solid var(--portal-border);
+    border-radius: var(--portal-radius);
+    box-shadow: none;
+    gap: var(--space-5);
+    display: flex;
+    flex-direction: column;
+}
+
+.estimate-breakdown__group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.estimate-breakdown__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: var(--text-sm, 14px);
+    font-weight: 600;
+    color: var(--portal-text-strong, #111827);
+}
+
+.estimate-breakdown__header strong {
+    font-size: var(--text-md, 16px);
+    font-weight: 700;
+    color: var(--portal-accent-strong, #111827);
+}
+
+.estimate-breakdown__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.estimate-breakdown__list li {
+    position: relative;
+    padding-left: 16px;
+    color: var(--portal-text-muted, #4b5563);
+    font-size: var(--text-sm, 14px);
+}
+
+.estimate-breakdown__list li::before {
+    content: '–';
+    position: absolute;
+    left: 0;
+    color: var(--portal-text-soft, #9ca3af);
+}
+
+.estimate-breakdown__list li small {
+    display: block;
+    font-size: 12px;
+    color: var(--portal-text-soft, #9ca3af);
+}
+
+.estimate-breakdown__list .placeholder {
+    font-style: italic;
+    color: var(--portal-text-soft, #9ca3af);
+}
+
+.estimate-summary-card:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--portal-border);
+}
+</style>
+{% endblock %}
+
+{% block page_content %}
+<section class="intake-shell">
+    <aside class="intake-sidebar">
+        <div class="intake-sidebar__brand">
+            <div class="logo-circle">🚗</div>
+            <div>
+                <p>AutoCare Workshop</p>
+                <strong>Manager</strong>
+            </div>
+        </div>
+        <nav class="intake-sidebar__nav">
+            <a href="/garage/insight">📊 Insight</a>
+            <a href="/garage/service">🔧 Service Order</a>
+            <a href="/garage/sparepart">📦 Sparepart</a>
+            <a href="/garage/procurement">🛒 Procurement</a>
+            <a href="/garage/finance">💰 Finance</a>
+            <a href="/garage/intake" class="active">📝 Customer Registration</a>
+            <a href="/garage/update-progress">⏱️ Update Progress</a>
+        </nav>
+        <div class="intake-sidebar__footer">
+            <span>Branch Code</span>
+            <strong>JKT</strong>
+        </div>
+    </aside>
+    <div class="intake-main">
+        <div class="intake-main__inner">
+            <header class="intake-header">
+                <div>
+                    <p class="portal-eyebrow">Step 1 · Intake Portal</p>
+                    <h1>Registrasi Customer & Kendaraan</h1>
+                    <p>Registrasikan customer baru, pilih kendaraan yang tepat, dan catat keluhan sebelum service dimulai.</p>
+                </div>
+                <div class="intake-header__meta">
+                    <div class="branch-pill">
+                        <span>Cabang Aktif</span>
+                        <strong data-role="branch-display" data-target="intake_branch">JKT</strong>
+                    </div>
+                    <button type="button" class="header-help">Panduan Intake</button>
+                </div>
+            </header>
+            <div class="intake-content-grid">
+                <div class="intake-content-grid__primary">
+<section class="portal-section">
+        <div class="container">
+            <div class="portal-grid two-column">
+                <article class="portal-card registration-card">
+                    <div class="portal-card__header">
+                        <h2>Registrasi Customer & Kendaraan</h2>
+                        <p class="lead">
+                            Gunakan form berikut untuk membuat customer baru atau memilih data yang sudah ada,
+                            lalu kaitkan kendaraan yang akan diservis.
+                        </p>
+                    </div>
+                    <div class="form-banner">
+                        <strong>Alur singkat proses intake</strong>
+                        <p>
+                            Form intake kini diringkas menjadi tiga langkah: mulai dari data kendaraan, pilih customer yang sesuai, lalu tambahkan catatan penting sebelum disimpan.
+                        </p>
+                        <ul class="form-banner__steps">
+                            <li>Langkah 1 · Detail Kendaraan</li>
+                            <li>Langkah 2 · Data Customer</li>
+                            <li>Langkah 3 · Catatan &amp; Konfirmasi</li>
+                        </ul>
+                    </div>
+                    <form id="customer-vehicle-form" class="form-grid">
+                        <div class="form-section">
+                            <header class="form-section__header">
+                                <span class="form-section__tag">Langkah 1</span>
+                                <h3 class="form-section__title">Detail Kendaraan</h3>
+                                <p class="form-section__subtitle">
+                                    Mulai dengan data unit. Isi nomor polisi untuk mencari riwayat kendaraan & customer secara otomatis.
+                                </p>
+                            </header>
+                            <div class="form-section__grid two-column">
+                                <div class="form-field">
+                                    <label for="license_plate">No. Polisi</label>
+                                    <input
+                                        id="license_plate"
+                                        name="license_plate"
+                                        placeholder="B 1234 CD"
+                                        list="license_plate_options"
+                                    />
+                                    <datalist id="license_plate_options"></datalist>
+                                </div>
+                                <div class="form-field">
+                                    <label for="brand">Merek</label>
+                                    <select id="brand" name="brand">
+                                        <option value="">— Pilih Merek —</option>
+                                        <option value="BMW">BMW</option>
+                                        <option value="Chevrolet">Chevrolet</option>
+                                        <option value="Daihatsu">Daihatsu</option>
+                                        <option value="Ferrari">Ferrari</option>
+                                        <option value="Ford">Ford</option>
+                                        <option value="Honda">Honda</option>
+                                        <option value="Hyundai">Hyundai</option>
+                                        <option value="Isuzu">Isuzu</option>
+                                        <option value="Kia">Kia</option>
+                                        <option value="Lainnya">Lainnya</option>
+                                        <option value="Lamborghini">Lamborghini</option>
+                                        <option value="Land Rover">Land Rover</option>
+                                        <option value="Lexus">Lexus</option>
+                                        <option value="Mazda">Mazda</option>
+                                        <option value="Mercedes-Benz">Mercedes-Benz</option>
+                                        <option value="Mitsubishi">Mitsubishi</option>
+                                        <option value="Nissan">Nissan</option>
+                                        <option value="Range Rover">Range Rover</option>
+                                        <option value="Suzuki">Suzuki</option>
+                                        <option value="Tesla">Tesla</option>
+                                        <option value="Toyota">Toyota</option>
+                                        <option value="Wuling">Wuling</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="model">Model</label>
+                                    <select id="model" name="model">
+                                        <option value="">— Pilih Model —</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="model_variant">Tipe Model</label>
+                                    <select id="model_variant" name="model_variant">
+                                        <option value="">— Pilih Tipe Model —</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="vehicle_year">Tahun</label>
+                                    <input id="vehicle_year" name="vehicle_year" type="number" min="1980" max="2100" placeholder="2020" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="color">Warna</label>
+                                    <input id="color" name="color" placeholder="Hitam, Putih, ..." />
+                                </div>
+                                <div class="form-field">
+                                    <label for="transmission">Transmisi</label>
+                                    <select id="transmission" name="transmission">
+                                        <option value="">—</option>
+                                        <option value="Manual">Manual</option>
+                                        <option value="Automatic">Automatic</option>
+                                        <option value="CVT">CVT</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="fuel_type">Jenis BBM</label>
+                                    <select id="fuel_type" name="fuel_type">
+                                        <option value="">—</option>
+                                        <option value="Petrol">Petrol</option>
+                                        <option value="Diesel">Diesel</option>
+                                        <option value="Hybrid">Hybrid</option>
+                                        <option value="Electric">Electric</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="mileage">Odometer (km)</label>
+                                    <input id="mileage" name="mileage" type="number" min="0" step="100" placeholder="50000" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="vin">No. Rangka</label>
+                                    <input id="vin" name="vin" placeholder="Contoh: MH8XXXXXXXXXXXXX" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="engine_number">No. Mesin</label>
+                                    <input id="engine_number" name="engine_number" placeholder="Contoh: 1NZ-FE123456" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Terakhir Servis</label>
+                                    <div class="form-static-value">Terisi otomatis saat registrasi disimpan.</div>
+                                    <p class="form-hint">Sistem mencatat tanggal &amp; jam registrasi sebagai riwayat servis terakhir.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <header class="form-section__header">
+                                <span class="form-section__tag">Langkah 2</span>
+                                <h3 class="form-section__title">Data Customer</h3>
+                                <p class="form-section__subtitle">
+                                    Pastikan customer yang tepat sudah dipilih atau buat data baru, lalu lengkapi informasi kontak.
+                                </p>
+                            </header>
+                            <div class="form-section__grid two-column">
+                                <input type="hidden" name="intake_type" value="Walk-In" />
+                                <!-- <div class="form-field form-field--full">
+                                    <label for="existing_customer_search">Customer</label>
+                                    <div class="combo-control combo-control--search">
+                                        <input
+                                            id="existing_customer_search"
+                                            name="existing_customer_search"
+                                            placeholder="Cari customer eksisting"
+                                            list="existing_customer_options"
+                                            autocomplete="off"
+                                            aria-label="Cari dan pilih customer eksisting"
+                                        />
+                                        <select
+                                            id="existing_customer"
+                                            name="existing_customer"
+                                            aria-label="Pilihan customer eksisting"
+                                            class="combo-control__hidden-select"
+                                            tabindex="-1"
+                                            aria-hidden="true"
+                                        >
+                                            <option value="">— Customer Baru —</option>
+                                        </select>
+                                    </div>
+                                    <datalist id="existing_customer_options"></datalist>
+                                    <p class="form-hint">Pilih customer eksisting yang sudah ada di sistem.</p>
+                                </div> -->
+                                <div class="form-field form-field--full">
+                                    <label for="new_customer_name">Customer Baru</label>
+                                    <input
+                                        type="text"
+                                        id="new_customer_name"
+                                        placeholder="Masukkan nama customer baru"
+                                        autocomplete="off"
+                                        aria-label="Nama customer baru"
+                                    />
+                                    <input type="hidden" id="customer_name" name="customer_name" />
+                                    <p class="form-hint">Isi nama customer baru jika belum terdaftar. Biarkan kosong bila memilih customer eksisting.</p>
+                                </div>
+                                <div class="form-field">
+                                    <label for="customer_type">Tipe Customer</label>
+                                    <select id="customer_type" name="customer_type">
+                                        <option value="Individual">Individual</option>
+                                        <option value="Corporate">Corporate</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="phone">No. Telepon</label>
+                                    <input id="phone" name="phone" placeholder="08xxxxxxxxxx" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="email">Email</label>
+                                    <input id="email" name="email" type="email" placeholder="email@example.com" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="preferred_contact_method">Preferensi Kontak</label>
+                                    <select id="preferred_contact_method" name="preferred_contact_method">
+                                        <option value="Phone">Phone</option>
+                                        <option value="Email">Email</option>
+                                        <option value="WhatsApp">WhatsApp</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="is_vip">Customer VIP</label>
+                                    <select id="is_vip" name="is_vip" data-cast="int">
+                                        <option value="0">Tidak</option>
+                                        <option value="1">Ya</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="marketing_source">Sumber Marketing</label>
+                                    <select id="marketing_source" name="marketing_source">
+                                        <option value="">—</option>
+                                        <option value="Walk In">Walk In</option>
+                                        <option value="Referral">Referral</option>
+                                        <option value="Online">Online</option>
+                                        <option value="Social Media">Social Media</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <header class="form-section__header">
+                                <span class="form-section__tag">Langkah 3</span>
+                                <h3 class="form-section__title">Catatan &amp; Konfirmasi</h3>
+                                <p class="form-section__subtitle">
+                                    Tambahkan catatan penting sebelum menyimpan intake untuk memastikan tim service siap menangani unit.
+                                </p>
+                            </header>
+                            <div class="form-section__grid two-column">
+                                <div class="form-field" hidden>
+                                    <label for="intake_branch">Cabang</label>
+                                    <div
+                                        class="form-field__value form-field__value--readonly"
+                                        data-role="branch-display"
+                                        data-target="intake_branch"
+                                        aria-live="polite"
+                                    >
+                                        Memuat cabang aktif…
+                                    </div>
+                                    <input type="hidden" id="intake_branch" name="branch" required value="JKT" data-default-branch="JKT" />
+                                    <p class="form-hint">Cabang mengikuti pilihan di bagian atas portal.</p>
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="service_order_type">Service</label>
+                                    <input
+                                        type="text"
+                                        id="service_order_type"
+                                        name="service_order_type"
+                                        list="service_options_list"
+                                        placeholder="Ketik atau pilih service/paket"
+                                        required
+                                    />
+                                    <datalist id="service_options_list">
+                                        <option value="Service/Repair"></option>
+                                        <option value="Inspection"></option>
+                                        <option value="Warranty"></option>
+                                        <option value="Insurance Claim"></option>
+                                        <option value="Body Repair"></option>
+                                    </datalist>
+                                    <p class="form-hint">Pilih jenis layanan atau paket servis yang tersedia.</p>
+                                </div>
+                                <div class="form-field">
+                                    <label for="priority">Prioritas Servis</label>
+                                    <select id="priority" name="priority">
+                                        <option value="">— Pilih Prioritas —</option>
+                                        <option value="Normal">Normal</option>
+                                        <option value="High">High</option>
+                                        <option value="Urgent">Urgent</option>
+                                    </select>
+                                    <p class="form-hint">Gunakan prioritas tinggi bila unit membutuhkan penanganan segera.</p>
+                                </div>
+                                <div class="form-field">
+                                    <label for="service_bundle">Paket Servis</label>
+                                    <select id="service_bundle" name="service_bundle">
+                                        <option value="">— Pilih Paket Servis —</option>
+                                    </select>
+                                    <p class="form-hint">Pilih paket servis dengan kombinasi jasa, sparepart, dan bahan.</p>
+                                </div>
+                                <div class="form-field">
+                                    <label for="total_estimated_amount">Total Estimasi (Rp)</label>
+                                    <input
+                                        type="number"
+                                        id="total_estimated_amount"
+                                        name="total_estimated_amount"
+                                        min="0"
+                                        step="1000"
+                                        placeholder="0"
+                                    />
+                                    <p class="form-hint">Nilai total diperbarui otomatis berdasarkan bundel atau bisa disesuaikan manual.</p>
+                                </div>
+                                <div class="form-field form-field--full">
+                                    <label for="notes">Keluhan Customer</label>
+                                    <textarea id="notes" name="notes" placeholder="Catat keluhan utama customer, detail kondisi kendaraan, atau permintaan khusus"></textarea>
+                                    <p class="form-hint">Gunakan catatan untuk riwayat servis, permintaan khusus, atau peringatan teknis.</p>
+                                </div>
+                                <div class="form-field form-field--full estimate-summary-container">
+                                    <section class="estimate-summary-card">
+                                        <header class="portal-card__header">
+                                            <h2>Ringkasan Estimasi</h2>
+                                            <p class="estimate-card__subtitle">Pilih bundel estimasi untuk mengisi rincian biaya otomatis.</p>
+                                        </header>
+                                        <div class="estimate-breakdown">
+                                            <div class="estimate-breakdown__group">
+                                                <div class="estimate-breakdown__header">
+                                                    <span>Jasa</span>
+                                                    <strong id="estimate_service_amount">Rp 0</strong>
+                                                </div>
+                                                <ul class="estimate-breakdown__list" id="estimate_service_list">
+                                                    <li class="placeholder">Belum ada jasa pada bundel ini.</li>
+                                                </ul>
+                                            </div>
+                                            <div class="estimate-breakdown__group">
+                                                <div class="estimate-breakdown__header">
+                                                    <span>Sparepart</span>
+                                                    <strong id="estimate_spare_amount">Rp 0</strong>
+                                                </div>
+                                                <ul class="estimate-breakdown__list" id="estimate_spare_list">
+                                                    <li class="placeholder">Belum ada sparepart pada bundel ini.</li>
+                                                </ul>
+                                            </div>
+                                            <div class="estimate-breakdown__group">
+                                                <div class="estimate-breakdown__header">
+                                                    <span>Bahan</span>
+                                                    <strong id="estimate_material_amount">Rp 0</strong>
+                                                </div>
+                                                <ul class="estimate-breakdown__list" id="estimate_material_list">
+                                                    <li class="placeholder">Belum ada bahan pada bundel ini.</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="estimate-total">
+                                            <span>Total Estimasi</span>
+                                            <strong id="estimate_total_amount">Rp 0</strong>
+                                        </div>
+                                        <p class="estimate-note" id="estimate_bundle_description">
+                                            Pilih bundel estimasi untuk melihat rincian jasa, sparepart, dan bahan.
+                                        </p>
+                                    </section>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button class="primary" type="submit">💾 Save</button>
+                                <button class="secondary" type="button" data-action="download-estimate">
+                                    📄 Download Estimasi Service Kendaraan
+                                </button>
+                                <button class="secondary" type="reset">🔄 Reset Form</button>
+                            </div>
+                        </div>
+                    </form>
+                </article>
+            </div>
+        </div>
+    </section>
+                </div>
+                <aside class="portal-card intake-queue-card" aria-live="polite">
+                    <div class="intake-queue-card__header">
+                        <div>
+                            <p class="portal-eyebrow">Today's registrations</p>
+                            <h3>
+                                <span data-role="todays-registration-count">0</span>
+                                <small>antrian</small>
+                            </h3>
+                        </div>
+                        <div class="intake-queue-card__meta">
+                            <span class="queue-branch" data-role="todays-registration-branch">JKT</span>
+                            <time data-role="todays-registration-date">—</time>
+                        </div>
+                    </div>
+                    <div class="intake-queue-card__list" data-role="todays-registration-list">
+                        <div class="queue-empty">
+                            <p>Belum ada registrasi hari ini.</p>
+                            <small>Registrasi baru akan tampil otomatis di sini.</small>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="queue-modal" id="queue-detail-modal" aria-hidden="true">
+    <div class="queue-modal__overlay" data-action="dismiss-queue-modal"></div>
+    <div class="queue-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="queue-modal-title">
+        <header class="queue-modal__header">
+            <div>
+                <p class="portal-eyebrow">Struk Nomor Antrian Inspection</p>
+                <h3 id="queue-modal-title">View Only</h3>
+            </div>
+            <button type="button" class="queue-modal__close" data-action="dismiss-queue-modal">
+                <span class="sr-only">Tutup detail antrian</span>
+                ✕
+            </button>
+        </header>
+        <section class="queue-modal__body">
+            <div class="queue-ticket" data-role="queue-ticket">
+                <div class="queue-ticket__badge">Registration ID</div>
+                <div class="queue-ticket__reg" data-role="queue-registration-id">—</div>
+                <div class="queue-ticket__number" data-role="queue-code">JKT-001</div>
+                <p class="queue-ticket__subtitle">Nomor Antrian</p>
+                <div class="queue-ticket__info">
+                    <h4>Customer Information</h4>
+                    <dl>
+                        <div>
+                            <dt>Nama</dt>
+                            <dd data-role="queue-customer-name">—</dd>
+                        </div>
+                        <div>
+                            <dt>Kontak</dt>
+                            <dd data-role="queue-customer-contact">—</dd>
+                        </div>
+                    </dl>
+                </div>
+                <div class="queue-ticket__info">
+                    <h4>Vehicle Information</h4>
+                    <dl>
+                        <div>
+                            <dt>Unit</dt>
+                            <dd data-role="queue-vehicle">—</dd>
+                        </div>
+                        <div>
+                            <dt>Detail</dt>
+                            <dd data-role="queue-vehicle-meta">—</dd>
+                        </div>
+                    </dl>
+                </div>
+                <div class="queue-ticket__info">
+                    <h4>Keluhan Customer</h4>
+                    <p data-role="queue-notes">—</p>
+                </div>
+                <div class="queue-ticket__status">
+                    <div>
+                        <span>Status</span>
+                        <strong data-role="queue-status">Inspection</strong>
+                    </div>
+                    <div>
+                        <span>Prioritas</span>
+                        <strong data-role="queue-priority">Normal</strong>
+                    </div>
+                    <div>
+                        <span>Tipe Intake</span>
+                        <strong data-role="queue-intake">Walk-In</strong>
+                    </div>
+                </div>
+                <div class="queue-ticket__steps">
+                    <h4>Next Steps</h4>
+                    <ul data-role="queue-next-steps">
+                        <li>Verifikasi data intake dan cetak struk.</li>
+                        <li>Serahkan unit ke tim inspeksi untuk pengecekan awal.</li>
+                    </ul>
+                </div>
+                <div class="queue-ticket__notes">
+                    <h4>Important Notes</h4>
+                    <p>Struk ini bersifat view only untuk konfirmasi customer dan dapat dicetak kapan saja.</p>
+                </div>
+            </div>
+        </section>
+        <footer class="queue-modal__footer">
+            <button type="button" class="secondary" data-action="dismiss-queue-modal">Tutup</button>
+            <button type="button" class="primary" data-action="print-queue">🖨️ Print Struk</button>
+        </footer>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    (function loadGaragePortalBundle() {
+        const assetPath = '/assets/garage/js/garage_portal.js';
+
+        if (window.frappe && typeof window.frappe.require === 'function') {
+            window.frappe.require(assetPath);
+            return;
+        }
+
+        if (document.querySelector(`script[data-garage-portal="${assetPath}"]`)) {
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = assetPath;
+        script.async = true;
+        script.dataset.garagePortal = assetPath;
+        document.head.appendChild(script);
+    })();
+</script>
+
+<!-- Bundle Estimator Script -->
+<script>
+(function () {
+    const DEFAULT_NOTE = 'Pilih bundel estimasi untuk melihat rincian jasa, sparepart, dan bahan.';
+
+    function callFrappe(options = {}) {
+        if (window.frappe && typeof window.frappe.call === 'function') {
+            return window.frappe.call(options);
+        }
+
+        const { method, args = {}, type = 'POST', callback, error } = options;
+
+        if (!method) {
+            const missingMethodError = new Error('Method is required for callFrappe');
+            if (typeof error === 'function') {
+                error(missingMethodError);
+            }
+            return Promise.reject(missingMethodError);
+        }
+
+        const url = method.startsWith('/') ? method : `/api/method/${method}`;
+        const requestType = (type || 'POST').toUpperCase();
+        const headers = { 'Content-Type': 'application/json' };
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        if (csrfToken) {
+            headers['X-Frappe-CSRF-Token'] = csrfToken;
+        }
+
+        const fetchOptions = {
+            method: requestType,
+            headers,
+            credentials: 'same-origin',
+        };
+
+        if (requestType === 'GET') {
+            const query = new URLSearchParams(args).toString();
+            return fetch(query ? `${url}?${query}` : url, fetchOptions)
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`Request failed with status ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then((data) => {
+                    if (typeof callback === 'function') {
+                        callback(data);
+                    }
+                    return data;
+                })
+                .catch((err) => {
+                    if (typeof error === 'function') {
+                        error(err);
+                    }
+                    throw err;
+                });
+        }
+
+        fetchOptions.body = JSON.stringify(args);
+
+        return fetch(url, fetchOptions)
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error(`Request failed with status ${response.status}`);
+                }
+                return response.json();
+            })
+            .then((data) => {
+                if (typeof callback === 'function') {
+                    callback(data);
+                }
+                return data;
+            })
+            .catch((err) => {
+                if (typeof error === 'function') {
+                    error(err);
+                }
+                throw err;
+            });
+    }
+
+    window.garageCall = callFrappe;
+
+    const currencyFormatter = new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+    });
+
+    const baseServiceOptions = ['Service/Repair', 'Inspection', 'Warranty', 'Insurance Claim', 'Body Repair'];
+    let computedBundles = [];
+    let bundleSelect = null;
+    let totalInput = null;
+    let nodes = null;
+    let serviceInput = null;
+    let serviceOptionsList = null;
+
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatCurrency(value) {
+        const numeric = Number(value);
+        if (Number.isNaN(numeric)) {
+            return currencyFormatter.format(0);
+        }
+        return currencyFormatter.format(Math.max(0, Math.round(numeric)));
+    }
+
+    function formatQuantity(qty, uom) {
+        const numeric = Number(qty);
+        if (Number.isNaN(numeric)) {
+            return uom ? `0 ${uom}` : '0';
+        }
+        const formatted = Number.isInteger(numeric)
+            ? numeric.toLocaleString('id-ID')
+            : numeric.toLocaleString('id-ID', { maximumFractionDigits: 2 });
+        return uom ? `${formatted} ${uom}` : formatted;
+    }
+
+    function renderCustomTotal(targetInput, totalNode) {
+        if (!totalNode) {
+            return;
+        }
+        const value = targetInput ? targetInput.value : 0;
+        totalNode.textContent = formatCurrency(value || 0);
+    }
+
+    function renderList(target, items, placeholder) {
+        if (!target) {
+            return;
+        }
+
+        if (!items || !items.length) {
+            target.innerHTML = `<li class="placeholder">${escapeHtml(placeholder)}</li>`;
+            return;
+        }
+
+        const rows = items
+            .map((item) => {
+                const label = escapeHtml(item.label || '-');
+                const meta = item.meta ? `<small>${escapeHtml(item.meta)}</small>` : '';
+                return `<li><span class="item-label">${label}</span>${meta}</li>`;
+            })
+            .join('');
+        target.innerHTML = rows;
+    }
+
+    function resetEstimateDisplay(targetNodes, targetInput) {
+        if (!targetNodes) {
+            return;
+        }
+        const { service, spare, material, total, description, serviceList, spareList, materialList } = targetNodes;
+        if (service) service.textContent = formatCurrency(0);
+        if (spare) spare.textContent = formatCurrency(0);
+        if (material) material.textContent = formatCurrency(0);
+        renderCustomTotal(targetInput, total);
+        if (description) {
+            description.innerHTML = escapeHtml(DEFAULT_NOTE);
+        }
+        renderList(serviceList, [], 'Belum ada jasa pada bundel ini.');
+        renderList(spareList, [], 'Belum ada sparepart pada bundel ini.');
+        renderList(materialList, [], 'Belum ada bahan pada bundel ini.');
+    }
+
+    function asArray(value) {
+        if (!value) {
+            return [];
+        }
+
+        if (Array.isArray(value)) {
+            return value;
+        }
+
+        if (typeof value === 'object') {
+            if (Array.isArray(value.data)) {
+                return value.data;
+            }
+            if (Array.isArray(value.results)) {
+                return value.results;
+            }
+            if (Array.isArray(value.values)) {
+                return value.values;
+            }
+            return Object.values(value);
+        }
+
+        if (typeof value === 'string') {
+            try {
+                const parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                console.warn('Failed to parse bundle data string', error);
+            }
+        }
+
+        return [];
+    }
+
+    function normalizeBundle(record) {
+        if (!record) {
+            return null;
+        }
+        const id = record.id || record.name;
+        if (!id) {
+            return null;
+        }
+        const stageList = asArray(record.stages);
+        const parts = asArray(record.parts).map((part) => {
+            const quantity = Math.max(0, Number(part.quantity) || 0);
+            const unitPrice = Math.max(0, Number(part.unitPrice ?? part.unit_price) || 0);
+            const total = Math.max(0, Number(part.total ?? part.amount) || 0);
+            const uom = part.uom || part.unit || 'Unit';
+            let stockQty = part.stockQty;
+            if (stockQty === undefined) {
+                stockQty = part.stock_qty;
+            }
+            if (stockQty !== null && stockQty !== undefined) {
+                const numericStock = Number(stockQty);
+                stockQty = Number.isNaN(numericStock) ? null : numericStock;
+            } else {
+                stockQty = null;
+            }
+            const status = part.status === 'missing' ? 'missing' : 'available';
+            const warehouse = part.warehouse || part.warehouse_location || '';
+            return {
+                status,
+                usage: part.usage === 'material' ? 'material' : 'sparepart',
+                quantity,
+                unitPrice,
+                total,
+                uom,
+                partCode: part.partCode || part.part_code || '',
+                partName:
+                    part.partName ||
+                    part.part_name ||
+                    part.item_name ||
+                    part.material_name ||
+                    part.spare_part_name ||
+                    'Item Servis',
+                stockQty,
+                warehouse,
+            };
+        });
+
+        return {
+            id,
+            code: record.code || record.bundle_code || '',
+            name: record.name || record.bundle_name || 'Paket Servis',
+            notes: record.notes || record.description || '',
+            stages: stageList,
+            service: Math.max(0, Number(record.service) || Number(record.service_fee) || 0),
+            spareparts: Math.max(0, Number(record.spareparts) || Number(record.total_spare_amount) || 0),
+            materials: Math.max(0, Number(record.materials) || Number(record.total_material_amount) || 0),
+            parts,
+        };
+    }
+
+    function getBundleRecordsFromState(state) {
+        if (!state || typeof state !== 'object') {
+            return undefined;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(state, 'service_bundles')) {
+            return state.service_bundles;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(state, 'serviceBundles')) {
+            return state.serviceBundles;
+        }
+
+        return undefined;
+    }
+
+    function updateBundles(records) {
+        const normalized = asArray(records)
+            .map((entry) => normalizeBundle(entry))
+            .filter((bundle) => bundle && bundle.id);
+        computedBundles = normalized;
+        rebuildOptions();
+        refreshServiceOptions();
+    }
+
+    function renderBundleDescription(bundle) {
+        const stageItems = (bundle.stages || []).map((stage) => ({
+            label: stage,
+            meta: '',
+        }));
+
+        const renderItems = (items) => items
+            .map((item) => `<li>${escapeHtml(item.label)}${item.meta ? ` — ${escapeHtml(item.meta)}` : ''}</li>`)
+            .join('');
+
+        return `
+            <strong>${escapeHtml(bundle.name)}</strong>
+            <p>${escapeHtml(bundle.notes || '')}</p>
+            ${stageItems.length ? `<p>Detail jasa:</p><ul>${renderItems(stageItems)}</ul>` : ''}
+        `;
+    }
+
+    function applyBundleToForm(bundle) {
+        if (!nodes || !bundle) {
+            resetEstimateDisplay(nodes, totalInput);
+            return;
+        }
+
+        const { service, spare, material, total, description, serviceList, spareList, materialList } = nodes;
+        const serviceTotal = Math.max(0, bundle.service || 0);
+        const spareTotal = Math.max(0, bundle.spareparts || 0);
+        const materialTotal = Math.max(0, bundle.materials || 0);
+        const overall = serviceTotal + spareTotal + materialTotal;
+
+        if (service) service.textContent = formatCurrency(serviceTotal);
+        if (spare) spare.textContent = formatCurrency(spareTotal);
+        if (material) material.textContent = formatCurrency(materialTotal);
+        if (total) total.textContent = formatCurrency(overall);
+        if (description) {
+            description.innerHTML = renderBundleDescription(bundle);
+        }
+        renderList(
+            serviceList,
+            (bundle.stages && bundle.stages.length
+                ? bundle.stages.map((stage) => ({ label: stage }))
+                : [{ label: bundle.name }]
+            ),
+            'Belum ada jasa pada bundel ini.'
+        );
+        const bundleParts = Array.isArray(bundle.parts) ? bundle.parts : [];
+        const spareParts = bundleParts
+            .filter((part) => part.usage !== 'material')
+            .map((part) => ({
+                label: part.partName || part.partCode || 'Item Servis',
+                meta: part.partCode ? `Kode: ${part.partCode}` : '',
+            }));
+        const materialParts = bundleParts
+            .filter((part) => part.usage === 'material')
+            .map((part) => ({
+                label: part.partName || part.partCode || 'Bahan',
+                meta: [
+                    part.partCode ? `Kode: ${part.partCode}` : '',
+                    part.warehouse ? `Gudang: ${part.warehouse}` : '',
+                ].filter(Boolean).join(' • '),
+            }));
+        renderList(spareList, spareParts, 'Belum ada sparepart pada bundel ini.');
+        renderList(materialList, materialParts, 'Belum ada bahan pada bundel ini.');
+        if (totalInput) {
+            totalInput.value = overall;
+            totalInput.dispatchEvent(new Event('input', { bubbles: true }));
+            totalInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+
+    function rebuildOptions() {
+        if (!bundleSelect) {
+            return;
+        }
+        const previousValue = bundleSelect.value;
+        bundleSelect.innerHTML = '';
+
+        const blank = document.createElement('option');
+        blank.value = '';
+        blank.textContent = '— Pilih Bundel Estimasi —';
+        bundleSelect.appendChild(blank);
+
+        computedBundles.forEach((bundle) => {
+            const option = document.createElement('option');
+            option.value = bundle.id;
+            option.textContent = `${bundle.name}`;
+            bundleSelect.appendChild(option);
+        });
+
+        if (previousValue && bundleSelect.querySelector(`option[value="${previousValue}"]`)) {
+            bundleSelect.value = previousValue;
+            const selected = computedBundles.find((bundle) => bundle.id === previousValue);
+            applyBundleToForm(selected || null);
+        } else {
+            resetEstimateDisplay(nodes, totalInput);
+        }
+    }
+
+    function handleStateUpdate(state) {
+        const records = getBundleRecordsFromState(state);
+        if (records === undefined) {
+            return;
+        }
+        updateBundles(records);
+    }
+
+    function refreshServiceOptions() {
+        if (!serviceOptionsList) {
+            return;
+        }
+
+        const options = new Set(baseServiceOptions);
+        computedBundles.forEach((bundle) => {
+            if (bundle && bundle.name) {
+                options.add(bundle.name);
+            }
+        });
+
+        serviceOptionsList.innerHTML = '';
+        options.forEach((value) => {
+            const option = document.createElement('option');
+            option.value = value;
+            serviceOptionsList.appendChild(option);
+        });
+    }
+
+    document.addEventListener('garage-portal:state-updated', (event) => {
+        handleStateUpdate(event?.detail?.state || {});
+    });
+
+    function initializeBundleEstimator() {
+        console.log('🚀 Initializing bundle estimator...');
+        
+        bundleSelect = document.getElementById('service_bundle');
+        totalInput = document.getElementById('total_estimated_amount');
+        serviceInput = document.getElementById('service_order_type');
+        serviceOptionsList = document.getElementById('service_options_list');
+        nodes = {
+            service: document.getElementById('estimate_service_amount'),
+            spare: document.getElementById('estimate_spare_amount'),
+            material: document.getElementById('estimate_material_amount'),
+            total: document.getElementById('estimate_total_amount'),
+            description: document.getElementById('estimate_bundle_description'),
+            serviceList: document.getElementById('estimate_service_list'),
+            spareList: document.getElementById('estimate_spare_list'),
+            materialList: document.getElementById('estimate_material_list'),
+        };
+
+        refreshServiceOptions();
+
+        if (!bundleSelect || !nodes.service || !nodes.spare || !nodes.material || !nodes.total) {
+            console.warn('❌ Bundle estimator: Required elements not found');
+            return;
+        }
+
+        console.log('✅ All required elements found');
+        console.log('📡 Loading service bundles from API...');
+        
+        callFrappe({
+            method: 'garage.api.portal.portal_bootstrap',
+            freeze: false,
+            callback: function(response) {
+                console.log('📥 API response received:', response);
+                
+                if (response && response.message) {
+                    console.log('✅ Portal state loaded successfully');
+                    const initialRecords = response.message.service_bundles || [];
+                    console.log('📦 Service bundles found:', initialRecords.length);
+                    
+                    if (initialRecords.length > 0) {
+                        updateBundles(initialRecords);
+                        console.log('✅ Bundle dropdown populated with', computedBundles.length, 'bundles');
+                    } else {
+                        console.warn('⚠️ No service bundles available');
+                        rebuildOptions();
+                    }
+                } else {
+                    console.error('❌ Failed to load portal state - no response.message');
+                    rebuildOptions();
+                }
+            },
+            error: function(error) {
+                console.error('❌ Error loading service bundles:', error);
+                rebuildOptions();
+            }
+        });
+
+        bundleSelect.addEventListener('change', (event) => {
+            console.log('📝 Bundle selected:', event.target.value);
+            const selected = computedBundles.find((bundle) => bundle.id === event.target.value);
+            console.log('🎯 Selected bundle data:', selected);
+            applyBundleToForm(selected || null);
+            if (serviceInput && selected && selected.name) {
+                serviceInput.value = selected.name;
+            }
+        });
+
+        if (totalInput) {
+            totalInput.addEventListener('input', () => {
+                renderCustomTotal(totalInput, nodes.total);
+            });
+        }
+
+        renderCustomTotal(totalInput, nodes.total);
+        console.log('✅ Bundle estimator initialized');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeBundleEstimator);
+    } else {
+        initializeBundleEstimator();
+    }
+})();
+</script>
+
+<!-- Auto-fill Customer Data Script -->
+<script>
+(function() {
+    'use strict';
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    async function searchByLicensePlate(licensePlate) {
+        if (!licensePlate || licensePlate.trim().length < 3) {
+            return null;
+        }
+
+        try {
+            const response = await window.garageCall({
+                method: 'garage.api.portal.lookup_customer',
+                args: {
+                    identifier: licensePlate.trim()
+                },
+                freeze: false
+            });
+
+            return response.message;
+        } catch (error) {
+            console.error('Error fetching customer data:', error);
+            return null;
+        }
+    }
+
+    function fillCustomerData(customerData) {
+        if (!customerData || !customerData.customer) {
+            return;
+        }
+
+        const customer = customerData.customer;
+        
+        if (customer.name) {
+            const existingCustomerSelect = document.getElementById('existing_customer');
+            if (existingCustomerSelect) {
+                let optionExists = false;
+                for (let option of existingCustomerSelect.options) {
+                    if (option.value === customer.name) {
+                        optionExists = true;
+                        break;
+                    }
+                }
+                
+                if (!optionExists) {
+                    const option = document.createElement('option');
+                    option.value = customer.name;
+                    option.text = customer.customer_name || customer.name;
+                    existingCustomerSelect.add(option);
+                }
+                
+                existingCustomerSelect.value = customer.name;
+                existingCustomerSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+
+        if (customer.customer_name) {
+            setFieldValue('customer_name', customer.customer_name, ['new_customer_name']);
+        }
+
+        if (customer.customer_type) {
+            setFieldValue('customer_type', customer.customer_type);
+        }
+
+        if (customer.phone) {
+            setFieldValue('phone', customer.phone);
+        }
+
+        if (customer.email) {
+            setFieldValue('email', customer.email);
+        }
+
+        if (customer.preferred_contact_method) {
+            setFieldValue('preferred_contact_method', customer.preferred_contact_method);
+        }
+
+        if (customer.is_vip !== undefined) {
+            setFieldValue('is_vip', customer.is_vip ? '1' : '0');
+        }
+
+        if (customer.marketing_source) {
+            setFieldValue('marketing_source', customer.marketing_source);
+        }
+
+        showNotification('Data customer ditemukan dan telah diisi otomatis! ✅', 'success');
+    }
+
+    function fillVehicleData(customerData) {
+        if (!customerData || !customerData.vehicles || customerData.vehicles.length === 0) {
+            return;
+        }
+
+        const licensePlateInput = document.getElementById('license_plate');
+        const searchPlate = licensePlateInput ? licensePlateInput.value.trim().toUpperCase() : '';
+        
+        let vehicle = null;
+        
+        if (searchPlate) {
+            vehicle = customerData.vehicles.find(v => 
+                v.license_plate && v.license_plate.toUpperCase() === searchPlate
+            );
+        }
+        
+        if (!vehicle && customerData.vehicles.length > 0) {
+            vehicle = customerData.vehicles[0];
+        }
+
+        if (!vehicle) {
+            return;
+        }
+
+        if (vehicle.license_plate) {
+            setFieldValue('license_plate', vehicle.license_plate.toUpperCase());
+        }
+
+        if (vehicle.brand) {
+            setFieldValue('brand', vehicle.brand);
+        }
+
+        if (vehicle.model) {
+            setFieldValue('model', vehicle.model);
+        }
+
+        if (vehicle.model_variant) {
+            setFieldValue('model_variant', vehicle.model_variant);
+        }
+
+        if (vehicle.vehicle_year) {
+            setFieldValue('vehicle_year', vehicle.vehicle_year);
+        }
+
+        if (vehicle.color) {
+            setFieldValue('color', vehicle.color);
+        }
+
+        if (vehicle.transmission) {
+            setFieldValue('transmission', vehicle.transmission);
+        }
+
+        if (vehicle.fuel_type) {
+            setFieldValue('fuel_type', vehicle.fuel_type);
+        }
+
+        if (vehicle.mileage !== undefined && vehicle.mileage !== null) {
+            setFieldValue('mileage', vehicle.mileage);
+        }
+
+        if (vehicle.vin) {
+            setFieldValue('vin', vehicle.vin);
+        }
+
+        if (vehicle.engine_number) {
+            setFieldValue('engine_number', vehicle.engine_number);
+        }
+    }
+
+    function setFieldValue(fieldId, value, mirrorIds = []) {
+        const ids = [fieldId]
+            .concat(Array.isArray(mirrorIds) ? mirrorIds : [])
+            .filter(Boolean);
+        const seen = new Set();
+
+        const shouldApply = !(value === undefined || value === null || (typeof value === 'string' && value.trim() === ''));
+
+        ids.forEach((id) => {
+            if (seen.has(id)) {
+                return;
+            }
+            seen.add(id);
+
+            const field = document.getElementById(id);
+            if (!field || !shouldApply) {
+                return;
+            }
+
+            const appliedValue = typeof value === 'number' ? value : String(value);
+            field.value = appliedValue;
+
+            if (field.tagName === 'SELECT') {
+                const hasOption = Array.from(field.options || []).some(option => option.value === appliedValue);
+                if (!hasOption) {
+                    field.setAttribute('data-pending-value', appliedValue);
+                } else {
+                    field.removeAttribute('data-pending-value');
+                }
+            }
+
+            if (id === 'customer_name') {
+                const searchInput = document.getElementById('existing_customer_search');
+                if (searchInput) {
+                    searchInput.value = appliedValue;
+                    searchInput.classList.add('auto-filled');
+                    setTimeout(() => searchInput.classList.remove('auto-filled'), 2000);
+                }
+            }
+
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+            field.classList.add('auto-filled');
+            setTimeout(() => {
+                field.classList.remove('auto-filled');
+            }, 2000);
+        });
+    }
+
+    function showNotification(message, type = 'info') {
+        if (typeof frappe !== 'undefined' && frappe.show_alert) {
+            frappe.show_alert({
+                message: message,
+                indicator: type
+            });
+        } else {
+            const notification = document.createElement('div');
+            notification.className = `custom-notification notification-${type}`;
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#00C853' : '#0066FF'};
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                z-index: 10000;
+                animation: slideIn 0.3s ease-out;
+                font-weight: 500;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 3000);
+        }
+    }
+
+    function showLoadingIndicator(show) {
+        const licensePlateField = document.getElementById('license_plate');
+        if (!licensePlateField) return;
+
+        const wrapper = licensePlateField.parentElement;
+        let indicator = wrapper.querySelector('.loading-indicator');
+
+        if (show) {
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.className = 'loading-indicator';
+                indicator.innerHTML = '🔍 Mencari data...';
+                indicator.style.cssText = `
+                    position: absolute;
+                    right: 12px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    font-size: 12px;
+                    color: #0066FF;
+                    font-weight: 500;
+                    pointer-events: none;
+                `;
+                wrapper.style.position = 'relative';
+                wrapper.appendChild(indicator);
+            }
+        } else {
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+    }
+
+    const handleLicensePlateInput = debounce(async function(event) {
+        const licensePlate = event.target.value;
+        
+        if (!licensePlate || licensePlate.trim().length < 3) {
+            return;
+        }
+
+        showLoadingIndicator(true);
+
+        try {
+            const data = await searchByLicensePlate(licensePlate);
+            
+            if (data && data.customer) {
+                fillCustomerData(data);
+                fillVehicleData(data);
+            } else {
+                showNotification('Nomor polisi tidak ditemukan. Anda dapat mengisi data baru.', 'info');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        } finally {
+            showLoadingIndicator(false);
+        }
+    }, 800);
+
+    function init() {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+            return;
+        }
+
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+
+            @keyframes pulseGreen {
+                0%, 100% {
+                    box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.4);
+                }
+                50% {
+                    box-shadow: 0 0 0 8px rgba(0, 200, 83, 0);
+                }
+            }
+
+            .auto-filled {
+                animation: pulseGreen 1s ease-out;
+                border-color: #00C853 !important;
+            }
+
+            .loading-indicator {
+                animation: pulse 1.5s ease-in-out infinite;
+            }
+
+            @keyframes pulse {
+                0%, 100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.5;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        const licensePlateField = document.getElementById('license_plate');
+        if (licensePlateField) {
+            licensePlateField.addEventListener('input', handleLicensePlateInput);
+            
+            const hint = licensePlateField.parentElement.querySelector('.form-hint');
+            if (hint) {
+                hint.innerHTML += ' <strong style="color: #0066FF;">💡 Ketik nomor polisi untuk auto-fill data customer!</strong>';
+            }
+        } else {
+            console.warn('License plate field not found');
+        }
+    }
+
+    init();
+
+    window.GarageAutoFill = {
+        searchByLicensePlate,
+        fillCustomerData,
+        fillVehicleData
+    };
+
+})();
+</script>
+
+<!-- Customer Name Sync Script -->
+<script>
+(function() {
+    'use strict';
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCustomerNameSync);
+    } else {
+        initCustomerNameSync();
+    }
+    
+    function initCustomerNameSync() {
+        const newCustomerNameInput = document.getElementById('new_customer_name');
+        const customerNameHidden = document.getElementById('customer_name');
+        const existingCustomerSelect = document.getElementById('existing_customer');
+        const form = document.getElementById('customer-vehicle-form');
+        
+        if (!newCustomerNameInput || !customerNameHidden || !form) {
+            console.warn('Customer name sync: Required elements not found');
+            return;
+        }
+        
+        newCustomerNameInput.addEventListener('input', function(e) {
+            const value = (e.target.value || '').trim();
+            customerNameHidden.value = value;
+            console.log('Customer name synced (input):', value);
+        });
+        
+        newCustomerNameInput.addEventListener('blur', function(e) {
+            const value = (e.target.value || '').trim();
+            customerNameHidden.value = value;
+            console.log('Customer name synced (blur):', value);
+        });
+        
+        if (existingCustomerSelect) {
+            existingCustomerSelect.addEventListener('change', function(e) {
+                const selectedValue = e.target.value;
+                if (selectedValue) {
+                    newCustomerNameInput.value = '';
+                    const selectedOption = e.target.options[e.target.selectedIndex];
+                    customerNameHidden.value = selectedOption.text || selectedValue;
+                    console.log('Customer selected:', customerNameHidden.value);
+                } else {
+                    customerNameHidden.value = '';
+                }
+            });
+        }
+        
+        form.addEventListener('submit', function(e) {
+            const customerNameValue = customerNameHidden.value?.trim();
+            const existingCustomerValue = existingCustomerSelect?.value?.trim();
+            
+            if (!customerNameValue && !existingCustomerValue) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (typeof frappe !== 'undefined' && frappe.show_alert) {
+                    frappe.show_alert({
+                        message: 'Mohon isi nama customer baru atau pilih customer eksisting!',
+                        indicator: 'red'
+                    });
+                } else {
+                    alert('Mohon isi nama customer baru atau pilih customer eksisting!');
+                }
+                
+                newCustomerNameInput.focus();
+                return false;
+            }
+            
+            console.log('Form validation passed. Customer name:', customerNameValue);
+        }, true);
+        
+        console.log('Customer name sync initialized successfully');
+    }
+})();
+</script>
+
+<!-- Form Submit with Auto-Download PDF -->
+<script>
+(function() {
+    'use strict';
+    
+    function initFormSubmit() {
+        const form = document.getElementById('customer-vehicle-form');
+        const downloadButton = document.querySelector('button[data-action="download-estimate"]');
+        
+        if (!form) {
+            console.warn('Form not found');
+            return;
+        }
+        
+        // Disable download button initially
+        if (downloadButton) {
+            downloadButton.disabled = true;
+            downloadButton.style.opacity = '0.5';
+        }
+        
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('🚀 Form submit started');
+            
+            // Validasi form
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return false;
+            }
+            
+            // Validasi customer name
+            const customerNameHidden = document.getElementById('customer_name');
+            const existingCustomerSelect = document.getElementById('existing_customer');
+            const customerNameValue = customerNameHidden?.value?.trim();
+            const existingCustomerValue = existingCustomerSelect?.value?.trim();
+            
+            if (!customerNameValue && !existingCustomerValue) {
+                frappe.show_alert({
+                    message: '⚠️ Mohon isi nama customer atau pilih customer eksisting!',
+                    indicator: 'orange'
+                }, 5);
+                return false;
+            }
+            
+            // Collect form data
+            const formData = new FormData(form);
+            const data = {};
+            
+            for (let [key, value] of formData.entries()) {
+                const field = form.elements[key];
+                if (field && field.dataset.cast === 'int') {
+                    data[key] = parseInt(value) || 0;
+                } else {
+                    data[key] = value;
+                }
+            }
+            
+            console.log('📦 Form data collected:', data);
+            
+            // Disable submit button
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '⏳ Menyimpan...';
+            }
+            
+            try {
+                // Step 1: Save intake data
+                console.log('💾 Saving intake data...');
+                const saveResponse = await window.garageCall({
+                    method: 'garage.api.portal.create_service_intake',
+                    args: { data: data },
+                    type: 'POST',
+                    freeze: true,
+                    freeze_message: 'Menyimpan registrasi...'
+                });
+                
+                console.log('✅ Save response:', saveResponse);
+                
+                if (!saveResponse.message || !saveResponse.message.order_id) {
+                    throw new Error('Order ID tidak ditemukan dalam response');
+                }
+                
+                const orderId = saveResponse.message.order_id;
+                console.log('🎯 Order ID:', orderId);
+                
+                frappe.show_alert({
+                    message: `✅ Registrasi berhasil! Order ID: ${orderId}`,
+                    indicator: 'green'
+                }, 3);
+                
+                // Step 2: Generate and download PDF
+                console.log('📄 Generating PDF...');
+                
+                if (submitButton) {
+                    submitButton.innerHTML = '📄 Generating PDF...';
+                }
+                
+                const pdfResponse = await window.garageCall({
+                    method: 'garage.api.pdf_generator.generate_service_estimate_pdf',
+                    args: { order_id: orderId },
+                    type: 'POST',
+                    freeze: true,
+                    freeze_message: 'Membuat PDF estimasi...'
+                });
+                
+                console.log('📥 PDF response:', pdfResponse);
+                
+                if (pdfResponse.message && pdfResponse.message.success) {
+                    const fileUrl = pdfResponse.message.file_url;
+                    const fileName = pdfResponse.message.file_name;
+
+                    console.log('📁 File URL:', fileUrl);
+                    console.log('📄 File Name:', fileName);
+
+                    // Force download dengan proper handling
+                    forceDownloadPDF(fileUrl, fileName);
+
+                } else {
+                    console.warn('⚠️ PDF generation failed, but registration successful');
+                    frappe.show_alert({
+                        message: '⚠️ Registrasi berhasil, tapi PDF gagal dibuat. Silakan download manual.',
+                        indicator: 'orange'
+                    }, 5);
+                }
+
+                if (window.garageQueueModule && typeof window.garageQueueModule.refresh === 'function') {
+                    window.garageQueueModule.refresh({ showLoader: false });
+                }
+
+                // Step 3: Redirect after success
+                setTimeout(() => {
+                    console.log('🔄 Redirecting to service page...');
+                    window.location.href = '/garage/service';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                
+                let errorMessage = '❌ Gagal menyimpan registrasi';
+                
+                if (error.message) {
+                    errorMessage += ': ' + error.message;
+                }
+                
+                if (error._server_messages) {
+                    try {
+                        const serverMessages = JSON.parse(error._server_messages);
+                        if (serverMessages && serverMessages.length > 0) {
+                            const parsedMsg = JSON.parse(serverMessages[0]);
+                            if (parsedMsg.message) {
+                                errorMessage = '❌ ' + parsedMsg.message;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse server messages:', e);
+                    }
+                }
+                
+                frappe.show_alert({
+                    message: errorMessage,
+                    indicator: 'red'
+                }, 7);
+                
+                // Re-enable submit button
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = '💾 Save';
+                }
+            }
+        });
+        
+        console.log('✅ Form submit handler initialized');
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initFormSubmit);
+    } else {
+        initFormSubmit();
+    }
+})();
+
+(function initTodayRegistrationPanel() {
+    const listRoot = document.querySelector('[data-role="todays-registration-list"]');
+    if (!listRoot) {
+        return;
+    }
+
+    const countNode = document.querySelector('[data-role="todays-registration-count"]');
+    const dateNode = document.querySelector('[data-role="todays-registration-date"]');
+    const branchNode = document.querySelector('[data-role="todays-registration-branch"]');
+    const modal = document.getElementById('queue-detail-modal');
+    const nextStepsNode = modal ? modal.querySelector('[data-role="queue-next-steps"]') : null;
+    const modalFields = modal
+        ? {
+              queueCode: modal.querySelector('[data-role="queue-code"]'),
+              registrationId: modal.querySelector('[data-role="queue-registration-id"]'),
+              customerName: modal.querySelector('[data-role="queue-customer-name"]'),
+              customerContact: modal.querySelector('[data-role="queue-customer-contact"]'),
+              vehicle: modal.querySelector('[data-role="queue-vehicle"]'),
+              vehicleMeta: modal.querySelector('[data-role="queue-vehicle-meta"]'),
+              notes: modal.querySelector('[data-role="queue-notes"]'),
+              status: modal.querySelector('[data-role="queue-status"]'),
+              priority: modal.querySelector('[data-role="queue-priority"]'),
+              intake: modal.querySelector('[data-role="queue-intake"]'),
+          }
+        : {};
+    const printButton = modal ? modal.querySelector('[data-action="print-queue"]') : null;
+
+    const DATE_FORMATTER = new Intl.DateTimeFormat('id-ID', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    });
+    const TIME_FORMATTER = new Intl.DateTimeFormat('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+
+    const state = {
+        records: [],
+        lookup: new Map(),
+        active: null,
+        timer: null,
+        lastBranch: null,
+    };
+
+    function setDateLabel() {
+        if (dateNode) {
+            dateNode.textContent = DATE_FORMATTER.format(new Date());
+        }
+    }
+
+    function getBranchValue() {
+        const branchInput = document.getElementById('intake_branch');
+        if (!branchInput) {
+            return 'JKT';
+        }
+        const fallback = branchInput.dataset.defaultBranch || 'JKT';
+        const value = (branchInput.value || '').trim();
+        return value || fallback || 'JKT';
+    }
+
+    function buildVehicleLine(record) {
+        const segments = [];
+        if (record.vehicle_plate) {
+            segments.push(record.vehicle_plate);
+        }
+        const descriptor = [record.vehicle_brand, record.vehicle_model]
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+        if (descriptor) {
+            segments.push(descriptor);
+        }
+        return segments.join(' · ') || '—';
+    }
+
+    function getStatusInfo(status) {
+        const label = status || 'Inspection';
+        const normalized = label.toLowerCase();
+        if (['completed', 'approved', 'work in progress'].some((value) => normalized.includes(value))) {
+            return { label, className: 'queue-status--success' };
+        }
+        if (['awaiting approval', 'estimate', 'inspection', 'draft'].some((value) => normalized.includes(value))) {
+            return { label, className: 'queue-status--warning' };
+        }
+        if (['cancelled', 'reject'].some((value) => normalized.includes(value))) {
+            return { label, className: 'queue-status--danger' };
+        }
+        return { label, className: '' };
+    }
+
+    function normalizeOrder(order, index, branchCode) {
+        const baseBranch = (order.branch_code || branchCode || order.branch || 'JKT').toString().toUpperCase();
+        const queueCode = `${baseBranch}-${String(index + 1).padStart(3, '0')}`;
+        const statusInfo = getStatusInfo(order.status);
+        return {
+            id: order.name || queueCode,
+            queueCode,
+            customer_name: order.customer_name || order.customer || 'Customer Baru',
+            customer_phone: order.customer_phone || order.primary_contact || order.phone || '',
+            vehicle_plate: (order.vehicle_plate || order.license_plate || order.vehicle || '').toUpperCase(),
+            vehicle_brand: order.vehicle_brand || '',
+            vehicle_model: order.vehicle_model || '',
+            vehicle_year: order.vehicle_year || '',
+            vehicle_variant: order.vehicle_model_variant || '',
+            status: statusInfo.label,
+            statusClass: statusInfo.className,
+            created_on: order.creation || order.modified || '',
+            created_label: order.creation ? TIME_FORMATTER.format(new Date(order.creation)) : '—',
+            notes: order.service_notes || order.inspection_summary || order.notes || '',
+            priority: order.priority || 'Normal',
+            intake_type: order.intake_type || 'Walk-In',
+        };
+    }
+
+    function showLoading() {
+        listRoot.innerHTML = '<div class="queue-empty"><p>Memuat data antrian…</p></div>';
+    }
+
+    async function refresh(options = {}) {
+        if (options.showLoader !== false) {
+            showLoading();
+        }
+
+        if (!window.garageCall) {
+            return;
+        }
+
+        const branch = getBranchValue();
+        state.lastBranch = branch;
+        if (branchNode) {
+            branchNode.textContent = branch;
+        }
+
+        try {
+            const today = new Date().toISOString().slice(0, 10);
+            const response = await window.garageCall({
+                method: 'garage.api.portal.list_service_orders',
+                args: { filters: { branch, from_date: today, to_date: today } },
+            });
+            const payload = response?.message?.orders ? response.message : response?.message || response;
+            const orders = Array.isArray(payload?.orders) ? payload.orders : [];
+            const sorted = orders
+                .slice()
+                .sort((a, b) => (a.creation || '').localeCompare(b.creation || ''));
+            state.records = sorted.map((order, index) => normalizeOrder(order, index, branch));
+            state.lookup = new Map(state.records.map((record) => [record.id, record]));
+            if (countNode) {
+                countNode.textContent = state.records.length;
+            }
+            renderList();
+        } catch (error) {
+            console.error('Failed to load today\'s registrations', error);
+            listRoot.innerHTML = '<div class="queue-empty queue-empty--error"><p>Tidak dapat memuat data antrian.</p></div>';
+        }
+    }
+
+    function renderList() {
+        if (!state.records.length) {
+            listRoot.innerHTML = '<div class="queue-empty"><p>Belum ada registrasi hari ini.</p><small>Registrasi baru akan tampil otomatis di sini.</small></div>';
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        state.records.forEach((record) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'queue-item';
+            button.dataset.registrationId = record.id;
+            button.innerHTML = `
+                <span class="queue-item__code">${escapeHtml(record.queueCode)}</span>
+                <div class="queue-item__content">
+                    <p class="queue-item__customer">${escapeHtml(record.customer_name)}</p>
+                    <p class="queue-item__vehicle">${escapeHtml(buildVehicleLine(record))}</p>
+                </div>
+                <div class="queue-item__meta">
+                    <span class="queue-status ${record.statusClass}">${escapeHtml(record.status)}</span>
+                    <time>${record.created_label}</time>
+                </div>
+            `;
+            fragment.appendChild(button);
+        });
+
+        listRoot.innerHTML = '';
+        listRoot.appendChild(fragment);
+    }
+
+    function renderNextSteps(record) {
+        if (!nextStepsNode) {
+            return;
+        }
+        nextStepsNode.innerHTML = '';
+        const steps = buildNextSteps(record);
+        steps.forEach((step) => {
+            const li = document.createElement('li');
+            li.textContent = step;
+            nextStepsNode.appendChild(li);
+        });
+    }
+
+    function buildNextSteps(record) {
+        const steps = [`Status saat ini: ${record.status}`];
+        if ((record.priority || '').toLowerCase() === 'urgent') {
+            steps.push('Prioritaskan antrian ini dan arahkan unit ke jalur inspeksi cepat.');
+        } else {
+            steps.push('Lanjutkan pengecekan awal lalu perbarui status di portal.');
+        }
+        steps.push('Gunakan tombol Print untuk menyerahkan struk ke customer.');
+        return steps;
+    }
+
+    function updateModal(record) {
+        if (!modal) {
+            return;
+        }
+        if (modalFields.queueCode) {
+            modalFields.queueCode.textContent = record.queueCode;
+        }
+        if (modalFields.registrationId) {
+            modalFields.registrationId.textContent = record.id;
+        }
+        if (modalFields.customerName) {
+            modalFields.customerName.textContent = record.customer_name || '—';
+        }
+        if (modalFields.customerContact) {
+            modalFields.customerContact.textContent = record.customer_phone || '—';
+        }
+        if (modalFields.vehicle) {
+            modalFields.vehicle.textContent = buildVehicleLine(record);
+        }
+        if (modalFields.vehicleMeta) {
+            const meta = [record.vehicle_year, record.vehicle_variant]
+                .filter(Boolean)
+                .join(' · ');
+            modalFields.vehicleMeta.textContent = meta || '—';
+        }
+        if (modalFields.notes) {
+            modalFields.notes.textContent = record.notes || 'Tidak ada catatan tambahan.';
+        }
+        if (modalFields.status) {
+            modalFields.status.textContent = record.status;
+        }
+        if (modalFields.priority) {
+            modalFields.priority.textContent = record.priority || 'Normal';
+        }
+        if (modalFields.intake) {
+            modalFields.intake.textContent = record.intake_type || 'Walk-In';
+        }
+        renderNextSteps(record);
+    }
+
+    function openModal(record) {
+        if (!modal || !record) {
+            return;
+        }
+        state.active = record;
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        updateModal(record);
+        const closeButton = modal.querySelector('.queue-modal__close');
+        if (closeButton) {
+            setTimeout(() => closeButton.focus(), 100);
+        }
+    }
+
+    function closeModal() {
+        if (!modal) {
+            return;
+        }
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        state.active = null;
+    }
+
+    function handleListClick(event) {
+        const origin = event.target instanceof Element ? event.target : null;
+        const target = origin ? origin.closest('[data-registration-id]') : null;
+        if (!target) {
+            return;
+        }
+        const record = state.lookup.get(target.dataset.registrationId);
+        if (record) {
+            openModal(record);
+        }
+    }
+
+    function handleStateUpdate(event) {
+        const incomingBranch = event?.detail?.state?.active_branch;
+        if (incomingBranch && incomingBranch !== state.lastBranch) {
+            refresh({ showLoader: false });
+        }
+    }
+
+    function openPrintWindow(record) {
+        const printWindow = window.open('', '_blank', 'width=420,height=640');
+        if (!printWindow) {
+            showNotification('Tidak dapat membuka jendela print.', 'warning');
+            return;
+        }
+        const created = record.created_on ? new Date(record.created_on) : new Date();
+        const html = `<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Struk Antrian ${escapeHtml(record.queueCode)}</title>
+        <style>
+            body { font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 24px; background: #f3f4f6; color: #111827; }
+            .ticket { background: #fff; border-radius: 20px; padding: 24px; border: 1px solid #e5e7eb; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08); }
+            .ticket h1 { margin: 0 0 8px; font-size: 32px; color: #2563eb; }
+            .ticket p { margin: 4px 0; font-size: 14px; }
+            dl { margin: 16px 0 0; }
+            dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: #94a3b8; }
+            dd { margin: 0 0 8px; font-size: 14px; color: #111827; }
+        </style>
+    </head>
+    <body>
+        <div class="ticket">
+            <p>Registration ID</p>
+            <h1>${escapeHtml(record.queueCode)}</h1>
+            <p>${escapeHtml(record.id)}</p>
+            <dl>
+                <dt>Customer</dt>
+                <dd>${escapeHtml(record.customer_name)}</dd>
+                <dt>Kontak</dt>
+                <dd>${escapeHtml(record.customer_phone || '—')}</dd>
+                <dt>Kendaraan</dt>
+                <dd>${escapeHtml(buildVehicleLine(record))}</dd>
+                <dt>Status</dt>
+                <dd>${escapeHtml(record.status)} · ${escapeHtml(record.priority || 'Normal')}</dd>
+                <dt>Tanggal</dt>
+                <dd>${escapeHtml(created.toLocaleString('id-ID'))}</dd>
+            </dl>
+            <p style="margin-top:16px;font-size:12px;color:#6b7280;">Cetak struk ini dan serahkan kepada customer sebagai bukti antrian inspeksi.</p>
+        </div>
+        <script>window.addEventListener('load', function() { window.print(); });<\/script>
+    </body>
+</html>`;
+        printWindow.document.write(html);
+        printWindow.document.close();
+    }
+
+    listRoot.addEventListener('click', handleListClick);
+    document.addEventListener('garage-portal:state-updated', handleStateUpdate);
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeModal();
+        }
+    });
+
+    if (modal) {
+        modal.querySelectorAll('[data-action="dismiss-queue-modal"]').forEach((element) => {
+            element.addEventListener('click', closeModal);
+        });
+    }
+
+    if (printButton) {
+        printButton.addEventListener('click', () => {
+            if (state.active) {
+                openPrintWindow(state.active);
+            }
+        });
+    }
+
+    window.addEventListener('pagehide', () => {
+        if (state.timer) {
+            clearInterval(state.timer);
+        }
+    });
+
+    setDateLabel();
+    refresh();
+    state.timer = setInterval(() => refresh({ showLoader: false }), 60000);
+
+    window.garageQueueModule = {
+        refresh,
+    };
+})();
+
+
+function forceDownloadPDF(fileUrl, fileName) {
+    console.log('🔽 Force downloading:', fileUrl, fileName);
+    
+    // Cek apakah file URL ada
+    if (!fileUrl) {
+        console.error('❌ File URL is empty');
+        frappe.show_alert({
+            message: '❌ File URL tidak ditemukan',
+            indicator: 'red'
+        }, 5);
+        return;
+    }
+    
+    // Pastikan file URL punya domain lengkap
+    let fullUrl = fileUrl;
+    if (fileUrl.startsWith('/')) {
+        // Relative URL, tambahkan origin
+        fullUrl = window.location.origin + fileUrl;
+    }
+    
+    console.log('📥 Downloading from:', fullUrl);
+    
+    // Method 1: Fetch then blob (paling reliable)
+    fetch(fullUrl, {
+        method: 'GET',
+        headers: {
+            'X-Frappe-CSRF-Token': frappe.csrf_token
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        // Create blob URL
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        // Create download link
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName || 'download.pdf';
+        link.style.display = 'none';
+        
+        document.body.appendChild(link);
+        link.click();
+        
+        // Cleanup
+        setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+        }, 100);
+        
+        console.log('✅ Download triggered successfully');
+        
+        frappe.show_alert({
+            message: '✅ PDF berhasil didownload!',
+            indicator: 'green'
+        }, 3);
+    })
+    .catch(error => {
+        console.error('❌ Download error:', error);
+        
+        // Fallback: Try direct window.open
+        console.log('⚠️ Trying fallback method: window.open');
+        window.open(fullUrl, '_blank');
+        
+        frappe.show_alert({
+            message: '⚠️ Membuka PDF di tab baru...',
+            indicator: 'orange'
+        }, 3);
+    });
+}
+</script>
+{% endblock %}

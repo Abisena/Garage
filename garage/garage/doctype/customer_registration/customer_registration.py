@@ -1,0 +1,275 @@
+# Copyright (c) 2024, Garage and contributors
+# For license information, please see license.txt
+
+from __future__ import annotations
+
+from typing import Any, Dict, Optional
+
+import frappe
+from frappe import _
+from frappe.model.document import Document
+from frappe.utils import get_datetime, now_datetime
+
+from garage.api import portal
+from garage.garage.doctype.customer_entry.customer_entry import create_from_registration
+
+VEHICLE_FIELDS = (
+    "license_plate",
+    "vin",
+    "engine_number",
+    "brand",
+    "model",
+    "vehicle_type",
+    "vehicle_year",
+    "assembly_type",
+    "transmission",
+    "fuel_type",
+    "mileage",
+)
+
+CUSTOMER_FIELDS = (
+    "customer_name",
+    "customer_type",
+    "phone",
+    "email",
+    "preferred_contact_method",
+    "id_number",
+    "address_line1",
+    "address_line2",
+    "city",
+    "state",
+    "postal_code",
+    "country",
+    "marketing_source",
+    "is_vip",
+)
+
+SERVICE_FIELDS = (
+    "service_order_type",
+    "service_bundle",
+    "service_bundle_name",
+    "priority",
+    "intake_type",
+    "service_booking_date",
+    "notes",
+    "complaint",  # Added complaint field
+    "service_notes",
+)
+
+
+class CustomerRegistration(Document):
+    """Combined vehicle + customer intake form for the desk/portal flows."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Initialize _action early to avoid AttributeError
+        if not hasattr(self, '_action'):
+            self._action = "save"
+        # Ensure _doc_before_save exists for validation paths
+        if not hasattr(self, "_doc_before_save"):
+            self._doc_before_save = None
+
+    def check_if_latest(self):
+        """Skip Frappe's modified-timestamp guard for this intake flow."""
+        return True  # Always consider it as latest to skip concurrent edit check
+
+    def before_save(self):
+        self.flags.ignore_version = True
+        # Ensure _action is set (backup in case __init__ didn't run)
+        if not hasattr(self, '_action'):
+            self._action = "save"
+
+    def before_insert(self):
+        self._apply_branch_default()
+        self._sync_master_records()
+
+    def after_insert(self):
+        if self.service_order:
+            create_from_registration(self)
+
+    def _apply_branch_default(self) -> None:
+        """Ensure the intake inherits the user's preferred branch when blank."""
+
+        if self.branch:
+            return
+
+        default_branch = portal._default_branch(frappe.session.user)
+        if default_branch:
+            self.branch = default_branch
+
+    def _sync_master_records(self) -> None:
+        """Create or update master data using the same logic as the portal."""
+
+        if getattr(getattr(self, "flags", None), "skip_portal_sync", False):
+            return
+
+        payload = self._as_portal_payload()
+        if self._should_defer_service_order():
+            payload["defer_service_order"] = True
+        result = portal.register_customer_vehicle(payload=payload)
+
+        created = result.get("created", {}) if isinstance(result, dict) else {}
+        if not isinstance(created, dict):
+            created = {}
+
+        self.customer = created.get("customer") or self.customer
+        self.vehicle = created.get("vehicle") or self.vehicle
+        self.service_order = created.get("service_order") or self.service_order
+
+        if not self.customer_name:
+            customer_name = created.get("customer_name")
+            if customer_name:
+                self.customer_name = customer_name
+
+    def _should_defer_service_order(self) -> bool:
+        if (self.intake_type or "").strip() != "Booking":
+            return False
+
+        booking_value = self.get("service_booking_date")
+        if not booking_value:
+            return False
+
+        booking_dt = get_datetime(booking_value)
+        if not booking_dt:
+            return False
+
+        return booking_dt > now_datetime()
+
+    def _as_portal_payload(self) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {}
+
+        for field in ("branch", *VEHICLE_FIELDS, *CUSTOMER_FIELDS, *SERVICE_FIELDS):
+            value = self.get(field)
+            if value not in (None, ""):
+                payload[field] = value
+
+        # Ensure plate number drives lookups and avoid blank branches
+        payload["license_plate"] = (payload.get("license_plate") or "").strip()
+        payload["branch"] = (payload.get("branch") or "").strip()
+
+        return payload
+
+
+@frappe.whitelist()
+def fetch_by_plate(license_plate: str, branch: Optional[str] = None) -> Dict[str, Any]:
+    """Pull existing vehicle + customer data by plate number for auto-fill."""
+
+    _require_login()
+
+    plate = (license_plate or "").strip()
+    branch_name = (branch or "").strip()
+
+    if not plate:
+        return {}
+
+    vehicle_fields = [
+        "name",
+        "customer",
+        "branch",
+        *VEHICLE_FIELDS,
+        "assembly_type",
+        "notes",
+    ]
+
+    filters: Dict[str, Any] = {"license_plate": plate}
+    if branch_name:
+        filters["branch"] = branch_name
+
+    vehicle = frappe.db.get_value("Garage Vehicle", filters, vehicle_fields, as_dict=True)
+
+    if not vehicle:
+        vehicle = frappe.db.get_value(
+            "Garage Vehicle", {"license_plate": plate}, vehicle_fields, as_dict=True
+        )
+
+    if not vehicle:
+        return {}
+
+    response: Dict[str, Any] = {"vehicle": vehicle}
+
+    customer_name = vehicle.get("customer")
+    if customer_name:
+        # Customer's own field names (mobile_no/email_id) differ from
+        # CUSTOMER_FIELDS' "phone"/"email" - those match Customer
+        # Registration's own portal-form fields (see _as_portal_payload()
+        # above, which reads CUSTOMER_FIELDS straight off `self`), so the
+        # response here is remapped back to that same "phone"/"email"
+        # shape the portal's own auto-fill JS already expects, rather than
+        # changing every caller to know about the swap.
+        customer_db_fields = [f for f in CUSTOMER_FIELDS if f not in ("phone", "email")]
+        customer_db_fields += ["mobile_no", "email_id"]
+        customer = frappe.db.get_value(
+            "Customer", customer_name, customer_db_fields + ["name"], as_dict=True
+        )
+        if customer:
+            customer["phone"] = customer.pop("mobile_no", None)
+            customer["email"] = customer.pop("email_id", None)
+            response["customer"] = customer
+
+    return response
+
+
+@frappe.whitelist()
+def get_default_branch() -> Optional[str]:
+    """Expose the user's preferred branch for client defaults."""
+
+    _require_login()
+    return portal._default_branch(frappe.session.user)
+
+
+def _require_login() -> None:
+    if frappe.session.user and frappe.session.user != "Guest":
+        return
+    frappe.throw(_("You must be logged in to perform this action."), frappe.PermissionError)
+
+
+def process_booking_registrations() -> None:
+    """Create service orders for bookings that are due today or earlier."""
+
+    now_value = now_datetime()
+    booking_filters = {
+        "intake_type": "Booking",
+        "service_order": ["is", "not set"],
+        "service_booking_date": ["<=", now_value],
+    }
+
+    registrations = frappe.get_all(
+        "Customer Registration",
+        filters=booking_filters,
+        fields=["name"],
+        order_by="service_booking_date asc",
+    )
+
+    for row in registrations:
+        registration_name = row.get("name")
+        if not registration_name:
+            continue
+        try:
+            _create_service_order_for_booking(registration_name)
+        except Exception:
+            frappe.log_error(
+                title="Failed to create booking service order",
+                message=f"Booking registration {registration_name} could not be processed.",
+            )
+
+
+def _create_service_order_for_booking(registration_name: str) -> None:
+    registration = frappe.get_doc("Customer Registration", registration_name)
+    if not registration or registration.service_order:
+        return
+
+    payload = registration._as_portal_payload()
+    if registration.customer:
+        payload["existing_customer"] = registration.customer
+
+    result = portal.register_customer_vehicle(payload=payload)
+    created = result.get("created", {}) if isinstance(result, dict) else {}
+    service_order = created.get("service_order") or result.get("service_order")
+
+    if not service_order:
+        return
+
+    registration.service_order = service_order
+    registration.flags.ignore_permissions = True
+    registration.save(ignore_permissions=True)
+    create_from_registration(registration)

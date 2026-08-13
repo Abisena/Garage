@@ -1,0 +1,449 @@
+{% set meta = meta or {} %}
+{% set vehicle = vehicle or {} %}
+{% set branch = branch or {} %}
+{% set job_items = job_items or [] %}
+{% set summary = summary or {} %}
+{% set taxes = taxes or {} %}
+{% set notes = notes or '-' %}
+{% set signatures = signatures or {} %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <title>{{ title }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 18mm 16mm;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Calibri', 'Helvetica Neue', Arial, sans-serif;
+            font-size: 11pt;
+            color: #000;
+            margin: 0;
+            padding: 0;
+            line-height: 1.4;
+        }
+
+        .page {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #000;
+        }
+
+        .header-left {
+            max-width: 65%;
+        }
+
+        .brand-name {
+            font-size: 20pt;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .branch-detail {
+            font-size: 9pt;
+            margin-top: 4px;
+        }
+
+        .header-right {
+            text-align: right;
+            font-size: 10pt;
+            font-weight: 600;
+        }
+
+        .doc-label {
+            text-transform: uppercase;
+            font-size: 9pt;
+            color: #555;
+        }
+
+        .doc-value {
+            font-size: 12pt;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        .doc-branch {
+            margin-top: 6px;
+            font-size: 10pt;
+        }
+
+        .title-block {
+            text-align: center;
+            margin: 24px 0 18px 0;
+        }
+
+        .title-block .title {
+            font-size: 16pt;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .info-table th,
+        .info-table td {
+            border: 1.5px solid #000;
+            padding: 8px 10px;
+            font-size: 10pt;
+            vertical-align: top;
+        }
+
+        .info-table th {
+            background: #f3f4f6;
+            text-align: left;
+            font-weight: 700;
+            width: 25%;
+        }
+
+        .section-title {
+            margin: 18px 0 10px 0;
+            font-size: 11pt;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .items-table th {
+            border: 1.5px solid #000;
+            background: #1f2937;
+            color: #fff;
+            font-size: 9pt;
+            padding: 8px 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .items-table td {
+            border: 1px solid #000;
+            font-size: 9pt;
+            padding: 6px 8px;
+            text-align: center;
+        }
+
+        .items-table td.text-left {
+            text-align: left;
+        }
+
+        .items-table td.text-right {
+            text-align: right;
+        }
+
+        .items-empty {
+            text-align: center;
+            font-style: italic;
+            color: #777;
+            padding: 14px 0;
+        }
+
+        .summary-notes {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .summary-wrapper {
+            flex: 1 1 40%;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .summary-table td {
+            border: 1.5px solid #000;
+            padding: 8px 10px;
+            font-size: 10pt;
+        }
+
+        .summary-table .label {
+            font-weight: 700;
+            background: #f3f4f6;
+        }
+
+        .summary-table .value {
+            text-align: right;
+            font-weight: 700;
+        }
+
+        .summary-table .grand {
+            background: #111827;
+            color: #fff;
+        }
+
+        .notes-wrapper {
+            flex: 1 1 60%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .notes-title {
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 10pt;
+            text-transform: uppercase;
+        }
+
+        .notes-box {
+            border: 1.5px solid #000;
+            padding: 12px;
+            min-height: 120px;
+            font-size: 10pt;
+            background: #fff;
+        }
+
+        .terms-section {
+            border: 1.5px solid #000;
+            padding: 12px 14px;
+            margin-bottom: 24px;
+            font-size: 9pt;
+            line-height: 1.5;
+        }
+
+        .terms-section strong {
+            display: block;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .terms-section ol {
+            margin: 0;
+            padding-left: 16px;
+        }
+
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-top: 10px;
+            margin-bottom: 30px;
+        }
+
+        .signature-box {
+            flex: 1 1 33%;
+            border: 1.5px solid #000;
+            padding: 12px 10px 16px 10px;
+            min-height: 140px;
+            text-align: center;
+        }
+
+        .signature-role {
+            font-weight: 700;
+            margin-bottom: 60px;
+            font-size: 10pt;
+            text-transform: uppercase;
+        }
+
+        .signature-name {
+            border-top: 1px solid #000;
+            padding-top: 6px;
+            font-weight: 700;
+            font-size: 10pt;
+            margin-top: 40px;
+        }
+
+        .signature-note {
+            font-size: 9pt;
+            margin-top: 4px;
+        }
+
+        .footer {
+            margin-top: auto;
+            padding-top: 12px;
+            border-top: 2px solid #000;
+            font-size: 8pt;
+            text-align: center;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="header">
+            <div class="header-left">
+                <div class="brand-name">{{ branch.name or 'Bengkel Garasi' }}</div>
+                {% if branch.address and branch.address != '-' %}
+                    <div class="branch-detail">{{ branch.address }}</div>
+                {% endif %}
+                {% if branch.contact and branch.contact != '-' %}
+                    <div class="branch-detail">{{ branch.contact }}</div>
+                {% endif %}
+                {% if branch.email and branch.email != '-' %}
+                    <div class="branch-detail">Email: {{ branch.email }}</div>
+                {% endif %}
+            </div>
+            <div class="header-right">
+                <div class="doc-label">No. Dokumen</div>
+                <div class="doc-value">{{ meta.number or '-' }}</div>
+                <div class="doc-branch">Cabang: {{ meta.branch_name or '-' }}{% if meta.branch_code and meta.branch_code != '-' %} ({{ meta.branch_code }}){% endif %}</div>
+            </div>
+        </div>
+
+        <div class="title-block">
+            <div class="title">{{ title }}</div>
+        </div>
+
+        <table class="info-table">
+            <tr>
+                <th>Tanggal Estimasi</th>
+                <td>{{ meta.date or '-' }}</td>
+                <th>Nama Pelanggan</th>
+                <td>{{ meta.customer or '-' }}</td>
+            </tr>
+            <tr>
+                <th>No. Estimasi</th>
+                <td>{{ meta.number or '-' }}</td>
+                <th>No. Telepon</th>
+                <td>{{ meta.phone or '-' }}</td>
+            </tr>
+            <tr>
+                <th>Merk / Model Kendaraan</th>
+                <td>{{ vehicle.description or '-' }}</td>
+                <th>No. Polisi</th>
+                <td>{{ vehicle.plate or '-' }}</td>
+            </tr>
+            <tr>
+                <th>Cabang</th>
+                <td>{{ meta.branch_name or '-' }}{% if meta.branch_code and meta.branch_code != '-' %} ({{ meta.branch_code }}){% endif %}</td>
+                <th>Mekanik Penanggung Jawab</th>
+                <td>{{ meta.mechanic or '-' }}</td>
+            </tr>
+            <tr>
+                <th>Contact Person</th>
+                <td>{{ meta.contact_person or '-' }}</td>
+                <th>Email Cabang</th>
+                <td>{{ meta.branch_email or branch.email or '-' }}</td>
+            </tr>
+        </table>
+
+        <div class="section-title">Rincian Biaya Sparepart dan Material</div>
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%;">No</th>
+                    <th style="width: 15%;">Kode Item</th>
+                    <th style="width: 38%;">Deskripsi / Nama Item</th>
+                    <th style="width: 10%;">Qty</th>
+                    <th style="width: 10%;">Satuan</th>
+                    <th style="width: 12%;">Harga Satuan</th>
+                    <th style="width: 10%;">Jumlah</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if job_items %}
+                    {% for item in job_items %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ item.code or '-' }}</td>
+                            <td class="text-left">{{ item.description or '-' }}</td>
+                            <td>{{ item.qty_formatted or '-' }}</td>
+                            <td>{{ item.uom or '-' }}</td>
+                            <td class="text-right">{{ item.rate_formatted or '-' }}</td>
+                            <td class="text-right">{{ item.amount_formatted or '-' }}</td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="items-empty">Belum ada rincian sparepart atau material.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        <div class="summary-notes">
+            <div class="summary-wrapper">
+                <table class="summary-table">
+                    <tr>
+                        <td class="label">Subtotal Sparepart &amp; Material</td>
+                        <td class="value">{{ taxes.parts_material_formatted or summary.spare_total_formatted or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Biaya Jasa Service / Tenaga Kerja</td>
+                        <td class="value">{{ taxes.service_fee_formatted or summary.service_total_formatted or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">DPP (Dasar Pengenaan Pajak)</td>
+                        <td class="value">{{ taxes.dpp_formatted or summary.grand_total_formatted or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">PPN 11%</td>
+                        <td class="value">{{ taxes.ppn_formatted or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">PPh Pasal 23 (2,5%)</td>
+                        <td class="value">{{ taxes.pph_formatted or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label grand">TOTAL ESTIMASI BIAYA</td>
+                        <td class="value grand">{{ taxes.total_formatted or summary.grand_total_formatted or '-' }}</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="notes-wrapper">
+                <div class="notes-title">Catatan / Keluhan Customer</div>
+                <div class="notes-box">{{ (notes or '-') | replace('\n', '<br/>') | safe }}</div>
+            </div>
+        </div>
+
+        <div class="terms-section">
+            <strong>Syarat dan Ketentuan:</strong>
+            <ol>
+                <li>Estimasi biaya ini berlaku selama 7 (tujuh) hari kalender sejak tanggal penerbitan.</li>
+                <li>Harga dapat berubah sesuai kondisi pasar dan ketersediaan sparepart atau material.</li>
+                <li>Biaya tambahan dapat timbul apabila ditemukan kerusakan lain saat proses perbaikan.</li>
+                <li>Pembayaran dapat dilakukan secara tunai, transfer bank, atau kartu kredit/debit.</li>
+                <li>Kendaraan wajib diambil maksimal 3 (tiga) hari setelah pemberitahuan pekerjaan selesai.</li>
+            </ol>
+        </div>
+
+        <div class="signature-section">
+            <div class="signature-box">
+                <div class="signature-role">Disetujui oleh<br/>Pelanggan</div>
+                <div class="signature-name">({{ signatures.approved_by or meta.customer or '-' }})</div>
+                <div class="signature-note">Tanggal: __________________</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-role">Diperiksa oleh<br/>Service Advisor</div>
+                <div class="signature-name">({{ signatures.prepared_by or service_advisor_name or '-' }})</div>
+                <div class="signature-note">Tanggal: __________________</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-role">Dikerjakan oleh<br/>Kepala Mekanik</div>
+                <div class="signature-name">({{ signatures.assigned_mechanic or assigned_mechanic or meta.mechanic or '-' }})</div>
+                <div class="signature-note">Tanggal: __________________</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Dokumen ini digenerate secara otomatis oleh Sistem Manajemen Bengkel Garasi.<br/>
+            Dicetak pada: {{ meta.date or '-' }}
+        </div>
+    </div>
+</body>
+</html>

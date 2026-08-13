@@ -1,0 +1,1300 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Inventaris Sparepart - Garage{% endblock %}
+
+{% set required_roles = ['Sparepart', 'Spare Part', 'Inventory', 'Inventory Controller'] %}
+{% include "garage/templates/includes/role_guard.html" %}
+
+{% block head_include %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --primary: #0066FF;
+    --primary-dark: #0052CC;
+    --primary-darker: #003D99;
+    --primary-light: #4D94FF;
+    --primary-subtle: #F0F7FF;
+
+    --status-success: #00C853;
+    --status-warning: #FFB300;
+    --status-danger: #FF3D00;
+    --status-info: #00B8D4;
+
+    --status-success-bg: #E8F5E9;
+    --status-warning-bg: #FFF8E1;
+    --status-danger-bg: #FFE8E6;
+    --status-info-bg: #E0F7FA;
+
+    --gray-50: #FAFBFC;
+    --gray-100: #F5F7FA;
+    --gray-200: #E9ECF1;
+    --gray-300: #D4DAE4;
+    --gray-400: #B8C1D3;
+    --gray-500: #8896AB;
+    --gray-600: #5E6C84;
+    --gray-700: #3E4C5E;
+    --gray-800: #2A3647;
+    --gray-900: #1A2332;
+
+    --text-primary: #1A2332;
+    --text-secondary: #5E6C84;
+    --text-muted: #8896AB;
+    --text-inverse: #FFFFFF;
+
+    --bg-body: #F5F7FA;
+    --bg-surface: #FFFFFF;
+
+    --border-light: #E9ECF1;
+    --border-base: #D4DAE4;
+
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+
+    --font-sans: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-sans) !important;
+    background: var(--bg-body) !important;
+    color: var(--text-primary) !important;
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+.header-hero {
+    position: relative;
+    background: linear-gradient(160deg,
+        var(--primary-darker) 0%,
+        var(--primary-dark) 40%,
+        var(--primary) 100%);
+    padding: 32px 0;
+    margin-top: 24px;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+}
+
+.header-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+    z-index: 0;
+}
+
+.header-hero .container {
+    position: relative;
+    z-index: 1;
+}
+
+.header-hero__brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: var(--text-inverse);
+    text-align: center;
+}
+
+.header-hero__icon {
+    width: 56px;
+    height: 56px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.header-hero__brand h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+}
+
+.header-hero__brand p {
+    margin: 0 auto;
+    max-width: 560px;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.portal-nav-wrapper {
+    background: linear-gradient(160deg,
+        var(--primary-darker) 0%,
+        var(--primary-dark) 40%,
+        var(--primary) 100%);
+    padding: 0 0 24px 0;
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 0;
+    width: 100%;
+}
+
+.portal-nav {
+    display: flex !important;
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    backdrop-filter: blur(20px) !important;
+    padding: 12px 16px !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    width: min(100%, 960px);
+    margin: 0 auto;
+}
+
+.portal-nav a {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 12px 20px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    text-decoration: none !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    transition: all 0.25s ease !important;
+    white-space: nowrap !important;
+    min-width: 148px;
+}
+
+.portal-nav a:hover,
+.portal-nav a.active {
+    background: rgba(255, 255, 255, 0.25) !important;
+    border-color: rgba(255, 255, 255, 0.4) !important;
+    color: #fff !important;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+}
+
+.portal-content {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+}
+
+.inventory-header {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    margin-bottom: 32px;
+    position: relative;
+}
+
+.inventory-header__title {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.inventory-header__title h2 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+}
+
+.inventory-header__title p {
+    color: var(--text-secondary);
+}
+
+.inventory-header__metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.inventory-metric {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.9));
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+}
+
+.inventory-metric::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, rgba(0, 102, 255, 0.15), transparent 55%);
+    pointer-events: none;
+}
+
+.inventory-metric__label {
+    font-size: 13px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.08em;
+}
+
+.inventory-metric__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04);
+}
+
+.inventory-metric__content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.inventory-metric__value {
+    display: block;
+    margin-top: 8px;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.inventory-section {
+    margin-top: 40px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    position: relative;
+}
+
+.inventory-section::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary), var(--primary-light));
+}
+
+.inventory-section__header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 28px 32px 24px;
+    border-bottom: 1px solid var(--border-light);
+    background: linear-gradient(135deg, rgba(0, 102, 255, 0.07), rgba(0, 102, 255, 0));
+}
+
+.inventory-section__header h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.inventory-section__header p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.inventory-section__meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.inventory-section__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: var(--primary-subtle);
+    color: var(--primary-dark);
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+}
+
+.inventory-section__hint {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+
+.inventory-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+.inventory-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 1420px;
+    table-layout: auto;
+}
+
+.inventory-table th,
+.inventory-table td {
+    padding: 16px 20px;
+    text-align: left;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    background: transparent;
+    white-space: nowrap;
+    word-break: normal;
+    line-height: 1.45;
+    vertical-align: top;
+}
+
+.inventory-table th:not(:last-child),
+.inventory-table td:not(:last-child) {
+    border-right: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.inventory-table th {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    background: rgba(0, 102, 255, 0.04);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    border-bottom: 1px solid rgba(210, 219, 235, 0.8);
+    backdrop-filter: blur(4px);
+}
+
+.inventory-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.inventory-table tbody tr[data-clickable="true"] {
+    cursor: pointer;
+}
+
+.inventory-table tbody tr[data-clickable="true"] td {
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.inventory-table tbody tr[data-clickable="true"]:hover td {
+    background: rgba(0, 102, 255, 0.08);
+}
+
+.inventory-table tbody tr:not(.is-low-stock):not(.is-out-of-stock) td {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.inventory-table tbody tr:nth-child(even):not(.is-low-stock):not(.is-out-of-stock) td {
+    background: rgba(244, 247, 252, 0.95);
+}
+
+.inventory-table tbody tr.is-low-stock td {
+    background: rgba(255, 179, 0, 0.14);
+    border-bottom-color: rgba(255, 179, 0, 0.35);
+    border-right-color: rgba(255, 179, 0, 0.25);
+}
+
+.inventory-table tbody tr.is-out-of-stock td {
+    background: rgba(255, 61, 0, 0.16);
+    border-bottom-color: rgba(255, 61, 0, 0.3);
+    border-right-color: rgba(255, 61, 0, 0.25);
+}
+
+.inventory-table tbody tr.is-low-stock:hover td,
+.inventory-table tbody tr.is-out-of-stock:hover td {
+    background: rgba(0, 102, 255, 0.12);
+    border-right-color: rgba(0, 102, 255, 0.3);
+    border-bottom-color: rgba(0, 102, 255, 0.3);
+}
+
+.inventory-table td.is-numeric,
+.inventory-table th.is-numeric {
+    text-align: right;
+}
+
+.inventory-table td.is-nowrap {
+    white-space: nowrap;
+}
+
+@media (max-width: 1280px) {
+    .inventory-table th,
+    .inventory-table td {
+        white-space: normal;
+    }
+}
+
+.inventory-table td.is-muted {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.inventory-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--primary);
+    background: rgba(0, 102, 255, 0.08);
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.inventory-action-btn:hover:not(:disabled) {
+    background: rgba(0, 102, 255, 0.16);
+    box-shadow: 0 8px 16px rgba(0, 102, 255, 0.15);
+}
+
+.inventory-action-btn:disabled {
+    cursor: not-allowed;
+    border-color: var(--border-base);
+    background: var(--gray-100);
+    color: var(--text-muted);
+    box-shadow: none;
+}
+
+.inventory-table--compact th,
+.inventory-table--compact td {
+    padding: 12px 14px;
+}
+
+.inventory-table--compact {
+    min-width: 720px;
+}
+
+.inventory-table .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.inventory-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.btn-secondary {
+    background: #fff;
+    color: var(--primary);
+    border-color: rgba(0, 102, 255, 0.3);
+}
+
+.btn-secondary:hover {
+    background: var(--primary-subtle);
+    border-color: var(--primary);
+    color: var(--primary-dark);
+}
+
+.inventory-search {
+    flex: 1 1 280px;
+}
+
+.inventory-search input {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+    background: var(--bg-surface);
+    font-size: 14px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.inventory-search input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.15);
+}
+
+.inventory-actions .btn {
+    padding: 12px 18px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 1px solid transparent;
+}
+
+.badge.success {
+    background: var(--status-success-bg);
+    color: var(--status-success);
+    border-color: rgba(0, 200, 83, 0.2);
+}
+
+.badge.warning {
+    background: var(--status-warning-bg);
+    color: var(--status-warning);
+    border-color: rgba(255, 179, 0, 0.25);
+}
+
+.badge.info {
+    background: var(--status-info-bg);
+    color: var(--status-info);
+    border-color: rgba(0, 184, 212, 0.25);
+}
+
+.badge.danger {
+    background: var(--status-danger-bg);
+    color: var(--status-danger);
+    border-color: rgba(255, 61, 0, 0.25);
+}
+
+.badge.muted {
+    background: var(--gray-100);
+    color: var(--gray-500);
+    border-color: rgba(136, 150, 171, 0.2);
+}
+
+.badge.subtle {
+    background: var(--gray-50);
+    color: var(--text-secondary);
+    border-color: rgba(94, 108, 132, 0.15);
+}
+
+.table-pagination {
+    margin-top: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.pagination-info {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.pagination-btn {
+    padding: 8px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+    background: var(--bg-surface);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 72px 24px;
+    background: var(--bg-surface);
+    border: 1px dashed var(--border-light);
+    border-radius: var(--radius-lg);
+    color: var(--text-secondary);
+    margin-top: 24px;
+}
+
+.empty-state__icon {
+    font-size: 40px;
+    margin-bottom: 16px;
+}
+
+.empty-state__title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+
+.empty-state p {
+    margin: 0;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+    .header-hero__brand {
+        flex-direction: column;
+    }
+
+    .inventory-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .portal-nav {
+        justify-content: flex-start !important;
+    }
+}
+
+@media (max-width: 1024px) {
+    .portal-content {
+        padding: 40px 20px 64px;
+    }
+
+    .inventory-section__header {
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 640px) {
+    .inventory-table th,
+    .inventory-table td {
+        padding: 12px;
+        font-size: 13px;
+    }
+
+    .inventory-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block page_content %}
+<header class="header-hero">
+    <div class="container">
+        <div class="header-hero__brand">
+            <div class="header-hero__icon">📦</div>
+            <div>
+                <h1>Inventaris Sparepart</h1>
+                <p>Telusuri stok gudang dan kelola detail setiap sparepart tanpa harus kembali ke halaman utama.</p>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="portal-nav-wrapper">
+    <div class="container">
+        <nav class="portal-nav">
+            <a href="/garage/intake">📋 Registrasi</a>
+            <a href="/garage/service">🔧 Servis</a>
+            <a href="/garage/sparepart" class="active">📦 Sparepart</a>
+            <a href="/garage/procurement">🛒 Pengadaan</a>
+            <a href="/garage/finance">💰 Keuangan</a>
+            <a href="/garage/insight">📊 Report</a>
+        </nav>
+    </div>
+</div>
+
+<div class="container portal-content">
+    <div class="inventory-header">
+        <div class="inventory-header__title">
+            <h2>Daftar Sparepart</h2>
+            <p>Lihat ringkasan stok dan detail gudang setiap sparepart.</p>
+        </div>
+        <div class="inventory-header__metrics">
+            <div class="inventory-metric">
+                <div class="inventory-metric__icon">📦</div>
+                <div class="inventory-metric__content">
+                    <span class="inventory-metric__label">Total Sparepart</span>
+                    <span class="inventory-metric__value" data-metric="spare-count">0</span>
+                </div>
+            </div>
+            <div class="inventory-metric">
+                <div class="inventory-metric__icon">📝</div>
+                <div class="inventory-metric__content">
+                    <span class="inventory-metric__label">Permintaan Aktif</span>
+                    <span class="inventory-metric__value" data-metric="spare-active-requests">0</span>
+                </div>
+            </div>
+            <div class="inventory-metric">
+                <div class="inventory-metric__icon">🚨</div>
+                <div class="inventory-metric__content">
+                    <span class="inventory-metric__label">Stok Menipis</span>
+                    <span class="inventory-metric__value" data-metric="spare-low-stock">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="inventory-actions">
+        <div class="inventory-search">
+            <input type="search" placeholder="Cari kode, nama, atau kategori" data-role="spare-search" />
+        </div>
+        <a class="btn btn-secondary" data-desk-link="Garage Spare Part" target="_blank">Buka Master Sparepart</a>
+    </div>
+
+    <section class="inventory-section">
+        <header class="inventory-section__header">
+            <div>
+                <h3>Stock Inventory</h3>
+                <p>Klik baris untuk membuka detail sparepart. Gunakan tombol <strong>Kelola Stok</strong> pada baris yang menipis untuk membuka halaman Purchase Order.</p>
+            </div>
+            <div class="inventory-section__meta">
+                <span class="inventory-section__badge" data-role="inventory-total-value">Nilai Stok: Rp 0</span>
+                <span class="inventory-section__hint">Nilai stok berdasarkan harga jual/unit.</span>
+            </div>
+        </header>
+        <div class="inventory-table-wrapper">
+            <table class="inventory-table" data-role="inventory-table">
+                <thead>
+                    <tr>
+                        <th>Kode Barang</th>
+                        <th>Nama Barang</th>
+                        <th>Gudang</th>
+                        <th>Stok Tersedia</th>
+                        <th>Dipesan</th>
+                        <th>Proyeksi</th>
+                        <th>Harga Jual / Unit (Rp)</th>
+                        <th>Satuan</th>
+                        <th>Merek</th>
+                        <th>Harga Beli Terakhir (Rp)</th>
+                        <th>Pemasok Terakhir</th>
+                        <th>Cabang</th>
+                        <th>Status</th>
+                        <th class="is-nowrap">Aksi</th>
+                        <th>Terakhir Diperbarui</th>
+                        <th>Dibuat Oleh</th>
+                    </tr>
+                </thead>
+                <tbody data-role="inventory-table-body"></tbody>
+            </table>
+            <div class="empty-state" data-empty="spare-inventory" hidden>
+                <div class="empty-state__icon">📦</div>
+                <div class="empty-state__title">Belum ada data sparepart.</div>
+                <p>Tambahkan data master sparepart dari halaman profil untuk mulai mengelola stok.</p>
+            </div>
+        </div>
+        <div class="table-pagination" data-pagination="spare-inventory" hidden></div>
+    </section>
+</div>
+{% endblock %}
+
+{% block script %}
+{% raw %}
+<script>
+(function () {
+    'use strict';
+
+    const API = {
+        listSpareParts: 'garage.api.portal.list_spare_parts',
+    };
+
+    const BRANCH_STORAGE_KEY = 'garage.portal.branch';
+    const PAGE_SIZE = 10;
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+    const state = {
+        spareParts: [],
+        searchQuery: '',
+        pagination: {
+            'spare-inventory': { page: 1 },
+        },
+        activeBranch: '',
+    };
+
+    function formatCurrency(value) {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(Number(value) || 0);
+    }
+
+    function formatQuantity(value, uom) {
+        const numeric = parseFloat(value);
+        if (!Number.isNaN(numeric)) {
+            const formatted = Number.isInteger(numeric)
+                ? numeric.toLocaleString('id-ID')
+                : numeric.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return `${formatted} ${uom || ''}`.trim();
+        }
+        if (value && uom) {
+            return `${value} ${uom}`.trim();
+        }
+        return value || '0';
+    }
+
+    function escapeHTML(value) {
+        if (value === undefined || value === null) {
+            return '';
+        }
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatDateTime(value) {
+        if (!value) {
+            return '-';
+        }
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+            return value;
+        }
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = MONTH_NAMES[date.getMonth()] || String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${day}-${month}-${year} ${hours}:${minutes}`;
+    }
+
+    function getStatusBadge(status) {
+        const normalized = (status || '').toLowerCase();
+        const labels = {
+            active: { text: 'Active', className: 'badge success' },
+            inactive: { text: 'Inactive', className: 'badge subtle' },
+            retired: { text: 'Retired', className: 'badge muted' },
+            discontinued: { text: 'Discontinued', className: 'badge danger' },
+        };
+        const config = labels[normalized] || { text: status || 'Active', className: 'badge success' };
+        return `<span class="${config.className} status-badge">${escapeHTML(config.text)}</span>`;
+    }
+
+    function evaluateStockStatus(part) {
+        const stockStatus = (part?.stock_status || '').toLowerCase();
+        if (stockStatus === 'out of stock' || stockStatus === 'out') {
+            return 'out';
+        }
+        if (stockStatus === 'low stock' || stockStatus === 'low') {
+            return 'low';
+        }
+
+        const qty = parseFloat(part.available_qty ?? part.stock_qty ?? 0) || 0;
+        const reorder = parseFloat(part.reorder_level ?? 0) || 0;
+        if (qty <= 0) {
+            return 'out';
+        }
+        if (reorder > 0 && qty <= reorder) {
+            return 'low';
+        }
+        return 'ok';
+    }
+
+    function openSpareDetail(identifier) {
+        const value = (identifier || '').trim();
+        if (!value) {
+            return;
+        }
+        const url = `/garage/sparepart/detail?part=${encodeURIComponent(value)}`;
+        window.location.href = url;
+    }
+
+    function openPurchaseOrder(part) {
+        console.log('[Inventory] openPurchaseOrder dipanggil dengan part:', part);
+        
+        if (!part) {
+            console.error('[Inventory] Part tidak ada');
+            if (window.frappe?.show_alert) {
+                window.frappe.show_alert({
+                    message: 'Tidak dapat membuka Purchase Order untuk sparepart ini.',
+                    indicator: 'red',
+                });
+            }
+            return;
+        }
+
+        const itemCode = (part.part_code || part.name || '').trim();
+        
+        console.log('[Inventory] Item code:', itemCode);
+        console.log('[Inventory] Membuka Purchase Order di tab baru...');
+
+        // Buka Purchase Order list di tab baru - 100% aman dari CSRF error
+        window.open('/app/purchase-order', '_blank');
+        
+        if (window.frappe?.show_alert) {
+            frappe.show_alert({
+                message: 'Purchase Order dibuka di tab baru',
+                indicator: 'blue'
+            }, 3);
+        }
+    }
+
+    function updateMetrics(data) {
+        const spareParts = Array.isArray(data.spare_parts) ? data.spare_parts : state.spareParts;
+        const computedLowStock = Array.isArray(spareParts)
+            ? spareParts.filter((part) => {
+                const status = evaluateStockStatus(part);
+                return status === 'low' || status === 'out';
+            }).length
+            : 0;
+        const metrics = {
+            'spare-count': data.total_count ?? (Array.isArray(spareParts) ? spareParts.length : 0),
+            'spare-low-stock': data.low_stock_count ?? computedLowStock,
+            'spare-active-requests': data.active_request_count ?? data.request_count ?? 0,
+        };
+        Object.entries(metrics).forEach(([key, value]) => {
+            document.querySelectorAll(`[data-metric="${key}"]`).forEach((el) => {
+                el.textContent = value ?? 0;
+            });
+        });
+        const totalValueEl = document.querySelector('[data-role="inventory-total-value"]');
+        if (totalValueEl) {
+            totalValueEl.textContent = `Nilai Stok: ${formatCurrency(data.total_stock_value || 0)}`;
+        }
+    }
+
+    function buildInventoryRow(part, index) {
+        const identifier = part.name || part.part_code || '';
+        const partCode = part.part_code || part.name || '-';
+        const partName = part.part_name || '-';
+        const warehouse = part.display_warehouse || part.default_warehouse || part.warehouse || part.warehouse_location || '-';
+        const availableQty = part.available_qty ?? part.stock_qty ?? 0;
+        const orderedQty = part.ordered_qty ?? part.reserved_qty ?? 0;
+        const projectedQty = part.projected_qty ?? (availableQty - orderedQty);
+        const uom = part.display_uom || part.uom || 'Unit';
+        const sellingRate = part.selling_rate || part.unit_price || 0;
+        const lastPurchaseRate = Number(part.last_purchase_rate || 0);
+        const lastSupplier = part.last_supplier || '-';
+        const branch = part.branch || '-';
+        const statusBadge = getStatusBadge(part.status);
+        const updatedAt = formatDateTime(part.modified);
+        const createdBy = part.owner || '-';
+        const stockStatus = evaluateStockStatus(part);
+        
+        const rowClasses = [];
+        if (stockStatus === 'out') {
+            rowClasses.push('is-out-of-stock');
+        } else if (stockStatus === 'low') {
+            rowClasses.push('is-low-stock');
+        }
+        
+        const manageButtonDisabled = !(stockStatus === 'low' || stockStatus === 'out');
+        const manageButton = `<button class="inventory-action-btn" type="button" data-action="manage-stock" ${manageButtonDisabled ? 'disabled' : ''}>Kelola Stok</button>`;
+
+        const cells = [
+            `<td class="is-nowrap">${escapeHTML(partCode)}</td>`,
+            `<td>${escapeHTML(partName)}</td>`,
+            `<td>${escapeHTML(warehouse)}</td>`,
+            `<td class="is-numeric">${escapeHTML(formatQuantity(availableQty, uom))}</td>`,
+            `<td class="is-numeric">${escapeHTML(formatQuantity(orderedQty, uom))}</td>`,
+            `<td class="is-numeric">${escapeHTML(formatQuantity(projectedQty, uom))}</td>`,
+            `<td class="is-numeric">${escapeHTML(formatCurrency(sellingRate))}</td>`,
+            `<td>${escapeHTML(uom)}</td>`,
+            `<td>${escapeHTML(part.brand || '-')}</td>`,
+            `<td class="is-numeric">${lastPurchaseRate ? escapeHTML(formatCurrency(lastPurchaseRate)) : '-'}</td>`,
+            `<td>${escapeHTML(lastSupplier)}</td>`,
+            `<td>${escapeHTML(branch)}</td>`,
+            `<td>${statusBadge}</td>`,
+            `<td class="is-nowrap">${manageButton}</td>`,
+            `<td class="is-nowrap is-muted">${escapeHTML(updatedAt)}</td>`,
+            `<td class="is-muted">${escapeHTML(createdBy)}</td>`,
+        ];
+
+        return [
+            '<tr class="' + rowClasses.join(' ') + '" ',
+            'data-clickable="true" ',
+            'data-index="' + index + '" ',
+            'data-part="' + escapeHTML(identifier) + '" ',
+            'data-stock-status="' + stockStatus + '">',
+            cells.join(''),
+            '</tr>'
+        ].join('');
+    }
+
+    function renderInventory(parts) {
+        const tableBody = document.querySelector('[data-role="inventory-table-body"]');
+        const emptyState = document.querySelector('[data-empty="spare-inventory"]');
+        const paginationState = state.pagination['spare-inventory'];
+        if (!tableBody || !paginationState) {
+            return;
+        }
+
+        if (!parts || !parts.length) {
+            tableBody.innerHTML = '';
+            if (emptyState) emptyState.hidden = false;
+            updatePaginationControls('spare-inventory', 0);
+            return;
+        }
+
+        if (emptyState) emptyState.hidden = true;
+
+        const total = parts.length;
+        const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        paginationState.page = Math.min(Math.max(paginationState.page, 1), totalPages);
+        const start = (paginationState.page - 1) * PAGE_SIZE;
+        const visibleParts = parts.slice(start, start + PAGE_SIZE);
+
+        updatePaginationControls('spare-inventory', total);
+
+        tableBody.innerHTML = visibleParts
+            .map((part, offset) => buildInventoryRow(part, start + offset))
+            .join('');
+    }
+
+    function updatePaginationControls(type, totalItems) {
+        const container = document.querySelector(`[data-pagination="${type}"]`);
+        const paginationState = state.pagination[type];
+        if (!container || !paginationState) {
+            return;
+        }
+
+        const totalPages = Math.ceil(totalItems / PAGE_SIZE);
+        if (totalPages <= 1) {
+            container.hidden = true;
+            container.innerHTML = '';
+            return;
+        }
+
+        const currentPage = Math.min(Math.max(paginationState.page, 1), totalPages);
+        paginationState.page = currentPage;
+
+        const startItem = (currentPage - 1) * PAGE_SIZE + 1;
+        const endItem = Math.min(totalItems, currentPage * PAGE_SIZE);
+
+        container.hidden = false;
+        container.innerHTML = `
+            <div class="pagination-info">Menampilkan ${startItem}-${endItem} dari ${totalItems}</div>
+            <div class="pagination-controls">
+                <button class="pagination-btn" type="button" data-page="prev" ${currentPage === 1 ? 'disabled' : ''}>⬅ Sebelumnya</button>
+                <span class="pagination-state">Halaman ${currentPage} dari ${totalPages}</span>
+                <button class="pagination-btn" type="button" data-page="next" ${currentPage === totalPages ? 'disabled' : ''}>Berikutnya ➡</button>
+            </div>
+        `;
+    }
+
+    function handlePaginationClick(event) {
+        const button = event.target.closest('button[data-page]');
+        if (!button) {
+            return;
+        }
+
+        const container = event.currentTarget;
+        const type = container?.dataset?.pagination;
+        if (!type || !state.pagination[type]) {
+            return;
+        }
+
+        const paginationState = state.pagination[type];
+        const totalItems = state.spareParts.length;
+        const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+
+        if (button.dataset.page === 'prev' && paginationState.page > 1) {
+            paginationState.page -= 1;
+        } else if (button.dataset.page === 'next' && paginationState.page < totalPages) {
+            paginationState.page += 1;
+        } else {
+            return;
+        }
+
+        renderInventory(state.spareParts);
+    }
+
+    function handleInventoryRowClick(event) {
+        console.log('[Inventory] Click event:', event.target);
+        
+        // Cek apakah yang diklik adalah tombol "Kelola Stok"
+        const manageButton = event.target.closest('button[data-action="manage-stock"]');
+        
+        if (manageButton) {
+            console.log('[Inventory] Tombol Kelola Stok diklik');
+            event.preventDefault();
+            event.stopPropagation();
+            
+            if (manageButton.disabled) {
+                console.log('[Inventory] Tombol disabled');
+                return;
+            }
+            
+            const row = manageButton.closest('tr[data-index]');
+            if (!row) {
+                console.warn('[Inventory] Row tidak ditemukan');
+                return;
+            }
+            
+            const index = Number(row.dataset.index);
+            console.log('[Inventory] Index:', index, 'dari dataset:', row.dataset.index);
+            
+            if (Number.isNaN(index)) {
+                console.warn('[Inventory] Index tidak valid:', row.dataset.index);
+                return;
+            }
+            
+            const part = state.spareParts[index];
+            if (!part) {
+                console.warn('[Inventory] Part tidak ditemukan di index:', index);
+                return;
+            }
+            
+            console.log('[Inventory] Membuka Purchase Order untuk:', part.part_code);
+            openPurchaseOrder(part);
+            return;
+        }
+
+        // Jika bukan tombol, handle click row untuk detail
+        const row = event.target.closest('tr[data-clickable="true"]');
+        if (!row) {
+            return;
+        }
+        
+        const index = Number(row.dataset.index);
+        if (Number.isNaN(index)) {
+            return;
+        }
+        
+        const part = state.spareParts[index];
+        if (!part) {
+            return;
+        }
+        
+        const identifier = part.name || part.part_code;
+        console.log('[Inventory] Membuka detail untuk:', identifier);
+        openSpareDetail(identifier);
+    }
+
+    function handleSearch(event) {
+        state.searchQuery = event.target.value.trim();
+        clearTimeout(window.spareInventorySearchTimeout);
+        window.spareInventorySearchTimeout = setTimeout(() => {
+            state.pagination['spare-inventory'].page = 1;
+            loadSpareParts();
+        }, 400);
+    }
+
+    function readPortalBranchPreference() {
+        try {
+            const portalStateBranch =
+                typeof window !== 'undefined' &&
+                window.garagePortalState &&
+                typeof window.garagePortalState.active_branch === 'string'
+                    ? window.garagePortalState.active_branch.trim()
+                    : '';
+            if (portalStateBranch) {
+                return portalStateBranch;
+            }
+            if (typeof window !== 'undefined' && window.localStorage) {
+                const stored = window.localStorage.getItem(BRANCH_STORAGE_KEY);
+                if (stored) {
+                    return stored.trim();
+                }
+            }
+        } catch (error) {
+            console.warn('[Inventory] Tidak dapat membaca preferensi cabang:', error);
+        }
+        return '';
+    }
+
+    function handleBranchChanged(event) {
+        const nextBranch = (event?.detail?.branch || '').trim();
+        if (nextBranch === state.activeBranch) {
+            return;
+        }
+        state.activeBranch = nextBranch;
+        if (state.pagination['spare-inventory']) {
+            state.pagination['spare-inventory'].page = 1;
+        }
+        loadSpareParts();
+    }
+
+    async function loadSpareParts() {
+        try {
+            const args = { filters: { search: state.searchQuery } };
+            if (state.activeBranch) {
+                args.branch = state.activeBranch;
+            }
+
+            const response = await frappe.call({
+                method: API.listSpareParts,
+                args,
+                freeze: false,
+            });
+
+            const data = response.message || {};
+            state.spareParts = Array.isArray(data.spare_parts) ? data.spare_parts : [];
+            updateMetrics(data);
+            renderInventory(state.spareParts);
+        } catch (error) {
+            console.error('[Inventory] Error:', error);
+            frappe.show_alert({ message: 'Gagal memuat inventaris: ' + (error.message || error), indicator: 'red' }, 5);
+        }
+    }
+
+    function init() {
+        console.log('[Inventory] Initializing...');
+        state.activeBranch = readPortalBranchPreference();
+        loadSpareParts();
+
+        document.querySelector('[data-role="spare-search"]')?.addEventListener('input', handleSearch);
+        document.querySelector('[data-role="inventory-table-body"]')?.addEventListener('click', handleInventoryRowClick);
+        document.querySelectorAll('[data-pagination]').forEach((container) => {
+            container.addEventListener('click', handlePaginationClick);
+        });
+
+        document.querySelectorAll('[data-desk-link]').forEach((link) => {
+            link.href = `/app/${link.dataset.deskLink.toLowerCase().replace(/ /g, '-')}`;
+        });
+
+        window.addEventListener('garage-portal:branch-changed', handleBranchChanged);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+</script>
+{% endraw %}
+{% endblock %}

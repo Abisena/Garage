@@ -1,0 +1,476 @@
+{
+  "actions": [],
+  "allow_guest_to_edit": 0,
+  "allow_guest_to_view": 0,
+  "allow_import": 1,
+  "allow_rename": 0,
+  "autoname": "naming_series:",
+  "beta": 0,
+  "creation": "2024-06-02 00:00:00.000000",
+  "default_view": "Form",
+  "disable_prepared_report": 0,
+  "docstatus": 0,
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "header_section",
+    "naming_series",
+    "service_order",
+    "customer_display",
+    "vehicle_plate",
+    "inspection_date",
+    "column_break_header",
+    "status",
+    "service_advisor",
+    "qc_inspector",
+    "qc_inspector_name",
+    "checklist_section",
+    "checklist_html",
+    "hidden_checks_section",
+    "brakes_functioning_properly",
+    "engine_starts_smoothly",
+    "no_fluid_leaks_detected",
+    "lights_and_signals_functional",
+    "mechanical_column_break",
+    "battery_holding_charge",
+    "power_steering_responsive",
+    "suspension_normal",
+    "steering_alignment_normal",
+    "aesthetics_column_break",
+    "windows_and_mirrors_cleaned",
+    "exterior_washed_and_dried",
+    "interior_vacuumed_and_wiped",
+    "interior_disinfected",
+    "interior_reconditioned",
+    "interior_air_freshener",
+    "documentation_column_break",
+    "all_work_order_documented",
+    "spare_parts_installation_verified",
+    "photos_before_after_taken",
+    "test_drive_column_break",
+    "acceleration_smooth_responsive",
+    "braking_effective_without_pulling",
+    "no_unusual_noise_during_drive",
+    "dry_and_wet_brakes_tested",
+    "dashboard_indicators_normal",
+    "parts_table_section",
+    "parts_table_html",
+    "qc_notes",
+    "summary_section",
+    "summary_service_order",
+    "summary_customer",
+    "summary_customer_name",
+    "summary_vehicle",
+    "summary_license_plate",
+    "summary_vehicle_year",
+    "summary_service_type",
+    "summary_assigned_mechanic",
+    "summary_branch",
+    "summary_invoice",
+    "summary_total_amount",
+    "summary_outstanding_amount",
+    "payment_entry"
+  ],
+  "fields": [
+    {
+      "fieldname": "header_section",
+      "fieldtype": "Section Break",
+      "collapsible": 0
+    },
+    {
+      "fieldname": "naming_series",
+      "fieldtype": "Select",
+      "label": "Series",
+      "options": "QC-.#####",
+      "default": "QC-.#####",
+      "hidden": 1
+    },
+    {
+      "fieldname": "service_order",
+      "fieldtype": "Link",
+      "label": "Service Order",
+      "options": "Garage Service Order",
+      "reqd": 1,
+      "in_list_view": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "customer_display",
+      "fieldtype": "Data",
+      "label": "Customer",
+      "fetch_from": "service_order.customer_display",
+      "read_only": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "vehicle_plate",
+      "fieldtype": "Data",
+      "label": "No. Polisi",
+      "fetch_from": "service_order.vehicle",
+      "read_only": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "inspection_date",
+      "fieldtype": "Date",
+      "label": "Tanggal Inspeksi",
+      "default": "Today",
+      "bold": 1
+    },
+    {
+      "fieldname": "column_break_header",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Draft\nIn Review\nQC Complete\nFail\nReopened",
+      "default": "Draft",
+      "in_list_view": 1,
+      "hidden": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "service_advisor",
+      "fieldtype": "Link",
+      "label": "Service Advisor",
+      "options": "User"
+    },
+    {
+      "fieldname": "qc_inspector",
+      "fieldtype": "Link",
+      "label": "QC Inspector",
+      "options": "User"
+    },
+    {
+      "fieldname": "qc_inspector_name",
+      "fieldtype": "Data",
+      "label": "QC Inspector Name",
+      "fetch_from": "qc_inspector.full_name",
+      "read_only": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "checklist_section",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "checklist_html",
+      "fieldtype": "HTML",
+      "label": "Checklist"
+    },
+    {
+      "fieldname": "hidden_checks_section",
+      "fieldtype": "Section Break",
+      "hidden": 1
+    },
+    {
+      "fieldname": "brakes_functioning_properly",
+      "fieldtype": "Check",
+      "label": "Rem berfungsi baik"
+    },
+    {
+      "fieldname": "engine_starts_smoothly",
+      "fieldtype": "Check",
+      "label": "Mesin start normal"
+    },
+    {
+      "fieldname": "no_fluid_leaks_detected",
+      "fieldtype": "Check",
+      "label": "Tidak ada kebocoran cairan"
+    },
+    {
+      "fieldname": "lights_and_signals_functional",
+      "fieldtype": "Check",
+      "label": "Lampu dan sein berfungsi"
+    },
+    {
+      "fieldname": "mechanical_column_break",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "battery_holding_charge",
+      "fieldtype": "Check",
+      "label": "Aki normal"
+    },
+    {
+      "fieldname": "power_steering_responsive",
+      "fieldtype": "Check",
+      "label": "Power steering responsif"
+    },
+    {
+      "fieldname": "suspension_normal",
+      "fieldtype": "Check",
+      "label": "Suspensi normal"
+    },
+    {
+      "fieldname": "steering_alignment_normal",
+      "fieldtype": "Check",
+      "label": "Alignment stir normal"
+    },
+    {
+      "fieldname": "windows_and_mirrors_cleaned",
+      "fieldtype": "Check",
+      "label": "Kaca dan spion bersih"
+    },
+    {
+      "fieldname": "exterior_washed_and_dried",
+      "fieldtype": "Check",
+      "label": "Eksterior dicuci"
+    },
+    {
+      "fieldname": "interior_vacuumed_and_wiped",
+      "fieldtype": "Check",
+      "label": "Interior divakum"
+    },
+    {
+      "fieldname": "aesthetics_column_break",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "interior_disinfected",
+      "fieldtype": "Check",
+      "label": "Interior didisinfeksi"
+    },
+    {
+      "fieldname": "interior_reconditioned",
+      "fieldtype": "Check",
+      "label": "Interior direkondisi"
+    },
+    {
+      "fieldname": "interior_air_freshener",
+      "fieldtype": "Check",
+      "label": "Pengharum ruangan"
+    },
+    {
+      "fieldname": "all_work_order_documented",
+      "fieldtype": "Check",
+      "label": "Work order terdokumentasi"
+    },
+    {
+      "fieldname": "spare_parts_installation_verified",
+      "fieldtype": "Check",
+      "label": "Pemasangan spare part terverifikasi"
+    },
+    {
+      "fieldname": "documentation_column_break",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "photos_before_after_taken",
+      "fieldtype": "Check",
+      "label": "Foto before/after diambil"
+    },
+    {
+      "fieldname": "acceleration_smooth_responsive",
+      "fieldtype": "Check",
+      "label": "Akselerasi halus"
+    },
+    {
+      "fieldname": "braking_effective_without_pulling",
+      "fieldtype": "Check",
+      "label": "Pengereman efektif"
+    },
+    {
+      "fieldname": "no_unusual_noise_during_drive",
+      "fieldtype": "Check",
+      "label": "Tidak ada suara abnormal"
+    },
+    {
+      "fieldname": "test_drive_column_break",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "dry_and_wet_brakes_tested",
+      "fieldtype": "Check",
+      "label": "Rem kering dan basah ditest"
+    },
+    {
+      "fieldname": "dashboard_indicators_normal",
+      "fieldtype": "Check",
+      "label": "Indikator dashboard normal"
+    },
+    {
+      "fieldname": "parts_table_section",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "parts_table_html",
+      "fieldtype": "HTML",
+      "label": "Parts Verification"
+    },
+    {
+      "fieldname": "qc_notes",
+      "fieldtype": "Text",
+      "label": "QC Notes",
+      "hidden": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_section",
+      "fieldtype": "Section Break",
+      "label": "Summary",
+      "hidden": 1,
+      "collapsible": 1
+    },
+    {
+      "fieldname": "summary_service_order",
+      "fieldtype": "Link",
+      "label": "Summary Service Order",
+      "options": "Garage Service Order",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_customer",
+      "fieldtype": "Link",
+      "label": "Summary Customer",
+      "options": "Customer",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_customer_name",
+      "fieldtype": "Data",
+      "label": "Summary Customer Name",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_vehicle",
+      "fieldtype": "Link",
+      "label": "Summary Vehicle",
+      "options": "Garage Vehicle",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_license_plate",
+      "fieldtype": "Data",
+      "label": "Summary License Plate",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_vehicle_year",
+      "fieldtype": "Int",
+      "label": "Summary Vehicle Year",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_service_type",
+      "fieldtype": "Link",
+      "label": "Summary Service Type",
+      "options": "Garage Service Type",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_assigned_mechanic",
+      "fieldtype": "Link",
+      "label": "Summary Assigned Mechanic",
+      "options": "Garage Technician",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_branch",
+      "fieldtype": "Link",
+      "label": "Summary Branch",
+      "options": "Garage Branch",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_invoice",
+      "fieldtype": "Link",
+      "label": "Summary Invoice",
+      "options": "Sales Invoice",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_total_amount",
+      "fieldtype": "Currency",
+      "label": "Summary Total Amount",
+      "read_only": 1
+    },
+    {
+      "fieldname": "summary_outstanding_amount",
+      "fieldtype": "Currency",
+      "label": "Summary Outstanding Amount",
+      "read_only": 1
+    },
+    {
+      "fieldname": "payment_entry",
+      "fieldtype": "Link",
+      "label": "Payment Entry",
+      "options": "Payment Entry",
+      "read_only": 1
+    }
+  ],
+  "has_web_view": 0,
+  "hide_heading": 0,
+  "hide_toolbar": 0,
+  "idx": 0,
+  "image_field": "",
+  "in_create": 0,
+  "info_fields": [],
+  "is_submittable": 0,
+  "issingle": 0,
+  "istable": 0,
+  "links": [],
+  "make_attachments_public": 0,
+  "max_attachments": 10,
+  "modified": "2024-06-02 00:00:00.000000",
+  "module": "Garage",
+  "name": "Repair QC",
+  "naming_rule": "By \"Naming Series\" field",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1,
+      "export": 1
+    },
+    {
+      "role": "Garage Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1
+    },
+    {
+      "role": "Garage User",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 0,
+      "email": 1,
+      "print": 1
+    }
+  ],
+  "quick_entry": 0,
+  "read_only": 0,
+  "read_only_onload": 0,
+  "search_fields": "service_order,status",
+  "show_name_in_global_search": 1,
+  "show_preview_popup": 1,
+  "sort_field": "creation",
+  "sort_order": "DESC",
+  "states": [
+    {"title": "Draft", "color": "Gray"},
+    {"title": "In Review", "color": "Blue"},
+    {"title": "QC Complete", "color": "Green"},
+    {"title": "Fail", "color": "Red"},
+    {"title": "Reopened", "color": "Orange"}
+  ],
+  "subject": "",
+  "title_field": "service_order",
+  "track_changes": 1,
+  "track_seen": 1,
+  "translated_doctype": 0,
+  "migration_hash": "",
+  "description": "Quality control inspection for service orders."
+}

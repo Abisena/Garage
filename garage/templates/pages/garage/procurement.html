@@ -1,0 +1,1222 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Pengadaan & Pergerakan Stok{% endblock %}
+
+{% set required_roles = ['Pengadaan', 'Procurement', 'Buying'] %}
+{% include "garage/templates/includes/role_guard.html" %}
+
+{% block head_include %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    /* ============================================================================
+   GARAGE PROCUREMENT PAGE - PREMIUM ELEGANT DESIGN
+   Procurement Orders & Stock Movement Management
+   ============================================================================ */
+
+/* === DESIGN TOKENS === */
+:root {
+    /* Brand Colors - Refined Blue Palette */
+    --primary: #0066FF;
+    --primary-dark: #0052CC;
+    --primary-darker: #003D99;
+    --primary-light: #4D94FF;
+    --primary-lightest: #E6F2FF;
+    --primary-subtle: #F0F7FF;
+    
+    /* Accent Colors */
+    --accent-success: #00C853;
+    --accent-success-light: #B9F6CA;
+    --accent-warning: #FFB300;
+    --accent-warning-light: #FFE57F;
+    --accent-danger: #FF3D00;
+    --accent-danger-light: #FF8A80;
+    --accent-info: #00B8D4;
+    --accent-info-light: #84FFFF;
+    --accent-purple: #7C4DFF;
+    --accent-purple-light: #E1BEE7;
+    
+    /* Neutral Palette - Sophisticated Grays */
+    --gray-50: #FAFBFC;
+    --gray-100: #F5F7FA;
+    --gray-200: #E9ECF1;
+    --gray-300: #D4DAE4;
+    --gray-400: #B8C1D3;
+    --gray-500: #8896AB;
+    --gray-600: #5E6C84;
+    --gray-700: #3E4C5E;
+    --gray-800: #2A3647;
+    --gray-900: #1A2332;
+    
+    /* Semantic Colors */
+    --text-primary: #1A2332;
+    --text-secondary: #5E6C84;
+    --text-muted: #8896AB;
+    --text-inverse: #FFFFFF;
+    
+    --bg-body: #F5F7FA;
+    --bg-surface: #FFFFFF;
+    --bg-elevated: #FAFBFC;
+    --bg-overlay: rgba(26, 35, 50, 0.8);
+    
+    --border-light: #E9ECF1;
+    --border-base: #D4DAE4;
+    --border-strong: #B8C1D3;
+    --border-accent: #B3D9FF;
+    
+    /* Shadows - Layered Depth */
+    --shadow-xs: 0 1px 2px rgba(26, 35, 50, 0.04);
+    --shadow-sm: 0 2px 4px rgba(26, 35, 50, 0.06), 0 1px 2px rgba(26, 35, 50, 0.04);
+    --shadow-md: 0 4px 8px rgba(26, 35, 50, 0.08), 0 2px 4px rgba(26, 35, 50, 0.04);
+    --shadow-lg: 0 8px 16px rgba(26, 35, 50, 0.12), 0 4px 8px rgba(26, 35, 50, 0.06);
+    --shadow-xl: 0 16px 32px rgba(26, 35, 50, 0.16), 0 8px 16px rgba(26, 35, 50, 0.08);
+    --shadow-2xl: 0 24px 48px rgba(26, 35, 50, 0.2), 0 12px 24px rgba(26, 35, 50, 0.1);
+    
+    /* Border Radius */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-2xl: 20px;
+    --radius-full: 9999px;
+    
+    /* Spacing Scale */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-20: 80px;
+    --space-24: 96px;
+    
+    /* Typography */
+    --font-sans: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    
+    --font-size-xs: 0.75rem;      /* 12px */
+    --font-size-sm: 0.875rem;     /* 14px */
+    --font-size-base: 0.9375rem;  /* 15px */
+    --font-size-lg: 1.0625rem;    /* 17px */
+    --font-size-xl: 1.25rem;      /* 20px */
+    --font-size-2xl: 1.5rem;      /* 24px */
+    --font-size-3xl: 1.875rem;    /* 30px */
+    --font-size-4xl: 2.25rem;     /* 36px */
+    --font-size-5xl: 3rem;        /* 48px */
+    
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    
+    --line-height-tight: 1.25;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.625;
+    --line-height-loose: 1.75;
+    
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    
+    /* Z-index Scale */
+    --z-base: 0;
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-popover: 1060;
+    --z-tooltip: 1070;
+}
+
+/* === BASE RESETS === */
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-sans) !important;
+    font-size: var(--font-size-base) !important;
+    line-height: var(--line-height-normal) !important;
+    color: var(--text-primary) !important;
+    background: var(--bg-body) !important;
+    overflow-x: hidden;
+}
+
+/* === CONTAINER === */
+.container {
+    max-width: 1440px !important;
+    margin: 0 auto !important;
+    padding-left: var(--space-6) !important;
+    padding-right: var(--space-6) !important;
+}
+
+@media (min-width: 1200px) {
+    .container {
+        padding-left: var(--space-12) !important;
+        padding-right: var(--space-12) !important;
+    }
+}
+
+/* === HEADER SECTION === */
+.portal-hero--sub {
+    position: relative;
+    background: linear-gradient(160deg, 
+        var(--primary-darker) 0%, 
+        var(--primary-dark) 40%, 
+        var(--primary) 100%);
+    padding: var(--space-6) 0 var(--space-4) 0;
+    margin-top: var(--space-6);
+    overflow: hidden;
+}
+
+/* Animated Background Pattern */
+.portal-hero--sub::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: 
+        radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+    z-index: 0;
+}
+
+.portal-hero--sub .container {
+    position: relative;
+    z-index: 1;
+}
+
+.portal-hero__brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+}
+
+.portal-hero__icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.portal-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-xs) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.8) !important;
+    margin-bottom: var(--space-3) !important;
+    background: rgba(255, 255, 255, 0.1);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    backdrop-filter: blur(10px);
+}
+
+.portal-hero--sub h1 {
+    font-size: var(--font-size-2xl) !important;
+    font-weight: var(--font-weight-bold) !important;
+    line-height: var(--line-height-tight) !important;
+    color: var(--text-inverse) !important;
+    margin: 0 !important;
+    letter-spacing: -0.02em;
+}
+
+.portal-hero--sub p {
+    font-size: var(--font-size-sm) !important;
+    line-height: var(--line-height-relaxed) !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    margin: 0 !important;
+}
+
+/* === NAVIGATION WRAPPER === */
+.portal-nav-wrapper {
+    background: linear-gradient(160deg, 
+        var(--primary-darker) 0%, 
+        var(--primary-dark) 40%, 
+        var(--primary) 100%);
+    padding: 0 0 var(--space-6) 0;
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 0;
+}
+
+/* === NAVIGATION === */
+.portal-nav {
+    display: flex !important;
+    justify-content: center !important;
+    gap: var(--space-2) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(20px) !important;
+    padding: var(--space-2) !important;
+    border-radius: var(--radius-lg) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    overflow-x: auto !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    max-width: fit-content;
+    margin: 0 auto;
+}
+
+.portal-nav::-webkit-scrollbar {
+    height: 6px;
+}
+
+.portal-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.portal-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-full);
+}
+
+.portal-nav a {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: var(--space-2) !important;
+    padding: var(--space-3) var(--space-5) !important;
+    border-radius: var(--radius-md) !important;
+    font-size: var(--font-size-sm) !important;
+    font-weight: var(--font-weight-medium) !important;
+    text-decoration: none !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    transition: all var(--transition-base) !important;
+    white-space: nowrap !important;
+    position: relative;
+}
+
+.portal-nav a::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+
+.portal-nav a:hover::before {
+    opacity: 1;
+}
+
+.portal-nav a:hover {
+    color: var(--text-inverse) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    transform: translateY(-1px);
+}
+
+.portal-nav a.active {
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: var(--primary) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.portal-nav a.active::before {
+    display: none;
+}
+
+/* === SECTION SPACING === */
+.portal-section {
+    padding: var(--space-12) 0 var(--space-16) !important;
+}
+
+.portal-section:first-of-type {
+    padding-top: var(--space-8) !important;
+}
+
+/* === GRID SYSTEM === */
+.portal-grid {
+    display: grid !important;
+    gap: var(--space-8) !important;
+    
+}
+
+.portal-grid.two-column {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+    .portal-grid.two-column {
+        grid-template-columns: 1fr;
+        gap: var(--space-10) !important;
+    }
+}
+
+/* === CARDS === */
+.portal-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border-light) !important;
+    border-radius: var(--radius-xl) !important;
+    padding: var(--space-8) !important;
+    box-shadow: var(--shadow-sm) !important;
+    transition: all var(--transition-slow) !important;
+    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(32px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Differentiate cards with accent borders */
+.portal-card:nth-child(1)::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent-purple), var(--primary));
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+.portal-card:nth-child(2)::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent-success), var(--accent-info));
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+.portal-card h2 {
+    font-size: var(--font-size-2xl) !important;
+    font-weight: var(--font-weight-bold) !important;
+    line-height: var(--line-height-tight) !important;
+    color: var(--text-primary) !important;
+    margin-bottom: var(--space-3) !important;
+    letter-spacing: -0.01em;
+}
+
+.portal-card .lead {
+    font-size: var(--font-size-base) !important;
+    line-height: var(--line-height-relaxed) !important;
+    color: var(--text-secondary) !important;
+    margin: 0 0 var(--space-6) 0;
+}
+
+/* === FORM GRID === */
+.form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6) !important;
+}
+
+.form-grid.two-column {
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: var(--space-5) !important;
+}
+
+@media (min-width: 768px) {
+    .form-grid.two-column {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-5) var(--space-6) !important;
+    }
+}
+
+/* === FORM FIELDS === */
+.form-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-field label {
+    display: block;
+    font-size: var(--font-size-sm) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    color: var(--text-primary) !important;
+    margin-bottom: var(--space-2) !important;
+    letter-spacing: -0.01em;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+    width: 100%;
+    font-family: var(--font-sans);
+    font-size: var(--font-size-base) !important;
+    color: var(--text-primary) !important;
+    background: var(--bg-surface) !important;
+    border: 1.5px solid var(--border-base) !important;
+    border-radius: var(--radius-md) !important;
+    padding: var(--space-3) var(--space-4) !important;
+    transition: all var(--transition-base) !important;
+    appearance: none;
+}
+
+.form-field input::placeholder,
+.form-field textarea::placeholder {
+    color: var(--text-muted);
+}
+
+.form-field input:hover,
+.form-field select:hover,
+.form-field textarea:hover {
+    border-color: var(--border-strong) !important;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+    outline: none !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 4px var(--primary-subtle) !important;
+    background: var(--bg-surface) !important;
+}
+
+.form-field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235E6C84' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--space-4) center;
+    padding-right: var(--space-10) !important;
+    cursor: pointer;
+}
+
+.form-field textarea {
+    min-height: 100px;
+    resize: vertical;
+    line-height: var(--line-height-relaxed) !important;
+}
+
+.form-field input[type="time"] {
+    font-family: var(--font-mono);
+}
+
+/* === REPEATING GROUPS === */
+.repeat-group {
+    background: var(--gray-50) !important;
+    border: 2px dashed var(--border-base) !important;
+    border-radius: var(--radius-xl) !important;
+    padding: var(--space-6) !important;
+    margin: var(--space-6) 0 !important;
+    transition: all var(--transition-base);
+}
+
+.repeat-group:hover {
+    border-color: var(--border-accent);
+    background: var(--primary-subtle);
+}
+
+/* Different accent for procurement vs stock movement */
+#procurement-form .repeat-group:hover {
+    border-color: var(--accent-purple-light);
+    background: #F3E5F5;
+}
+
+#stock-movement-form .repeat-group:hover {
+    border-color: var(--accent-success-light);
+    background: #E8F5E9;
+}
+
+.repeat-group header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6) !important;
+    padding-bottom: var(--space-4);
+    border-bottom: 2px solid var(--border-light);
+}
+
+.repeat-group header h3 {
+    font-size: var(--font-size-lg) !important;
+    font-weight: var(--font-weight-bold) !important;
+    color: var(--text-primary) !important;
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+.repeat-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5) !important;
+}
+
+/* === REPEAT ROW === */
+.repeat-row {
+    position: relative;
+    display: grid;
+    gap: var(--space-4) !important;
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border-light) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: var(--space-5) !important;
+    box-shadow: var(--shadow-xs);
+    transition: all var(--transition-base);
+    animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.repeat-row:hover {
+    box-shadow: var(--shadow-sm);
+    border-color: var(--border-base);
+}
+
+.repeat-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--primary), var(--primary-light));
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+
+.repeat-row:hover::before {
+    opacity: 1;
+}
+
+/* Different accent colors for different forms */
+#procurement-form .repeat-row::before {
+    background: linear-gradient(180deg, var(--accent-purple), var(--primary));
+}
+
+#stock-movement-form .repeat-row::before {
+    background: linear-gradient(180deg, var(--accent-success), var(--accent-info));
+}
+
+/* Responsive Columns for Repeat Rows */
+.repeat-row.columns-4 {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+    .repeat-row.columns-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .repeat-row.columns-4 {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Remove Row Button */
+.repeat-row .remove-row {
+    grid-column: 1 / -1;
+    justify-self: flex-start;
+    background: var(--accent-danger) !important;
+    color: var(--text-inverse) !important;
+    border: none !important;
+    padding: var(--space-2) var(--space-4) !important;
+    font-size: var(--font-size-xs) !important;
+}
+
+.repeat-row .remove-row:hover {
+    background: #D32F2F !important;
+    transform: translateY(-1px);
+}
+
+/* === FORM ACTIONS === */
+.form-actions {
+    display: flex;
+    gap: var(--space-3) !important;
+    margin-top: var(--space-6) !important;
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--border-light);
+}
+
+/* === BUTTONS === */
+button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--font-size-sm) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    line-height: 1;
+    padding: var(--space-3) var(--space-5) !important;
+    border: none;
+    border-radius: var(--radius-lg) !important;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--transition-base) !important;
+    overflow: hidden;
+}
+
+button::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent);
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+button:hover::before {
+    opacity: 1;
+}
+
+button.primary,
+button[type="submit"] {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+    color: var(--text-inverse) !important;
+    box-shadow: var(--shadow-md), 0 0 0 0 rgba(0, 102, 255, 0.4) !important;
+    padding: var(--space-4) var(--space-6) !important;
+}
+
+button.primary:hover,
+button[type="submit"]:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg), 0 0 0 4px rgba(0, 102, 255, 0.15) !important;
+}
+
+button.primary:active,
+button[type="submit"]:active {
+    transform: translateY(0);
+}
+
+button.secondary {
+    background: var(--bg-surface) !important;
+    color: var(--text-primary) !important;
+    border: 1.5px solid var(--border-base) !important;
+    box-shadow: var(--shadow-xs) !important;
+}
+
+button.secondary:hover {
+    background: var(--gray-50) !important;
+    border-color: var(--border-strong) !important;
+    box-shadow: var(--shadow-sm) !important;
+    transform: translateY(-1px);
+}
+
+button:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* === SECTION SUBTITLE === */
+.section-subtitle {
+    font-size: var(--font-size-lg) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    color: var(--text-primary) !important;
+    margin: var(--space-8) 0 var(--space-4) 0 !important;
+    letter-spacing: -0.01em;
+}
+
+/* === TABLES === */
+.simple-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: var(--font-size-sm) !important;
+    border: 1px solid var(--border-light) !important;
+    border-radius: var(--radius-lg) !important;
+    overflow: hidden;
+    box-shadow: var(--shadow-xs);
+    margin-top: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.simple-table thead {
+    background: var(--gray-50) !important;
+}
+
+.simple-table th {
+    padding: var(--space-4) var(--space-5) !important;
+    text-align: left;
+    font-size: var(--font-size-xs) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted) !important;
+    border-bottom: 1px solid var(--border-light) !important;
+}
+
+.simple-table td {
+    padding: var(--space-4) var(--space-5) !important;
+    border-bottom: 1px solid var(--border-light) !important;
+    color: var(--text-primary) !important;
+    transition: background var(--transition-fast);
+}
+
+.simple-table tbody tr {
+    transition: all var(--transition-fast);
+    cursor: pointer;
+}
+
+.simple-table tbody tr:hover {
+    background: var(--gray-50) !important;
+}
+
+.simple-table tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+/* === LIST EMPTY === */
+.list-empty {
+    display: none;
+    padding: var(--space-6) !important;
+    text-align: center;
+    color: var(--text-muted) !important;
+    font-style: italic;
+    font-size: var(--font-size-sm) !important;
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-4);
+}
+
+/* === SCROLLBAR === */
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--gray-100);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--gray-100);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+}
+
+/* === RESPONSIVE BREAKPOINTS === */
+@media (max-width: 1023px) {
+    .portal-hero--sub h1 {
+        font-size: var(--font-size-3xl) !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .container {
+        padding-left: var(--space-4) !important;
+        padding-right: var(--space-4) !important;
+    }
+    
+    .portal-hero--sub {
+        padding: var(--space-10) 0 var(--space-8) !important;
+    }
+    
+    .portal-hero--sub h1 {
+        font-size: var(--font-size-2xl) !important;
+    }
+    
+    .portal-hero--sub p {
+        font-size: var(--font-size-sm) !important;
+    }
+    
+    .portal-nav {
+        margin-bottom: var(--space-8) !important;
+        padding: var(--space-2) !important;
+        gap: var(--space-1) !important;
+    }
+    
+    .portal-nav a {
+        padding: var(--space-2) var(--space-4) !important;
+        font-size: var(--font-size-xs) !important;
+    }
+    
+    .portal-section {
+        padding: 0 0 var(--space-12) !important;
+    }
+    
+    .portal-card {
+        padding: var(--space-6) !important;
+    }
+    
+    .portal-card h2 {
+        font-size: var(--font-size-xl) !important;
+    }
+    
+    .repeat-group {
+        padding: var(--space-5) !important;
+    }
+    
+    .repeat-row {
+        padding: var(--space-4) !important;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .form-actions button {
+        width: 100%;
+    }
+}
+
+@media (max-width: 479px) {
+    .portal-hero--sub h1 {
+        font-size: var(--font-size-xl) !important;
+    }
+    
+    .portal-card {
+        padding: var(--space-5) !important;
+    }
+    
+    .repeat-group {
+        padding: var(--space-4) !important;
+    }
+    
+    .repeat-row {
+        padding: var(--space-3) !important;
+        gap: var(--space-3) !important;
+    }
+    
+    .simple-table {
+        font-size: var(--font-size-xs) !important;
+    }
+    
+    .simple-table th,
+    .simple-table td {
+        padding: var(--space-3) !important;
+    }
+}
+
+/* === PRINT STYLES === */
+@media print {
+    .portal-nav,
+    button {
+        display: none !important;
+    }
+    
+    .portal-card,
+    .repeat-group {
+        box-shadow: none !important;
+        border: 1px solid var(--border-base) !important;
+        page-break-inside: avoid;
+    }
+    
+    .portal-hero--sub {
+        background: var(--text-primary) !important;
+        color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+}
+
+/* === ACCESSIBILITY === */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* === UTILITY CLASSES === */
+.text-center {
+    text-align: center !important;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+.mt-0 { margin-top: 0 !important; }
+.mt-2 { margin-top: var(--space-2) !important; }
+.mt-4 { margin-top: var(--space-4) !important; }
+.mt-6 { margin-top: var(--space-6) !important; }
+.mt-8 { margin-top: var(--space-8) !important; }
+
+.mb-0 { margin-bottom: 0 !important; }
+.mb-2 { margin-bottom: var(--space-2) !important; }
+.mb-4 { margin-bottom: var(--space-4) !important; }
+.mb-6 { margin-bottom: var(--space-6) !important; }
+.mb-8 { margin-bottom: var(--space-8) !important; }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<header class="portal-hero--sub">
+    <div class="container">
+        <div class="portal-hero__brand">
+            <div class="portal-hero__icon">🛒</div>
+            <div>
+                <h1>Pengadaan & Pergerakan Stok</h1>
+                <p>Dokumentasikan kebutuhan pembelian dan mutasi gudang agar persediaan selalu terkendali.</p>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="portal-nav-wrapper">
+    <div class="container">
+        <nav class="portal-nav">
+            <a href="/garage/intake">📋 Registrasi</a>
+            <a href="/garage/service">🔧 Servis</a>
+            <a href="/garage/sparepart">📦 Sparepart</a>
+            <a href="/garage/procurement" class="active">🛒 Pengadaan</a>
+            <a href="/garage/finance">💰 Keuangan</a>
+            <a href="/garage/insight">📊 Report</a>
+        </nav>
+    </div>
+</div>
+
+<section class="portal-section">
+    <div class="container">
+        <div class="portal-grid two-column">
+            <article class="portal-card">
+                <h2>Buat Procurement Order</h2>
+                <p class="lead">Isi data supplier, referensi dokumen, dan detail item yang perlu dipesan.</p>
+                <form id="procurement-form" class="form-grid">
+                    <datalist id="spare_part_options"></datalist>
+                    <div class="form-grid two-column">
+                        <div class="form-field">
+                            <label for="reference_type">Referensi</label>
+                            <select id="reference_type" name="reference_type">
+                                <option value="Garage Service Order">Service Order</option>
+                                <option value="Garage Spare Part Order">Spare Part Order</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="reference_name">Nomor Referensi</label>
+                            <input id="reference_name" name="reference_name" placeholder="Masukkan nomor dokumen" />
+                        </div>
+                        <div class="form-field">
+                            <label for="supplier">Supplier</label>
+                            <input id="supplier" name="supplier" placeholder="Nama supplier" />
+                        </div>
+                        <div class="form-field">
+                            <label for="order_date_proc">Tanggal Order</label>
+                            <input id="order_date_proc" name="order_date" type="date" />
+                        </div>
+                        <div class="form-field">
+                            <label for="expected_date">Tanggal Kedatangan</label>
+                            <input id="expected_date" name="expected_date" type="date" />
+                        </div>
+                        <div class="form-field">
+                            <label for="total_qty">Total Qty</label>
+                            <input id="total_qty" name="total_qty" type="number" min="0" step="0.01" data-cast="float" />
+                        </div>
+                        <div class="form-field">
+                            <label for="total_amount_proc">Total Nilai</label>
+                            <input id="total_amount_proc" name="total_amount" type="number" min="0" step="0.01" data-cast="float" />
+                        </div>
+                    </div>
+                    <div class="repeat-group" data-repeat="items">
+                        <header>
+                            <h3>Item Pengadaan</h3>
+                            <button class="secondary" type="button" data-action="add-row">Tambah Item</button>
+                        </header>
+                        <div class="repeat-rows" data-role="rows"></div>
+                        <template data-role="row-template">
+                            <div class="repeat-row columns-4">
+                                <div class="form-field">
+                                    <label>Kode</label>
+                                    <input data-field="item_code" list="spare_part_options" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Nama</label>
+                                    <input data-field="item_name" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Qty</label>
+                                    <input data-field="qty" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Harga</label>
+                                    <input data-field="rate" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>UOM</label>
+                                    <input data-field="uom" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Total</label>
+                                    <input data-field="amount" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Service Order Ref</label>
+                                    <input data-field="service_order_ref" placeholder="Opsional" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Qty Diterima</label>
+                                    <input data-field="received_qty" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="form-field">
+                        <label for="remarks">Catatan</label>
+                        <textarea id="remarks" name="remarks"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button class="primary" type="submit">Simpan Procurement Order</button>
+                    </div>
+                </form>
+            </article>
+            <article class="portal-card">
+                <h2>Mutasi Stok & Monitoring</h2>
+                <p class="lead">Catat perpindahan barang antar gudang dan lihat pengadaan yang masih tertunda.</p>
+                <form id="stock-movement-form" class="form-grid">
+                    <div class="form-grid two-column">
+                        <div class="form-field">
+                            <label for="movement_type">Jenis Mutasi</label>
+                            <select id="movement_type" name="movement_type">
+                                <option value="Receipt">Receipt</option>
+                                <option value="Issue">Issue</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="movement_reference_type">Referensi</label>
+                            <select id="movement_reference_type" name="reference_type">
+                                <option value="Garage Procurement Order">Procurement Order</option>
+                                <option value="Garage Service Order">Service Order</option>
+                                <option value="Garage Spare Part Order">Spare Part Order</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="movement_reference_name">Nomor Referensi</label>
+                            <input id="movement_reference_name" name="reference_name" placeholder="Nomor dokumen" />
+                        </div>
+                        <div class="form-field">
+                            <label for="posting_date">Tanggal Posting</label>
+                            <input id="posting_date" name="posting_date" type="date" />
+                        </div>
+                        <div class="form-field">
+                            <label for="posting_time">Jam Posting</label>
+                            <input id="posting_time" name="posting_time" type="time" />
+                        </div>
+                        <div class="form-field">
+                            <label for="movement_warehouse">Gudang</label>
+                            <input id="movement_warehouse" name="warehouse" placeholder="Gudang utama" />
+                        </div>
+                    </div>
+                    <div class="repeat-group" data-repeat="items">
+                        <header>
+                            <h3>Detail Item</h3>
+                            <button class="secondary" type="button" data-action="add-row">Tambah Item</button>
+                        </header>
+                        <div class="repeat-rows" data-role="rows"></div>
+                        <template data-role="row-template">
+                            <div class="repeat-row columns-4">
+                                <div class="form-field">
+                                    <label>Kode</label>
+                                    <input data-field="item_code" list="spare_part_options" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Nama</label>
+                                    <input data-field="item_name" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Qty</label>
+                                    <input data-field="qty" type="number" min="0" step="0.01" data-cast="float" />
+                                </div>
+                                <div class="form-field">
+                                    <label>UOM</label>
+                                    <input data-field="uom" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Gudang Asal</label>
+                                    <input data-field="source_warehouse" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Gudang Tujuan</label>
+                                    <input data-field="target_warehouse" />
+                                </div>
+                                <div class="form-field">
+                                    <label>Status</label>
+                                    <select data-field="status">
+                                        <option value="Pending">Pending</option>
+                                        <option value="Submitted">Submitted</option>
+                                        <option value="Cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+                                <button class="secondary remove-row" type="button" data-action="remove-row">Hapus</button>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="form-field">
+                        <label for="movement_remarks">Catatan</label>
+                        <textarea id="movement_remarks" name="remarks"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button class="primary" type="submit">Simpan Mutasi Stok</button>
+                    </div>
+                </form>
+                <h3 class="section-subtitle">Pengadaan Tertunda</h3>
+                <table class="simple-table">
+                    <thead>
+                        <tr>
+                            <th>Nomor</th>
+                            <th>Supplier</th>
+                            <th>Status</th>
+                            <th>ETA</th>
+                        </tr>
+                    </thead>
+                    <tbody data-role="pending-procurement-table"></tbody>
+                </table>
+                <div class="list-empty" data-empty="pending-procurement">Belum ada pengadaan tertunda.</div>
+            </article>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block script %}
+<script>
+    frappe.require("/assets/garage/js/garage_portal.js");
+</script>
+{% endblock %}

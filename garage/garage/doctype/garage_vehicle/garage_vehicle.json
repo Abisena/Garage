@@ -1,0 +1,264 @@
+{
+  "actions": [],
+  "allow_guest_to_edit": 0,
+  "allow_guest_to_view": 0,
+  "allow_import": 1,
+  "allow_rename": 0,
+  "autoname": "field:license_plate",
+  "beta": 0,
+  "creation": "2024-06-02 00:00:00.000000",
+  "default_view": "Form",
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "section_break_vehicle_id",
+    "license_plate",
+    "brand",
+    "vehicle_type",
+    "fuel_type",
+    "column_break_vehicle_id",
+    "vin",
+    "model",
+    "vehicle_year",
+    "mileage",
+    "column_break_vehicle_id2",
+    "engine_number",
+    "color",
+    "transmission",
+    "section_break_owner",
+    "customer",
+    "column_break_owner",
+    "customer_name",
+    "customer_number",
+    "customer_phone",
+    "section_break_hidden",
+    "notes",
+    "branch",
+    "assembly_type",
+    "last_service_date",
+    "last_service_logged_at"
+  ],
+  "fields": [
+    {
+      "fieldname": "section_break_vehicle_id",
+      "fieldtype": "Section Break",
+      "label": "Vehicle"
+    },
+    {
+      "fieldname": "license_plate",
+      "fieldtype": "Data",
+      "label": "License Plate (No. Polisi)",
+      "reqd": 1,
+      "in_list_view": 1,
+      "bold": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "vin",
+      "fieldtype": "Data",
+      "label": "Chassis Number (No. Rangka)",
+      "reqd": 1
+    },
+    {
+      "fieldname": "column_break_vehicle_id",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "engine_number",
+      "fieldtype": "Data",
+      "label": "Engine Number (No. Mesin)",
+      "reqd": 1
+    },
+    {
+      "fieldname": "color",
+      "fieldtype": "Data",
+      "label": "Color (Warna)",
+      "reqd": 1
+    },
+    {
+      "fieldname": "section_break_owner",
+      "fieldtype": "Section Break",
+      "label": "Owner"
+    },
+    {
+      "fieldname": "customer_number",
+      "fieldtype": "Data",
+      "label": "Customer Number",
+      "bold": 1,
+      "length": 15,
+      "hidden": 1
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Customer",
+      "options": "Customer",
+      "reqd": 1,
+      "bold": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "column_break_owner",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "customer_name",
+      "fieldtype": "Data",
+      "label": "Customer Name",
+      "fetch_from": "customer.customer_name",
+      "bold": 1
+    },
+    {
+      "fieldname": "customer_phone",
+      "fieldtype": "Data",
+      "label": "Phone",
+      "read_only": 1,
+      "fetch_from": "customer.mobile_no",
+      "hidden": 1
+    },
+    {
+      "fieldname": "column_break_vehicle_id2",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "brand",
+      "fieldtype": "Link",
+      "label": "Brand (Merk)",
+      "options": "Garage Brand",
+      "reqd": 1,
+      "in_list_view": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "model",
+      "fieldtype": "Link",
+      "label": "Model",
+      "options": "Garage Model",
+      "reqd": 1,
+      "in_list_view": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "vehicle_type",
+      "fieldtype": "Select",
+      "label": "Vehicle Type",
+      "options": "\nSedan\nHatchback\nSUV\nMPV\nTruck\nVan\nCoupe\nWagon\nPickup",
+      "reqd": 1
+    },
+    {
+      "fieldname": "vehicle_year",
+      "fieldtype": "Int",
+      "label": "Year",
+      "reqd": 1
+    },
+    {
+      "fieldname": "transmission",
+      "fieldtype": "Select",
+      "label": "Transmission",
+      "options": "\nManual (MT)\nAutomatic (AT)\nCVT\nDCT\nOther",
+      "reqd": 1
+    },
+    {
+      "fieldname": "fuel_type",
+      "fieldtype": "Select",
+      "label": "Fuel Type",
+      "options": "\nPetrol (Bensin)\nDiesel (Solar)\nHybrid\nElectric\nOther",
+      "reqd": 1
+    },
+    {
+      "fieldname": "mileage",
+      "fieldtype": "Int",
+      "label": "Current Mileage (KM)",
+      "reqd": 1
+    },
+    {
+      "fieldname": "notes",
+      "fieldtype": "Small Text",
+      "label": "Notes",
+      "hidden": 1
+    },
+    {
+      "fieldname": "section_break_hidden",
+      "fieldtype": "Section Break",
+      "hidden": 1
+    },
+    {
+      "fieldname": "branch",
+      "fieldtype": "Link",
+      "label": "Branch",
+      "options": "Garage Branch",
+      "hidden": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "assembly_type",
+      "fieldtype": "Select",
+      "label": "Assembly Type",
+      "options": "\nCKD\nCBU",
+      "hidden": 1
+    },
+    {
+      "fieldname": "last_service_date",
+      "fieldtype": "Date",
+      "label": "Last Service Date",
+      "hidden": 1
+    },
+    {
+      "fieldname": "last_service_logged_at",
+      "fieldtype": "Datetime",
+      "label": "Last Service Logged At",
+      "read_only": 1,
+      "hidden": 1
+    }
+  ],
+  "has_web_view": 0,
+  "hide_toolbar": 0,
+  "index_web_pages_for_search": 1,
+  "links": [],
+  "modified": "2026-07-17 22:25:00.000000",
+  "module": "Garage",
+  "name": "Garage Vehicle",
+  "naming_rule": "By fieldname",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1,
+      "export": 1
+    },
+    {
+      "role": "Garage Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1
+    },
+    {
+      "role": "Garage User",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 0,
+      "email": 1,
+      "print": 1
+    }
+  ],
+  "quick_entry": 1,
+  "show_name_in_global_search": 1,
+  "show_preview_popup": 1,
+  "title_field": "license_plate",
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": 1,
+  "description": "Vehicle registry with complete specifications, linked to customer."
+}

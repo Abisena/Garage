@@ -1,0 +1,1107 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Log History - Garage{% endblock %}
+
+{% set required_roles = [
+    'Admin',
+    'Manager',
+    'System Manager',
+    'Garage Manager',
+    'Manager Bengkel',
+    'Head Manager Bengkel'
+] %}
+{% include "garage/templates/includes/role_guard.html" %}
+
+{% block head_include %}
+<style>
+:root {
+    --primary: #0066FF;
+    --primary-dark: #0052CC;
+    --primary-darker: #003D99;
+    --accent-success: #00C853;
+    --accent-danger: #FF3D00;
+    --accent-warning: #FFB300;
+    --gray-50: #FAFBFC;
+    --gray-100: #F5F7FA;
+    --gray-200: #E9ECF1;
+    --gray-300: #D4DAE4;
+    --gray-500: #8896AB;
+    --gray-700: #3E4C5E;
+    --gray-900: #1A2332;
+    --text-primary: #1A2332;
+    --text-secondary: #5E6C84;
+    --text-muted: #8896AB;
+    --bg-surface: #FFFFFF;
+    --shadow-lg: 0 24px 48px rgba(0, 61, 153, 0.18);
+    --shadow-md: 0 12px 24px rgba(0, 61, 153, 0.12);
+    --radius-lg: 16px;
+    --radius-md: 12px;
+}
+
+.portal-hero--log {
+    position: relative;
+    padding: 4rem 0 3.5rem !important;
+    background: linear-gradient(155deg, var(--primary-darker) 0%, var(--primary-dark) 45%, var(--primary) 100%);
+    color: #ffffff;
+    overflow: hidden;
+}
+
+.portal-hero--log::before,
+.portal-hero--log::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.12) 0%, transparent 55%),
+        radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.1) 0%, transparent 55%);
+    z-index: 0;
+}
+
+.portal-hero--log::after {
+    background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 60%);
+    mix-blend-mode: screen;
+}
+
+.portal-hero--log .container {
+    position: relative;
+    z-index: 1;
+}
+
+.portal-hero__brand {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.portal-hero__icon {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.16);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(12px);
+}
+
+.portal-hero--log h1 {
+    font-size: 2.4rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.5rem !important;
+    color: #ffffff !important;
+}
+
+.portal-hero--log p {
+    margin: 0 !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    font-size: 1rem !important;
+}
+
+.portal-nav-wrapper {
+    background: linear-gradient(155deg, var(--primary-darker) 0%, var(--primary-dark) 45%, var(--primary) 100%);
+    padding: 0 0 2.5rem 0;
+    box-shadow: 0 18px 40px rgba(0, 46, 102, 0.35);
+}
+
+.portal-nav {
+    display: flex !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-radius: 18px !important;
+    padding: 0.55rem !important;
+    backdrop-filter: blur(24px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    overflow-x: auto !important;
+    max-width: fit-content;
+    margin: 0 auto;
+}
+
+.portal-nav a {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.45rem !important;
+    padding: 0.65rem 1.15rem !important;
+    border-radius: 12px !important;
+    font-size: 0.95rem !important;
+    font-weight: 500 !important;
+    color: rgba(255, 255, 255, 0.88) !important;
+    text-decoration: none !important;
+    border: 1px solid transparent !important;
+    position: relative;
+    transition: all 0.2s ease !important;
+}
+
+.portal-nav a::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.portal-nav a:hover::before {
+    opacity: 1;
+}
+
+.portal-nav a:hover {
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    transform: translateY(-1px);
+}
+
+.portal-nav a.active {
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: var(--primary) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 10px 24px rgba(0, 51, 153, 0.22) !important;
+}
+
+.portal-nav a.active::before {
+    display: none;
+}
+
+.log-section {
+    position: relative;
+    margin-top: -2rem;
+    padding: 0 0 4rem;
+}
+
+.log-card {
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.log-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at -20% -10%, rgba(0, 102, 255, 0.08), transparent 45%),
+        radial-gradient(circle at 120% 20%, rgba(0, 82, 204, 0.08), transparent 55%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.log-card__inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+}
+
+.log-card__header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1.5rem;
+}
+
+.log-card__header h2 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.log-card__header p {
+    margin: 0.35rem 0 0;
+    color: var(--text-secondary);
+    max-width: 36rem;
+}
+
+.log-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.log-actions button {
+    border: none;
+    border-radius: 999px;
+    padding: 0.55rem 1.4rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.log-actions button.primary {
+    background: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 8px 20px rgba(0, 102, 255, 0.25);
+}
+
+.log-actions button.secondary {
+    background: rgba(0, 102, 255, 0.1);
+    color: var(--primary);
+    border: 1px solid rgba(0, 102, 255, 0.2);
+}
+
+.log-actions button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(0, 102, 255, 0.25);
+}
+
+.log-filters {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.25rem;
+    align-items: end;
+}
+
+.log-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.log-filter label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.log-filter select,
+.log-filter input {
+    height: 2.9rem;
+    border-radius: 12px;
+    border: 1px solid var(--gray-200);
+    padding: 0 1rem;
+    font-size: 0.95rem;
+    background: #fff;
+    color: var(--text-primary);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.log-filter select:focus,
+.log-filter input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.12);
+}
+
+.log-summary {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.log-state {
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+    border: 1px dashed var(--gray-200);
+    background: rgba(0, 102, 255, 0.04);
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.log-state--error {
+    background: rgba(255, 61, 0, 0.06);
+    border-color: rgba(255, 61, 0, 0.25);
+    color: var(--accent-danger);
+}
+
+.log-state--empty {
+    background: rgba(0, 102, 255, 0.04);
+    border-style: dashed;
+}
+
+.log-state button {
+    margin-top: 0.75rem;
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    padding: 0.5rem 1.4rem;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.log-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.log-entry {
+    position: relative;
+    padding: 1.5rem 1.5rem 1.75rem;
+    border-radius: 14px;
+    border: 1px solid rgba(0, 102, 255, 0.08);
+    background: #ffffff;
+    box-shadow: var(--shadow-md);
+}
+
+.log-entry::before {
+    content: '';
+    position: absolute;
+    left: 1rem;
+    top: 1.5rem;
+    bottom: 1.5rem;
+    width: 3px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(0, 102, 255, 0.35), rgba(0, 102, 255, 0.1));
+}
+
+.log-entry__content {
+    margin-left: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+}
+
+.log-entry__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    align-items: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.log-entry__actor-name {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.log-entry__actor-username {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.log-entry__actor-separator {
+    margin: 0 0.35rem;
+    color: rgba(15, 23, 42, 0.35);
+}
+
+.log-entry__actor-unknown {
+    color: var(--text-muted);
+}
+
+.log-entry__title {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.log-entry__doctype {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.log-entry__docname {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.log-entry__action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.log-entry__action::before {
+    content: '⚡';
+    font-size: 1rem;
+}
+
+.log-entry__section {
+    border-radius: 12px;
+    border: 1px solid rgba(0, 102, 255, 0.1);
+    background: rgba(0, 102, 255, 0.03);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.log-entry__section-title {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.log-entry__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.log-entry__list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.25rem;
+    align-items: baseline;
+    font-size: 0.92rem;
+}
+
+.log-entry__field {
+    min-width: 9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.log-entry__value {
+    flex: 1;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    color: var(--text-primary);
+}
+
+.log-entry__value span {
+    display: inline-flex;
+    align-items: center;
+}
+
+.log-entry__value .log-entry__arrow {
+    color: var(--text-muted);
+}
+
+.log-entry__comment {
+    border-left: 3px solid var(--primary);
+    padding-left: 1rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    background: rgba(0, 102, 255, 0.05);
+    border-radius: 6px;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+}
+
+.log-entry__footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.log-entry__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 1rem;
+    background: rgba(0, 102, 255, 0.1);
+    border: 1px solid rgba(0, 102, 255, 0.25);
+    border-radius: 999px;
+    font-size: 0.9rem;
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.log-entry__link:hover {
+    background: var(--primary);
+    color: #ffffff;
+}
+
+@media (max-width: 992px) {
+    .log-filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .log-entry__list li {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .log-entry__field {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .portal-hero__brand {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .log-section {
+        margin-top: -1.2rem;
+    }
+
+    .log-card {
+        padding: 1.75rem;
+    }
+
+    .log-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .log-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+</style>
+{% endblock %}
+
+{% block page_content %}
+<header class="portal-hero--log">
+    <div class="container">
+        <div class="portal-hero__brand">
+            <div class="portal-hero__icon">🕒</div>
+            <div>
+                <h1>Log History Portal</h1>
+                <p>Telusuri seluruh aktivitas dokumen untuk memastikan setiap perubahan tercatat rapi dan transparan.</p>
+            </div>
+        </div>
+    </div>
+</header>
+
+{% set active_page = 'log-history' %}
+{% include "garage/templates/includes/portal_nav.html" %}
+
+<section class="log-section">
+    <div class="container">
+        <div class="log-card">
+            <div class="log-card__inner">
+                <div class="log-card__header">
+                    <div>
+                        <h2>Riwayat Aktivitas Dokumen</h2>
+                        <p>Pantau siapa yang melakukan perubahan, kapan terjadi, dan detail perubahannya langsung dari audit trail Frappe.</p>
+                    </div>
+                    <div class="log-actions">
+                        <button type="button" class="secondary" id="log-reset">Reset Filter</button>
+                        <button type="button" class="primary" id="log-refresh">Segarkan</button>
+                    </div>
+                </div>
+
+                <form id="log-filters" class="log-filters" autocomplete="off">
+                    <div class="log-filter">
+                        <label for="filter-doctype">DocType</label>
+                        <select id="filter-doctype">
+                            <option value="">Semua Dokumen</option>
+                        </select>
+                    </div>
+                    <div class="log-filter">
+                        <label for="filter-docname">Nama Dokumen</label>
+                        <input type="text" id="filter-docname" placeholder="Contoh: GAR-SO-0001" />
+                    </div>
+                    <div class="log-filter">
+                        <label for="filter-limit">Jumlah Data</label>
+                        <select id="filter-limit">
+                            <option value="20">20</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                            <option value="200">200</option>
+                        </select>
+                    </div>
+                    <div class="log-actions">
+                        <button type="submit" class="primary">Terapkan</button>
+                    </div>
+                </form>
+
+                <div id="log-summary" class="log-summary">Menampilkan 0 log.</div>
+
+                <div id="log-loading" class="log-state" hidden>Memuat data log...</div>
+                <div id="log-error" class="log-state log-state--error" hidden>
+                    <div id="log-error-text">Gagal memuat data log. Silakan coba lagi.</div>
+                    <button type="button" id="log-retry">Coba lagi</button>
+                </div>
+                <div id="log-empty" class="log-state log-state--empty" hidden>
+                    Belum ada aktivitas yang sesuai dengan filter.
+                </div>
+
+                <div id="log-list" class="log-timeline"></div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block script %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const API_ENDPOINT = '/api/method/garage.api.portal.get_audit_log_entries';
+
+        const state = {
+            entries: [],
+            doctypes: [],
+            filters: {
+                doctype: '',
+                docname: '',
+                limit: 50,
+            },
+        };
+
+        const ui = {
+            list: document.getElementById('log-list'),
+            loading: document.getElementById('log-loading'),
+            error: document.getElementById('log-error'),
+            errorText: document.getElementById('log-error-text'),
+            retry: document.getElementById('log-retry'),
+            empty: document.getElementById('log-empty'),
+            summary: document.getElementById('log-summary'),
+            refresh: document.getElementById('log-refresh'),
+            reset: document.getElementById('log-reset'),
+            filters: {
+                form: document.getElementById('log-filters'),
+                doctype: document.getElementById('filter-doctype'),
+                docname: document.getElementById('filter-docname'),
+                limit: document.getElementById('filter-limit'),
+            },
+        };
+
+        const IGNORED_ROW_KEYS = new Set([
+            'name',
+            'parent',
+            'parentfield',
+            'parenttype',
+            'owner',
+            'creation',
+            'modified',
+            'modified_by',
+            'idx',
+            'docstatus',
+        ]);
+
+        function setLoading(isLoading) {
+            if (ui.loading) {
+                ui.loading.hidden = !isLoading;
+            }
+            if (ui.error) {
+                ui.error.hidden = true;
+            }
+            if (ui.empty) {
+                ui.empty.hidden = true;
+            }
+            if (ui.list) {
+                ui.list.hidden = isLoading;
+            }
+        }
+
+        function showError(message) {
+            if (ui.errorText && message) {
+                ui.errorText.textContent = message;
+            }
+            if (ui.error) {
+                ui.error.hidden = false;
+            }
+            if (ui.list) {
+                ui.list.hidden = true;
+            }
+            if (ui.empty) {
+                ui.empty.hidden = true;
+            }
+        }
+
+        function escapeHtml(value) {
+            if (value === null || value === undefined) {
+                return '';
+            }
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function valueToString(value) {
+            if (value === null || value === undefined || value === '') {
+                return '—';
+            }
+            if (Array.isArray(value)) {
+                return value
+                    .slice(0, 3)
+                    .map((item) => valueToString(item))
+                    .join(', ');
+            }
+            if (typeof value === 'object') {
+                return summariseRow(value);
+            }
+            return String(value);
+        }
+
+        function summariseRow(row) {
+            if (!row || typeof row !== 'object') {
+                return valueToString(row);
+            }
+            const entries = Object.entries(row).filter(([key, val]) => {
+                if (IGNORED_ROW_KEYS.has(key)) {
+                    return false;
+                }
+                if (val === null || val === undefined || val === '') {
+                    return false;
+                }
+                return true;
+            });
+
+            if (!entries.length) {
+                if (Object.prototype.hasOwnProperty.call(row, 'name') && row.name) {
+                    return String(row.name);
+                }
+                try {
+                    return JSON.stringify(row);
+                } catch (error) {
+                    return String(row);
+                }
+            }
+
+            const preview = entries.slice(0, 3).map(([key, val]) => `${key}: ${valueToString(val)}`);
+            if (entries.length > 3) {
+                preview.push('…');
+            }
+            return preview.join(', ');
+        }
+
+        function formatTimestamp(value) {
+            if (!value) {
+                return '—';
+            }
+
+            if (window.frappe && frappe.datetime && frappe.datetime.moment) {
+                const momentValue = frappe.datetime.moment(value);
+                if (momentValue && momentValue.isValid && momentValue.isValid()) {
+                    return momentValue.format('DD MMM YYYY, HH:mm');
+                }
+            }
+
+            const parsed = new Date(value);
+            if (!Number.isNaN(parsed.getTime())) {
+                return parsed.toLocaleString('id-ID', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                });
+            }
+            return String(value);
+        }
+
+        function renderActor(entry) {
+            const name = (entry.user_name || '').trim();
+            const username = (entry.user_id || '').trim();
+
+            const sections = [];
+            if (name) {
+                sections.push(`<span class="log-entry__actor-name">${escapeHtml(name)}</span>`);
+            }
+
+            if (username && username !== name) {
+                sections.push(`<span class="log-entry__actor-username">${escapeHtml(username)}</span>`);
+            }
+
+            if (!sections.length) {
+                return '<span class="log-entry__actor-unknown">Tidak diketahui</span>';
+            }
+
+            return sections.join('<span class="log-entry__actor-separator">•</span>');
+        }
+
+        function renderFieldChanges(changes) {
+            if (!changes || !changes.length) {
+                return '';
+            }
+
+            const items = changes
+                .map((change) => {
+                    const field = escapeHtml(change.field || 'Field');
+                    const before = escapeHtml(valueToString(change.before));
+                    const after = escapeHtml(valueToString(change.after));
+                    return `<li><span class="log-entry__field">${field}</span><span class="log-entry__value"><span>${before}</span><span class="log-entry__arrow">→</span><span>${after}</span></span></li>`;
+                })
+                .join('');
+
+            return `<div class="log-entry__section"><div class="log-entry__section-title">Perubahan Field</div><ul class="log-entry__list">${items}</ul></div>`;
+        }
+
+        function renderRowChanges(changes) {
+            if (!changes || !changes.length) {
+                return '';
+            }
+
+            const items = changes
+                .map((change) => {
+                    const label = `${change.table || 'Child Table'} › ${change.row || '-'}`;
+                    const before = escapeHtml(valueToString(change.before));
+                    const after = escapeHtml(valueToString(change.after));
+                    return `<li><span class="log-entry__field">${escapeHtml(label)}</span><span class="log-entry__value"><span>${before}</span><span class="log-entry__arrow">→</span><span>${after}</span></span></li>`;
+                })
+                .join('');
+
+            return `<div class="log-entry__section"><div class="log-entry__section-title">Perubahan Tabel Anak</div><ul class="log-entry__list">${items}</ul></div>`;
+        }
+
+        function renderChildChanges(label, rows) {
+            if (!rows || !rows.length) {
+                return '';
+            }
+
+            const items = rows
+                .map((row) => {
+                    const table = escapeHtml(row.table || 'Child Table');
+                    const summary = escapeHtml(summariseRow(row.row));
+                    return `<li><span class="log-entry__field">${table}</span><span class="log-entry__value"><span>${summary}</span></span></li>`;
+                })
+                .join('');
+
+            return `<div class="log-entry__section"><div class="log-entry__section-title">${escapeHtml(label)}</div><ul class="log-entry__list">${items}</ul></div>`;
+        }
+
+        function renderDataSection(data) {
+            if (!data || typeof data !== 'object') {
+                return '';
+            }
+            const entries = Object.entries(data).filter(([, val]) => val !== null && val !== undefined && val !== '');
+            if (!entries.length) {
+                return '';
+            }
+
+            const items = entries
+                .slice(0, 6)
+                .map(([key, val]) => `<li><span class="log-entry__field">${escapeHtml(key)}</span><span class="log-entry__value"><span>${escapeHtml(valueToString(val))}</span></span></li>`)
+                .join('');
+
+            return `<div class="log-entry__section"><div class="log-entry__section-title">Konteks Dokumen</div><ul class="log-entry__list">${items}</ul></div>`;
+        }
+
+        function renderEntry(entry) {
+            const actor = renderActor(entry);
+            const timestamp = escapeHtml(formatTimestamp(entry.timestamp));
+            const doctype = escapeHtml(entry.doctype || 'DocType');
+            const docname = escapeHtml(entry.document || '—');
+            const action = escapeHtml(entry.action || 'Aktivitas Dokumen');
+
+            const sections = [
+                renderFieldChanges(entry.changed_fields),
+                renderRowChanges(entry.row_changes),
+                renderChildChanges('Baris Ditambahkan', entry.added_children),
+                renderChildChanges('Baris Dihapus', entry.removed_children),
+                renderDataSection(entry.data),
+            ].filter(Boolean);
+
+            const comment = entry.comment ? `<div class="log-entry__comment">${escapeHtml(entry.comment)}</div>` : '';
+            const footer = entry.desk_link
+                ? `<div class="log-entry__footer"><a class="log-entry__link" href="${escapeHtml(entry.desk_link)}" target="_blank" rel="noopener">Buka di Desk</a></div>`
+                : '';
+
+            return `
+                <article class="log-entry">
+                    <div class="log-entry__content">
+                        <div class="log-entry__title">
+                            <div class="log-entry__doctype">${doctype}</div>
+                            <div class="log-entry__docname">${docname}</div>
+                        </div>
+                        <div class="log-entry__meta">
+                            <span>Oleh ${actor}</span>
+                            <span>${timestamp}</span>
+                        </div>
+                        <div class="log-entry__action">${action}</div>
+                        ${sections.join('')}
+                        ${comment}
+                        ${footer}
+                    </div>
+                </article>
+            `;
+        }
+
+        function renderEntries(entries) {
+            if (!ui.list) {
+                return;
+            }
+
+            if (!entries.length) {
+                ui.list.innerHTML = '';
+                if (ui.empty) {
+                    ui.empty.hidden = false;
+                }
+                return;
+            }
+
+            if (ui.empty) {
+                ui.empty.hidden = true;
+            }
+
+            const html = entries.map(renderEntry).join('');
+            ui.list.innerHTML = html;
+        }
+
+        function updateSummary(entries) {
+            if (!ui.summary) {
+                return;
+            }
+            const parts = [`Menampilkan ${entries.length} log`];
+            if (state.filters.doctype) {
+                parts.push(`untuk ${state.filters.doctype}`);
+            }
+            if (state.filters.docname) {
+                parts.push(`dengan nama ${state.filters.docname}`);
+            }
+            ui.summary.textContent = `${parts.join(' ')}.`;
+        }
+
+        function setDoctypeOptions(doctypes) {
+            if (!ui.filters.doctype) {
+                return;
+            }
+            const unique = Array.from(new Set((doctypes || []).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'id'));
+            const current = ui.filters.doctype.value;
+            const options = ['<option value="">Semua Dokumen</option>'].concat(
+                unique.map((dt) => `<option value="${escapeHtml(dt)}">${escapeHtml(dt)}</option>`)
+            );
+            ui.filters.doctype.innerHTML = options.join('');
+            if (current && unique.includes(current)) {
+                ui.filters.doctype.value = current;
+            }
+        }
+
+        function extractMessage(payload) {
+            if (!payload) {
+                return {};
+            }
+            if (payload.message && typeof payload.message === 'object') {
+                return payload.message;
+            }
+            if (payload.data && typeof payload.data === 'object') {
+                return payload.data;
+            }
+            return payload;
+        }
+
+        function fetchLogs() {
+            const params = new URLSearchParams();
+            params.set('limit', String(state.filters.limit));
+            if (state.filters.doctype) {
+                params.set('doctype', state.filters.doctype);
+            }
+            if (state.filters.docname) {
+                params.set('docname', state.filters.docname);
+            }
+
+            setLoading(true);
+
+            fetch(`${API_ENDPOINT}?${params.toString()}`, {
+                headers: {
+                    Accept: 'application/json',
+                },
+            })
+                .then((response) => response.json().then((body) => ({ body, ok: response.ok })))
+                .then(({ body, ok }) => {
+                    if (!ok || body.exc || body.exception) {
+                        let serverMessage = '';
+                        if (body && body._server_messages) {
+                            try {
+                                const parsedMessages = JSON.parse(body._server_messages);
+                                if (Array.isArray(parsedMessages) && parsedMessages.length) {
+                                    serverMessage = parsedMessages.join(', ');
+                                }
+                            } catch (parseError) {
+                                serverMessage = body._server_messages;
+                            }
+                        }
+
+                        const message = typeof body.message === 'string' && body.message
+                            ? body.message
+                            : serverMessage || 'Gagal memuat data log.';
+                        throw new Error(message);
+                    }
+
+                    const payload = extractMessage(body);
+                    state.entries = payload.entries || [];
+                    state.doctypes = payload.doctypes || [];
+
+                    if (payload.filters) {
+                        state.filters.doctype = payload.filters.doctype || state.filters.doctype;
+                        state.filters.docname = payload.filters.docname || state.filters.docname;
+                    }
+
+                    setLoading(false);
+                    setDoctypeOptions(state.doctypes);
+                    renderEntries(state.entries);
+                    updateSummary(state.entries);
+                })
+                .catch((error) => {
+                    console.error('Gagal memuat log history:', error);
+                    setLoading(false);
+                    showError(error && error.message ? error.message : 'Gagal memuat data log.');
+                });
+        }
+
+        if (ui.filters.form) {
+            ui.filters.form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                state.filters.doctype = (ui.filters.doctype && ui.filters.doctype.value) || '';
+                state.filters.docname = (ui.filters.docname && ui.filters.docname.value.trim()) || '';
+                const limitValue = ui.filters.limit ? parseInt(ui.filters.limit.value, 10) : state.filters.limit;
+                state.filters.limit = Number.isNaN(limitValue) ? state.filters.limit : limitValue;
+                fetchLogs();
+            });
+        }
+
+        if (ui.filters.docname) {
+            ui.filters.docname.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    if (ui.filters.form) {
+                        ui.filters.form.requestSubmit();
+                    }
+                }
+            });
+        }
+
+        if (ui.filters.limit) {
+            ui.filters.limit.addEventListener('change', function () {
+                const limitValue = parseInt(ui.filters.limit.value, 10);
+                if (!Number.isNaN(limitValue)) {
+                    state.filters.limit = limitValue;
+                    fetchLogs();
+                }
+            });
+        }
+
+        if (ui.refresh) {
+            ui.refresh.addEventListener('click', function () {
+                fetchLogs();
+            });
+        }
+
+        if (ui.reset) {
+            ui.reset.addEventListener('click', function () {
+                state.filters.doctype = '';
+                state.filters.docname = '';
+                state.filters.limit = 50;
+                if (ui.filters.doctype) {
+                    ui.filters.doctype.value = '';
+                }
+                if (ui.filters.docname) {
+                    ui.filters.docname.value = '';
+                }
+                if (ui.filters.limit) {
+                    ui.filters.limit.value = '50';
+                }
+                fetchLogs();
+            });
+        }
+
+        if (ui.retry) {
+            ui.retry.addEventListener('click', function () {
+                fetchLogs();
+            });
+        }
+
+        fetchLogs();
+    });
+</script>
+{% endblock %}
+
+{% block style %}
+<style>@import url('/assets/garage/css/garage_portal.css');</style>
+{% endblock %}

@@ -1,0 +1,311 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Report & Monitoring{% endblock %}
+
+{% set required_roles = [] %}
+{% include "garage/templates/includes/role_guard.html" %}
+
+{% block head_include %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --primary: #0066FF;
+    --primary-dark: #0052CC;
+    --primary-darker: #003D99;
+    --text-primary: #1A2332;
+    --text-secondary: #5E6C84;
+    --text-inverse: #FFFFFF;
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+    --radius-md: 12px;
+    --radius-lg: 14px;
+    --radius-full: 9999px;
+}
+
+body {
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    background: #F5F7FA !important;
+    color: var(--text-primary) !important;
+}
+
+.portal-hero--sub {
+    position: relative;
+    background: linear-gradient(160deg,
+        var(--primary-darker) 0%,
+        var(--primary-dark) 40%,
+        var(--primary) 100%);
+    padding: 24px 0 16px;
+    margin-top: 24px;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+}
+
+.portal-hero--sub::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+    z-index: 0;
+}
+
+.portal-hero--sub .container {
+    position: relative;
+    z-index: 1;
+}
+
+.portal-hero__brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.portal-hero__icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.portal-hero--sub h1 {
+    color: var(--text-inverse);
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+}
+
+.portal-hero--sub p {
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.portal-nav-wrapper {
+    background: linear-gradient(160deg,
+        var(--primary-darker) 0%,
+        var(--primary-dark) 40%,
+        var(--primary) 100%);
+    padding: 0 0 24px 0;
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 0;
+}
+
+.portal-nav {
+    display: flex !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(20px) !important;
+    padding: 8px !important;
+    border-radius: var(--radius-md) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    overflow-x: auto !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    max-width: fit-content;
+    margin: 0 auto;
+}
+
+.portal-nav::-webkit-scrollbar {
+    height: 6px;
+}
+
+.portal-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.portal-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-full);
+}
+
+.portal-nav a {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 12px 20px !important;
+    border-radius: var(--radius-md) !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    text-decoration: none !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    transition: all 0.25s ease !important;
+    white-space: nowrap !important;
+    position: relative;
+}
+
+.portal-nav a::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.portal-nav a:hover::before {
+    opacity: 1;
+}
+
+.portal-nav a:hover {
+    color: var(--text-inverse) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    transform: translateY(-1px);
+}
+
+.portal-nav a.active {
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: var(--primary) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.portal-nav a.active::before {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .portal-hero--sub {
+        margin-top: 16px;
+        padding: 20px 0 12px;
+    }
+
+    .portal-hero__brand {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+
+    .portal-hero__icon {
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+    }
+
+    .portal-hero--sub h1 {
+        font-size: 20px;
+    }
+
+    .portal-hero--sub p {
+        font-size: 14px;
+    }
+
+    .portal-nav-wrapper {
+        padding-bottom: 20px;
+    }
+
+    .portal-nav {
+        justify-content: flex-start !important;
+        margin: 0 16px;
+    }
+
+    .portal-nav a {
+        padding: 10px 16px !important;
+        font-size: 13px !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block page_content %}
+<header class="portal-hero--sub">
+    <div class="container">
+        <div class="portal-hero__brand">
+            <div class="portal-hero__icon">📊</div>
+            <div>
+                <h1>Report & Monitoring</h1>
+                <p>Ringkas status workflow lintas modul Garage untuk keputusan cepat dan data terkini.</p>
+            </div>
+        </div>
+    </div>
+</header>
+
+{% set active_page = 'insight' %}
+{% include "garage/templates/includes/portal_nav.html" %}
+
+<section class="portal-section">
+    <div class="container">
+        <div class="portal-grid two-column">
+            <article class="portal-card">
+                <h2>Ringkasan Status Dokumen</h2>
+                <p class="lead">Pantau jumlah dokumen per status dari seluruh proses bengkel.</p>
+                <div class="metric-grid metric-grid--columns">
+                    <div>
+                        <h3 class="section-subtitle">Service Order</h3>
+                        <ul class="status-list" data-status="service-orders"></ul>
+                    </div>
+                    <div>
+                        <h3 class="section-subtitle">Sparepart</h3>
+                        <ul class="status-list" data-status="spare-orders"></ul>
+                    </div>
+                    <div>
+                        <h3 class="section-subtitle">Procurement</h3>
+                        <ul class="status-list" data-status="procurement-orders"></ul>
+                    </div>
+                    <div>
+                        <h3 class="section-subtitle">Stock Movement</h3>
+                        <ul class="status-list" data-status="stock-movements"></ul>
+                    </div>
+                    <div>
+                        <h3 class="section-subtitle">Sales Invoice</h3>
+                        <ul class="status-list" data-status="sales-invoices"></ul>
+                    </div>
+                    <div>
+                        <h3 class="section-subtitle">Payment Entry</h3>
+                        <ul class="status-list" data-status="payment-entries"></ul>
+                    </div>
+                </div>
+            </article>
+            <article class="portal-card">
+                <h2>Terhubung dengan Desk</h2>
+                <p class="lead">
+                    Semua data di portal ini adalah DocType yang sama dengan versi Desk/Pravenya.
+                    Gunakan tautan berikut ketika Anda ingin melakukan operasi lanjutan langsung di Desk.
+                </p>
+                <div class="table-links table-links--wrap table-links--flush">
+                    <a data-desk-link="Garage Service Order" target="_blank">Service Order Desk</a>
+                    <a data-desk-link="Garage Spare Part Order" target="_blank">Sparepart Desk</a>
+                    <a data-desk-link="Garage Procurement Order" target="_blank">Procurement Desk</a>
+                    <a data-desk-link="Garage Stock Movement" target="_blank">Stock Movement Desk</a>
+                    <a data-desk-link="Garage Sales Invoice" target="_blank">Sales Invoice Desk</a>
+                    <a data-desk-link="Garage Payment Entry" target="_blank">Payment Entry Desk</a>
+                    <a data-desk-link="Garage Receipt Document" target="_blank">Receipt Desk</a>
+                </div>
+                <div class="refresh-meta">
+                    <div>
+                        <span class="refresh-label">Terakhir disinkronkan:</span>
+                        <span class="refresh-value" data-role="refreshed-at">—</span>
+                    </div>
+                    <button class="secondary" type="button" data-action="refresh-portal">Refresh Data</button>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block script %}
+<script>
+    frappe.require("/assets/garage/js/garage_portal.js");
+</script>
+{% endblock %}
+
+{% block style %}
+<style>@import url('/assets/garage/css/garage_portal.css');</style>
+{% endblock %}

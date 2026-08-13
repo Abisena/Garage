@@ -1,0 +1,321 @@
+{
+  "doctype": "DocType",
+  "name": "Customer Registration",
+  "module": "Garage",
+  "autoname": "format:CR-{#####}",
+  "allow_import": 1,
+  "track_changes": 1,
+  "title_field": "license_plate",
+  "description": "Quick customer and vehicle registration for service intake",
+  "modified": "2026-07-18 01:20:00.000000",
+
+  "field_order": [
+    "info_section",
+    "branch",
+    "intake_type",
+    "column_break_info",
+    "registration_date",
+
+    "vehicle_section",
+    "license_plate",
+    "brand",
+    "vehicle_type",
+    "chassiss_number",
+    "column_break_v1",
+    "model",
+    "mileage",
+    "vehicle_year",
+    "engine_number",
+
+    "customer_section",
+    "customer_name",
+    "phone",
+    "column_break_c1",
+    "email",
+    "is_vip",
+
+    "service_section",
+    "service_order_type",
+    "priority",
+    "column_break_s1",
+    "estimated_duration",
+    "service_booking_date",
+    "preferred_date",
+
+    "complaint_section",
+    "complaint",
+
+    "system_section",
+    "vehicle",
+    "customer",
+    "column_break_sys",
+    "service_order"
+  ],
+
+  "fields": [
+    {
+      "fieldname": "info_section",
+      "fieldtype": "Section Break",
+      "label": "Registration Info"
+    },
+    {
+      "fieldname": "branch",
+      "fieldtype": "Link",
+      "label": "Branch",
+      "options": "Garage Branch",
+      "in_list_view": 1,
+      "reqd": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "intake_type",
+      "fieldtype": "Select",
+      "label": "Visit Type",
+      "options": "Walk-In\nBooking",
+      "default": "Walk-In",
+      "in_list_view": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "column_break_info",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "registration_date",
+      "fieldtype": "Datetime",
+      "label": "Registration Time",
+      "default": "now",
+      "read_only": 1,
+      "in_list_view": 1
+    },
+
+    {
+      "fieldname": "customer_section",
+      "fieldtype": "Section Break",
+      "label": "Customer Details"
+    },
+    {
+      "fieldname": "customer_name",
+      "fieldtype": "Data",
+      "label": "Full Name",
+      "in_list_view": 1,
+      "in_global_search": 1,
+      "bold": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "phone",
+      "fieldtype": "Data",
+      "label": "Phone Number",
+      "options": "Phone",
+      "in_list_view": 1,
+      "reqd": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "column_break_c1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "email",
+      "fieldtype": "Data",
+      "label": "Email",
+      "options": "Email"
+    },
+    {
+      "fieldname": "is_vip",
+      "fieldtype": "Check",
+      "label": "VIP Customer"
+    },
+
+    {
+      "fieldname": "vehicle_section",
+      "fieldtype": "Section Break",
+      "label": "Vehicle Information"
+    },
+    {
+      "fieldname": "license_plate",
+      "fieldtype": "Data",
+      "label": "License Plate Number",
+      "in_list_view": 1,
+      "in_global_search": 1,
+      "bold": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "brand",
+      "fieldtype": "Link",
+      "label": "Brand",
+      "options": "Garage Brand",
+      "in_standard_filter": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "column_break_v1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "model",
+      "fieldtype": "Link",
+      "label": "Model",
+      "options": "Garage Model",
+      "reqd": 1
+    },
+    {
+      "fieldname": "mileage",
+      "fieldtype": "Int",
+      "label": "Current Mileage (KM)",
+      "bold": 1
+    },
+    {
+      "fieldname": "vehicle_year",
+      "fieldtype": "Int",
+      "label": "Manufacturing Year"
+    },
+    {
+      "fieldname": "engine_number",
+      "fieldtype": "Data",
+      "label": "Engine Number"
+    },
+
+    {
+      "fieldname": "vehicle_type",
+      "fieldtype": "Select",
+      "label": "Vehicle Type",
+      "options": "\nSedan\nHatchback\nSUV\nMPV\nTruck\nVan\nCoupe\nWagon"
+    },
+    {
+      "fieldname": "chassiss_number",
+      "fieldtype": "Data",
+      "label": "Chassis Number"
+    },
+
+    {
+      "fieldname": "service_section",
+      "fieldtype": "Section Break",
+      "label": "Service Request"
+    },
+    {
+      "fieldname": "service_order_type",
+      "fieldtype": "Link",
+      "label": "Service Type",
+      "options": "Garage Service Type",
+      "in_list_view": 1,
+      "bold": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "priority",
+      "fieldtype": "Select",
+      "label": "Priority Level",
+      "options": "Normal\nHigh\nUrgent\nCritical",
+      "default": "Normal",
+      "in_list_view": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "column_break_s1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "estimated_duration",
+      "fieldtype": "Select",
+      "label": "Estimated Duration",
+      "options": "\n30 Minutes\n1 Hour\n2 Hours\n3 Hours\n4+ Hours\nFull Day"
+    },
+    {
+      "fieldname": "service_booking_date",
+      "fieldtype": "Datetime",
+      "label": "Booking Date & Time",
+      "depends_on": "eval:doc.intake_type=='Booking'",
+      "mandatory_depends_on": "eval:doc.intake_type=='Booking'"
+    },
+    {
+      "fieldname": "preferred_date",
+      "fieldtype": "Date",
+      "label": "Preferred Service Date",
+      "default": "Today"
+    },
+
+    {
+      "fieldname": "complaint_section",
+      "fieldtype": "Section Break",
+      "label": "Customer Complaint / Service Notes"
+    },
+    {
+      "fieldname": "complaint",
+      "fieldtype": "Text Editor",
+      "label": ""
+    },
+
+    {
+      "fieldname": "system_section",
+      "fieldtype": "Section Break",
+      "label": "System Links",
+      "depends_on": "eval:doc.vehicle || doc.customer || doc.service_order",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "vehicle",
+      "fieldtype": "Link",
+      "label": "Vehicle Master",
+      "options": "Garage Vehicle",
+      "read_only": 1
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Customer Master",
+      "options": "Customer",
+      "read_only": 1
+    },
+    {
+      "fieldname": "column_break_sys",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "service_order",
+      "fieldtype": "Link",
+      "label": "Service Order",
+      "options": "Garage Service Order",
+      "read_only": 1
+    }
+  ],
+
+  "permissions": [
+    {
+      "role": "System Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1,
+      "export": 1
+    },
+    {
+      "role": "Garage User",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1
+    },
+    {
+      "role": "Garage Receptionist",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "print": 1
+    }
+  ],
+
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_seen": 1,
+  "show_name_in_global_search": 1,
+  "quick_entry": 0,
+  "is_submittable": 0
+}

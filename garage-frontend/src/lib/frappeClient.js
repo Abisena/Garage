@@ -1,0 +1,743 @@
+const FRAPPE_URL = import.meta.env.VITE_FRAPPE_URL || 'http://localhost:3000';
+
+const CSRF_HEADER = 'X-Frappe-CSRF-Token';
+const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
+
+const formatFrappeDateTime = (value) => {
+  if (!value) return value;
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
+function getCookie(name) {
+  if (typeof document === 'undefined') return null;
+
+  return document.cookie
+    ?.split(';')
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`))
+    ?.split('=')[1];
+}
+
+class FrappeClient {
+  constructor() {
+    // ✅ Remove trailing slash to prevent double slashes
+    this.baseURL = FRAPPE_URL.replace(/\/$/, '');
+  }
+
+  buildListURL(doctype, fields = [], filters = null, limit = 200) {
+    const params = new URLSearchParams();
+
+    if (fields.length > 0) {
+      params.append('fields', JSON.stringify(fields));
+    }
+
+    if (filters) {
+      params.append('filters', JSON.stringify(filters));
+    }
+
+    if (limit) {
+      params.append('limit_page_length', String(limit));
+    }
+
+    return `/api/resource/${encodeURIComponent(doctype)}?${params.toString()}`;
+  }
+
+  async request(endpoint, options = {}) {
+    // ✅ Ensure endpoint starts with slash
+    if (!endpoint.startsWith('/')) {
+      endpoint = '/' + endpoint;
+    }
+
+    // ✅ Build URL - no double slashes because baseURL has no trailing slash
+    const url = `${this.baseURL}${endpoint}`;
+    const method = (options.method || 'GET').toUpperCase();
+
+    const csrfToken = getCookie('csrf_token');
+    const csrfHeaders =
+      !SAFE_METHODS.includes(method) && csrfToken
+        ? { [CSRF_HEADER]: decodeURIComponent(csrfToken) }
+        : {};
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...csrfHeaders,
+          ...options.headers,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Frappe API Error:', error);
+      throw error;
+    }
+  }
+
+  async login(username, password) {
+    try {
+      const response = await this.request('/api/method/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          usr: username,
+          pwd: password,
+        }),
+      });
+
+      console.log('Login response:', response);
+      
+      if (response.message === 'Logged In') {
+        const userInfo = await this.getCurrentUser();
+        
+        // ✅ Add null check
+        if (!userInfo) {
+          return {
+            success: false,
+            error: 'Failed to retrieve user information',
+          };
+        }
+        
+        return {
+          success: true,
+          user: userInfo,
+        };
+      }
+
+      return {
+        success: false,
+        error: 'Login failed',
+      };
+    } catch (error) {
+      console.error('Login error:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  async getCurrentUser() {
+    try {
+      const response = await this.request('/api/method/frappe.auth.get_logged_user');
+      return {
+        username: response.message,
+        full_name: response.full_name || response.message,
+      };
+    } catch (error) {
+      console.error('Failed to get current user:', error);
+      return null;
+    }
+  }
+
+  async getUserRoles() {
+    try {
+      console.log('🔄 Fetching user roles from API...');
+      const response = await this.request('/api/method/garage.api.auth.get_user_roles');
+      console.log('📦 Raw API response:', response);
+      
+      // ✅ Frappe wraps response in "message"
+      const data = response.message || response;
+      console.log('📋 Extracted data:', data);
+      
+      const roles = Array.isArray(data.roles) ? data.roles : [];
+      const user = data.user || null;
+      
+      console.log('✅ Final extracted roles:', roles);
+      console.log('✅ Final extracted user:', user);
+      
+      return { user, roles };
+    } catch (error) {
+      console.error('❌ Failed to fetch user roles:', error);
+      return { user: null, roles: [] };
+    }
+  }
+
+  async logout() {
+    try {
+      await this.request('/api/method/logout', {
+        method: 'POST',
+      });
+      return true;
+    } catch (error) {
+      console.error('Logout error:', error);
+      return false;
+    }
+  }
+
+  async listGarageCustomers() {
+    try {
+      const response = await this.request(
+        '/api/resource/Customer?fields=["name","customer_name","customer_type"]&limit_page_length=20'
+      );
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to fetch customers:', error);
+      throw error;
+    }
+  }
+
+  async registerCustomerVehicle(payload) {
+    try {
+      console.log('Calling register_customer_vehicle with payload:', payload);
+      
+      const response = await this.request(
+        '/api/method/garage.api.portal.register_customer_vehicle',
+        {
+          method: 'POST',
+          body: JSON.stringify({ payload }),
+        },
+      );
+
+      console.log('API Response:', response);
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to register customer/vehicle:', error);
+      throw error;
+    }
+  }
+
+  async createCustomerRegistration(payload) {
+    try {
+      console.log('Calling create_customer_registration with payload:', payload);
+
+      const response = await this.request(
+        '/api/method/garage.api.portal.create_customer_registration',
+        {
+          method: 'POST',
+          body: JSON.stringify({ payload }),
+        },
+      );
+
+      console.log('Customer Registration API Response:', response);
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to create customer registration:', error);
+      throw error;
+    }
+  }
+
+  async listCustomerRegistrations({ branch = '', startDate, endDate, limit = 200 } = {}) {
+    try {
+      const fields = [
+        'name',
+        'branch',
+        'creation',
+        'license_plate',
+        'vin',
+        'engine_number',
+        'brand',
+        'model',
+        'vehicle_type',
+        'vehicle_year',
+        'assembly_type',
+        'fuel_type',
+        'mileage',
+        'customer_name',
+        'customer',
+        'phone',
+        'email',
+        'service_order_type',
+        'service_bundle',
+        'service_bundle_name',
+        'intake_type',
+        'priority',
+        'notes',
+        'service_notes',
+        'service_order',
+        'vehicle',
+      ];
+
+      const filters = [];
+
+      if (branch && branch !== 'all') {
+        filters.push(['branch', '=', branch]);
+      }
+
+      if (startDate) {
+        filters.push(['creation', '>=', formatFrappeDateTime(startDate)]);
+      }
+
+      if (endDate) {
+        filters.push(['creation', '<=', formatFrappeDateTime(endDate)]);
+      }
+
+      const url = this.buildListURL('Customer Registration', fields, filters, limit);
+      const response = await this.request(url);
+
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to list customer registrations:', error);
+      return [];
+    }
+  }
+
+  async listServiceOrdersByNames(orderNames = [], fields = null) {
+    const names = Array.isArray(orderNames)
+      ? orderNames.filter((name) => typeof name === 'string' && name.trim())
+      : [];
+
+    if (names.length === 0) {
+      return [];
+    }
+
+    const serviceOrderFields = Array.isArray(fields) && fields.length > 0
+      ? fields
+      : ['name', 'status', 'inspection_record', 'inspection_summary'];
+
+    const filters = [['name', 'in', names]];
+
+    try {
+      const url = this.buildListURL('Garage Service Order', serviceOrderFields, filters, names.length);
+      const response = await this.request(url);
+
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to list service orders by names:', error);
+      return [];
+    }
+  }
+
+  async listServiceOrders({ branch, status } = {}) {
+    try {
+      const filters = {};
+      if (branch && branch !== 'all') {
+        filters.branch = branch;
+      }
+      if (status) {
+        filters.status = status;
+      }
+
+      const response = await this.request('/api/method/garage.api.portal.list_service_orders', {
+        method: 'POST',
+        body: JSON.stringify({ filters }),
+      });
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to list service orders:', error);
+      throw error;
+    }
+  }
+
+  async listHandoverOrders({ branch } = {}) {
+    try {
+      const searchParams = new URLSearchParams();
+      if (branch && branch !== 'all') {
+        searchParams.append('branch', branch);
+      }
+
+      const query = searchParams.toString();
+      const endpoint = query
+        ? `/api/method/garage.api.portal.list_handover_orders?${query}`
+        : '/api/method/garage.api.portal.list_handover_orders';
+
+      const response = await this.request(endpoint);
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to list handover orders:', error);
+      throw error;
+    }
+  }
+
+  async completeServiceOrder(orderId, completionData = {}) {
+    if (!orderId) {
+      throw new Error('Service Order ID is required');
+    }
+
+    try {
+      const response = await this.request('/api/method/garage.api.portal.complete_service_order', {
+        method: 'POST',
+        body: JSON.stringify({
+          order_id: orderId,
+          completion_data: completionData,
+        }),
+      });
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to complete service order:', error);
+      throw error;
+    }
+  }
+
+  async updateServiceOrder(name, updates = {}) {
+    if (!name) {
+      throw new Error('Service Order name is required');
+    }
+
+    try {
+      const response = await this.request('/api/method/garage.api.portal.update_service_order', {
+        method: 'POST',
+        body: JSON.stringify({ name, updates }),
+      });
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to update service order:', error);
+      throw error;
+    }
+  }
+
+  async listGarageBrands(limit = 200) {
+    try {
+      const fields = ['name', 'brand_name'];
+      const url = this.buildListURL('Garage Brand', fields, null, limit);
+      const response = await this.request(url);
+
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to list garage brands:', error);
+      return [];
+    }
+  }
+
+  async listGarageModels({ brand = '', limit = 500 } = {}) {
+    try {
+      const fields = ['name', 'brand', 'model_name'];
+      const filters = brand ? [['brand', '=', brand]] : null;
+      const url = this.buildListURL('Garage Model', fields, filters, limit);
+      const response = await this.request(url);
+
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to list garage models:', error);
+      return [];
+    }
+  }
+
+  async getPortalBootstrap(params = {}) {
+    try {
+      const searchParams = new URLSearchParams();
+
+      Object.entries(params).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+        if (typeof value === 'string' && value.trim() === '') return;
+        searchParams.append(key, value);
+      });
+
+      const query = searchParams.toString();
+      const endpoint = query
+        ? `/api/method/garage.api.portal.portal_bootstrap?${query}`
+        : '/api/method/garage.api.portal.portal_bootstrap';
+
+      const response = await this.request(endpoint);
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to fetch portal bootstrap:', error);
+      throw error;
+    }
+  }
+
+  async getServiceOrderDetails(orderId) {
+    if (!orderId) {
+      return null;
+    }
+
+    try {
+      const response = await this.request(
+        `/api/method/garage.api.portal.get_service_order_details?order_id=${encodeURIComponent(orderId)}`
+      );
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to fetch service order details:', error);
+      throw error;
+    }
+  }
+
+  async lookupVehicleByPlate(licensePlate) {
+    if (!licensePlate) {
+      return {};
+    }
+
+    try {
+      const params = new URLSearchParams({
+        license_plate: licensePlate,
+      });
+
+      const response = await this.request(
+        `/api/method/garage.api.portal.lookup_vehicle_by_plate?${params.toString()}`
+      );
+
+      return response.message || response || {};
+    } catch (error) {
+      console.error('Failed to lookup vehicle by plate:', error);
+      throw error;
+    }
+  }
+
+  async cancelServiceOrder(orderId, reason = '') {
+    if (!orderId) {
+      throw new Error('Service Order ID is required to cancel an order');
+    }
+
+    try {
+      const response = await this.request(
+        '/api/method/garage.api.portal.cancel_service_order',
+        {
+          method: 'POST',
+          body: JSON.stringify({ order_id: orderId, reason })
+        }
+      );
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to cancel service order:', error);
+      throw error;
+    }
+  }
+
+  async updateServiceOrderInspection(orderId, inspectionData = {}) {
+    if (!orderId) {
+      throw new Error('Service Order ID is required to save inspection data');
+    }
+
+    try {
+      const response = await this.request(
+        '/api/method/garage.api.portal.update_service_order_inspection',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            order_id: orderId,
+            inspection_data: inspectionData,
+          }),
+        },
+      );
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to update inspection on Frappe:', error);
+      throw error;
+    }
+  }
+
+  async listSpareParts(filters = {}, branch) {
+    try {
+      const payload = {};
+
+      if (filters && Object.keys(filters).length > 0) {
+        payload.filters = filters;
+      }
+
+      if (branch) {
+        payload.branch = branch;
+      }
+
+      const response = await this.request('/api/method/garage.api.portal.list_spare_parts', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      const data = response.message || response || {};
+      const parts = Array.isArray(data?.spare_parts) ? data.spare_parts : [];
+
+      // Normalize response so the UI keeps working even if backend field names change
+      const normalizedParts = parts.map((part) => ({
+        ...part,
+        item_code: part.item_code || part.part_code,
+        item_name: part.item_name || part.part_name,
+        item_group: part.item_group || part.category,
+        standard_rate: part.standard_rate ?? part.unit_price,
+        // Prefer the explicitly provided available quantity, but fall back to other
+        // stock fields returned by the API to keep the UI resilient to schema tweaks.
+        stock_qty: part.available_qty ?? part.stock_qty ?? part.actual_qty ?? 0,
+        total_reserved_qty:
+          part.total_reserved_qty ?? part.ordered_qty ?? part.reserved_qty ?? 0,
+        safety_stock: part.safety_stock ?? part.reorder_level,
+      }));
+
+      return {
+        spare_parts: normalizedParts,
+        total_count: data.total_count ?? normalizedParts.length,
+        low_stock_count: data.low_stock_count,
+      };
+    } catch (error) {
+      console.error('Failed to list spare parts:', error);
+      throw error;
+    }
+  }
+
+  async getSparePartStats() {
+    try {
+      const response = await this.request('/api/method/garage.api.portal.get_spare_part_stats');
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to fetch spare part stats:', error);
+      throw error;
+    }
+  }
+
+  async listServiceTypes() {
+    try {
+      const fields = [
+        'name',
+        'service_type',
+        'service_fee',
+        'bundle_description',
+        'is_active',
+      ];
+
+      const url = this.buildListURL('Garage Service Type', fields, null, 200);
+      const response = await this.request(url);
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to list service types:', error);
+      return [];
+    }
+  }
+
+  async listServiceBundles(limit = 200) {
+    try {
+      const fields = [
+        'name',
+        'bundle_name',
+        'service_fee',
+        'total_spare_amount',
+        'total_material_amount',
+        'grand_total',
+        'description',
+        'is_active',
+      ];
+
+      const filters = [['is_active', '=', 1]];
+      const url = this.buildListURL('Garage Service Bundle', fields, filters, limit);
+      const response = await this.request(url);
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to list service bundles:', error);
+      return [];
+    }
+  }
+
+  async listMechanics(branch = '') {
+    try {
+      const searchParams = new URLSearchParams();
+      const branchFilter = typeof branch === 'string' ? branch.trim() : '';
+
+      if (branchFilter) {
+        searchParams.append('branch', branchFilter);
+      }
+
+      const query = searchParams.toString();
+      const endpoint = query
+        ? `/api/method/garage.api.portal.list_mechanics?${query}`
+        : '/api/method/garage.api.portal.list_mechanics';
+
+      const response = await this.request(endpoint);
+      const roster = response.message || response;
+
+      if (roster && typeof roster === 'object') {
+        const { technicians = [], employees = [], users = [] } = roster;
+        return { technicians, employees, users };
+      }
+    } catch (error) {
+      console.warn('Failed to load mechanic roster via list_mechanics:', error);
+    }
+
+    // Prefer portal bootstrap which is designed for portal users and avoids permission issues
+    try {
+      const bootstrap = await this.getPortalBootstrap({ branch });
+      const roster = bootstrap?.available_technicians;
+
+      if (Array.isArray(roster)) {
+        return {
+          technicians: roster,
+          employees: [],
+          users: [],
+        };
+      }
+    } catch (error) {
+      console.warn('Failed to load mechanic roster from portal bootstrap:', error);
+    }
+
+    return { technicians: [], employees: [], users: [] };
+  }
+
+  async syncWorkOrders(workOrders) {
+    try {
+      const response = await this.request(
+        '/api/method/garage.api.portal.sync_frontend_work_orders',
+        {
+          method: 'POST',
+          body: JSON.stringify({ work_orders: workOrders })
+        }
+      );
+
+      return response.message || response;
+    } catch (error) {
+      console.error('Failed to sync work orders to Frappe:', error);
+      throw error;
+    }
+  }
+
+  async adjustSparePartStock(partCode, qty, action = 'issue') {
+    if (!partCode) {
+      throw new Error('Part code is required to adjust stock');
+    }
+
+    const payload = {
+      part_code: partCode,
+      qty,
+      action,
+    };
+
+    const response = await this.request('/api/method/garage.api.portal.adjust_spare_part_stock', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    return response.message || response;
+  }
+
+  async syncSparePartRequest(payload) {
+    const response = await this.request('/api/method/garage.api.portal.sync_spare_part_request', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    return response.message || response;
+  }
+
+  async listSparePartRequests(branch) {
+    const params = new URLSearchParams();
+    if (branch) {
+      params.append('branch', branch);
+    }
+
+    const response = await this.request(
+      `/api/method/garage.api.portal.list_spare_part_requests${params.toString() ? `?${params.toString()}` : ''}`
+    );
+
+    return response.message || response;
+  }
+}
+
+export const frappeClient = new FrappeClient();
+export default frappeClient;
