@@ -6666,8 +6666,8 @@ body[data-route*="Repair QC"] [data-fieldname="spare_parts_verification"] .frapp
      different natural widths - Customer's visibly narrower than the
      Vehicle dialog it's nested inside. Forcing both to the same fixed
      width makes them match regardless of what's inside. */
-  width: 1040px !important;
-  max-width: 1040px;
+  width: 1120px !important;
+  max-width: 1120px;
 }
 
 /* Beats the general `.frappe-control .control-label { white-space: normal
@@ -6677,12 +6677,15 @@ body[data-route*="Repair QC"] [data-fieldname="spare_parts_verification"] .frapp
 }
 
 /* Beats the app-wide 160px label column
-   (`.frappe-control[data-fieldtype="..."] .form-group .clearfix` above) -
-   210px comfortably fits the longest label in either dialog ("Chassis
-   Number (No. Rangka)", "Identity Number (KTP/SIM)") on one line. */
+   (`.frappe-control[data-fieldtype="..."] .form-group .clearfix` above).
+   210px turned out too tight for "Chassis Number (No. Rangka)" - it ran
+   into the input box instead of wrapping (white-space: nowrap above means
+   an overflow, not a wrap) - 260px clears it and every other label in
+   either dialog with room to spare. Widened alongside the dialog itself
+   (1040px -> 1120px) so the inputs don't shrink to compensate. */
 .modal-dialog.garage-quick-entry-wide .frappe-control .form-group .clearfix {
-  flex: 0 0 210px !important;
-  min-width: 210px !important;
+  flex: 0 0 260px !important;
+  min-width: 260px !important;
 }
 
 /* ── Bank Statement Import Card List View (bca_bank_statement_import_list.js) ── */

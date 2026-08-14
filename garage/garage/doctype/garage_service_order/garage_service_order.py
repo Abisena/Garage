@@ -252,8 +252,8 @@ class GarageServiceOrder(Document):
                         "item_name": f"Jasa {self.service_order_type}",
                         "qty": 1,
                         "rate": service_fee,
-                        "tax": 11,
-                        "amount": flt(service_fee * 1.11),
+                        "tax": 0,
+                        "amount": flt(service_fee),
                         "stock_status": "",
                     },
                 )
@@ -273,8 +273,8 @@ class GarageServiceOrder(Document):
                         "description": item.get("description") or "",
                         "qty": qty,
                         "rate": rate,
-                        "tax": 11,
-                        "amount": flt(qty * rate * 1.11),
+                        "tax": 0,
+                        "amount": flt(qty * rate),
                         "stock_status": "Request Spare Part" if is_stock else "",
                     },
                 )

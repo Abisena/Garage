@@ -145,6 +145,14 @@
     // "Amount" (amount_after_tax) = Subtotal + tax, computed client-side
     // the same way as purchase_order.js's sync_amount_after_tax() - Sales
     // Order Item has no native per-row "amount including tax" field either.
+    //
+    // Mutates the row doc directly + refresh_field() (static-cell re-paint
+    // only, no model event) rather than frappe.model.set_value() -
+    // set_value() unconditionally marks the whole form dirty, which would
+    // flip an already-saved, unedited document to Not Saved the instant
+    // this purely-for-display value's computed result drifts from
+    // whatever was last persisted (see Purchase Order's own
+    // sync_amount_after_tax() for the incident this was reported from).
     function sync_amount_after_tax(frm, cdt, cdn) {
         const item = locals[cdt][cdn];
         const rates = parse_item_tax_rates(item);
@@ -155,7 +163,10 @@
             precision('amount_after_tax', item)
         );
         if (flt(item.amount_after_tax) !== final_amount) {
-            frappe.model.set_value(cdt, cdn, 'amount_after_tax', final_amount);
+            item.amount_after_tax = final_amount;
+            const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+            const gridRow = grid && grid.grid_rows_by_docname && grid.grid_rows_by_docname[cdn];
+            if (gridRow) gridRow.refresh_field('amount_after_tax');
         }
     }
 

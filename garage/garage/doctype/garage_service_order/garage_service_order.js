@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Contributors
+a// Copyright (c) 2024, Contributors
 // For license information, please see license.txt
 
 const REQUEST_STATUS = 'Request Spare Part';
@@ -88,8 +88,8 @@ const applyBundleItems = (frm, items, { replace = false } = {}) => {
     row.qty = item.qty || 1;
     row.rate = flt(item.rate);
     row.discount = 0;
-    row.tax = 11;
-    row.amount = flt(flt(row.qty) * flt(row.rate) * 1.11);
+    row.tax = 0;
+    row.amount = flt(flt(row.qty) * flt(row.rate));
     row.stock_status = item.is_stock_item ? REQUEST_STATUS : '';
     existing.add(item.item_code);
   });
@@ -166,8 +166,8 @@ const addServiceFeeRow = (frm, data) => {
   row.qty = 1;
   row.rate = fee;
   row.discount = 0;
-  row.tax = 11;
-  row.amount = flt(fee * 1.11);
+  row.tax = 0;
+  row.amount = flt(fee);
   row.stock_status = '';
   frm.refresh_field('required_parts');
   renderTableFooter(frm);
@@ -1109,7 +1109,7 @@ const fetchItemDetails = (frm, cdt, cdn, row, isStock) => {
         rate: flt(r.message.standard_rate),
         uom: r.message.stock_uom || 'Unit',
         discount: 0,
-        tax: 11,
+        tax: 0,
         stock_status: isStock ? REQUEST_STATUS : '',
       }).then(() => {
         calcAmount(frm, cdt, cdn);

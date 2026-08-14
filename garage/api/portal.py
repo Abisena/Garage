@@ -162,33 +162,73 @@ def _doctype_has_field(doctype: str, field: str) -> bool:
 PPN_RATE = 0.11
 
 
+def _get_ppn_account(company: str) -> Optional[str]:
+    """Resolve the company's VAT/PPN output tax account, if one is configured."""
+
+    for pattern in ("%VAT%", "%PPN%"):
+        account = frappe.db.get_value(
+            "Account",
+            {"company": company, "account_type": "Tax", "account_name": ["like", pattern]},
+            "name",
+        )
+        if account:
+            return account
+    return None
+
+
 def _apply_ppn_pricing(
     invoice_doc: frappe.Document, base_total: Optional[float] = None
 ) -> float:
+    """Compute the pre-tax (DPP) total and add PPN as a proper tax line -
+    not baked into item.rate - so the invoice's own tax breakdown
+    (total_taxes_and_charges) and GL postings reflect the real PPN instead
+    of hiding it inside the unit price.
+
+    Each item's own `tax_percent` (threaded through from the originating
+    Garage Service Order Part row's `tax` field by the caller - see
+    repair_qc.py's _build_invoice_items()/portal.py's own item-append loop
+    above) drives its share of PPN, not a flat 11% - a row explicitly set
+    to 0% on the Service Order must stay untaxed on the invoice, and the
+    resulting "Total Taxes and Charges" has to match the blended PPN total
+    already shown on the Service Order's own footer. Falls back to the
+    standard PPN_RATE only for items where the caller never set
+    tax_percent at all (e.g. bundle items), not for ones explicitly at 0."""
+
     dpp_total = 0.0
+    total_ppn = 0.0
+    has_ppn_percent_field = _doctype_has_field("Sales Invoice Item", "ppn_percent")
     for item in invoice_doc.items or []:
         base_rate = flt(getattr(item, "rate", None) or 0)
         qty = flt(getattr(item, "qty", None) or 0)
-        dpp_total += base_rate * qty
+        line_total = base_rate * qty
+        dpp_total += line_total
 
-        if base_rate:
-            item.rate = flt(base_rate * (1 + PPN_RATE))
-            if _doctype_has_field("Sales Invoice Item", "ppn_percent"):
-                item.ppn_percent = PPN_RATE * 100
+        tax_percent = getattr(item, "tax_percent", None)
+        tax_percent = flt(tax_percent) if tax_percent is not None else PPN_RATE * 100
+        total_ppn += line_total * tax_percent / 100
 
-        # Keep price_list_rate on the same (tax-inclusive) basis as rate when
-        # a caller has populated it (e.g. to show a Discount % column) - if
-        # only rate is scaled, calculate_taxes_and_totals() later derives a
-        # bogus discount_amount from the mismatched pre-tax/post-tax pair.
-        price_list_rate = flt(getattr(item, "price_list_rate", None) or 0)
-        if price_list_rate:
-            item.price_list_rate = flt(price_list_rate * (1 + PPN_RATE))
+        # Informational - the row-level PPN (%) grid column.
+        if has_ppn_percent_field and base_rate:
+            item.ppn_percent = tax_percent
 
     if base_total is not None:
         dpp_total = flt(base_total)
 
     if _doctype_has_field("Sales Invoice", "total_amount"):
         invoice_doc.total_amount = dpp_total
+
+    account_head = _get_ppn_account(invoice_doc.company)
+    if account_head and total_ppn:
+        invoice_doc.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": account_head,
+                "description": "PPN",
+                "tax_amount": flt(total_ppn, 2),
+                "cost_center": frappe.db.get_value("Company", invoice_doc.company, "cost_center"),
+            },
+        )
 
     return dpp_total
 
@@ -4670,6 +4710,7 @@ def _ensure_billing_placeholders(
                     "rate": rate,
                     "uom": getattr(row, "uom", None) or "Unit",
                     "description": getattr(row, "description", None) or row.item_code,
+                    "tax_percent": flt(getattr(row, "tax", None) or 0),
                 },
             )
 
@@ -4686,6 +4727,7 @@ def _ensure_billing_placeholders(
                         "rate": labor_amount,
                         "uom": "Unit",
                         "description": _("Labor Charges for {0}").format(doc.name),
+                        "tax_percent": 0,
                     },
                 )
 

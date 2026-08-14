@@ -605,11 +605,10 @@ class RepairQC(Document):
 
             # Garage Service Order Part keeps `rate` as the pre-discount unit
             # price and `discount` as a separate percentage. Fold it into the
-            # unit rate here: neither _apply_ppn_pricing() (which bakes PPN
-            # into `rate`) nor calculate_taxes_and_totals() (which just does
-            # amount = rate * qty) apply discount_percentage automatically
-            # once rate/amount are already explicit - without this the line
-            # silently reverts to full price on the invoice.
+            # unit rate here: calculate_taxes_and_totals() just does
+            # amount = rate * qty and does not apply discount_percentage
+            # automatically once rate/amount are already explicit - without
+            # this the line silently reverts to full price on the invoice.
             price_list_rate = rate
             if discount_pct:
                 rate = flt(rate * (1 - discount_pct / 100))
@@ -644,6 +643,7 @@ class RepairQC(Document):
                 "amount": amount,
                 "price_list_rate": price_list_rate,
                 "discount_percentage": discount_pct,
+                "tax_percent": flt(getattr(row, "tax", None) or 0),
             })
 
         # If no items, add default service item

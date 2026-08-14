@@ -121,8 +121,15 @@ DEMO_STOCK_QTY = 50
 # trackers that don't sync each other. Deleting all Stock Entry docs above
 # zeroes this one out too, so it needs its own opening balance restored via
 # a real Stock Entry (not a direct Bin write - that would desync Bin from
-# its own Stock Ledger Entries).
-DEMO_WAREHOUSE = "Stores - I"
+# its own Stock Ledger Entries). Resolved per-company at call time rather
+# than hardcoded - a fixed "Stores - I" (this app's original reference
+# company's own abbreviation) silently matched no Warehouse at all on any
+# site whose company abbreviation isn't literally "I", quietly skipping
+# the opening-stock Stock Entry below with no error.
+def _demo_warehouse(company: str) -> str | None:
+    return frappe.db.get_value(
+        "Warehouse", {"company": company, "warehouse_name": "Stores"}, "name"
+    ) or frappe.db.get_value("Warehouse", {"company": company, "is_group": 0}, "name")
 
 
 def _cancel_reconciled_bank_transactions() -> int:
@@ -198,23 +205,25 @@ def reset_test_transactions(confirm: bool = False) -> dict[str, object]:
         )
     summary["Garage Spare Part (stock reset to %s)" % DEMO_STOCK_QTY] = len(part_codes)
 
+    company = frappe.db.get_single_value("Global Defaults", "default_company") or (
+        frappe.get_all("Company", limit=1, pluck="name") or [None]
+    )[0]
+    demo_warehouse = _demo_warehouse(company) if company else None
+
     item_codes = [
         code for code in part_codes
         if frappe.db.get_value("Item", code, "is_stock_item")
-    ] if frappe.db.exists("Warehouse", DEMO_WAREHOUSE) else []
+    ] if demo_warehouse else []
     if item_codes:
-        company = frappe.db.get_single_value("Global Defaults", "default_company") or (
-            frappe.get_all("Company", limit=1, pluck="name") or [None]
-        )[0]
         se = frappe.new_doc("Stock Entry")
         se.stock_entry_type = "Material Receipt"
         se.company = company
-        se.to_warehouse = DEMO_WAREHOUSE
+        se.to_warehouse = demo_warehouse
         for item_code in item_codes:
             se.append("items", {
                 "item_code": item_code,
                 "qty": DEMO_STOCK_QTY,
-                "t_warehouse": DEMO_WAREHOUSE,
+                "t_warehouse": demo_warehouse,
                 "basic_rate": frappe.db.get_value("Garage Spare Part", item_code, "unit_price") or 0,
             })
         se.insert(ignore_permissions=True)

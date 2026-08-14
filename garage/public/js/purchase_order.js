@@ -339,13 +339,6 @@
         }
     }
 
-    function format_item_tax_rate(value, df, options, doc) {
-        if (!value) return '';
-        const rates = parse_item_tax_rates(doc);
-        if (!rates.length) return '';
-        return rates.map((r) => `${flt(r, 2)}%`).join(' + ');
-    }
-
     // Whether the document's own Purchase Taxes and Charges Template
     // treats its rate as already-included-in-the-price ("Is this Tax
     // included in Basic Rate?", included_in_print_rate on each tax row) -
@@ -456,6 +449,15 @@
         return (frm.doc.taxes || []).reduce((sum, t) => sum + flt(t.rate), 0);
     }
 
+    // Mutates the row doc directly + refresh_field() (static-cell re-paint
+    // only, no model event) rather than frappe.model.set_value() -
+    // set_value() unconditionally marks the whole form dirty. This field
+    // is "purely for display" (see the comment above), recomputed fresh
+    // on every poll tick regardless, but today's PPN Tax Rule fix means
+    // its computed value can now genuinely differ from whatever was
+    // stored on an already-saved document from before that fix existed -
+    // opening such a document then immediately flipped it to Not Saved
+    // with zero actual user edits, reported directly by the user.
     function sync_amount_after_tax(frm, cdt, cdn) {
         const item = locals[cdt][cdn];
         const total_rate = get_effective_tax_rate(frm, item);
@@ -467,14 +469,42 @@
                 precision('amount_after_tax', item)
             );
         if (flt(item.amount_after_tax) !== final_amount) {
-            frappe.model.set_value(cdt, cdn, 'amount_after_tax', final_amount);
+            item.amount_after_tax = final_amount;
+            const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+            const gridRow = grid && grid.grid_rows_by_docname && grid.grid_rows_by_docname[cdn];
+            if (gridRow) gridRow.refresh_field('amount_after_tax');
         }
     }
 
-    function apply_item_tax_rate_formatter() {
-        const map = frappe.meta.docfield_map['Purchase Order Item'];
-        const df = map && map.item_tax_template;
-        if (df) df.formatter = format_item_tax_rate;
+    // "Tax" column - a genuinely populated, read-only Data field (custom
+    // field ppn_display), not a formatter layered on top of the empty
+    // item_tax_template Link. A formatter-only display looked fine at
+    // rest but flickered back to blank the moment the (still technically
+    // editable-until-clicked) Link field's own control took over on click
+    // - reported directly by the user. Writing a real value here has no
+    // such control-vs-formatter mismatch, and doubles as what the
+    // Include/Exclude PPN checkboxes actually drive per row now instead
+    // of a second, contradictory Item Tax Template picker.
+    //
+    // Mutates the row doc directly + refresh_field() (static-cell re-paint
+    // only, no model event) rather than frappe.model.set_value() -
+    // set_value() unconditionally marks the whole form dirty, so on ANY
+    // already-saved document from before this field existed (ppn_display
+    // starts out unset), the very first poll tick after opening it would
+    // "backfill" the field and flip the form to Not Saved with zero actual
+    // user edits - reported directly by the user. This value is fully
+    // re-derivable from rate/tax_category every time regardless, so it
+    // never needs to be a real, persisted edit in the first place.
+    function sync_ppn_display(frm, cdt, cdn) {
+        const item = locals[cdt][cdn];
+        const rate = get_effective_tax_rate(frm, item);
+        const text = rate ? `${flt(rate, 2)}% ${is_tax_inclusive(frm) ? 'Inc' : 'Exc'}` : '';
+        if ((item.ppn_display || '') !== text) {
+            item.ppn_display = text;
+            const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+            const gridRow = grid && grid.grid_rows_by_docname && grid.grid_rows_by_docname[cdn];
+            if (gridRow) gridRow.refresh_field('ppn_display');
+        }
     }
 
     // Purchase Order Item carries BOTH discount_percentage and
@@ -534,7 +564,6 @@
     // grid.reset_grid() call actually needs a real grid to act on.
     function sync_grid_customizations(frm) {
         apply_item_code_formatter();
-        apply_item_tax_rate_formatter();
         const discount_changed = apply_discount_mode(frm);
 
         delete frappe.meta.docfield_copy['Purchase Order Item'];
@@ -612,6 +641,7 @@
             // this loop.
             (latest_po_frm.doc.items || []).forEach((row) => {
                 sync_amount_after_tax(latest_po_frm, row.doctype, row.name);
+                sync_ppn_display(latest_po_frm, row.doctype, row.name);
             });
         }, 400);
     }

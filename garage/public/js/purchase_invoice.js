@@ -164,19 +164,6 @@
         }
     }
 
-    function format_item_tax_rate(value, df, options, doc) {
-        if (!value) return '';
-        const rates = parse_item_tax_rates(doc);
-        if (!rates.length) return '';
-        return rates.map((r) => `${flt(r, 2)}%`).join(' + ');
-    }
-
-    function apply_item_tax_rate_formatter() {
-        const map = frappe.meta.docfield_map['Purchase Invoice Item'];
-        const df = map && map.item_tax_template;
-        if (df) df.formatter = format_item_tax_rate;
-    }
-
     // Whether the document's own Purchase Taxes and Charges Template
     // treats its rate as already-included-in-the-price ("Is this Tax
     // included in Basic Rate?", included_in_print_rate on each tax row) -
@@ -272,6 +259,13 @@
         return (frm.doc.taxes || []).reduce((sum, t) => sum + flt(t.rate), 0);
     }
 
+    // Mutates the row doc directly + refresh_field() (static-cell re-paint
+    // only, no model event) rather than frappe.model.set_value() - see
+    // Purchase Order's own sync_amount_after_tax() for the full reasoning
+    // (set_value() unconditionally marks the form dirty, which flipped an
+    // already-saved, unedited document to Not Saved the moment today's
+    // PPN Tax Rule fix changed what this purely-for-display value
+    // computes to).
     function sync_amount_after_tax(frm, cdt, cdn) {
         const item = locals[cdt][cdn];
         const total_rate = get_effective_tax_rate(frm, item);
@@ -283,7 +277,36 @@
                 precision('amount_after_tax', item)
             );
         if (flt(item.amount_after_tax) !== final_amount) {
-            frappe.model.set_value(cdt, cdn, 'amount_after_tax', final_amount);
+            item.amount_after_tax = final_amount;
+            const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+            const gridRow = grid && grid.grid_rows_by_docname && grid.grid_rows_by_docname[cdn];
+            if (gridRow) gridRow.refresh_field('amount_after_tax');
+        }
+    }
+
+    // "Tax" column - a genuinely populated, read-only Data field (custom
+    // field ppn_display), not a formatter layered on top of the empty
+    // item_tax_template Link (same fix as Purchase Order's own
+    // purchase_order.js - see its own comment for the full reasoning on
+    // why a formatter-only display flickered blank on click).
+    //
+    // Mutates the row doc directly + refresh_field() (static-cell re-paint
+    // only, no model event) rather than frappe.model.set_value() -
+    // set_value() unconditionally marks the whole form dirty, so opening
+    // ANY already-saved document from before this field existed
+    // (ppn_display starts out unset) flipped it to Not Saved on the very
+    // first poll tick with zero actual user edits - reported directly by
+    // the user. This value is fully re-derivable from rate/tax_category
+    // every time, so it never needs to be a real, persisted edit.
+    function sync_ppn_display(frm, cdt, cdn) {
+        const item = locals[cdt][cdn];
+        const rate = get_effective_tax_rate(frm, item);
+        const text = rate ? `${flt(rate, 2)}% ${is_tax_inclusive(frm) ? 'Inc' : 'Exc'}` : '';
+        if ((item.ppn_display || '') !== text) {
+            item.ppn_display = text;
+            const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+            const gridRow = grid && grid.grid_rows_by_docname && grid.grid_rows_by_docname[cdn];
+            if (gridRow) gridRow.refresh_field('ppn_display');
         }
     }
 
@@ -318,7 +341,6 @@
     // visible flash of the raw, un-patched column state.
     function sync_grid_customizations(frm) {
         apply_item_code_formatter();
-        apply_item_tax_rate_formatter();
         const discount_changed = apply_discount_mode(frm);
 
         delete frappe.meta.docfield_copy['Purchase Invoice Item'];
@@ -399,6 +421,7 @@
             // landing after item_code/item_tax_template selection.
             (latest_pi_frm.doc.items || []).forEach((row) => {
                 sync_amount_after_tax(latest_pi_frm, row.doctype, row.name);
+                sync_ppn_display(latest_pi_frm, row.doctype, row.name);
             });
         }, 400);
     }

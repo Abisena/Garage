@@ -219,6 +219,32 @@ if (frappe.ui.form.QuickEntryForm && !frappe.ui.form.GarageVehicleQuickEntryForm
           }
         };
       }
+
+      // Same Brand -> Model relationship as the full form
+      // (garage_vehicle.js: setup()'s frm.set_query('model', ...) plus the
+      // brand(frm) handler that clears a stale Model) - doesn't apply here
+      // on its own, since doctype_js only loads for Garage Vehicle's own
+      // routed Form, never for this Quick Entry Dialog (see that file's own
+      // top-of-file comment on exactly this limitation). Re-implemented
+      // here so Model's search box stays scoped to whichever Brand is
+      // already picked, instead of listing every model from every brand.
+      const modelField = this.mandatory.find((df) => df.fieldname === 'model');
+      if (modelField) {
+        modelField.get_query = () => {
+          const brand = this.dialog && this.dialog.get_value('brand');
+          return { filters: brand ? { brand } : {} };
+        };
+      }
+
+      const brandField = this.mandatory.find((df) => df.fieldname === 'brand');
+      if (brandField) {
+        brandField.onchange = function () {
+          const dialog = window.cur_dialog;
+          if (dialog && dialog.get_value('model')) {
+            dialog.set_value('model', null);
+          }
+        };
+      }
     }
 
     render_edit_in_full_page_link() {
@@ -320,6 +346,53 @@ if (frappe.ui.form.CustomerQuickEntryForm && !frappe.ui.form.CustomerQuickEntryF
         return super.is_quick_entry();
       }
       return false;
+    }
+
+    // ContactAddressQuickEntryForm (the class this one extends -
+    // erpnext/public/js/utils/contact_address_quick_entry.js) always
+    // concatenates its own "Primary Contact/Address Details" fields onto
+    // the dialog: city/state/country/pincode/email_address/mobile_number,
+    // meant to create a separate linked Contact + Address behind the
+    // scenes. Those collide fieldname-for-fieldname with this app's own
+    // city/state/country (garage_profile_section's Select fields, already
+    // in `mandatory` via allow_in_quick_entry - see
+    // add_customer_profile_fields.py) and would render twice. Returning no
+    // variant fields keeps the dialog to Customer's own real fields only,
+    // which sync_primary_address (garage/utils/customer_hooks.py) already
+    // turns into a proper Address on save - the variant fields' Contact/
+    // Address creation would just be a second, disconnected copy of that.
+    get_variant_fields() {
+      return [];
+    }
+
+    // The base insert() renames map_to_first_name/map_to_last_name/
+    // email_address/mobile_number (the variant fields above) onto
+    // first_name/last_name/email_id/mobile_no before saving - needed there
+    // because core Customer defines email_id/mobile_no as read-only, so a
+    // field named exactly that would render disabled. This app's own
+    // mobile_no/email_id Property Setters (reorder_customer_form_layout.py)
+    // already switch them to a plain editable "Data" fieldtype, so they're
+    // filled in directly under their real names - nothing left to rename,
+    // and with get_variant_fields() empty above there's nothing at
+    // map_to_first_name etc. to rename FROM. Skip straight to
+    // QuickEntryForm's own insert().
+    insert() {
+      return frappe.ui.form.QuickEntryForm.prototype.insert.call(this);
+    }
+
+    set_meta_and_mandatory_fields() {
+      super.set_meta_and_mandatory_fields();
+      // Same two-column treatment as GarageVehicleQuickEntryForm above -
+      // splits after address_line2 so the left column ends up
+      // name/number/city/province/country/id/postal/address (matching the
+      // reference layout's left side) and everything from
+      // preferred_contact_method onward flows into the right column.
+      this.mandatory = garage.splitIntoTwoColumns(this.mandatory, 'address_line2');
+    }
+
+    render_dialog() {
+      super.render_dialog();
+      garage.widenQuickEntryDialog(this.dialog);
     }
   };
   frappe.ui.form.CustomerQuickEntryForm.__garage_patched = true;
@@ -632,7 +705,6 @@ const gsiRenderTotalsBox = (frm) => {
   const fmt = (v) => frappe.format(flt(v, 2), { fieldtype: 'Currency' });
 
   let totalDiscount = 0;
-  let totalPpn = 0;
   (frm.doc.items || []).forEach((row) => {
     const priceListRate = flt(row.price_list_rate);
     const rate = flt(row.rate);
@@ -640,11 +712,12 @@ const gsiRenderTotalsBox = (frm) => {
     if (priceListRate) {
       totalDiscount += (priceListRate - rate) * qty;
     }
-    const ppnPercent = flt(row.ppn_percent);
-    if (ppnPercent) {
-      totalPpn += flt(row.amount) - flt(row.amount) / (1 + ppnPercent / 100);
-    }
   });
+  // rate/amount are stored pre-tax (see portal.py's _apply_ppn_pricing,
+  // which adds PPN as its own Sales Taxes and Charges line rather than
+  // baking it into rate/amount) - total_taxes_and_charges is already the
+  // real, per-line-aware PPN total, no need to re-derive it from amount.
+  const totalPpn = flt(frm.doc.total_taxes_and_charges);
 
   const summaryRow = (label, value, variant) => {
     const bg = variant === 'grand' ? 'var(--g-accent, #4f46e5)' : '#2c3e50';
@@ -702,39 +775,13 @@ frappe.ui.form.on('Sales Invoice', {
       ?.find('.grid-download, .grid-upload')
       .addClass('hidden');
 
-    // Item rate is stored tax-inclusive (see repair_qc.py's
-    // _apply_ppn_pricing, which bakes PPN straight into rate/amount rather
-    // than using a separate Sales Taxes and Charges row) but that reads as a
-    // mismatch against the Service Order's pre-tax rate column. Rather than
-    // changing the stored value (grand_total, payments and tax reporting all
-    // depend on it staying as-is), show a computed pre-tax number in the
-    // grid's static cell only via a formatter - editing a cell still shows
-    // the real stored value in the input, so nothing about save behavior
-    // changes. Deferred: the grid's own internal setup (data render, column
-    // sizing) runs after this refresh handler and redraws from its own
-    // docfields snapshot, clobbering an in-place property change otherwise.
-    //
-    // Also deferred for the same reason: ERPNext's own SalesInvoiceController
-    // calls set_dynamic_labels() -> set_currency_labels() -> frm.refresh_fields()
+    // Deferred: ERPNext's own SalesInvoiceController calls
+    // set_dynamic_labels() -> set_currency_labels() -> frm.refresh_fields()
     // as part of its own refresh handling, which re-derives each control's
     // hidden state from a fresh docfield lookup and silently un-hides
     // total_taxes_and_charges/grand_total/total_advance/outstanding_amount
     // if that runs after ours.
     setTimeout(() => {
-      const itemsGrid = frm.fields_dict.items?.grid;
-      if (itemsGrid) {
-        try {
-          itemsGrid.update_docfield_property('rate', 'formatter', (value, df, options, doc) => {
-            const ppnPercent = flt(doc?.ppn_percent);
-            const preTax = ppnPercent ? flt(value) / (1 + ppnPercent / 100) : flt(value);
-            return frappe.format(preTax, { fieldtype: 'Currency' }, options, doc);
-          });
-          itemsGrid.make_head();
-        } catch (e) {
-          // field not rendered yet on this view; ignore
-        }
-      }
-
       // Grand Total / Total Taxes and Charges / Total Advance / Outstanding
       // Amount are replaced by the single gsi-totals-box card below (built
       // alongside Total Diskon, which has no field of its own) - hide the

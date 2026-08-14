@@ -25,8 +25,8 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = "/assets/garage/css/garage_desk.css?v=365"
-app_include_js = ["/assets/garage/js/route_aliases.js?v=1", "/assets/garage/js/garage_theme.js?v=76"]
+app_include_css = "/assets/garage/css/garage_desk.css?v=366"
+app_include_js = ["/assets/garage/js/route_aliases.js?v=1", "/assets/garage/js/garage_theme.js?v=78"]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/garage/css/garage.css"
@@ -400,6 +400,8 @@ fixtures = [
                 "Sales Invoice-service_order",
                 "Sales Invoice-customer_number",
                 "Sales Invoice Item-ppn_percent",
+                "Purchase Order Item-ppn_display",
+                "Purchase Invoice Item-ppn_display",
                 "Payment Entry-no_polisi",
                 "Bank Transaction-balance",
                 "Bank Statement Import-skipped_row_count",
@@ -655,6 +657,10 @@ fixtures = [
                 "Purchase Invoice-language-hidden",
                 "Payment Entry-apply_tax_withholding_amount-hidden",
                 "Payment Entry-tax_withholding_category-hidden",
+                "Payment Entry-taxes_and_charges_section-hidden",
+                "Payment Entry-reversal_section-hidden",
+                "Payment Entry Reference-due_date-in_list_view",
+                "Payment Entry Reference-bill_no-in_list_view",
                 "Payment Entry-main-default_print_format",
                 "Sales Invoice-main-default_print_format",
                 "Payment Entry-main-links_order",
