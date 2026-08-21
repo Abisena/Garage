@@ -7837,16 +7837,22 @@ body[data-route*="Sales Order"] [data-fieldname="items"] .grid-static-col .input
 }
 
 /* ── Sales Invoice Items grid column widths (sales_invoice.js) ──────
-   Explicit user request: match Purchase Order's own Items grid column
-   set (see that block's own comments for the full flex-grow reasoning),
-   minus Received Qty - that field doesn't exist on Sales Invoice Item at
-   all (a Purchase-side-only concept), so there's nothing to drop, it's
-   just naturally absent. Tax/discount still use this doctype's own actual
-   fields (ppn_percent, discount_percentage) rather than PO's item_tax_
-   template/price_list_rate - those two are what actually drive this app's
-   real tax calculation (see jinja.py's get_nota_service_context docstring
-   on why PPN is baked into ppn_percent, not a tax template), swapping
-   them out would break that, not just restyle a column. */
+   Explicit user request: match Sales Order's own Items grid column SET
+   (Item Code/Description/Quantity/UOM/Rate/Discount/Subtotal/Tax/Amount)
+   and give each one a width that fits what's actually typed into it,
+   same flex-grow-for-variable-currency / fixed-px-for-short-text
+   approach already used for Purchase Order's own grid below. Tax/
+   Discount still read this doctype's own actual fields (ppn_percent,
+   discount_percentage) rather than Sales Order's item_tax_rate/taxes
+   table - those two are what actually drive this app's real tax
+   calculation for Sales Invoice (see jinja.py's get_nota_service_context
+   docstring), ppn_display/amount_after_tax are just a readable column on
+   top of that same real data, never a second calculation.
+   Re-tuned when Subtotal/Tax/Amount were added as their own columns
+   (previously just item_code/rate/amount existed) - the raw ppn_percent
+   number column doesn't need its own rule anymore since Property Setter
+   hides it from the grid now (ppn_display, a Data field, shows the same
+   information as readable text instead). */
 body[data-route*="Sales Invoice"] [data-fieldname="items"] .grid-static-col[data-fieldname="item_code"] {
   flex: 1 1 0% !important;
   width: 0 !important;
@@ -7854,10 +7860,10 @@ body[data-route*="Sales Invoice"] [data-fieldname="items"] .grid-static-col[data
   min-width: 0 !important;
 }
 body[data-route*="Sales Invoice"] [data-fieldname="items"] .grid-static-col[data-fieldname="description"] {
-  flex: 0 0 220px !important;
-  width: 220px !important;
-  max-width: 220px !important;
-  min-width: 220px !important;
+  flex: 0 0 200px !important;
+  width: 200px !important;
+  max-width: 200px !important;
+  min-width: 200px !important;
 }
 body[data-route*="Sales Invoice"] [data-fieldname="items"] .grid-static-col[data-fieldname="qty"] {
   flex: 0 1 90px !important;
@@ -7866,31 +7872,42 @@ body[data-route*="Sales Invoice"] [data-fieldname="items"] .grid-static-col[data
   min-width: 90px !important;
 }
 body[data-route*="Sales Invoice"] [data-fieldname="items"] .grid-static-col[data-fieldname="uom"] {
-  flex: 0 1 70px !important;
-  width: 70px !important;
-  max-width: 70px !important;
-  min-width: 70px !important;
+  flex: 0 1 60px !important;
+  width: 60px !important;
+  max-width: 60px !important;
+  min-width: 60px !important;
 }
-body[data-route*="Sales Invoice"] [data-fieldname="items"] .grid-static-col[data-fieldname="rate"] {
-  flex: 1.1 1 0% !important;
+/* price_list_rate, not "rate" - "Rate" now shows the pre-discount list
+   price (matches Sales Order's own convention), native "rate" (already
+   post-discount) is hidden from the grid but still what ERPNext's own
+   core computes Subtotal/amount from - see the Property Setters that
+   swapped which one is visible. */
+body[data-route*="Sales Invoice"] [data-fieldname="items"] .grid-static-col[data-fieldname="price_list_rate"] {
+  flex: 1 1 0% !important;
   width: 0 !important;
   max-width: none !important;
   min-width: 0 !important;
 }
 body[data-route*="Sales Invoice"] [data-fieldname="items"] .grid-static-col[data-fieldname="discount_percentage"] {
-  flex: 0 1 95px !important;
-  width: 95px !important;
-  max-width: 95px !important;
-  min-width: 95px !important;
+  flex: 0 1 85px !important;
+  width: 85px !important;
+  max-width: 85px !important;
+  min-width: 85px !important;
 }
-body[data-route*="Sales Invoice"] [data-fieldname="items"] .grid-static-col[data-fieldname="ppn_percent"] {
+body[data-route*="Sales Invoice"] [data-fieldname="items"] .grid-static-col[data-fieldname="amount"] {
+  flex: 1 1 0% !important;
+  width: 0 !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}
+body[data-route*="Sales Invoice"] [data-fieldname="items"] .grid-static-col[data-fieldname="ppn_display"] {
   flex: 0 1 80px !important;
   width: 80px !important;
   max-width: 80px !important;
   min-width: 80px !important;
 }
-body[data-route*="Sales Invoice"] [data-fieldname="items"] .grid-static-col[data-fieldname="amount"] {
-  flex: 1.2 1 0% !important;
+body[data-route*="Sales Invoice"] [data-fieldname="items"] .grid-static-col[data-fieldname="amount_after_tax"] {
+  flex: 1.1 1 0% !important;
   width: 0 !important;
   max-width: none !important;
   min-width: 0 !important;
@@ -7909,6 +7926,70 @@ body[data-route*="Sales Invoice"] [data-fieldname="items"] .grid-static-col .inp
   background: transparent !important;
   border: none !important;
   padding: 6px 8px !important;
+}
+
+/* ── Sales Invoice header: uniform full-width inputs ─────────────────
+   Frappe's own field controls don't all size their inner <input> (or,
+   for Link fields, the awesomplete text box) the same way - Date's own
+   control renders visibly narrower than Data/Link by default (same root
+   cause already worked around for Purchase Order's own transaction_date/
+   schedule_date above), and even among Data/Link fields here Customer
+   Number ended up narrower than Customer right above it once this
+   header became a 3-column row (see the column_break_header_customer
+   Custom Field) - each control was left to its own default intrinsic
+   width instead of filling the flex:1 .control-input-wrapper it already
+   sits in (the app-wide rule further up this file only stretches that
+   wrapper, never the actual input element inside it). Forcing every one
+   of this row's own controls to the same 100%-of-wrapper width is what
+   actually makes Customer Number/Customer/Service Order/No. Polisi/
+   Posting Date/Payment Due Date all line up flush right, instead of
+   fixing only whichever field happened to be reported narrowest. */
+/* Confirmed live via DevTools (user-supplied inspect screenshot): the
+   real <input> is class="input-with-feedback form-control bold" with
+   data-fieldname sitting on the INPUT itself, not just an ancestor div -
+   the earlier version of this fix only forced width on .control-input-
+   wrapper/.control-input-wrapper input, which had zero visible effect
+   even in a clean incognito window (no stale cache to blame), so
+   whatever the real narrowing rule is, it's on a level this didn't
+   reach. Forcing every plausible level in the chain at once (.frappe-
+   control down through .control-input, the awesomplete text box, and
+   the input itself, all by data-fieldname since that attribute is
+   confirmed present at multiple levels) removes the guessing - one of
+   these was always going to be the actual bottleneck. */
+body[data-route*="Sales Invoice"] .frappe-control[data-fieldname="customer_number"],
+body[data-route*="Sales Invoice"] .frappe-control[data-fieldname="customer"],
+body[data-route*="Sales Invoice"] .frappe-control[data-fieldname="service_order"],
+body[data-route*="Sales Invoice"] .frappe-control[data-fieldname="no_polisi"],
+body[data-route*="Sales Invoice"] .frappe-control[data-fieldname="posting_date"],
+body[data-route*="Sales Invoice"] .frappe-control[data-fieldname="due_date"],
+body[data-route*="Sales Invoice"] [data-fieldname="customer_number"] .form-group,
+body[data-route*="Sales Invoice"] [data-fieldname="customer"] .form-group,
+body[data-route*="Sales Invoice"] [data-fieldname="service_order"] .form-group,
+body[data-route*="Sales Invoice"] [data-fieldname="no_polisi"] .form-group,
+body[data-route*="Sales Invoice"] [data-fieldname="posting_date"] .form-group,
+body[data-route*="Sales Invoice"] [data-fieldname="due_date"] .form-group,
+body[data-route*="Sales Invoice"] [data-fieldname="customer_number"] .control-input-wrapper,
+body[data-route*="Sales Invoice"] [data-fieldname="customer"] .control-input-wrapper,
+body[data-route*="Sales Invoice"] [data-fieldname="service_order"] .control-input-wrapper,
+body[data-route*="Sales Invoice"] [data-fieldname="no_polisi"] .control-input-wrapper,
+body[data-route*="Sales Invoice"] [data-fieldname="posting_date"] .control-input-wrapper,
+body[data-route*="Sales Invoice"] [data-fieldname="due_date"] .control-input-wrapper,
+body[data-route*="Sales Invoice"] [data-fieldname="customer_number"] .control-input,
+body[data-route*="Sales Invoice"] [data-fieldname="customer"] .control-input,
+body[data-route*="Sales Invoice"] [data-fieldname="service_order"] .control-input,
+body[data-route*="Sales Invoice"] [data-fieldname="no_polisi"] .control-input,
+body[data-route*="Sales Invoice"] [data-fieldname="posting_date"] .control-input,
+body[data-route*="Sales Invoice"] [data-fieldname="due_date"] .control-input,
+body[data-route*="Sales Invoice"] [data-fieldname="customer"] .awesomplete,
+body[data-route*="Sales Invoice"] [data-fieldname="service_order"] .awesomplete,
+body[data-route*="Sales Invoice"] input[data-fieldname="customer_number"],
+body[data-route*="Sales Invoice"] input[data-fieldname="customer"],
+body[data-route*="Sales Invoice"] input[data-fieldname="service_order"],
+body[data-route*="Sales Invoice"] input[data-fieldname="no_polisi"],
+body[data-route*="Sales Invoice"] input[data-fieldname="posting_date"],
+body[data-route*="Sales Invoice"] input[data-fieldname="due_date"] {
+  width: 100% !important;
+  flex: 1 1 0% !important;
 }
 
 /* Trial Balance (then General Ledger, then Salary Register, requested to

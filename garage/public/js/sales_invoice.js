@@ -34,6 +34,21 @@
         }
     }
 
+    // Sales Invoice items are always auto-populated from the originating
+    // Garage Service Order (_create_draft_sales_invoice in garage_service_
+    // order.py) - typing in ad hoc rows or bulk-uploading here bypasses
+    // that link entirely, same reasoning as Purchase Receipt's own
+    // disable_add_row(). grid.js's own add_row()/add_multiple() only ever
+    // check this runtime flag, not a persisted DocField property, so
+    // there's nothing to configure via Property Setter for this specific
+    // pair of buttons.
+    function disable_add_row(frm) {
+        const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+        if (!grid) return;
+        grid.cannot_add_rows = true;
+        grid.refresh();
+    }
+
     function refresh_grid_if_idle(frm) {
         const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
         if (!grid || !grid.wrapper) return;
@@ -66,16 +81,143 @@
         if (df) df.formatter = plain_item_code;
     }
 
+    // "Tax"/"Amount" columns - same visible-breakdown convention as
+    // Purchase Order/Receipt/Invoice and Sales Order's own Items grid.
+    // Two DIFFERENT real tax mechanisms can end up on a Sales Invoice
+    // depending on where its items came from: a Garage Service Order-
+    // originated invoice (_create_draft_sales_invoice) gets its PPN from
+    // _apply_ppn_pricing (garage/api/portal.py), which sets EACH row's
+    // own real ppn_percent AND appends a real "Actual" tax row to
+    // frm.doc.taxes; a Sales-Order-originated one (via "Get Items From")
+    // instead mirrors the source order's own tax_category/taxes_and_
+    // charges template (see sync_taxes_from_sales_order below), which
+    // populates frm.doc.taxes through ERPNext's own native Tax Rule
+    // engine instead, leaving every row's ppn_percent at 0. Reading
+    // frm.doc.taxes FIRST (same as Purchase Order/Sales Order's own
+    // get_effective_tax_rate()) is what makes both flows show correctly -
+    // ppn_percent only wins when a row was given a genuinely different
+    // rate of its own (still respected, never overridden).
+    //
+    // This column previously read ONLY item.ppn_percent and always
+    // labelled itself "Exc" - correct for the Garage Service Order flow
+    // (_apply_ppn_pricing always adds PPN as a separate exclusive line),
+    // but wrong for a Sales-Order-sourced invoice whose source had
+    // "Include PPN" checked: the Amount column showed Subtotal + tax on
+    // top of an already tax-inclusive rate, double-counting PPN into a
+    // real, believable-looking number that didn't match the invoice's own
+    // actual Grand Total - reported directly by the user.
+    function get_effective_tax_rate(frm, item) {
+        const doc_rate = (frm.doc.taxes || [])
+            .filter((t) => !t.is_tax_withholding_account)
+            .reduce((sum, t) => sum + flt(t.rate), 0);
+        if (doc_rate) return doc_rate;
+        return flt(item.ppn_percent);
+    }
+
+    function is_tax_inclusive(frm) {
+        return (frm.doc.taxes || []).some((t) => cint(t.included_in_print_rate));
+    }
+
+    function sync_amount_after_tax(frm, cdt, cdn) {
+        const item = locals[cdt][cdn];
+        const rate = get_effective_tax_rate(frm, item);
+        const subtotal = flt(item.amount);
+        const final_amount = is_tax_inclusive(frm)
+            ? subtotal
+            : flt(
+                subtotal + (subtotal * rate) / 100,
+                precision('amount_after_tax', item)
+            );
+        if (flt(item.amount_after_tax) !== final_amount) {
+            item.amount_after_tax = final_amount;
+            const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+            const gridRow = grid && grid.grid_rows_by_docname && grid.grid_rows_by_docname[cdn];
+            if (gridRow) gridRow.refresh_field('amount_after_tax');
+        }
+    }
+
+    function sync_ppn_display(frm, cdt, cdn) {
+        const item = locals[cdt][cdn];
+        const rate = get_effective_tax_rate(frm, item);
+        const text = rate ? `${flt(rate, 2)}% ${is_tax_inclusive(frm) ? 'Inc' : 'Exc'}` : '';
+        if ((item.ppn_display || '') !== text) {
+            item.ppn_display = text;
+            const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+            const gridRow = grid && grid.grid_rows_by_docname && grid.grid_rows_by_docname[cdn];
+            if (gridRow) gridRow.refresh_field('ppn_display');
+        }
+    }
+
+    // Sales Order's own PPN lives at the document level (Include/Exclude
+    // PPN checkbox -> Sales Taxes and Charges Template - see sales_order.
+    // js's own apply_ppn_category()). A Sales Invoice built via "Get Items
+    // From" a Sales Order carries over item amounts but NOT that tax
+    // setup, so its own Grand Total silently came out with zero real PPN
+    // even though the grid's own Tax/Amount columns looked like they had
+    // some (a per-item ppn_percent guess this file used to backfill here,
+    // which only ever drove the DISPLAY, never the actual taxes table) -
+    // reported directly by the user (Amount showing 896rb while the
+    // invoice's own real Outstanding Amount stayed 807rb). Mirroring
+    // tax_category + taxes_and_charges directly - the same real fields
+    // Purchase Receipt already mirrors from its own source Purchase Order
+    // (see purchase_receipt.js's own sync_ppn_from_source_po) - lets
+    // ERPNext's own native Tax Rule engine populate a real tax row here
+    // too, instead of a second, display-only calculation trying to guess
+    // what that row would have been.
+    let taxes_synced_from_so = null;
+
+    function sync_taxes_from_sales_order(frm) {
+        const source_so = (frm.doc.items || []).map((row) => row.sales_order).find(Boolean);
+
+        if (!source_so) {
+            taxes_synced_from_so = null;
+            return;
+        }
+
+        if (source_so === taxes_synced_from_so) return;
+        taxes_synced_from_so = source_so;
+
+        frappe.db.get_value('Sales Order', source_so, ['tax_category', 'taxes_and_charges']).then(({ message }) => {
+            if (!message || !message.taxes_and_charges) return;
+            if (message.taxes_and_charges === frm.doc.taxes_and_charges) return;
+            frm.doc.tax_category = message.tax_category;
+            frm.refresh_field('tax_category');
+            frm.set_value('taxes_and_charges', message.taxes_and_charges);
+        });
+    }
+
+    function sync_item_tax_display(frm) {
+        (frm.doc.items || []).forEach((row) => {
+            sync_amount_after_tax(frm, row.doctype, row.name);
+            sync_ppn_display(frm, row.doctype, row.name);
+        });
+    }
+
+    function on_item_row_change(frm, cdt, cdn) {
+        sync_amount_after_tax(frm, cdt, cdn);
+        sync_ppn_display(frm, cdt, cdn);
+        frm.refresh_field('items');
+    }
+
+    // Resets the grid on every call (onload + every refresh), not just
+    // once per grid instance - this doctype's own column set changed
+    // several times in a row this session (Tax/Amount columns added,
+    // Rate swapped from `rate` to `price_list_rate`, ppn_percent hidden),
+    // and frappe.meta.docfield_copy's own per-doctype+docname cache (see
+    // purchase_order.js's own long comment on this exact mechanism) only
+    // ever gets rebuilt from the current, correct docfield_map when
+    // something actually calls grid.reset_grid() - an already-open tab
+    // whose grid reset only ONCE, before all of today's changes landed,
+    // would keep showing raw/stale formatting (no currency symbol, wrong
+    // decimal places, unstyled percent) indefinitely otherwise, exactly
+    // matching what the user reported.
     function sync_grid_customizations(frm) {
         apply_item_code_formatter();
         delete frappe.meta.docfield_copy['Sales Invoice Item'];
 
         const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
         if (!grid) return;
-        if (!grid._customizations_applied) {
-            grid._customizations_applied = true;
-            grid.reset_grid();
-        }
+        grid.reset_grid();
     }
 
     // Customer Number/Service Order/No. Polisi are all read_only=1 custom
@@ -207,6 +349,7 @@
             disable_row_open(latest_si_frm);
             refresh_grid_if_idle(latest_si_frm);
             disable_row_open(latest_si_frm);
+            disable_add_row(latest_si_frm);
             lock_fields(latest_si_frm);
             // AFTER clear_stale_docfield_copy(), not before - that call
             // rebuilds every field's df object from scratch via refresh_
@@ -214,6 +357,8 @@
             // this sets if run in the other order.
             clear_stale_docfield_copy(latest_si_frm);
             force_visible(latest_si_frm);
+            sync_taxes_from_sales_order(latest_si_frm);
+            sync_item_tax_display(latest_si_frm);
         }, 400);
     }
 
@@ -227,6 +372,7 @@
         },
         refresh(frm) {
             disable_row_open(frm);
+            disable_add_row(frm);
             sync_grid_customizations(frm);
             watch_si_form(frm);
             lock_fields(frm);
@@ -250,5 +396,12 @@
         on_submit(frm) {
             frm.print_doc();
         },
+    });
+
+    frappe.ui.form.on('Sales Invoice Item', {
+        qty: on_item_row_change,
+        rate: on_item_row_change,
+        discount_percentage: on_item_row_change,
+        ppn_percent: on_item_row_change,
     });
 })();

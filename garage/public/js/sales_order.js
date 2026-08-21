@@ -114,11 +114,18 @@
         if (df) df.formatter = plain_item_code;
     }
 
-    // Tax column shows the resolved rate ("11%"), not the template's own
-    // name - see purchase_order.js's format_item_tax_rate()/parse_item_tax_
-    // rates() for the full reasoning (item_tax_rate is the hidden JSON
-    // field core's own item_tax_template handler populates with the real
-    // rate(s), same for Sales Order Item as Purchase Order Item).
+    // Tax now comes from the document-level Sales Taxes and Charges
+    // template (see apply_ppn_category()/sync_ppn_checkboxes() below - the
+    // same Include/Exclude PPN checkbox pattern as Purchase Order, ported
+    // here on explicit request so Sales Order stops relying on staff
+    // manually picking an Item Tax Template per row). get_effective_tax_
+    // rate() mirrors purchase_order.js's own version exactly: an item's own
+    // item_tax_rate override still wins if one is set, otherwise it falls
+    // back to summing frm.doc.taxes' own rates. The is_tax_withholding_
+    // account filter never actually matches anything on the sales side
+    // (Sales Order never carries a withholding row) but is kept anyway so
+    // this stays a drop-in match with the Purchase Order/Receipt version
+    // instead of silently diverging if that ever changes.
     function parse_item_tax_rates(doc) {
         if (!doc || !doc.item_tax_rate) return [];
         try {
@@ -129,17 +136,16 @@
         }
     }
 
-    function format_item_tax_rate(value, df, options, doc) {
-        if (!value) return '';
-        const rates = parse_item_tax_rates(doc);
-        if (!rates.length) return '';
-        return rates.map((r) => `${flt(r, 2)}%`).join(' + ');
+    function get_effective_tax_rate(frm, item) {
+        const own_rates = parse_item_tax_rates(item);
+        if (own_rates.length) return own_rates.reduce((sum, r) => sum + r, 0);
+        return (frm.doc.taxes || [])
+            .filter((t) => !t.is_tax_withholding_account)
+            .reduce((sum, t) => sum + flt(t.rate), 0);
     }
 
-    function apply_item_tax_rate_formatter() {
-        const map = frappe.meta.docfield_map['Sales Order Item'];
-        const df = map && map.item_tax_template;
-        if (df) df.formatter = format_item_tax_rate;
+    function is_tax_inclusive(frm) {
+        return (frm.doc.taxes || []).some((t) => cint(t.included_in_print_rate));
     }
 
     // "Amount" (amount_after_tax) = Subtotal + tax, computed client-side
@@ -155,18 +161,101 @@
     // sync_amount_after_tax() for the incident this was reported from).
     function sync_amount_after_tax(frm, cdt, cdn) {
         const item = locals[cdt][cdn];
-        const rates = parse_item_tax_rates(item);
-        const total_rate = rates.reduce((sum, r) => sum + r, 0);
+        const total_rate = get_effective_tax_rate(frm, item);
         const subtotal = flt(item.amount);
-        const final_amount = flt(
-            subtotal + (subtotal * total_rate) / 100,
-            precision('amount_after_tax', item)
-        );
+        const final_amount = is_tax_inclusive(frm)
+            ? subtotal
+            : flt(
+                subtotal + (subtotal * total_rate) / 100,
+                precision('amount_after_tax', item)
+            );
         if (flt(item.amount_after_tax) !== final_amount) {
             item.amount_after_tax = final_amount;
             const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
             const gridRow = grid && grid.grid_rows_by_docname && grid.grid_rows_by_docname[cdn];
             if (gridRow) gridRow.refresh_field('amount_after_tax');
+        }
+    }
+
+    // "Tax" column (ppn_display) - same real, populated Data field as
+    // Purchase Order/Receipt/Invoice Item, replacing item_tax_template's
+    // own raw grid column (now hidden via Property Setter) as the visible
+    // Tax display.
+    function sync_ppn_display(frm, cdt, cdn) {
+        const item = locals[cdt][cdn];
+        const rate = get_effective_tax_rate(frm, item);
+        const text = rate ? `${flt(rate, 2)}% ${is_tax_inclusive(frm) ? 'Inc' : 'Exc'}` : '';
+        if ((item.ppn_display || '') !== text) {
+            item.ppn_display = text;
+            const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+            const gridRow = grid && grid.grid_rows_by_docname && grid.grid_rows_by_docname[cdn];
+            if (gridRow) gridRow.refresh_field('ppn_display');
+        }
+    }
+
+    // Explicit request: Description should always read in uppercase on
+    // print/invoice - core's own item_code fetch (transaction.js) applies
+    // description via a bare `opts.child[key] = r.message[key]` property
+    // write (frm.call's own child-table path), not frappe.model.set_value(),
+    // so it never fires a "description" field trigger at all (same root
+    // cause already traced for item_group elsewhere in this app - see
+    // purchase_order.js's own sync_pph23_flags() comment). Polling for a
+    // mismatch, same idle-tick pattern as the rest of this file, is what
+    // catches both that silent auto-fetch AND a manually-typed value.
+    function sync_description_uppercase(frm) {
+        let changed = false;
+        (frm.doc.items || []).forEach((row) => {
+            if (!row.description) return;
+            const upper = row.description.toUpperCase();
+            if (row.description !== upper) {
+                row.description = upper;
+                changed = true;
+            }
+        });
+        if (changed) frm.refresh_field('items');
+    }
+
+    // "Include PPN" / "Exclude PPN" - direct port of purchase_order.js's
+    // own apply_ppn_category()/sync_ppn_checkboxes(), Supplier swapped for
+    // Customer. Drives tax_category (now hidden, see the Property Setter
+    // created alongside these two checkboxes) through the same "PPN
+    // Include"/"PPN Exclude" Tax Category + Tax Rule records already used
+    // on the buying side, rather than inventing a second, parallel way to
+    // pick a tax template for selling.
+    const PPN_CATEGORY = { ppn_include: 'PPN Include', ppn_exclude: 'PPN Exclude' };
+
+    function apply_ppn_category(frm, fieldname) {
+        const category = PPN_CATEGORY[fieldname];
+        const other = fieldname === 'ppn_include' ? 'ppn_exclude' : 'ppn_include';
+
+        if (!cint(frm.doc[fieldname])) {
+            return;
+        }
+
+        if (!frm.doc.company || !frm.doc.customer || !(frm.doc.transaction_date || frm.doc.posting_date)) {
+            frappe.msgprint(__('Pilih Customer dan Company dulu sebelum pilih Include/Exclude PPN.'));
+            frm.doc[fieldname] = 0;
+            frm.refresh_field(fieldname);
+            return;
+        }
+
+        frm.doc[other] = 0;
+        frm.refresh_field(other);
+        frm.doc.tax_category = category;
+        frm.refresh_field('tax_category');
+        erpnext.utils.set_taxes(frm, 'tax_category');
+    }
+
+    function sync_ppn_checkboxes(frm) {
+        const want_include = frm.doc.tax_category === 'PPN Include' ? 1 : 0;
+        const want_exclude = frm.doc.tax_category === 'PPN Exclude' ? 1 : 0;
+        if (cint(frm.doc.ppn_include) !== want_include) {
+            frm.doc.ppn_include = want_include;
+            frm.refresh_field('ppn_include');
+        }
+        if (cint(frm.doc.ppn_exclude) !== want_exclude) {
+            frm.doc.ppn_exclude = want_exclude;
+            frm.refresh_field('ppn_exclude');
         }
     }
 
@@ -197,7 +286,6 @@
 
     function sync_grid_customizations(frm) {
         apply_item_code_formatter();
-        apply_item_tax_rate_formatter();
         const discount_changed = apply_discount_mode(frm);
 
         delete frappe.meta.docfield_copy['Sales Order Item'];
@@ -234,8 +322,11 @@
             disable_row_open(latest_so_frm);
             lock_customer_number(latest_so_frm);
             render_totals_footer(latest_so_frm);
+            sync_ppn_checkboxes(latest_so_frm);
+            sync_description_uppercase(latest_so_frm);
             (latest_so_frm.doc.items || []).forEach((row) => {
                 sync_amount_after_tax(latest_so_frm, row.doctype, row.name);
+                sync_ppn_display(latest_so_frm, row.doctype, row.name);
             });
             // Polling frm.doc.customer directly, instead of relying only on
             // the customer(frm) trigger below, is what actually makes the
@@ -269,6 +360,7 @@
 
     function on_item_row_change(frm, cdt, cdn) {
         sync_amount_after_tax(frm, cdt, cdn);
+        sync_ppn_display(frm, cdt, cdn);
         frm.refresh_field('items');
         close_row(frm, cdn);
         render_totals_footer(frm);
@@ -384,11 +476,18 @@
             watch_so_form(frm);
             lock_customer_number(frm);
             apply_vehicle_query(frm);
+            sync_ppn_checkboxes(frm);
         },
         discount_mode(frm) {
             sync_grid_customizations(frm);
             disable_row_open(frm);
             render_totals_footer(frm);
+        },
+        ppn_include(frm) {
+            apply_ppn_category(frm, 'ppn_include');
+        },
+        ppn_exclude(frm) {
+            apply_ppn_category(frm, 'ppn_exclude');
         },
         // Explicit user request: picking No. Polisi should auto-fill
         // Customer from that vehicle's own registered owner (Garage

@@ -25,8 +25,8 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = "/assets/garage/css/garage_desk.css?v=366"
-app_include_js = ["/assets/garage/js/route_aliases.js?v=1", "/assets/garage/js/garage_theme.js?v=78"]
+app_include_css = "/assets/garage/css/garage_desk.css?v=371"
+app_include_js = ["/assets/garage/js/route_aliases.js?v=1", "/assets/garage/js/garage_theme.js?v=81"]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/garage/css/garage.css"
@@ -399,9 +399,15 @@ fixtures = [
                 "Sales Invoice-no_polisi",
                 "Sales Invoice-service_order",
                 "Sales Invoice-customer_number",
+                "Sales Invoice-column_break_header_customer",
+                "Sales Invoice-section_break_si_header_end",
                 "Sales Invoice Item-ppn_percent",
+                "Sales Invoice Item-ppn_display",
+                "Sales Invoice Item-amount_after_tax",
                 "Purchase Order Item-ppn_display",
                 "Purchase Invoice Item-ppn_display",
+                "Purchase Receipt Item-ppn_display",
+                "Purchase Receipt Item-amount_after_tax",
                 "Payment Entry-no_polisi",
                 "Bank Transaction-balance",
                 "Bank Statement Import-skipped_row_count",
@@ -425,6 +431,10 @@ fixtures = [
                 "Sales Order-customer_number",
                 "Sales Order-petugas_part",
                 "Sales Order-vehicle",
+                "Sales Order-ppn_include",
+                "Sales Order-ppn_col_break",
+                "Sales Order-ppn_exclude",
+                "Sales Order Item-ppn_display",
                 "Customer-customer_number",
                 "Customer-garage_profile_section",
                 "Customer-is_vip",
@@ -441,7 +451,6 @@ fixtures = [
                 "Customer-notes",
                 "Customer-registration_date",
                 "Customer-registration_time",
-                "Sales Order-main-default_print_format",
             ],
         ]],
     },
@@ -514,6 +523,8 @@ fixtures = [
                 "Sales Order-net_total-hidden",
                 "Sales Order-shipping_rule-hidden",
                 "Sales Order-incoterm-hidden",
+                "Sales Order-tax_category-hidden",
+                "Sales Order-taxes_and_charges-hidden",
                 "Sales Order-named_place-hidden",
                 "Sales Order-base_grand_total-hidden",
                 "Sales Order-base_rounding_adjustment-hidden",
@@ -601,6 +612,9 @@ fixtures = [
                 "Purchase Receipt-additional_discount_percentage-hidden",
                 "Purchase Receipt-discount_amount-hidden",
                 "Purchase Receipt-other_charges_calculation-hidden",
+                "Purchase Receipt Item-amount-label",
+                "Purchase Receipt Item-amount-in_list_view",
+                "Purchase Receipt Item-net_amount-in_list_view",
                 "Purchase Receipt-pricing_rules-hidden",
                 "Purchase Receipt-get_current_stock-hidden",
                 "Purchase Receipt-supplied_items-hidden",
@@ -702,6 +716,11 @@ fixtures = [
                 "Sales Invoice-customer_name-read_only",
                 "Sales Invoice-tax_id-read_only",
                 "Sales Invoice-tax_id-hidden",
+                "Sales Invoice-project-hidden",
+                "Sales Invoice-naming_series-hidden",
+                "Sales Invoice-naming_series-default",
+                "Sales Invoice-base_net_total-default",
+                "Sales Invoice-cost_center-hidden",
                 "Sales Invoice-customer_name-hidden",
                 "Sales Invoice-company_tax_id-hidden",
                 "Sales Invoice-total_qty-hidden",
@@ -723,6 +742,9 @@ fixtures = [
                 "Sales Invoice-additional_discount_percentage-hidden",
                 "Sales Invoice-discount_amount-hidden",
                 "Sales Invoice-other_charges_calculation-hidden",
+                "Sales Invoice-out_fp_section-hidden",
+                "Sales Invoice-out_fp_data_section-hidden",
+                "Sales Invoice-taxes_section-hidden",
                 "Sales Invoice-tax_id-print_hide",
                 "Sales Invoice-company_tax_id-read_only",
                 "Sales Invoice-update_stock-hidden",
@@ -736,6 +758,14 @@ fixtures = [
                 "Sales Invoice-update_billed_amount_in_delivery_note-hidden",
                 "Sales Invoice-is_debit_note-hidden",
                 "Sales Invoice Item-main-field_order",
+                "Sales Invoice Item-amount-label",
+                "Sales Invoice Item-ppn_percent-in_list_view",
+                "Sales Invoice Item-item_code-label",
+                "Sales Invoice Item-price_list_rate-label",
+                "Sales Invoice Item-price_list_rate-in_list_view",
+                "Sales Invoice Item-price_list_rate-columns",
+                "Sales Invoice Item-rate-in_list_view",
+                "Sales Invoice Item-warehouse-in_list_view",
                 "Sales Invoice Item-item_code-columns",
                 "Sales Invoice Item-qty-columns",
                 "Sales Invoice Item-rate-columns",
@@ -840,6 +870,7 @@ fixtures = [
                 "Purchase Receipt Item-main-field_order",
                 "Purchase Order-status-options",
                 "Purchase Order-main-default_print_format",
+                "Sales Order-main-default_print_format",
                 "Purchase Receipt-main-default_print_format",
                 "Purchase Invoice-main-default_print_format",
                 "Purchase Invoice-items-allow_bulk_edit",
@@ -909,6 +940,7 @@ fixtures = [
                 "Sales Order-po_date-hidden",
                 "Sales Order-section_break_31-hidden",
                 "Sales Order-main-field_order",
+                "Sales Order-items-allow_bulk_edit",
                 "Customer-main-search_fields",
                 "Sales Order Item-delivery_date-in_list_view",
                 "Sales Order Item-warehouse-in_list_view",
@@ -1040,6 +1072,7 @@ doc_events = {
     },
     "Item": {
         "on_trash": "garage.utils.item_hooks.block_delete_if_spare_part_requested",
+        "on_update": "garage.utils.item_hooks.sync_garage_spare_part_price",
     },
     "Purchase Order": {
         "validate": [

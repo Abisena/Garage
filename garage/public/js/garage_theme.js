@@ -1097,6 +1097,40 @@ const gpeApplySupplierPaymentVisibility = (frm) => {
   }
 };
 
+// Delivery Note: mirrors the same "hide sections this garage never uses"
+// treatment already applied to Sales Invoice above - Delivery Note is
+// created straight from a Sales Invoice/Service Order here, always same
+// currency, no separate document-level discount or tax template applied
+// at the delivery step (that's already settled on the Invoice), so these
+// four sections are just unused clutter on every Delivery Note screen.
+frappe.ui.form.on('Delivery Note', {
+  refresh(frm) {
+    frm.set_df_property('currency_and_price_list', 'hidden', 1);
+    frm.set_df_property('taxes_section', 'hidden', 1); // "Taxes and Charges"
+    frm.set_df_property('section_break_49', 'hidden', 1); // "Additional Discount"
+    frm.set_df_property('totals', 'hidden', 1); // "Totals"
+
+    // taxes_section only covers its own tax_category/shipping_rule pair -
+    // the Sales Taxes and Charges table (section_break_41) and Tax Breakup
+    // (sec_tax_breakup) are each their own separate section in the
+    // layout, hidden here too so no part of the tax breakdown leaks
+    // through once Taxes and Charges itself is hidden.
+    frm.set_df_property('section_break_41', 'hidden', 1); // "Sales Taxes and Charges" table
+    frm.set_df_property('sec_tax_breakup', 'hidden', 1); // "Tax Breakup"
+
+    frm.set_df_property('set_warehouse', 'hidden', 1); // "Set Source Warehouse"
+    frm.set_df_property('total_qty', 'hidden', 1); // "Total Quantity"
+    frm.set_df_property('total', 'hidden', 1); // "Total (IDR)"
+
+    // "Download"/"Upload" grid footer buttons (bulk CSV edit of the items
+    // table) - same reasoning as Sales Invoice's own identical hide above,
+    // not a workflow this app uses for Delivery Note either.
+    frm.fields_dict.items?.grid?.wrapper
+      ?.find('.grid-download, .grid-upload')
+      .addClass('hidden');
+  },
+});
+
 frappe.ui.form.on('Payment Entry', {
   refresh(frm) {
     gpeApplyFieldVisibility(frm);

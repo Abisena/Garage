@@ -446,7 +446,16 @@
     function get_effective_tax_rate(frm, item) {
         const own_rates = parse_item_tax_rates(item);
         if (own_rates.length) return own_rates.reduce((sum, r) => sum + r, 0);
-        return (frm.doc.taxes || []).reduce((sum, t) => sum + flt(t.rate), 0);
+        // PPh 23 (and any other withholding row, is_tax_withholding_account)
+        // lives in this same frm.doc.taxes table alongside real PPN rows,
+        // but it's a document-level deduction from the grand total, not a
+        // per-item VAT that should ever add to a row's own Tax/Amount
+        // display - see purchase_order_tax_withholding.py's _build_tax_row()
+        // and this file's own render_totals_footer(), which already shows
+        // it as its own separate summary line.
+        return (frm.doc.taxes || [])
+            .filter((t) => !t.is_tax_withholding_account)
+            .reduce((sum, t) => sum + flt(t.rate), 0);
     }
 
     // Mutates the row doc directly + refresh_field() (static-cell re-paint

@@ -746,6 +746,7 @@ def _build_invoice_items_for_service_order(doc) -> list[dict]:
             "amount": flt(rate * qty),
             "price_list_rate": price_list_rate,
             "discount_percentage": discount_pct,
+            "tax_percent": flt(row.tax or 0),
         })
 
     if not items:

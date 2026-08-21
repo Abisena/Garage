@@ -262,31 +262,41 @@ def get_nota_service_context(doc) -> Dict[str, Any]:
     items: List[Dict[str, Any]] = []
     subtotal_jasa = 0.0
     subtotal_part = 0.0
-    total_ppn = 0.0
+    total_diskon = 0.0
     for row in doc.items or []:
         item_group = None
         if row.item_code:
             item_group = frappe.get_cached_value("Item", row.item_code, "item_group")
         is_jasa = item_group == _SERVICE_ITEM_GROUP
 
-        # doc.total_taxes_and_charges is always 0 in this app - PPN is baked
-        # into each item's tax-inclusive rate via the custom ppn_percent
-        # field instead (see repair_qc.py's _apply_ppn_pricing), so row.amount
-        # is tax-inclusive. Back the tax out per line (same formula
-        # garage_theme.js's gsiRenderTotalsBox() uses for the "Total Taxes
-        # and Charges (PPN)" row on the Sales Invoice form) so the printed
-        # "Subtotal" column shows the pre-tax amount and Jasa + Part + PPN
-        # adds back up to the tax-inclusive grand total, instead of Jasa/Part
-        # silently already including tax and PPN double-counting on top.
-        gross_amount = row.amount or 0
-        ppn_percent = row.get("ppn_percent") or 0
-        pre_tax_amount = gross_amount / (1 + ppn_percent / 100) if ppn_percent else gross_amount
-        total_ppn += gross_amount - pre_tax_amount
+        # row.amount (rate x qty) is ALREADY tax-exclusive here - _apply_ppn_
+        # pricing (garage/api/portal.py, used by both repair_qc.py and
+        # garage_service_order.py's own invoice builders) adds PPN as a real
+        # tax row instead of baking it into rate, confirmed directly against
+        # a real invoice (net_total + total_taxes_and_charges == grand_total,
+        # each item's own rate matching its Item's plain standard_rate). The
+        # previous version of this function assumed the opposite - that
+        # total_taxes_and_charges was always 0 and PPN lived inside rate -
+        # and divided every line by (1 + ppn_percent/100) to "back it out",
+        # which instead understated every printed Subtotal/Jasa/Part/Total by
+        # dividing an amount that was never tax-inclusive to begin with
+        # (reported directly by the user: printed Total Tagihan came out
+        # ~10% under the invoice's own real Grand Total). row.amount is used
+        # as-is now; doc.total_taxes_and_charges (the tax engine's own real
+        # figure) is read directly below instead of being reconstructed.
+        gross_amount = flt(row.amount)
+        # discount_amount on a Sales Invoice Item is a PER-UNIT figure (same
+        # convention as Purchase Order Item elsewhere in this app) - row.
+        # amount already reflects the discounted rate, this is purely the
+        # informational "how much was taken off" figure for the new Diskon
+        # column/summary line below.
+        line_discount = flt(row.discount_amount) * flt(row.qty)
+        total_diskon += line_discount
 
         if is_jasa:
-            subtotal_jasa += pre_tax_amount
+            subtotal_jasa += gross_amount
         else:
-            subtotal_part += pre_tax_amount
+            subtotal_part += gross_amount
 
         item_name = row.item_name or row.item_code
         description = frappe.utils.strip_html(row.description or "").strip()
@@ -299,14 +309,29 @@ def get_nota_service_context(doc) -> Dict[str, Any]:
                 "item_name": item_name,
                 "description": description or None,
                 "qty": row.qty,
-                "amount": pre_tax_amount,
+                "amount": gross_amount,
+                "discount": line_discount,
                 "is_jasa": is_jasa,
             }
         )
 
+    total_ppn = flt(doc.total_taxes_and_charges)
+
     return {
         "nota_service_number": nota_service_number,
         "branch": branch,
+        # Order type split - explicit user request: a Sales Invoice with a
+        # linked Garage Service Order went through an actual repair/service
+        # flow (Repair QC's own auto-generation - see this function's own
+        # docstring), while one with no Service Order came straight from a
+        # Sales Order (make_sales_invoice_with_vehicle in sales_order_
+        # invoice_hooks.py), i.e. a parts-only sale with no service ever
+        # performed. The print format uses this to swap the header tagline,
+        # hide the Mekanik/KM Service/KM Berikut fields (there's no
+        # mechanic or service mileage to show), and relabel the "PETUGAS
+        # SERVICE" signature/garansi-jasa note - none of which apply to a
+        # plain parts sale.
+        "is_service": bool(service_order),
         "service_order": service_order,
         "customer_phone": customer_phone,
         "customer_address": customer_address,
@@ -318,12 +343,14 @@ def get_nota_service_context(doc) -> Dict[str, Any]:
         "line_items": items,
         "subtotal_jasa": subtotal_jasa,
         "subtotal_part": subtotal_part,
+        "total_diskon": total_diskon,
         "total_ppn": total_ppn,
-        # Explicitly Jasa + Part + PPN, per what the printed nota shows above
-        # it - not doc.grand_total directly, so the total on the page is
-        # always exactly the sum of the lines printed above it, even if
-        # grand_total and this ever drift apart for some other reason.
-        "total_tagihan": subtotal_jasa + subtotal_part + total_ppn,
+        # doc.grand_total directly now, not a reconstructed sum - Jasa/Part
+        # already carry the real (already tax-exclusive, already net-of-
+        # discount) amounts and total_ppn is the tax engine's own real
+        # figure, so this always matches what's actually owed regardless of
+        # how the line items happen to group.
+        "total_tagihan": flt(doc.grand_total),
     }
 
 
@@ -637,7 +664,17 @@ def get_purchase_order_print_context(doc) -> Dict[str, Any]:
         total_disc += flt(row.discount_amount) * flt(row.qty)
 
     pph_row = next((t for t in (doc.taxes or []) if t.is_tax_withholding_account), None)
-    pph_label = doc.tax_withholding_category or (pph_row.description if pph_row else None) or "PPh"
+    # pph_row.description is NOT a tax name - _build_tax_row() (purchase_
+    # order_tax_withholding.py) sets it from the Tax Withholding Category's
+    # own category_name field, which in this system holds a business-
+    # facing label like "Jasa Perawatan Kendaraan" (what the withholding
+    # applies to), not an official tax name - printing that instead of
+    # "PPh 23" reads as if the deduction's name IS that description.
+    # doc.tax_withholding_category (the category's own doctype name, e.g.
+    # "(INC) PPH 23") is the only field here that's an actual tax name;
+    # same fallback purchase_order.js's own render_totals_footer() already
+    # uses on the live form when that field is empty.
+    pph_label = doc.tax_withholding_category or "PPh 23"
     pph_amount = flt(doc.taxes_and_charges_deducted)
 
     company = frappe.db.get_value(
@@ -647,7 +684,16 @@ def get_purchase_order_print_context(doc) -> Dict[str, Any]:
     owner_name = frappe.db.get_value("User", doc.owner, "full_name") or doc.owner
 
     ppn_amount = flt(doc.taxes_and_charges_added)
-    pph_amount_shown = pph_amount if doc.apply_tds and pph_amount else 0
+    # doc.apply_tds reflects the checkbox's CURRENT state, which can read
+    # unchecked on a saved/submitted document even though a real deduction
+    # is already baked into taxes_and_charges_deducted/grand_total (e.g. a
+    # Purchase Invoice mapped from a PO/Receipt where the header flag
+    # didn't carry over the same way the actual tax row did) - gating the
+    # print on that flag hid a real, already-paid-for deduction from the
+    # printed document while the grand total silently still reflected it,
+    # a mismatch a supplier-facing document must never show. The presence
+    # of a real amount is the only signal that matters here.
+    pph_amount_shown = pph_amount if pph_amount else 0
     needs_dedicated_sign_page, sign_block_height_mm = _estimate_po_sign_block_placement(
         len(items), bool(ppn_amount), bool(pph_amount_shown)
     )
@@ -929,10 +975,26 @@ def get_purchase_invoice_print_context(doc) -> Dict[str, Any]:
     pr_names = sorted({row.purchase_receipt for row in doc.items or [] if row.purchase_receipt})
 
     pph_row = next((t for t in (doc.taxes or []) if t.is_tax_withholding_account), None)
-    pph_label = doc.tax_withholding_category or (pph_row.description if pph_row else None) or "PPh"
+    # pph_row.description is NOT a tax name - _build_tax_row() (purchase_
+    # order_tax_withholding.py) sets it from the Tax Withholding Category's
+    # own category_name field, which in this system holds a business-
+    # facing label like "Jasa Perawatan Kendaraan" (what the withholding
+    # applies to), not an official tax name - printing that instead of
+    # "PPh 23" reads as if the deduction's name IS that description.
+    # doc.tax_withholding_category (the category's own doctype name, e.g.
+    # "(INC) PPH 23") is the only field here that's an actual tax name;
+    # same fallback purchase_order.js's own render_totals_footer() already
+    # uses on the live form when that field is empty.
+    pph_label = doc.tax_withholding_category or "PPh 23"
     pph_amount = flt(doc.taxes_and_charges_deducted)
     ppn_amount = flt(doc.taxes_and_charges_added)
-    pph_amount_shown = pph_amount if doc.apply_tds and pph_amount else 0
+    # See get_purchase_order_print_context()'s own identical fix: doc.
+    # apply_tds is the checkbox's current state, not proof of whether a
+    # real deduction exists - a Purchase Invoice mapped from a PO/Receipt
+    # can read apply_tds=0 while taxes_and_charges_deducted/grand_total
+    # already reflect a real, already-applied withholding amount, and
+    # this print must never hide that from the printed total.
+    pph_amount_shown = pph_amount if pph_amount else 0
 
     company = frappe.db.get_value(
         "Company", doc.company, ["company_name", "phone_no", "email"], as_dict=True

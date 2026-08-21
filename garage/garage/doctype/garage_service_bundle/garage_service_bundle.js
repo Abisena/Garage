@@ -1,13 +1,13 @@
 const GSB_CHILD_CONFIG = {
   spare_parts: {
     link_field: 'spare_part',
-    link_doctype: 'Garage Spare Part',
+    link_doctype: 'Item',
     link_label: 'Spare Part',
     title: 'Daftar Spare Part',
   },
   materials: {
     link_field: 'material',
-    link_doctype: 'Garage Spare Part',
+    link_doctype: 'Item',
     link_label: 'Bahan',
     title: 'Daftar Bahan',
   },
@@ -145,17 +145,30 @@ function gsb_on_item_selected(frm, fieldname, row_name, value) {
     return;
   }
 
-  frappe.db
-    .get_value('Garage Spare Part', value, ['part_name', 'part_code', 'uom', 'unit_price', 'stock_qty'])
-    .then(({ message }) => {
-      if (!message) return;
-      row.item_name = message.part_name;
-      row.part_code = message.part_code;
-      row.uom = message.uom;
-      row.unit_price = flt(message.unit_price);
-      row.stock_qty = message.stock_qty;
-      finish();
-    });
+  // Item.standard_rate/stock_uom is this app's own canonical price/uom
+  // (see item_hooks.sync_garage_spare_part_price's own comment for why
+  // Garage Spare Part used to be a second, easily-stale copy of this same
+  // data) - pulled straight from Item now instead. Item itself carries no
+  // stock_qty field of its own (ERPNext tracks that per-warehouse via Bin,
+  // not on the Item master) - reusing garage_service_order.py's own
+  // get_stock_qty (already whitelisted for the exact same Required Parts
+  // stock lookup) rather than duplicating that Bin query here.
+  Promise.all([
+    frappe.db.get_value('Item', value, ['item_name', 'stock_uom', 'standard_rate']),
+    frappe.call({
+      method: 'garage.garage.doctype.garage_service_order.garage_service_order.get_stock_qty',
+      args: { item_code: value },
+    }),
+  ]).then(([itemRes, stockRes]) => {
+    const item = itemRes.message;
+    if (!item) return;
+    row.item_name = item.item_name;
+    row.part_code = value;
+    row.uom = item.stock_uom;
+    row.unit_price = flt(item.standard_rate);
+    row.stock_qty = flt(stockRes.message?.stock_qty || 0);
+    finish();
+  });
 }
 
 function gsb_render_table(frm, fieldname) {

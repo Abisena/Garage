@@ -15,6 +15,42 @@
         grid.refresh();
     }
 
+    // Without grid.df.in_place_edit, GridRow's own toggle_editable_row(true)
+    // (grid_row.js) - triggered just by clicking into a row - only shows
+    // EDITABLE in_list_view fields as inputs inline; any READ-ONLY in_list_
+    // view field (ppn_display/amount_after_tax here) gets pushed into a
+    // separate compact "quick view" line rendered BELOW the row instead of
+    // staying in its own Tax/Amount column - reported directly by the user
+    // ("kenapa jadi gini") right after those two read-only columns were
+    // added. Purchase Order hit this same layout quirk first (see purchase_
+    // order.js's own before_load/disable_row_open) - setting in_place_edit
+    // (keeps the static column layout even while a row is "active") plus
+    // hiding the row-open pencil (add_open_form_button() in grid_row.js
+    // only ever adds it when in_place_edit is falsy) is the same fix,
+    // ported here now that this grid has read-only display columns of its
+    // own for the first time.
+    const REMOVED_BUTTON_STUB = { parent: () => ({ focus() {} }) };
+
+    function disable_row_open(frm) {
+        const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+        if (!grid) return;
+        grid.df.in_place_edit = 1;
+        (grid.grid_rows || []).forEach((row) => {
+            if (row.open_form_button && row.open_form_button !== REMOVED_BUTTON_STUB) {
+                row.open_form_button.parent('.col').remove();
+                row.open_form_button = REMOVED_BUTTON_STUB;
+            }
+            if (row.configure_columns_button) {
+                row.configure_columns_button.remove();
+                row.configure_columns_button = null;
+            }
+        });
+        if (grid.header_row && grid.header_row.configure_columns_button) {
+            grid.header_row.configure_columns_button.remove();
+            grid.header_row.configure_columns_button = null;
+        }
+    }
+
     // ERPNext core (erpnext/public/js/utils.js) registers frappe.form.
     // link_formatters["Item"] globally - once a row also has item_name,
     // ANY Item Link field anywhere in the system renders as "CODE: Item
@@ -105,6 +141,78 @@
         });
     }
 
+    // "Amount" (custom field amount_after_tax) = Subtotal + tax, same
+    // convention as Purchase Order's own amount_after_tax (see purchase_
+    // order.js) - Purchase Receipt Item has no native per-row "amount
+    // including tax" field either, ERPNext's tax engine only tracks tax at
+    // the document level. Reads item_tax_rate (populated by core's own
+    // get_item_tax_map whenever the item has its own Item Tax Template
+    // override) first, falling back to summing frm.doc.taxes' own rates -
+    // excluding any is_tax_withholding_account row, since a withholding
+    // deduction (PPh 23) is a document-level deduction from the grand
+    // total, never a per-item VAT that should inflate a row's own Amount/
+    // Tax display (see purchase_order.js's own get_effective_tax_rate()
+    // for the same fix, applied there first after this exact bug was
+    // reported for Purchase Order's Tax column).
+    function parse_item_tax_rates(doc) {
+        if (!doc || !doc.item_tax_rate) return [];
+        try {
+            const parsed = JSON.parse(doc.item_tax_rate);
+            return Object.values(parsed).map((r) => flt(r));
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function get_effective_tax_rate(frm, item) {
+        const own_rates = parse_item_tax_rates(item);
+        if (own_rates.length) return own_rates.reduce((sum, r) => sum + r, 0);
+        return (frm.doc.taxes || [])
+            .filter((t) => !t.is_tax_withholding_account)
+            .reduce((sum, t) => sum + flt(t.rate), 0);
+    }
+
+    function is_tax_inclusive(frm) {
+        return (frm.doc.taxes || []).some((t) => cint(t.included_in_print_rate));
+    }
+
+    function sync_amount_after_tax(frm, cdt, cdn) {
+        const item = locals[cdt][cdn];
+        const total_rate = get_effective_tax_rate(frm, item);
+        const subtotal = flt(item.amount);
+        const final_amount = is_tax_inclusive(frm)
+            ? subtotal
+            : flt(
+                subtotal + (subtotal * total_rate) / 100,
+                precision('amount_after_tax', item)
+            );
+        if (flt(item.amount_after_tax) !== final_amount) {
+            item.amount_after_tax = final_amount;
+            const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+            const gridRow = grid && grid.grid_rows_by_docname && grid.grid_rows_by_docname[cdn];
+            if (gridRow) gridRow.refresh_field('amount_after_tax');
+        }
+    }
+
+    function sync_ppn_display(frm, cdt, cdn) {
+        const item = locals[cdt][cdn];
+        const rate = get_effective_tax_rate(frm, item);
+        const text = rate ? `${flt(rate, 2)}% ${is_tax_inclusive(frm) ? 'Inc' : 'Exc'}` : '';
+        if ((item.ppn_display || '') !== text) {
+            item.ppn_display = text;
+            const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+            const gridRow = grid && grid.grid_rows_by_docname && grid.grid_rows_by_docname[cdn];
+            if (gridRow) gridRow.refresh_field('ppn_display');
+        }
+    }
+
+    function sync_item_tax_display(frm) {
+        (frm.doc.items || []).forEach((row) => {
+            sync_amount_after_tax(frm, row.doctype, row.name);
+            sync_ppn_display(frm, row.doctype, row.name);
+        });
+    }
+
     // item_group isn't something a discrete field-change event fires for -
     // same root cause already traced in purchase_order.js (frm.call({child:
     // ...}) bulk-assigns fetched fields like item_group with a bare
@@ -122,9 +230,11 @@
         pr_interval_bound = true;
         setInterval(() => {
             if (!latest_pr_frm) return;
+            disable_row_open(latest_pr_frm);
             strip_service_items(latest_pr_frm);
             sync_ppn_from_source_po(latest_pr_frm);
             sync_ppn_checkboxes(latest_pr_frm);
+            sync_item_tax_display(latest_pr_frm);
         }, 400);
     }
 
@@ -213,12 +323,17 @@
         // paint already happened, stops the raw "CODE: Item Name" format
         // from ever being visible in the first place, matching the same
         // fix applied to Purchase Order (purchase_order.js).
+        before_load(frm) {
+            const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+            if (grid) grid.df.in_place_edit = 1;
+        },
         onload(frm) {
             apply_item_code_formatter(frm);
             sync_supplier_name_visibility(frm);
         },
         refresh(frm) {
             disable_add_row(frm);
+            disable_row_open(frm);
             apply_item_code_formatter(frm);
             strip_service_items(frm);
             watch_pr_form(frm);
@@ -234,6 +349,34 @@
         // and click the print icon themselves as a separate step.
         on_submit(frm) {
             frm.print_doc();
+        },
+    });
+
+    // Recalculates a row's own Tax/Amount display the moment something
+    // that feeds get_effective_tax_rate()/sync_amount_after_tax() above
+    // changes, rather than waiting up to 400ms for the next watch_pr_form()
+    // poll tick - same set of triggers purchase_order.js's own on_item_row_
+    // change() binds to for the same fields.
+    frappe.ui.form.on('Purchase Receipt Item', {
+        item_code(frm, cdt, cdn) {
+            sync_amount_after_tax(frm, cdt, cdn);
+            sync_ppn_display(frm, cdt, cdn);
+        },
+        qty(frm, cdt, cdn) {
+            sync_amount_after_tax(frm, cdt, cdn);
+            sync_ppn_display(frm, cdt, cdn);
+        },
+        rate(frm, cdt, cdn) {
+            sync_amount_after_tax(frm, cdt, cdn);
+            sync_ppn_display(frm, cdt, cdn);
+        },
+        item_tax_template(frm, cdt, cdn) {
+            sync_amount_after_tax(frm, cdt, cdn);
+            sync_ppn_display(frm, cdt, cdn);
+        },
+        uom(frm, cdt, cdn) {
+            sync_amount_after_tax(frm, cdt, cdn);
+            sync_ppn_display(frm, cdt, cdn);
         },
     });
 })();

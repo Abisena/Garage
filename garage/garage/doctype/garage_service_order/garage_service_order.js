@@ -68,6 +68,18 @@ const applyBundleItems = (frm, items, { replace = false } = {}) => {
 
   if (replace) {
     frm.clear_table('required_parts');
+  } else {
+    // get_garage_bundle_items (garage_service_order.py) always bundles its
+    // own "Jasa Paket {name}" labor line alongside the parts/materials -
+    // the generic Service Type flat fee (addServiceFeeRow, below) is the
+    // only required_parts row ever added with no item_code, so dropping
+    // rows without one here is what stops a package selection from
+    // double-billing labor on top of the flat fee that was auto-added
+    // when Service Type was first picked.
+    const withoutGenericFee = (frm.doc.required_parts || []).filter((row) => row.item_code);
+    if (withoutGenericFee.length !== (frm.doc.required_parts || []).length) {
+      frm.doc.required_parts = withoutGenericFee;
+    }
   }
 
   const existing = new Set(
@@ -154,6 +166,12 @@ const subscribeToUpdates = (frm) => {
 const addServiceFeeRow = (frm, data) => {
   const fee = flt(data.service_fee);
   if (!fee) return;
+  // A Paket Service already carries its own labor line (see applyBundleItems's
+  // own comment above / get_garage_bundle_items in garage_service_order.py) -
+  // skip the generic flat fee entirely whenever a package is already selected,
+  // so re-picking Service Type while a package is active can't double-bill
+  // labor back in.
+  if (frm.doc.service_package) return;
 
   const label = 'Jasa ' + (frm.doc.service_order_type || 'Servis');
   const exists = (frm.doc.required_parts || []).some(
