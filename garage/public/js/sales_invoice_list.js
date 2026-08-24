@@ -1,4 +1,18 @@
-(() => {
+// Leading `;` is load-bearing: imogi_finance's own sales_invoice_list_
+// toolbar.js (concatenated into this SAME __list_js blob, immediately
+// before this file - confirmed via bench console) ends its `window.
+// init_sales_invoice_list_toolbar = function(listview) {...}` assignment
+// WITHOUT a trailing semicolon. Without this leading `;`, ASI merges the
+// two: `}(() => {...})();` gets parsed as calling that toolbar function
+// with THIS file's own IIFE as its `listview` argument, then calling
+// THAT result as a function - confirmed live (Playwright, cold page
+// load) as the exact source of "TypeError: (intermediate value)(...) is
+// not a function", which silently broke both imogi_finance's toolbar
+// (wrong argument) and this file (never ran) at once. This one
+// character fully isolates this file from whatever the preceding
+// section in the blob does or doesn't end with - not just a workaround
+// for this specific concatenation order, but immune to it changing too.
+;(() => {
     // Same bg/fg palette style as garage_service_order_list.js, mapped from
     // ERPNext's own sales_invoice_list.js status_colors so the semantics match.
     const STATUS = {
@@ -145,4 +159,15 @@
             render(lv);
         },
     });
+
+    // Sales Invoice's __list_js blob concatenates THREE files (imogi_
+    // finance's own sales_invoice_list.js + sales_invoice_list_toolbar.js,
+    // then this one, confirmed via bench console) - same eval/settings
+    // race as purchase_order_list.js on top of that (confirmed live: card
+    // never rendered). See garage.registerListRenderOverride()'s own
+    // comment (garage_theme.js) for the full root cause.
+    garage.registerListRenderOverride("Sales Invoice", render, [
+        "customer_name", "service_order", "no_polisi", "grand_total", "status",
+        "currency", "posting_date", "outstanding_amount",
+    ]);
 })();

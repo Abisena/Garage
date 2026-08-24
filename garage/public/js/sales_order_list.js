@@ -143,4 +143,11 @@
             render(lv);
         },
     });
+
+    // Same eval/settings race as purchase_order_list.js (confirmed live
+    // for this doctype too) - see garage.registerListRenderOverride()'s
+    // own comment (garage_theme.js) for the full root cause.
+    garage.registerListRenderOverride("Sales Order", render, [
+        "customer_name", "transaction_date", "status", "grand_total", "currency",
+    ]);
 })();

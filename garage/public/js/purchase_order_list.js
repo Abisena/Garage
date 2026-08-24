@@ -175,4 +175,20 @@
             return existing_get_indicator ? existing_get_indicator(doc) : undefined;
         },
     });
+
+    // erpnext's own convention-loaded buying/doctype/purchase_order/
+    // purchase_order_list.js and this file both land in the SAME
+    // concatenated __list_js blob (confirmed via bench console:
+    // get_code_files_via_hooks + a live Playwright check), so the plain
+    // Object.assign above normally wins outright since it runs last in
+    // that eval - but ListView's constructor can capture `this.settings
+    // = frappe.listview_settings[doctype] || {}` from BEFORE that blob
+    // finishes evaluating (confirmed live: frappe.listview_settings
+    // ["Purchase Order"] ends up with only `add_fields`/`onload`, both
+    // `refresh` and `get_indicator` gone, card never renders). Same root
+    // cause/fix as expense_request_list.js - see garage.
+    // registerListRenderOverride()'s own comment (garage_theme.js).
+    garage.registerListRenderOverride("Purchase Order", render, [
+        "supplier_name", "transaction_date", "status", "grand_total", "currency",
+    ]);
 })();

@@ -83,6 +83,160 @@ garage.registerListRenderOverride = function (doctype, renderFn, extraFields) {
   }
 };
 
+// Sales Invoice's __list_js blob concatenates erpnext's own base file +
+// TWO imogi_finance files + garage's own sales_invoice_list.js (in that
+// order, confirmed via bench console) - one of imogi_finance's two files
+// throws a genuine (pre-existing, confirmed independent of any garage
+// change - reproduces on a clean git checkout of both apps) uncaught
+// TypeError partway through, which aborts that ENTIRE concatenated eval
+// synchronously. garage.registerListRenderOverride() alone can't recover
+// from that for THIS doctype specifically: the call to it lives inside
+// garage's own sales_invoice_list.js, which is the LAST section in that
+// same blob - the abort happens before execution ever reaches it, so the
+// registration itself never runs (confirmed live: `garage.
+// __list_render_overrides` stayed empty, ListView.prototype.refresh
+// never got patched).
+//
+// Fixed by registering the SAME render() this file's own sales_invoice_
+// list.js defines from THIS file instead - garage_theme.js loads via
+// app_include_js, a separate <script> tag on every desk page,
+// independent of that doctype's own fragile __list_js eval, so this
+// registration always runs regardless of whether that other blob throws.
+// sales_invoice_list.js itself is untouched/still in hooks.py's
+// doctype_list_js - if imogi_finance's bug ever gets fixed, its own
+// (identical) registerListRenderOverride call just becomes a harmless
+// duplicate (last call wins, same renderFn either way).
+(() => {
+    const STATUS = {
+        "Draft":                       { bg: "#f3f4f6", fg: "#4b5563", border: "#9ca3af" },
+        "Unpaid":                      { bg: "#fff7ed", fg: "#c2410c", border: "#f97316" },
+        "Paid":                        { bg: "#dcfce7", fg: "#15803d", border: "#22c55e" },
+        "Return":                      { bg: "#f3f4f6", fg: "#4b5563", border: "#9ca3af" },
+        "Credit Note Issued":          { bg: "#f3f4f6", fg: "#4b5563", border: "#9ca3af" },
+        "Unpaid and Discounted":       { bg: "#fff7ed", fg: "#c2410c", border: "#f97316" },
+        "Partly Paid and Discounted":  { bg: "#fef9c3", fg: "#92400e", border: "#eab308" },
+        "Overdue and Discounted":      { bg: "#fee2e2", fg: "#b91c1c", border: "#ef4444" },
+        "Overdue":                     { bg: "#fee2e2", fg: "#b91c1c", border: "#ef4444" },
+        "Partly Paid":                 { bg: "#fef9c3", fg: "#92400e", border: "#eab308" },
+        "Internal Transfer":           { bg: "#f3f4f6", fg: "#4b5563", border: "#9ca3af" },
+    };
+
+    function esc(v) { return frappe.utils.escape_html(v || ""); }
+
+    const HEADER_HTML = `<div class="si-header" style="
+        display:flex !important;
+        align-items:center;
+        width:100%;
+        padding:9px 14px 9px 0;
+        gap:10px;
+        background:#1f2937;
+    ">
+        <div style="flex:0 0 36px;"></div>
+        <span class="si-c-id si-hdr">ID</span>
+        <span class="si-c-date si-hdr">TANGGAL</span>
+        <span class="si-c-so si-hdr">SERVICE ORDER</span>
+        <span class="si-c-plate si-hdr">NO. POLISI</span>
+        <span class="si-c-customer si-hdr">CUSTOMER</span>
+        <span class="si-c-outstanding si-hdr">OUTSTANDING</span>
+        <span class="si-c-amt si-hdr">GRAND TOTAL</span>
+        <span class="si-c-badge si-hdr">STATUS</span>
+        <span class="si-c-ago si-hdr"></span>
+    </div>`;
+
+    function card(doc) {
+        const s = STATUS[doc.status] || STATUS.Draft;
+        const customer = doc.customer_name || doc.customer || "";
+        const so = doc.service_order || "";
+        const plate = doc.no_polisi || "";
+        const date = doc.posting_date ? frappe.datetime.str_to_user(doc.posting_date) : "";
+        const outstanding = format_currency(doc.outstanding_amount || 0, doc.currency);
+        const amount = format_currency(doc.grand_total || 0, doc.currency);
+        const ago = doc.modified ? frappe.datetime.comment_when(doc.modified, true) : "";
+
+        return `<div class="si-card" style="
+            display:flex !important;
+            align-items:center;
+            width:100%;
+            padding:10px 14px 10px 0;
+            gap:10px;
+            cursor:pointer;
+            border-left:3px solid ${s.border};
+        ">
+            <div style="flex:0 0 36px; display:flex; align-items:center; justify-content:center;">
+                <input type="checkbox" class="list-row-checkbox" data-name="${esc(doc.name)}" style="cursor:pointer;">
+            </div>
+            <span class="si-c-id">${esc(doc.name)}</span>
+            <span class="si-c-date">${esc(date)}</span>
+            <span class="si-c-so" title="${esc(so)}">${so ? esc(so) : '<span style="color:#cbd5e1;">&mdash;</span>'}</span>
+            <span class="si-c-plate">${plate ? esc(plate) : '<span style="color:#cbd5e1;">&mdash;</span>'}</span>
+            <span class="si-c-customer">${esc(customer)}</span>
+            <span class="si-c-outstanding">${flt(doc.outstanding_amount) > 0 ? outstanding : '<span style="color:#cbd5e1;">&mdash;</span>'}</span>
+            <span class="si-c-amt">${amount}</span>
+            <span class="si-c-badge" style="background:${s.bg};color:${s.fg};">${esc(doc.status)}</span>
+            <span class="si-c-ago">${ago}</span>
+        </div>`;
+    }
+
+    function render(lv) {
+        const $fl = lv.$result.closest(".frappe-list");
+        if (!$fl.hasClass("si-list")) $fl.addClass("si-list");
+
+        lv.$result.find(".list-row-head").each(function () {
+            this.style.setProperty("display", "none", "important");
+        });
+
+        if (!$fl.find(".si-header").length) {
+            lv.$result.before(HEADER_HTML);
+        }
+
+        let idx = 0;
+        lv.$result.find(".list-row:not(.list-row-head)").each(function () {
+            const row = this;
+            const $row = $(row);
+            if ($row.hasClass("si-ok")) return;
+
+            const name = $row.find("input.list-row-checkbox").data("name");
+            const doc = (lv.data || []).find((d) => d.name === name);
+            if (!doc) return;
+
+            $row.addClass("si-ok");
+
+            $row.children().each(function () {
+                this.style.setProperty("display", "none", "important");
+            });
+
+            row.style.setProperty("height", "auto", "important");
+            row.style.setProperty("min-height", "0", "important");
+            row.style.setProperty("padding", "0", "important");
+            row.style.setProperty("overflow", "visible", "important");
+            row.style.setProperty("background", "transparent", "important");
+
+            const $card = $(card(doc));
+            const bg = idx % 2 === 0 ? "#ffffff" : "#f0f1f3";
+            $card[0].style.setProperty("background", bg, "important");
+            $row.append($card);
+
+            $card.on("mouseenter", function () {
+                this.style.setProperty("background", "#e8edff", "important");
+            }).on("mouseleave", function () {
+                this.style.setProperty("background", bg, "important");
+            });
+
+            $card.on("click", function (e) {
+                if ($(e.target).is("input[type=checkbox]")) return;
+                frappe.set_route("Form", "Sales Invoice", doc.name);
+            });
+
+            idx++;
+        });
+    }
+
+    garage.registerListRenderOverride("Sales Invoice", render, [
+        "customer_name", "service_order", "no_polisi", "grand_total", "status",
+        "currency", "posting_date", "outstanding_amount",
+    ]);
+})();
+
 // Indonesian license plates are [huruf wilayah][angka][huruf seri], e.g.
 // "B 1234 XYZ" or "BK 5678 AB" - auto-insert the spaces between those three
 // groups as the user types, rather than making them type the spaces
