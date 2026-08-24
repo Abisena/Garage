@@ -7,6 +7,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from garage.utils.pricing import get_item_rate
+
 
 class GarageServiceBundle(Document):
     """Aggregate spare part and material costs for a service bundle."""
@@ -43,15 +45,15 @@ class GarageServiceBundle(Document):
         # spare_part/material link to Item now (see garage_service_bundle.js's
         # own gsb_on_item_selected() and the child doctypes' own "options" -
         # both switched from Garage Spare Part to Item so this bundle always
-        # reads the one canonical price, see item_hooks.sync_garage_spare_
-        # part_price for the full reasoning). This hydration has to mirror
-        # that exact same source or a save would silently re-fetch stale/
-        # empty data from the wrong doctype for any Item without a same-
-        # coded Garage Spare Part record.
+        # reads the one canonical price - see garage.utils.pricing.get_item_
+        # rate for why that's Item Price, not Item.standard_rate). This
+        # hydration has to mirror that exact same source or a save would
+        # silently re-fetch stale/empty data from the wrong doctype for any
+        # Item without a same-coded Garage Spare Part record.
         item = frappe.db.get_value(
             "Item",
             item_code,
-            ["item_name", "stock_uom", "standard_rate"],
+            ["item_name", "stock_uom"],
             as_dict=True,
         )
         if not item:
@@ -60,7 +62,7 @@ class GarageServiceBundle(Document):
         row.item_name = item.get("item_name")
         row.part_code = item_code
         row.uom = item.get("stock_uom")
-        unit_price = flt(item.get("standard_rate"))
+        unit_price = get_item_rate(item_code)
         row.unit_price = unit_price
         row.stock_qty = flt(frappe.db.get_value("Bin", {"item_code": item_code}, "actual_qty") or 0)
         quantity = flt(row.quantity or 0)

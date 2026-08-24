@@ -11,6 +11,7 @@ from frappe.utils import cstr, flt, getdate, nowdate
 from frappe.model.document import Document
 
 from garage.utils import naming
+from garage.utils.pricing import get_item_rate
 
 
 def _slugify(value: str) -> str:
@@ -724,7 +725,7 @@ def _build_invoice_items_for_service_order(doc) -> list[dict]:
                 rate = flt(frappe.db.get_value("Garage Service Bundle", doc.service_package, "service_fee"))
 
         if not rate:
-            rate = flt(frappe.db.get_value("Item", item_code, "standard_rate") or 0)
+            rate = get_item_rate(item_code)
         if not rate:
             rate = 100000
 

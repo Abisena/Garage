@@ -7,6 +7,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt, now_datetime, nowdate, nowtime
 
+from garage.utils.pricing import get_item_rate
+
 
 class GarageStockMovement(Document):
     """Maintain stock quantities and ledger entries for spare parts."""
@@ -175,14 +177,14 @@ class GarageStockMovement(Document):
         spare_part.part_name = row.item_name or row.item_code
         spare_part.description = row.description
         spare_part.uom = row.uom or spare_part.uom
-        # Item.standard_rate is this app's own canonical price (see
-        # item_hooks.sync_garage_spare_part_price, which keeps this same
-        # field in sync afterward whenever the Item's own price changes) -
-        # left unset here, every spare part first seen through a stock
-        # movement silently started at Rp 0 wherever its price gets read
-        # later (Garage Service Bundle, the customer portal, etc.).
-        spare_part.unit_price = flt(
-            frappe.db.get_value("Item", row.item_code, "standard_rate") or 0
-        )
+        # garage.utils.pricing.get_item_rate (Item Price, not Item.standard_
+        # rate - see that module's own docstring for why) is this app's own
+        # canonical price (see item_hooks.sync_garage_spare_part_price,
+        # which keeps this same field in sync afterward whenever the Item's
+        # price changes) - left unset here, every spare part first seen
+        # through a stock movement silently started at Rp 0 wherever its
+        # price gets read later (Garage Service Bundle, the customer
+        # portal, etc.).
+        spare_part.unit_price = get_item_rate(row.item_code)
         spare_part.insert(ignore_permissions=True)
         return spare_part

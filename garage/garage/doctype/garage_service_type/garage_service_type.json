@@ -44,7 +44,7 @@
       "label": "Service Fee",
       "in_list_view": 1,
       "read_only": 1,
-      "fetch_from": "item.standard_rate"
+      "description": "Diambil dari Item Price (Standard Selling) milik Service Item ini - lihat garage_service_type.py."
     },
     {
       "fieldname": "bundle_description",

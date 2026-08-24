@@ -11,6 +11,7 @@ from garage.garage.doctype.garage_service_order.garage_service_order import (
     PART_CANCELLED_STATUSES,
     PART_REJECTED_STATUSES,
 )
+from garage.utils.pricing import get_item_rate
 
 TERMINAL_STATUSES = {"Completed", "Cancelled"}
 STATUS_FLOW = [
@@ -179,7 +180,7 @@ def _sync_repair_qc_parts_used(repair_qc, required_parts: Iterable[object]) -> N
         if not rate and amount and qty:
             rate = amount / qty
         if not rate:
-            rate = flt(frappe.db.get_value("Item", item_code, "standard_rate") or 0)
+            rate = get_item_rate(item_code)
         if not amount and rate and qty:
             amount = rate * qty
         repair_qc.append(

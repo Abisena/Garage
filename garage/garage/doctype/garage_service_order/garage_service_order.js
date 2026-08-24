@@ -1111,32 +1111,41 @@ frappe.ui.form.on('Garage Service Order', {
 });
 
 const fetchItemDetails = (frm, cdt, cdn, row, isStock) => {
-  frappe.call({
-    method: 'frappe.client.get_value',
-    args: {
-      doctype: 'Item',
-      filters: { name: row.item_code },
-      fieldname: ['item_name', 'description', 'standard_rate', 'stock_uom'],
-    },
-    callback(r) {
-      if (!r.message) return;
-      frappe.model.set_value(cdt, cdn, {
-        item_name: r.message.item_name,
-        description: r.message.description,
-        qty: 1,
-        rate: flt(r.message.standard_rate),
-        uom: r.message.stock_uom || 'Unit',
-        discount: 0,
-        tax: 0,
-        stock_status: isStock ? REQUEST_STATUS : '',
-      }).then(() => {
-        calcAmount(frm, cdt, cdn);
-        const gridRow = frm.fields_dict.required_parts.grid.grid_rows_by_docname[cdn];
-        if (gridRow) {
-          gridRow.toggle_editable_row(false);
-        }
-      });
-    },
+  // Rate comes from garage.utils.pricing.get_item_rate_api (Item Price),
+  // not Item.standard_rate - that field is only ever shown on a brand new,
+  // unsaved Item and nothing keeps it updated afterward, so it's stuck at 0
+  // for every real/imported Item.
+  Promise.all([
+    frappe.call({
+      method: 'frappe.client.get_value',
+      args: {
+        doctype: 'Item',
+        filters: { name: row.item_code },
+        fieldname: ['item_name', 'description', 'stock_uom'],
+      },
+    }),
+    frappe.call({
+      method: 'garage.utils.pricing.get_item_rate_api',
+      args: { item_code: row.item_code },
+    }),
+  ]).then(([itemRes, rateRes]) => {
+    if (!itemRes.message) return;
+    frappe.model.set_value(cdt, cdn, {
+      item_name: itemRes.message.item_name,
+      description: itemRes.message.description,
+      qty: 1,
+      rate: flt(rateRes.message),
+      uom: itemRes.message.stock_uom || 'Unit',
+      discount: 0,
+      tax: 0,
+      stock_status: isStock ? REQUEST_STATUS : '',
+    }).then(() => {
+      calcAmount(frm, cdt, cdn);
+      const gridRow = frm.fields_dict.required_parts.grid.grid_rows_by_docname[cdn];
+      if (gridRow) {
+        gridRow.toggle_editable_row(false);
+      }
+    });
   });
 };
 

@@ -145,27 +145,32 @@ function gsb_on_item_selected(frm, fieldname, row_name, value) {
     return;
   }
 
-  // Item.standard_rate/stock_uom is this app's own canonical price/uom
-  // (see item_hooks.sync_garage_spare_part_price's own comment for why
-  // Garage Spare Part used to be a second, easily-stale copy of this same
-  // data) - pulled straight from Item now instead. Item itself carries no
-  // stock_qty field of its own (ERPNext tracks that per-warehouse via Bin,
-  // not on the Item master) - reusing garage_service_order.py's own
-  // get_stock_qty (already whitelisted for the exact same Required Parts
-  // stock lookup) rather than duplicating that Bin query here.
+  // Item Price (not Item.standard_rate - see garage.utils.pricing.
+  // get_item_rate for why: standard_rate is only ever shown on a brand new,
+  // unsaved Item and nothing keeps it updated afterward, so every real/
+  // imported Item ends up stuck at 0 there) is this app's own canonical
+  // price. Item itself carries no stock_qty field of its own (ERPNext
+  // tracks that per-warehouse via Bin, not on the Item master) - reusing
+  // garage_service_order.py's own get_stock_qty (already whitelisted for
+  // the exact same Required Parts stock lookup) rather than duplicating
+  // that Bin query here.
   Promise.all([
-    frappe.db.get_value('Item', value, ['item_name', 'stock_uom', 'standard_rate']),
+    frappe.db.get_value('Item', value, ['item_name', 'stock_uom']),
+    frappe.call({
+      method: 'garage.utils.pricing.get_item_rate_api',
+      args: { item_code: value },
+    }),
     frappe.call({
       method: 'garage.garage.doctype.garage_service_order.garage_service_order.get_stock_qty',
       args: { item_code: value },
     }),
-  ]).then(([itemRes, stockRes]) => {
+  ]).then(([itemRes, rateRes, stockRes]) => {
     const item = itemRes.message;
     if (!item) return;
     row.item_name = item.item_name;
     row.part_code = value;
     row.uom = item.stock_uom;
-    row.unit_price = flt(item.standard_rate);
+    row.unit_price = flt(rateRes.message);
     row.stock_qty = flt(stockRes.message?.stock_qty || 0);
     finish();
   });

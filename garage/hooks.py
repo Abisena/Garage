@@ -26,7 +26,7 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 app_include_css = "/assets/garage/css/garage_desk.css?v=371"
-app_include_js = ["/assets/garage/js/route_aliases.js?v=1", "/assets/garage/js/garage_theme.js?v=81"]
+app_include_js = ["/assets/garage/js/route_aliases.js?v=1", "/assets/garage/js/garage_theme.js?v=82"]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/garage/css/garage.css"
@@ -1073,6 +1073,10 @@ doc_events = {
     "Item": {
         "on_trash": "garage.utils.item_hooks.block_delete_if_spare_part_requested",
         "on_update": "garage.utils.item_hooks.sync_garage_spare_part_price",
+    },
+    "Item Price": {
+        "on_update": "garage.utils.item_hooks.sync_garage_spare_part_price_from_item_price",
+        "on_trash": "garage.utils.item_hooks.sync_garage_spare_part_price_from_item_price",
     },
     "Purchase Order": {
         "validate": [

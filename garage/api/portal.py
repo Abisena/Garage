@@ -21,6 +21,7 @@ from frappe.utils import cint, cstr, flt, get_datetime, get_url, getdate, now_da
 from frappe.defaults import get_user_default
 
 from garage.utils import service_estimate, spare_part_issue
+from garage.utils.pricing import get_item_rate
 from garage.garage.doctype.garage_service_order.garage_service_order import (
     derive_part_charge_status,
 )
@@ -4695,9 +4696,7 @@ def _ensure_billing_placeholders(
             if not row.item_code or not row.qty:
                 continue
 
-            rate = flt(getattr(row, "rate", None)) or flt(
-                frappe.db.get_value("Item", row.item_code, "standard_rate") or 0
-            )
+            rate = flt(getattr(row, "rate", None)) or get_item_rate(row.item_code)
 
             amount = rate * flt(row.qty)
             parts_total += amount

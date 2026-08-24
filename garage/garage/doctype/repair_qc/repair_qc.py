@@ -5,6 +5,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt, nowdate, getdate, today
 
+from garage.utils.pricing import get_item_rate
+
 
 class RepairQC(Document):
     """Document model for repair and QC inspections with checklist fields."""
@@ -589,9 +591,9 @@ class RepairQC(Document):
             if not rate and item_code.startswith("JASA-PAKET-"):
                 # This is a bundle's own labor fee line. Check the bundle's
                 # current service_fee before the generic Item-based
-                # fallbacks below: those read standard_rate / Item Price,
-                # which for this placeholder Item may hold a stale value
-                # left over from an earlier bug (e.g. a past run of the
+                # fallback below: get_item_rate() reads Item Price, which
+                # for this placeholder Item may hold a stale value left
+                # over from an earlier bug (e.g. a past run of the
                 # hardcoded 100000 default getting recorded as an Item
                 # Price). The bundle itself is the authoritative source.
                 bundle_name = service_order.get("service_package")
@@ -675,30 +677,16 @@ class RepairQC(Document):
             return []
 
     def _get_item_rate(self, item_code: str) -> float:
+        # Delegates to garage.utils.pricing.get_item_rate, the same Item
+        # Price-first lookup every other price-reading spot in this app
+        # uses now - this used to duplicate that logic locally (Item Price
+        # fallback added here first, then copied everywhere else).
         if not item_code:
             return 0
-
         try:
-            standard_rate = flt(frappe.db.get_value("Item", item_code, "standard_rate") or 0)
-            if standard_rate:
-                return standard_rate
+            return get_item_rate(item_code)
         except Exception:
-            pass
-
-        try:
-            prices = frappe.get_all(
-                "Item Price",
-                filters={"item_code": item_code, "selling": 1},
-                fields=["price_list_rate"],
-                order_by="modified desc",
-                limit=1,
-            )
-            if prices:
-                return flt(prices[0].get("price_list_rate") or 0)
-        except Exception:
-            pass
-
-        return 0
+            return 0
 
 @frappe.whitelist()
 def is_repair_qc_invoice_paid(repair_qc: str):

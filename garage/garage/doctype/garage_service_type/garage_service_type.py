@@ -5,6 +5,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from garage.utils.pricing import get_item_rate
+
 
 class GarageServiceType(Document):
     """Service type master with optional product bundle link."""
@@ -26,6 +28,13 @@ class GarageServiceType(Document):
                     frappe.bold(self.item), item_group
                 )
             )
+
+        # service_fee used to be a plain `fetch_from: item.standard_rate` -
+        # that field is only ever shown on a brand new, unsaved Item and
+        # nothing keeps it updated afterward, so fetch_from silently copied
+        # 0 for every real Service Item. Resolving it here from Item Price
+        # on every save keeps it live instead.
+        self.service_fee = get_item_rate(self.item)
 
     def autoname(self):
         self.name = self.service_type
