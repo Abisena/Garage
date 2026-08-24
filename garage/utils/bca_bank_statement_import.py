@@ -273,9 +273,21 @@ def delete_if_not_success(doc, method=None):
     fully successful import. "Error" and "Success" are never used as that
     kind of interim placeholder (only ever set once, as the true final
     outcome), so those are safe to act on immediately - only "Partial
-    Success" needs the extra check below, gated on whether every payload row
-    has actually been logged yet (mirrors the exact total-vs-logged
-    comparison importer.py itself uses to compute the final status)."""
+    Success" needs the extra check below.
+
+    A logged-count-vs-payload_count check alone (gating on whether every
+    payload row has actually been logged yet) is NOT enough on its own: for
+    the LAST row of any run - including a 1-row run, where "last" and
+    "first" are the same row - logged already equals payload_count at the
+    exact moment THIS row's own db_set("status", "Partial Success") fires,
+    since its own create_import_log() call already ran a few lines earlier
+    in the same loop iteration. That reads as "every row is in, safe to
+    check now" and deleted a fully successful single-row import outright
+    (reported directly by the user: a real Bank Statement Import vanished
+    right after "Start Import", despite the underlying import having
+    nothing wrong with it). Also requiring at least one logged failure
+    closes that gap - a batch with zero failures is never actually a
+    delete-worthy outcome, no matter how the row/log counts line up."""
     if doc.flags.in_delete:
         return
     if doc.status in (None, "", "Pending", "Success"):
@@ -286,6 +298,11 @@ def delete_if_not_success(doc, method=None):
             return
         logged = frappe.db.count("Data Import Log", {"data_import": doc.name})
         if logged < total:
+            return
+        has_failure = frappe.db.exists(
+            "Data Import Log", {"data_import": doc.name, "success": 0}
+        )
+        if not has_failure:
             return
 
     frappe.delete_doc(
