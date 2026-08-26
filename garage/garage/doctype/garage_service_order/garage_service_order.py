@@ -551,6 +551,7 @@ def item_query_with_stock(doctype, txt, searchfield, start, page_len, filters):
             i.name,
             i.item_name,
             i.item_group,
+            i.is_stock_item,
             COALESCE(b.actual_qty, 0) as stock_qty
         FROM `tabItem` i
         LEFT JOIN `tabBin` b ON b.item_code = i.name
@@ -567,14 +568,22 @@ def item_query_with_stock(doctype, txt, searchfield, start, page_len, filters):
 
     results = []
     for row in items:
-        stock = flt(row[3])
-        if stock <= 0:
-            stock_label = '<span style="color:#dc2626;font-weight:700;">Stock: 0 ⛔</span>'
-            desc = f'<span style="color:#ccc;">{row[1]}, {row[2]}</span> | {stock_label}'
-        else:
-            stock_label = f'<span style="color:#059669;font-weight:700;">Stock: {int(stock)}</span>'
-            desc = f"{row[1]}, {row[2]} | {stock_label}"
-        results.append([row[0], desc])
+        item_name, item_group, is_stock_item, stock = row[1], row[2], row[3], flt(row[4])
+        label = f"{item_name}, {item_group}"
+
+        # Jasa/service items (get_or_create_service_fee_item et al. always
+        # create these with is_stock_item=0) never carry real stock - Bin
+        # only exists for actual spare parts. Showing a red "Stock: 0"
+        # badge on every single service read as "unavailable" when it was
+        # just "not stock-tracked", reported directly by the user.
+        if is_stock_item:
+            if stock <= 0:
+                stock_label = '<span style="color:#b91c1c;font-weight:600;">Stock: 0</span>'
+            else:
+                stock_label = f'<span style="color:#15803d;font-weight:600;">Stock: {int(stock)}</span>'
+            label = f"{label} | {stock_label}"
+
+        results.append([row[0], label])
     return results
 
 
