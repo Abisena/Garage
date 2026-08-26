@@ -81,6 +81,7 @@ doctype_list_js = {
     "Delivery Note": "public/js/delivery_note_list.js",
     "Purchase Receipt": "public/js/purchase_receipt_list.js",
     "Account": "public/js/account_list.js",
+    "Garage Stock Alert": "public/js/garage_stock_alert_list.js",
     "Item": "public/js/item_list.js",
     "Item Group": "public/js/item_group_list.js",
     "Item Price": "public/js/item_price_list.js",

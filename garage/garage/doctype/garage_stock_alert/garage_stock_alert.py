@@ -6,6 +6,12 @@ Deliberately does NOT create a Garage Procurement Order by itself - explicit
 request: the alert is a review queue, not an auto-buy trigger. A human
 reviews it here and either approve()s it (which creates a Draft Garage
 Procurement Order for them to finish and submit normally) or dismiss()es it.
+
+When several parts breach their reorder level in the same run, that's
+naturally one purchase run, not N of them (explicit request) - see
+bulk_approve() and the "Approve Selected" list view action
+(garage_stock_alert_list.js), and _notify_stock_alerts() below, which sends
+ONE notification listing every part instead of stacking N separate popups.
 """
 
 from __future__ import annotations
@@ -28,41 +34,13 @@ class GarageStockAlert(Document):
         posts a receiving Garage Stock Movement, and that should only
         happen once the goods are genuinely in hand.
         """
-        self._check_write_permission()
-        if self.status != "Open":
-            frappe.throw(f"Alert ini sudah berstatus {self.status}, tidak bisa di-approve lagi.")
-
-        # Order enough to bring stock back up to the reorder level - a
-        # sane default the buyer can still edit before submitting, not a
-        # blind guess pretending to be precise procurement planning.
-        needed = flt(self.reorder_level) - flt(self.stock_qty)
-        qty = needed if needed > 0 else (flt(self.reorder_level) or 1)
-
-        warehouse = frappe.db.get_value("Garage Spare Part", self.spare_part, "warehouse_location")
-
-        order = frappe.new_doc("Garage Procurement Order")
-        order.reference_type = "Garage Stock Alert"
-        order.reference_name = self.name
-        order.order_date = nowdate()
-        order.warehouse = warehouse
-        order.remarks = f"Auto-generated dari Garage Stock Alert {self.name} ({self.part_name})"
-        order.append("items", {
-            "item_code": self.spare_part,
-            "qty": qty,
-        })
-        order.insert(ignore_permissions=True)
-
-        self.garage_procurement_order = order.name
-        self.status = "Approved"
-        self.resolved_on = now_datetime()
-        self.save(ignore_permissions=True)
-        return order.name
+        return bulk_approve([self.name])
 
     @frappe.whitelist()
     def dismiss(self, remarks: str | None = None) -> None:
         """Close the alert without buying anything - e.g. a part being
         discontinued, or stock counted differently than the system shows."""
-        self._check_write_permission()
+        self.check_permission("write")
         if self.status != "Open":
             frappe.throw(f"Alert ini sudah berstatus {self.status}, tidak bisa di-dismiss lagi.")
 
@@ -72,9 +50,59 @@ class GarageStockAlert(Document):
             self.remarks = remarks
         self.save(ignore_permissions=True)
 
-    def _check_write_permission(self) -> None:
-        if not self.has_permission("write"):
-            frappe.throw("Anda tidak punya izin untuk memproses Stock Alert ini.", frappe.PermissionError)
+
+@frappe.whitelist()
+def bulk_approve(names) -> str:
+    """Approve any number of Open alerts into a SINGLE Draft Garage
+    Procurement Order - one order with one line per item, not N separate
+    orders. Explicit request: when several parts hit their reorder level
+    together, reviewing and buying them is naturally one purchase run.
+    Returns the new order's name. Works for a single alert too (the
+    per-doc "Approve" button just calls this with a one-item list).
+    """
+    if isinstance(names, str):
+        names = frappe.parse_json(names)
+    if not names:
+        frappe.throw("Pilih minimal 1 Stock Alert.")
+
+    alerts = [frappe.get_doc("Garage Stock Alert", name) for name in names]
+    for alert in alerts:
+        alert.check_permission("write")
+        if alert.status != "Open":
+            frappe.throw(f"{alert.name} sudah berstatus {alert.status}, tidak bisa di-approve lagi.")
+
+    order = frappe.new_doc("Garage Procurement Order")
+    order.reference_type = "Garage Stock Alert"
+    order.reference_name = alerts[0].name
+    order.order_date = nowdate()
+    order.remarks = "Auto-generated dari {0} Garage Stock Alert: {1}".format(
+        len(alerts), ", ".join(a.name for a in alerts)
+    )
+
+    warehouses = set()
+    for alert in alerts:
+        # Order enough to bring stock back up to the reorder level - a
+        # sane default the buyer can still edit before submitting, not a
+        # blind guess pretending to be precise procurement planning.
+        needed = flt(alert.reorder_level) - flt(alert.stock_qty)
+        qty = needed if needed > 0 else (flt(alert.reorder_level) or 1)
+        order.append("items", {"item_code": alert.spare_part, "qty": qty})
+
+        warehouse = frappe.db.get_value("Garage Spare Part", alert.spare_part, "warehouse_location")
+        if warehouse:
+            warehouses.add(warehouse)
+
+    if len(warehouses) == 1:
+        order.warehouse = warehouses.pop()
+    order.insert(ignore_permissions=True)
+
+    for alert in alerts:
+        alert.garage_procurement_order = order.name
+        alert.status = "Approved"
+        alert.resolved_on = now_datetime()
+        alert.save(ignore_permissions=True)
+
+    return order.name
 
 
 def check_low_stock_alerts() -> dict:
@@ -99,6 +127,7 @@ def check_low_stock_alerts() -> dict:
         )
     }
 
+    created_docs = []
     created, resolved = [], []
 
     for part in parts:
@@ -121,7 +150,7 @@ def check_low_stock_alerts() -> dict:
             alert.reorder_level = reorder_level
             alert.insert(ignore_permissions=True)
             created.append(alert.name)
-            _notify_stock_alert(alert)
+            created_docs.append(alert)
         elif existing:
             alert = frappe.get_doc("Garage Stock Alert", existing)
             alert.status = "Resolved"
@@ -132,15 +161,39 @@ def check_low_stock_alerts() -> dict:
     if created or resolved:
         frappe.db.commit()
 
+    if created_docs:
+        # One notification for the whole batch, not one per item - N
+        # separate popups stacking on top of each other when several parts
+        # breach together was exactly the "kalau banyak product" concern
+        # raised directly by the user.
+        _notify_stock_alerts(created_docs)
+
     return {"created": created, "resolved": resolved}
 
 
-def _notify_stock_alert(alert: "GarageStockAlert") -> None:
-    """Bell-icon Notification Log entry (Notification Type "Alert",
-    already a stock fixture in Frappe core) for every Purchase Manager -
-    a document silently sitting in a list somewhere isn't an alert, it's
-    just data nobody's looking at (explicit distinction the user asked
-    about directly)."""
+def _notify_stock_alerts(alerts: list) -> None:
+    """Two layers, not one - a document silently sitting in a list
+    somewhere isn't an alert, it's just data nobody's looking at (explicit
+    distinction the user asked about directly):
+
+    1. Bell-icon Notification Log entry (Notification Type "Alert",
+       already a stock fixture in Frappe core) - persists regardless of
+       whether anyone's online right now, so it's still there whenever a
+       Purchase Manager next opens Desk.
+    2. A live msgprint pushed over the realtime socket (explicit request:
+       "real-time saat itu juga") - pops up as an actual modal on screen
+       for anyone who happens to have Desk open at that exact moment.
+       Only reaches users who are online right now; #1 is what catches
+       everyone else on their next visit.
+
+    Always one notification for the whole `alerts` batch (even when it's a
+    batch of one) rather than one call per alert - keeps the table format
+    below the single, consistent code path regardless of how many parts
+    breached together.
+    """
+    if not alerts:
+        return
+
     users = [
         user
         for user in set(
@@ -153,6 +206,21 @@ def _notify_stock_alert(alert: "GarageStockAlert") -> None:
     if not users:
         return
 
+    def _fmt(n):
+        # 2 -> "2", 2.5 -> "2.5" - qty is rarely fractional here, but
+        # trimming ".0" off whole numbers is what makes it read as a
+        # quantity instead of a raw float dump.
+        n = flt(n)
+        return str(int(n)) if n == int(n) else f"{n:g}"
+
+    if len(alerts) == 1:
+        alert = alerts[0]
+        subject = _("Stok {0} sudah di bawah batas minimum ({1} <= {2})").format(
+            alert.part_name or alert.spare_part, _fmt(alert.stock_qty), _fmt(alert.reorder_level)
+        )
+    else:
+        subject = _("{0} item stoknya sudah di bawah batas minimum").format(len(alerts))
+
     from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
 
     enqueue_create_notification(
@@ -160,10 +228,56 @@ def _notify_stock_alert(alert: "GarageStockAlert") -> None:
         {
             "type": "Alert",
             "document_type": "Garage Stock Alert",
-            "document_name": alert.name,
-            "subject": _("Stok {0} sudah di bawah batas minimum ({1} <= {2})").format(
-                alert.part_name or alert.spare_part, alert.stock_qty, alert.reorder_level
-            ),
+            "document_name": alerts[0].name,
+            "subject": subject,
         },
-        dedupe_on=["document_type", "document_name"],
+        dedupe_on=["document_type", "document_name"] if len(alerts) == 1 else None,
     )
+
+    rows_html = "".join(
+        f"""
+        <tr>
+            <td style="padding: 6px 12px 6px 0; border-bottom: 1px solid var(--border-color);">{frappe.utils.escape_html(a.part_name or a.spare_part)}</td>
+            <td style="padding: 6px 12px; text-align: right; color: #dc2626; font-weight: 700; border-bottom: 1px solid var(--border-color);">{_fmt(a.stock_qty)}</td>
+            <td style="padding: 6px 0; text-align: right; border-bottom: 1px solid var(--border-color);">{_fmt(a.reorder_level)}</td>
+        </tr>
+        """
+        for a in alerts
+    )
+
+    list_url = frappe.utils.get_url("/app/garage-stock-alert?status=Open")
+    single_url = frappe.utils.get_url_to_form("Garage Stock Alert", alerts[0].name)
+    cta_url = single_url if len(alerts) == 1 else list_url
+    cta_label = _("Lihat & Approve") if len(alerts) == 1 else _("Lihat Semua & Approve")
+
+    body = f"""
+        <div style="font-size: 14px;">
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 14px;">
+                <thead>
+                    <tr style="text-align: left; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .03em;">
+                        <th style="padding: 0 12px 6px 0; font-weight: 600;">Item</th>
+                        <th style="padding: 0 12px 6px; text-align: right; font-weight: 600;">Stok</th>
+                        <th style="padding: 0 0 6px; text-align: right; font-weight: 600;">Min</th>
+                    </tr>
+                </thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+            <a href="{cta_url}" style="display: inline-block; padding: 6px 16px; background: #dc2626; color: #fff; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px;">
+                {cta_label} &rarr;
+            </a>
+        </div>
+    """
+
+    title = (
+        _("Stock Alert: {0}").format(frappe.utils.escape_html(alerts[0].part_name or alerts[0].spare_part))
+        if len(alerts) == 1
+        else _("Stock Alert: {0} item").format(len(alerts))
+    )
+
+    for user in users:
+        frappe.publish_realtime(
+            event="msgprint",
+            message={"title": title, "indicator": "red", "message": body},
+            user=user,
+            after_commit=True,
+        )
