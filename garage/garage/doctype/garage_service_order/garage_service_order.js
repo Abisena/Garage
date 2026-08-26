@@ -250,6 +250,59 @@ const showMissingFieldsDialog = (fields) => {
   d.show();
 };
 
+const setStartRepairAction = (frm) => {
+  frm.page.set_primary_action(__('Start Repair'), () => {
+    // Always ask the server - it reads spk_number fresh from the DB on
+    // every call. Don't pre-check frm.doc.spk_number client-side: that
+    // field is only ever populated as a side effect of opening the SPK
+    // print format (garage/utils/jinja.py), a plain navigation the
+    // in-memory frm.doc doesn't reliably pick up on return, which was
+    // sending users back to the print screen in a loop even after
+    // they'd already printed it.
+    frappe.call({
+      method: 'garage.garage.doctype.garage_service_order.garage_service_order.start_repair',
+      args: { service_order_name: frm.doc.name },
+      freeze: true,
+      freeze_message: 'Memulai perbaikan...',
+      error(r) {
+        const msg = r?.exc_type === 'ValidationError' ? (r?._server_messages && JSON.parse(r._server_messages)[0]) : null;
+        const text = msg ? JSON.parse(msg).message : '';
+        if (text && text.includes('belum pernah dicetak')) {
+          frappe.show_alert({
+            message: __('SPK belum pernah dicetak - membuka halaman cetak SPK dulu.'),
+            indicator: 'orange',
+          });
+          frm.print_doc();
+        }
+      },
+      callback(r) {
+        if (r.message) {
+          const sd = new frappe.ui.Dialog({
+            title: ' ',
+            fields: [{
+              fieldtype: 'HTML',
+              options: `
+                <div style="text-align:center;padding:10px 0;">
+                  <div style="width:56px;height:56px;border-radius:50%;background:#dbeafe;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
+                    <svg width="28" height="28" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                      <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
+                    </svg>
+                  </div>
+                  <div style="font-size:15px;font-weight:700;color:#2563eb;margin-bottom:6px;">Perbaikan Dimulai!</div>
+                  <div style="font-size:12px;color:#6b7280;">Status berubah menjadi <strong style="color:#2563eb;">In Progress</strong></div>
+                </div>`
+            }],
+            primary_action_label: 'OK',
+            primary_action() { sd.hide(); frm.reload_doc(); },
+          });
+          sd.$wrapper.find('.modal-dialog').css({'max-width': '380px', 'margin': 'auto'});
+          sd.show();
+        }
+      },
+    });
+  });
+};
+
 frappe.ui.form.on('Garage Service Order', {
   validate(frm) {
     const missing = [];
@@ -274,6 +327,13 @@ frappe.ui.form.on('Garage Service Order', {
     // Garage Service Type is a master list meant to be browsed in full; without this
     // the Link dropdown silently truncates to Frappe's default page_length of 10.
     frm.set_query('service_order_type', () => ({ page_length: 200 }));
+
+    // Only show Employees who are mechanics (User has Role "Mekanik", or -
+    // failing that - Designation "Mekanik"). See mechanic_query in
+    // garage_service_order.py for the actual filter.
+    frm.set_query('assigned_mechanic', () => ({
+      query: 'garage.garage.doctype.garage_service_order.garage_service_order.mechanic_query',
+    }));
 
     fetchSentPartNames(frm);
 
@@ -510,7 +570,19 @@ frappe.ui.form.on('Garage Service Order', {
     const color = STATUS_COLORS[frm.doc.status] || 'gray';
     frm.page.set_indicator(frm.doc.status, color);
 
-    if (frm.doc.status === 'Open' && !frm.is_new() && (frm.doc.required_parts || []).some(r => r.item_code)) {
+    const openPartsWithCode = (frm.doc.required_parts || []).filter(r => r.item_code);
+    // A row's stock_status is only ever set (to "Request Spare Part") for a real
+    // stock item when it's picked - see fetchItemDetails below. Jasa/labor rows
+    // never get a stock_status, so its absence across every row means the order
+    // has nothing to physically prepare and can skip Waiting Part entirely.
+    const openHasStockPart = openPartsWithCode.some(r => r.stock_status);
+
+    if (frm.doc.status === 'Open' && !frm.is_new() && openPartsWithCode.length && !openHasStockPart) {
+      // Jasa-only order - nothing to send to Spare Part Request, so let the
+      // mechanic start repair directly instead of getting stuck waiting for a
+      // part that will never need preparing.
+      setStartRepairAction(frm);
+    } else if (frm.doc.status === 'Open' && !frm.is_new() && openHasStockPart) {
       frm.page.set_primary_action(__('Send Order Part'), () => {
         frm.page.btn_primary.prop('disabled', true);
 
@@ -683,56 +755,7 @@ frappe.ui.form.on('Garage Service Order', {
         // the spare part team. If nothing is prepared yet, there's nothing for
         // the mechanic to act on - show no primary action at all rather than a
         // "Start Repair" button that looks clickable but isn't.
-        frm.page.set_primary_action(__('Start Repair'), () => {
-          // Always ask the server - it reads spk_number fresh from the DB on
-          // every call. Don't pre-check frm.doc.spk_number client-side: that
-          // field is only ever populated as a side effect of opening the SPK
-          // print format (garage/utils/jinja.py), a plain navigation the
-          // in-memory frm.doc doesn't reliably pick up on return, which was
-          // sending users back to the print screen in a loop even after
-          // they'd already printed it.
-          frappe.call({
-            method: 'garage.garage.doctype.garage_service_order.garage_service_order.start_repair',
-            args: { service_order_name: frm.doc.name },
-            freeze: true,
-            freeze_message: 'Memulai perbaikan...',
-            error(r) {
-              const msg = r?.exc_type === 'ValidationError' ? (r?._server_messages && JSON.parse(r._server_messages)[0]) : null;
-              const text = msg ? JSON.parse(msg).message : '';
-              if (text && text.includes('belum pernah dicetak')) {
-                frappe.show_alert({
-                  message: __('SPK belum pernah dicetak - membuka halaman cetak SPK dulu.'),
-                  indicator: 'orange',
-                });
-                frm.print_doc();
-              }
-            },
-            callback(r) {
-              if (r.message) {
-                const sd = new frappe.ui.Dialog({
-                  title: ' ',
-                  fields: [{
-                    fieldtype: 'HTML',
-                    options: `
-                      <div style="text-align:center;padding:10px 0;">
-                        <div style="width:56px;height:56px;border-radius:50%;background:#dbeafe;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
-                          <svg width="28" height="28" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                            <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
-                          </svg>
-                        </div>
-                        <div style="font-size:15px;font-weight:700;color:#2563eb;margin-bottom:6px;">Perbaikan Dimulai!</div>
-                        <div style="font-size:12px;color:#6b7280;">Status berubah menjadi <strong style="color:#2563eb;">In Progress</strong></div>
-                      </div>`
-                  }],
-                  primary_action_label: 'OK',
-                  primary_action() { sd.hide(); frm.reload_doc(); },
-                });
-                sd.$wrapper.find('.modal-dialog').css({'max-width': '380px', 'margin': 'auto'});
-                sd.show();
-              }
-            },
-          });
-        });
+        setStartRepairAction(frm);
       }
 
       const rejectedStatuses = ['rejected', 'out of stock'];

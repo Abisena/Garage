@@ -6,7 +6,7 @@ import re
 from typing import Iterable, Optional
 
 import frappe
-from frappe.utils import cstr, flt, getdate, nowdate
+from frappe.utils import cint, cstr, flt, getdate, nowdate
 
 from frappe.model.document import Document
 
@@ -579,6 +579,26 @@ def item_query_with_stock(doctype, txt, searchfield, start, page_len, filters):
 
 
 @frappe.whitelist()
+def mechanic_query(doctype, txt, searchfield, start, page_len, filters):
+    """Only offer Employees who are mechanics: their linked User has Role
+    "Mekanik", or - failing that (no user_id, or that user lacks the role) -
+    their Designation is "Mekanik"."""
+    return frappe.db.sql(
+        """
+        SELECT DISTINCT e.name, e.employee_name
+        FROM `tabEmployee` e
+        LEFT JOIN `tabHas Role` hr
+            ON hr.parent = e.user_id AND hr.parenttype = 'User' AND hr.role = 'Mekanik'
+        WHERE (hr.name IS NOT NULL OR e.designation = 'Mekanik')
+          AND (e.name LIKE %(txt)s OR e.employee_name LIKE %(txt)s)
+        ORDER BY e.employee_name
+        LIMIT %(start)s, %(page_len)s
+        """,
+        {"txt": f"%{txt}%", "start": cint(start), "page_len": cint(page_len)},
+    )
+
+
+@frappe.whitelist()
 def get_sent_part_row_names(service_order_name: str) -> list[str]:
     """Return Required Parts row names that are already linked to a Spare Part Request."""
 
@@ -621,7 +641,16 @@ def send_order_part(service_order_name: str) -> dict[str, object]:
 def start_repair(service_order_name: str) -> dict[str, object]:
     doc = frappe.get_doc("Garage Service Order", service_order_name)
 
-    if doc.status not in ("Waiting Part", "Prepared"):
+    parts_with_code = [row for row in getattr(doc, "required_parts", []) if getattr(row, "item_code", None)]
+    has_stock_parts = any(
+        frappe.db.get_value("Item", row.item_code, "is_stock_item") for row in parts_with_code
+    )
+
+    # Jasa-only orders (no physical part in Required Parts) have nothing for the
+    # spare part team to prepare, so they can start repair straight from Open -
+    # everyone else still has to go through Waiting Part first.
+    allowed_statuses = ("Waiting Part", "Prepared") if has_stock_parts else ("Waiting Part", "Prepared", "Open")
+    if doc.status not in allowed_statuses:
         frappe.throw("Start Repair hanya bisa dilakukan saat status Waiting Part atau Prepared.")
 
     if not doc.spk_number:
@@ -630,15 +659,14 @@ def start_repair(service_order_name: str) -> dict[str, object]:
             "Cetak SPK dulu sebelum memulai perbaikan."
         )
 
-    parts_with_code = [row for row in getattr(doc, "required_parts", []) if getattr(row, "item_code", None)]
-    prepared_statuses = {"prepared", "received", "issued", "approved"}
-    any_prepared = any(
-        cstr(getattr(row, "stock_status", "")).strip().lower() in prepared_statuses
-        for row in parts_with_code
-    ) if parts_with_code else False
-
-    if not any_prepared:
-        frappe.throw("Minimal satu spare part harus sudah Prepared sebelum memulai perbaikan.")
+    if has_stock_parts:
+        prepared_statuses = {"prepared", "received", "issued", "approved"}
+        any_prepared = any(
+            cstr(getattr(row, "stock_status", "")).strip().lower() in prepared_statuses
+            for row in parts_with_code
+        )
+        if not any_prepared:
+            frappe.throw("Minimal satu spare part harus sudah Prepared sebelum memulai perbaikan.")
 
     doc.status = "In Progress"
     doc.save(ignore_permissions=True)
