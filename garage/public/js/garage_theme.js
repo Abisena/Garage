@@ -803,13 +803,22 @@ if (frappe.user.has_role('System Manager') && !$('#garage-reset-test-data-btn').
           callback(r) {
             frappe.dom.unfreeze();
             if (r.message) {
+              const errors = r.message._errors;
               const lines = Object.entries(r.message)
+                .filter(([key]) => key !== '_errors')
                 .map(([doctype, count]) => `${doctype}: ${count}`)
                 .join('<br>');
+              const errorBlock = errors
+                ? '<br><br><strong>' + __('Otomatis diperbaiki (dihapus paksa), untuk info:') +
+                  '</strong><br>' +
+                  Object.entries(errors)
+                    .map(([doctype, msgs]) => `${doctype}:<br>` + msgs.map((m) => `&nbsp;&nbsp;- ${frappe.utils.escape_html(m)}`).join('<br>'))
+                    .join('<br>')
+                : '';
               frappe.msgprint({
                 title: __('Data Testing Direset'),
-                indicator: 'green',
-                message: lines,
+                indicator: errors ? 'yellow' : 'green',
+                message: lines + errorBlock,
               });
             }
           },

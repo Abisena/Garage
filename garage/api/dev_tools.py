@@ -5,8 +5,19 @@ handovers/SIKK, stock moves and their GL/stock ledger side effects,
 employee attendance/checkins) while leaving master data (customers,
 vehicles, service types, bundles, spare parts) untouched, so the workshop
 setup doesn't have to be rebuilt between test rounds. Also resets every
-Garage Spare Part's stock_qty to DEMO_STOCK_QTY so parts are immediately
-orderable again for the next round of demo transactions.
+Garage Spare Part's stock_qty to 0 - no opening-stock Stock Entry is
+created afterwards (a previous version did this "for convenience", but
+that Stock Entry is itself a transaction: it left a non-zero Trial
+Balance/Stock Ledger right after a "wipe everything" reset, which defeats
+the point). Testers create their own opening stock via a real Purchase
+Receipt/Stock Entry, same as any other test data.
+
+Resilient by design: every cancel/delete is attempted per-document, and a
+document that can't be cancelled or deleted the normal way (a validation
+hook, a stock/GL edge case, whatever) is force-removed at the row level
+instead of aborting the whole run - see _hard_delete() and the try/except
+loops in reset_test_transactions(). One awkward leftover document should
+never again mean "reset button did nothing."
 
 Exposed to the desk via a System Manager-only navbar button (see
 garage_theme.js); can also be run directly via bench:
@@ -112,24 +123,29 @@ LEDGER_DOCTYPES = [
 # Garage Spare Part.stock_qty is decremented directly by transactional flows
 # (Garage Stock Movement, Spare Part Request) and was never seeded with a
 # real starting quantity in this test data - it's only ever drifted between
-# 0 and small negative numbers. Rather than "preserve" that, reset it to a
-# usable demo baseline every time so parts are immediately orderable again.
-DEMO_STOCK_QTY = 50
+# 0 and small negative numbers. Reset it to 0 (not a "demo baseline") so it
+# actually matches Bin.actual_qty, which is genuinely 0 once every Stock
+# Entry/Delivery Note/etc. above is gone - see the module docstring for why
+# this no longer auto-creates an opening-stock Stock Entry to paper over
+# that.
+RESET_STOCK_QTY = 0
 
-# The "Item Code" search on Garage Service Order (item_query_with_stock)
-# reads Bin.actual_qty, not Garage Spare Part.stock_qty - two separate stock
-# trackers that don't sync each other. Deleting all Stock Entry docs above
-# zeroes this one out too, so it needs its own opening balance restored via
-# a real Stock Entry (not a direct Bin write - that would desync Bin from
-# its own Stock Ledger Entries). Resolved per-company at call time rather
-# than hardcoded - a fixed "Stores - I" (this app's original reference
-# company's own abbreviation) silently matched no Warehouse at all on any
-# site whose company abbreviation isn't literally "I", quietly skipping
-# the opening-stock Stock Entry below with no error.
-def _demo_warehouse(company: str) -> str | None:
-    return frappe.db.get_value(
-        "Warehouse", {"company": company, "warehouse_name": "Stores"}, "name"
-    ) or frappe.db.get_value("Warehouse", {"company": company, "is_group": 0}, "name")
+
+def _hard_delete(doctype: str, name: str) -> None:
+    """Last-resort removal for a document that survived both cancel() and
+    delete_doc(): bypass every controller hook (on_trash guards, link
+    checks, docstatus checks - whatever it was that kept throwing) and rip
+    the row out directly, taking its child-table rows with it. Only reached
+    once the normal cancel/delete path has already been tried and failed -
+    see the fallback sweep in reset_test_transactions(). This is what makes
+    "hapus semua data transaksi" an actual guarantee instead of a best
+    effort: a single stubborn document (an edge case like the historical
+    Delivery Note bug documented above) no longer gets to leave test data
+    behind."""
+    meta = frappe.get_meta(doctype)
+    for df in meta.get_table_fields():
+        frappe.db.delete(df.options, {"parenttype": doctype, "parent": name})
+    frappe.db.delete(doctype, {"name": name})
 
 
 def _cancel_reconciled_bank_transactions() -> int:
@@ -164,10 +180,22 @@ def reset_test_transactions(confirm: bool = False) -> dict[str, object]:
         frappe.throw("Only Administrator / System Manager can run this.")
 
     bank_transactions_cancelled = _cancel_reconciled_bank_transactions()
+    frappe.db.commit()
 
     names_by_doctype: dict[str, list[str]] = {
         doctype: frappe.get_all(doctype, pluck="name") for doctype in TRANSACTIONAL_DOCTYPES
     }
+
+    # Every cancel/delete below runs in its own try/except and keeps going
+    # on failure, instead of letting one bad document raise and unwind the
+    # whole request. That used to mean one edge case (a validation hook, a
+    # stock/GL quirk on one specific document) discarded the *entire* reset
+    # on rollback - "hapus semua data transaksi" silently becoming "hapus
+    # nothing" the moment any single document misbehaved. Docs that fail
+    # both cancel() and delete_doc() are swept up by _hard_delete() below,
+    # so the button's promise holds even for cases like the historical
+    # Delivery Note bug documented in TRANSACTIONAL_DOCTYPES above.
+    errors: dict[str, list[str]] = {}
 
     # Two phases, not cancel-then-delete-per-doctype: several of these
     # doctypes reference each other (Vehicle Handover <-> Payment Entry),
@@ -180,17 +208,51 @@ def reset_test_transactions(confirm: bool = False) -> dict[str, object]:
     # deletion while its Payment Entry is still docstatus 1.
     for doctype, names in names_by_doctype.items():
         for name in names:
-            doc = frappe.get_doc(doctype, name)
-            if doc.meta.is_submittable and doc.docstatus == 1:
-                doc.cancel()
+            try:
+                doc = frappe.get_doc(doctype, name)
+                if doc.meta.is_submittable and doc.docstatus == 1:
+                    doc.flags.ignore_permissions = True
+                    doc.cancel()
+            except Exception as e:
+                errors.setdefault(doctype, []).append(f"{name} (cancel): {e}")
+    frappe.db.commit()
 
     summary: dict[str, object] = {
         "Bank Transaction (unreconciled + cancelled)": bank_transactions_cancelled,
     }
     for doctype, names in names_by_doctype.items():
+        deleted = 0
         for name in names:
-            frappe.delete_doc(doctype, name, ignore_permissions=True, force=True)
-        summary[doctype] = len(names)
+            try:
+                frappe.delete_doc(
+                    doctype,
+                    name,
+                    ignore_permissions=True,
+                    force=True,
+                    ignore_on_trash=True,
+                    ignore_missing=True,
+                )
+                deleted += 1
+            except Exception as e:
+                errors.setdefault(doctype, []).append(f"{name} (delete): {e}")
+        summary[doctype] = deleted
+    frappe.db.commit()
+
+    # Fallback sweep: anything still sitting in the table after both phases
+    # above (cancel failed, or delete_doc still refused it) gets removed
+    # directly, no exceptions to catch because there's no controller logic
+    # left to throw one.
+    force_removed = 0
+    for doctype in TRANSACTIONAL_DOCTYPES:
+        remaining = frappe.get_all(doctype, pluck="name")
+        for name in remaining:
+            _hard_delete(doctype, name)
+        if remaining:
+            summary[doctype] = summary.get(doctype, 0) + len(remaining)
+            force_removed += len(remaining)
+    if force_removed:
+        summary["Force-removed (cancel/delete failed, see _errors)"] = force_removed
+    frappe.db.commit()
 
     for doctype in LEDGER_DOCTYPES:
         remaining = frappe.get_all(doctype, pluck="name")
@@ -198,37 +260,29 @@ def reset_test_transactions(confirm: bool = False) -> dict[str, object]:
             frappe.db.delete(doctype, {"name": ["in", remaining]})
         summary[doctype] = len(remaining)
 
+    # Bin is a derived cache (per item+warehouse actual/reserved/ordered
+    # qty), not a ledger record itself - raw-deleting Stock Ledger Entry
+    # above doesn't update it, so it can be left holding stale quantities
+    # from before the wipe. ERPNext recreates a Bin row lazily whenever one
+    # is next needed (get_bin), so wiping the table outright is safe and is
+    # what makes Stock Balance / the Garage Service Order item picker
+    # (which reads Bin.actual_qty, not Stock Ledger Entry) match the
+    # now-empty ledger instead of showing leftover numbers.
+    bin_count = frappe.db.count("Bin")
+    if bin_count:
+        frappe.db.delete("Bin")
+    summary["Bin (cache cleared)"] = bin_count
+    frappe.db.commit()
+
     part_codes = frappe.get_all("Garage Spare Part", pluck="name")
     for part_code in part_codes:
         frappe.db.set_value(
-            "Garage Spare Part", part_code, "stock_qty", DEMO_STOCK_QTY, update_modified=False
+            "Garage Spare Part", part_code, "stock_qty", RESET_STOCK_QTY, update_modified=False
         )
-    summary["Garage Spare Part (stock reset to %s)" % DEMO_STOCK_QTY] = len(part_codes)
-
-    company = frappe.db.get_single_value("Global Defaults", "default_company") or (
-        frappe.get_all("Company", limit=1, pluck="name") or [None]
-    )[0]
-    demo_warehouse = _demo_warehouse(company) if company else None
-
-    item_codes = [
-        code for code in part_codes
-        if frappe.db.get_value("Item", code, "is_stock_item")
-    ] if demo_warehouse else []
-    if item_codes:
-        se = frappe.new_doc("Stock Entry")
-        se.stock_entry_type = "Material Receipt"
-        se.company = company
-        se.to_warehouse = demo_warehouse
-        for item_code in item_codes:
-            se.append("items", {
-                "item_code": item_code,
-                "qty": DEMO_STOCK_QTY,
-                "t_warehouse": demo_warehouse,
-                "basic_rate": frappe.db.get_value("Garage Spare Part", item_code, "unit_price") or 0,
-            })
-        se.insert(ignore_permissions=True)
-        se.submit()
-        summary["Bin (opening stock via %s)" % se.name] = len(item_codes)
-
+    summary["Garage Spare Part (stock reset to %s)" % RESET_STOCK_QTY] = len(part_codes)
     frappe.db.commit()
+
+    if errors:
+        summary["_errors (auto-recovered, kept going - see Force-removed above)"] = errors
+
     return summary
