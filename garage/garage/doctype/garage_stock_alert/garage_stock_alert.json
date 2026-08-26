@@ -1,0 +1,183 @@
+{
+  "actions": [],
+  "allow_guest_to_edit": 0,
+  "allow_guest_to_view": 0,
+  "allow_import": 1,
+  "allow_rename": 0,
+  "autoname": "format:SALERT-{#####}",
+  "beta": 0,
+  "creation": "2026-08-26 00:00:00.000000",
+  "default_view": "List",
+  "disable_prepared_report": 0,
+  "docstatus": 0,
+  "doctype": "DocType",
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "spare_part",
+    "part_name",
+    "status",
+    "column_break_status",
+    "stock_qty",
+    "reorder_level",
+    "section_break_timeline",
+    "triggered_on",
+    "resolved_on",
+    "column_break_action",
+    "garage_procurement_order",
+    "remarks"
+  ],
+  "fields": [
+    {
+      "fieldname": "spare_part",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "label": "Spare Part",
+      "options": "Garage Spare Part",
+      "read_only": 1,
+      "reqd": 1
+    },
+    {
+      "fetch_from": "spare_part.part_name",
+      "fieldname": "part_name",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "Part Name",
+      "read_only": 1
+    },
+    {
+      "default": "Open",
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "label": "Status",
+      "options": "Open\nApproved\nDismissed\nResolved",
+      "read_only": 1
+    },
+    {
+      "fieldname": "column_break_status",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "stock_qty",
+      "fieldtype": "Float",
+      "in_list_view": 1,
+      "label": "Stock Saat Alert",
+      "read_only": 1
+    },
+    {
+      "fieldname": "reorder_level",
+      "fieldtype": "Float",
+      "label": "Batas Minimum",
+      "read_only": 1
+    },
+    {
+      "fieldname": "section_break_timeline",
+      "fieldtype": "Section Break"
+    },
+    {
+      "default": "now",
+      "fieldname": "triggered_on",
+      "fieldtype": "Datetime",
+      "in_list_view": 1,
+      "label": "Triggered On",
+      "read_only": 1
+    },
+    {
+      "fieldname": "resolved_on",
+      "fieldtype": "Datetime",
+      "label": "Resolved On",
+      "read_only": 1
+    },
+    {
+      "fieldname": "column_break_action",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "garage_procurement_order",
+      "fieldtype": "Link",
+      "label": "Procurement Order",
+      "options": "Garage Procurement Order",
+      "read_only": 1
+    },
+    {
+      "fieldname": "remarks",
+      "fieldtype": "Small Text",
+      "label": "Remarks"
+    }
+  ],
+  "has_web_view": 0,
+  "hide_heading": 0,
+  "hide_toolbar": 0,
+  "idx": 0,
+  "image_field": "",
+  "in_create": 0,
+  "index_web_pages_for_search": 1,
+  "info_fields": [],
+  "is_submittable": 0,
+  "issingle": 0,
+  "istable": 0,
+  "links": [],
+  "make_attachments_public": 0,
+  "max_attachments": 0,
+  "modified": "2026-08-26 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Garage",
+  "name": "Garage Stock Alert",
+  "naming_rule": "Expression",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "create": 1,
+      "read": 1,
+      "write": 1,
+      "delete": 1,
+      "email": 1,
+      "print": 1,
+      "share": 1,
+      "export": 1,
+      "report": 1
+    },
+    {
+      "role": "Purchase Manager",
+      "create": 0,
+      "read": 1,
+      "write": 1,
+      "delete": 0,
+      "email": 1,
+      "print": 1,
+      "share": 0,
+      "export": 1,
+      "report": 1
+    },
+    {
+      "role": "Purchase User",
+      "create": 0,
+      "read": 1,
+      "write": 0,
+      "delete": 0,
+      "email": 1,
+      "print": 1,
+      "share": 0,
+      "export": 0,
+      "report": 1
+    }
+  ],
+  "quick_entry": 0,
+  "read_only": 0,
+  "read_only_onload": 0,
+  "show_name_in_global_search": 0,
+  "show_preview_popup": 0,
+  "sort_field": "creation",
+  "sort_order": "DESC",
+  "states": [],
+  "subject": "",
+  "track_changes": 1,
+  "track_seen": 0,
+  "translated_doctype": 0,
+  "migration_hash": "",
+  "description": "Low-stock alert for a Garage Spare Part, raised when stock_qty drops to or below its reorder_level. Reviewed and approved manually - approving creates a Garage Procurement Order, it never happens automatically."
+}

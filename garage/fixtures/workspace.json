@@ -351,7 +351,7 @@
  },
  {
   "charts": [],
-  "content": "[{\"type\": \"header\", \"data\": {\"text\": \"Procurement Order\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Purchase Order\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Purchase Receipt\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Purchase Invoice\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Supplier\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Item\"}}]",
+  "content": "[{\"type\": \"header\", \"data\": {\"text\": \"Procurement Order\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Purchase Order\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Purchase Receipt\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Purchase Invoice\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Supplier\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Item\"}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Garage Stock Alert\"}}]",
   "custom_blocks": [],
   "docstatus": 0,
   "doctype": "Workspace",
@@ -362,7 +362,7 @@
   "is_hidden": 0,
   "label": "Procurement Order",
   "links": [],
-  "modified": "2026-07-17 06:45:44.006786",
+  "modified": "2026-08-26 17:40:43.912429",
   "module": "Garage",
   "name": "Procurement Order",
   "number_cards": [],
@@ -455,6 +455,23 @@
     "report_ref_doctype": null,
     "restrict_to_domain": null,
     "stats_filter": null,
+    "type": "DocType",
+    "url": null
+   },
+   {
+    "color": null,
+    "doc_view": "",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Garage Stock Alert",
+    "link_to": "Garage Stock Alert",
+    "parent": "Procurement Order",
+    "parentfield": "shortcuts",
+    "parenttype": "Workspace",
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": "{\"status\": \"Open\"}",
     "type": "DocType",
     "url": null
    }
