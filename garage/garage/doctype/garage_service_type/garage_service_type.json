@@ -35,7 +35,7 @@
       "fieldtype": "Link",
       "options": "Item",
       "label": "Service Item",
-      "reqd": 1,
+      "reqd": 0,
       "link_filters": "[[\"Item\",\"item_group\",\"=\",\"Services\"]]"
     },
     {

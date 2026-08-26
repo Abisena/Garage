@@ -14,13 +14,14 @@ class GarageServiceType(Document):
     def validate(self):
         self.bundle_description = (self.bundle_description or "").strip().upper()
 
+        if not self.item:
+            self.service_fee = 0
+            return
+
         # link_filters on the field only narrows the dropdown in the UI -
         # it doesn't stop the value being set some other way (API, import,
         # bulk edit), so re-check it here to keep the fee tied to a real
         # priced service Item instead of drifting into a manual number.
-        if not self.item:
-            frappe.throw(_("Service Item wajib diisi."))
-
         item_group = frappe.db.get_value("Item", self.item, "item_group")
         if item_group != "Services":
             frappe.throw(

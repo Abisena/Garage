@@ -302,9 +302,6 @@ frappe.ui.form.on('Garage Service Order', {
     const grid = frm.fields_dict.required_parts?.grid;
     if (grid) {
       grid.df.in_place_edit = 1;
-      const noTypeSelected = !frm.doc.service_order_type && !frm.doc.service_package;
-      grid.df.cannot_add_rows = noTypeSelected;
-      grid.df.cannot_delete_rows = noTypeSelected;
 
       // ITEM CODE | ITEM NAME | STATUS | QTY | RATE | DISC% | TAX% | SUB TOTAL
       const COL_FLEX_SEQ = [
@@ -1085,24 +1082,10 @@ frappe.ui.form.on('Garage Service Order', {
     }
   },
   service_order_type(frm) {
-    const grid = frm.fields_dict.required_parts?.grid;
-    if (grid) {
-      const noTypeSelected = !frm.doc.service_order_type && !frm.doc.service_package;
-      grid.df.cannot_add_rows = noTypeSelected;
-      grid.df.cannot_delete_rows = noTypeSelected;
-      grid.refresh();
-    }
     autoApplyServiceFee(frm);
     updatePackageFilter(frm);
   },
   service_package(frm) {
-    const grid = frm.fields_dict.required_parts?.grid;
-    if (grid) {
-      const noTypeSelected = !frm.doc.service_order_type && !frm.doc.service_package;
-      grid.df.cannot_add_rows = noTypeSelected;
-      grid.df.cannot_delete_rows = noTypeSelected;
-      grid.refresh();
-    }
     autoApplyPackage(frm);
   },
   required_parts_remove(frm) {
