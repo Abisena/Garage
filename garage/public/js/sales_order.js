@@ -215,48 +215,51 @@
         if (changed) frm.refresh_field('items');
     }
 
-    // "Include PPN" / "Exclude PPN" - direct port of purchase_order.js's
-    // own apply_ppn_category()/sync_ppn_checkboxes(), Supplier swapped for
-    // Customer. Drives tax_category (now hidden, see the Property Setter
-    // created alongside these two checkboxes) through the same "PPN
-    // Include"/"PPN Exclude" Tax Category + Tax Rule records already used
-    // on the buying side, rather than inventing a second, parallel way to
-    // pick a tax template for selling.
-    const PPN_CATEGORY = { ppn_include: 'PPN Include', ppn_exclude: 'PPN Exclude' };
+    // "Include PPN" / "Exclude PPN" / "Non PPN" - direct port of
+    // purchase_order.js's own apply_ppn_category()/sync_ppn_checkboxes(),
+    // Supplier swapped for Customer. Drives tax_category (now hidden, see
+    // the Property Setter created alongside these checkboxes) through the
+    // same "PPN Include"/"PPN Exclude"/"PPN Non" Tax Category + Tax Rule
+    // records already used on the buying side, rather than inventing a
+    // second, parallel way to pick a tax template for selling. "PPN Non"
+    // (2026-08-26 explicit ask) resolves to a template with zero tax rows
+    // - a sale that genuinely has no PPN, distinct from leaving all three
+    // boxes unticked (which still doesn't clear tax_category).
+    const PPN_CATEGORY = { ppn_include: 'PPN Include', ppn_exclude: 'PPN Exclude', ppn_non: 'PPN Non' };
+    const PPN_FIELDS = Object.keys(PPN_CATEGORY);
 
     function apply_ppn_category(frm, fieldname) {
         const category = PPN_CATEGORY[fieldname];
-        const other = fieldname === 'ppn_include' ? 'ppn_exclude' : 'ppn_include';
+        const others = PPN_FIELDS.filter((f) => f !== fieldname);
 
         if (!cint(frm.doc[fieldname])) {
             return;
         }
 
         if (!frm.doc.company || !frm.doc.customer || !(frm.doc.transaction_date || frm.doc.posting_date)) {
-            frappe.msgprint(__('Pilih Customer dan Company dulu sebelum pilih Include/Exclude PPN.'));
+            frappe.msgprint(__('Pilih Customer dan Company dulu sebelum pilih Include/Exclude/Non PPN.'));
             frm.doc[fieldname] = 0;
             frm.refresh_field(fieldname);
             return;
         }
 
-        frm.doc[other] = 0;
-        frm.refresh_field(other);
+        others.forEach((other) => {
+            frm.doc[other] = 0;
+            frm.refresh_field(other);
+        });
         frm.doc.tax_category = category;
         frm.refresh_field('tax_category');
         erpnext.utils.set_taxes(frm, 'tax_category');
     }
 
     function sync_ppn_checkboxes(frm) {
-        const want_include = frm.doc.tax_category === 'PPN Include' ? 1 : 0;
-        const want_exclude = frm.doc.tax_category === 'PPN Exclude' ? 1 : 0;
-        if (cint(frm.doc.ppn_include) !== want_include) {
-            frm.doc.ppn_include = want_include;
-            frm.refresh_field('ppn_include');
-        }
-        if (cint(frm.doc.ppn_exclude) !== want_exclude) {
-            frm.doc.ppn_exclude = want_exclude;
-            frm.refresh_field('ppn_exclude');
-        }
+        PPN_FIELDS.forEach((fieldname) => {
+            const want = frm.doc.tax_category === PPN_CATEGORY[fieldname] ? 1 : 0;
+            if (cint(frm.doc[fieldname]) !== want) {
+                frm.doc[fieldname] = want;
+                frm.refresh_field(fieldname);
+            }
+        });
     }
 
     // Swaps which ONE of discount_percentage/discount_amount is the
@@ -488,6 +491,9 @@
         },
         ppn_exclude(frm) {
             apply_ppn_category(frm, 'ppn_exclude');
+        },
+        ppn_non(frm) {
+            apply_ppn_category(frm, 'ppn_non');
         },
         // Explicit user request: picking No. Polisi should auto-fill
         // Customer from that vehicle's own registered owner (Garage

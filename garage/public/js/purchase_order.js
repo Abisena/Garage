@@ -354,14 +354,20 @@
     // familiar pattern) - a plain checkbox pair reads more standard, so
     // this replaced the earlier HTML-badge version entirely. Tax Category
     // and the template Link field both stay hidden (see this app's own
-    // Property Setter fixtures) - "Include PPN" / "Exclude PPN" become
-    // the only visible surface, and drive tax_category behind the scenes
-    // exactly the same way the (hidden) Tax Category field itself would
-    // have, through the two "PPN Include" / "PPN Exclude" Tax Category
-    // records + their matching Tax Rule records (see Tax Rule list) -
-    // reusing that already-correct, already-core mechanism rather than
-    // inventing a second parallel way to pick a tax template.
-    const PPN_CATEGORY = { ppn_include: 'PPN Include', ppn_exclude: 'PPN Exclude' };
+    // Property Setter fixtures) - "Include PPN" / "Exclude PPN" / "Non
+    // PPN" become the only visible surface, and drive tax_category behind
+    // the scenes exactly the same way the (hidden) Tax Category field
+    // itself would have, through three "PPN Include" / "PPN Exclude" /
+    // "PPN Non" Tax Category records + their matching Tax Rule records
+    // (see Tax Rule list) - reusing that already-correct, already-core
+    // mechanism rather than inventing a second parallel way to pick a tax
+    // template. "PPN Non" (2026-08-26 explicit ask) resolves to a template
+    // with zero tax rows - a transaction that genuinely has no PPN, not
+    // just "didn't say" - distinct from leaving all three unticked, which
+    // still doesn't clear tax_category (see the "no 'neither' state"
+    // comment below).
+    const PPN_CATEGORY = { ppn_include: 'PPN Include', ppn_exclude: 'PPN Exclude', ppn_non: 'PPN Non' };
+    const PPN_FIELDS = Object.keys(PPN_CATEGORY);
 
     // erpnext.utils.set_taxes (party.js) hard frappe.throw()s - and wipes
     // the field that triggered it back to "" - if company/party/date
@@ -372,31 +378,34 @@
     // then silently get blanked back out from under the user.
     function apply_ppn_category(frm, fieldname) {
         const category = PPN_CATEGORY[fieldname];
-        const other = fieldname === 'ppn_include' ? 'ppn_exclude' : 'ppn_include';
+        const others = PPN_FIELDS.filter((f) => f !== fieldname);
 
         if (!cint(frm.doc[fieldname])) {
             // Unchecking a box on its own doesn't clear tax_category -
             // there's no "neither" state worth landing on mid-edit -
-            // checking the OTHER box is how you actually switch modes.
+            // checking one of the OTHER boxes is how you actually switch
+            // modes.
             return;
         }
 
         if (!frm.doc.company || !frm.doc.supplier || !(frm.doc.transaction_date || frm.doc.posting_date)) {
-            frappe.msgprint(__('Pilih Supplier dan Company dulu sebelum pilih Include/Exclude PPN.'));
+            frappe.msgprint(__('Pilih Supplier dan Company dulu sebelum pilih Include/Exclude/Non PPN.'));
             frm.doc[fieldname] = 0;
             frm.refresh_field(fieldname);
             return;
         }
 
-        frm.doc[other] = 0;
-        frm.refresh_field(other);
+        others.forEach((other) => {
+            frm.doc[other] = 0;
+            frm.refresh_field(other);
+        });
         frm.doc.tax_category = category;
         frm.refresh_field('tax_category');
         erpnext.utils.set_taxes(frm, 'tax_category');
     }
 
-    // Keeps the two checkboxes truthful whenever tax_category changes for
-    // any OTHER reason than the checkboxes themselves - most commonly,
+    // Keeps the three checkboxes truthful whenever tax_category changes
+    // for any OTHER reason than the checkboxes themselves - most commonly,
     // core's own supplier(frm) handler already calls erpnext.utils.
     // set_taxes(frm, "supplier") on every Supplier change (buying.js),
     // which resolves tax_category from the Supplier's own default via
@@ -404,16 +413,13 @@
     // does - polled the same "no discrete event to hook" way the rest of
     // this file's watch_po_form() loop already handles item_tax_rate.
     function sync_ppn_checkboxes(frm) {
-        const want_include = frm.doc.tax_category === 'PPN Include' ? 1 : 0;
-        const want_exclude = frm.doc.tax_category === 'PPN Exclude' ? 1 : 0;
-        if (cint(frm.doc.ppn_include) !== want_include) {
-            frm.doc.ppn_include = want_include;
-            frm.refresh_field('ppn_include');
-        }
-        if (cint(frm.doc.ppn_exclude) !== want_exclude) {
-            frm.doc.ppn_exclude = want_exclude;
-            frm.refresh_field('ppn_exclude');
-        }
+        PPN_FIELDS.forEach((fieldname) => {
+            const want = frm.doc.tax_category === PPN_CATEGORY[fieldname] ? 1 : 0;
+            if (cint(frm.doc[fieldname]) !== want) {
+                frm.doc[fieldname] = want;
+                frm.refresh_field(fieldname);
+            }
+        });
     }
 
     // "Amount" (custom field amount_after_tax) = Subtotal + tax - the
@@ -919,6 +925,9 @@
         },
         ppn_exclude(frm) {
             apply_ppn_category(frm, 'ppn_exclude');
+        },
+        ppn_non(frm) {
+            apply_ppn_category(frm, 'ppn_non');
         },
         // GridRow.remove() (grid_row.js) fires "<fieldname>_remove" on the
         // PARENT form once a row is actually deleted - ERPNext core itself

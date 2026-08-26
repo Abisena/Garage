@@ -173,21 +173,24 @@
         return (frm.doc.taxes || []).some((t) => cint(t.included_in_print_rate));
     }
 
-    // "Include PPN" / "Exclude PPN" - explicit ask (2026-08-10): Include/
-    // Exclude is a Purchase Order-only decision. Purchase Invoice just
-    // MIRRORS whichever Purchase Taxes and Charges Template the source
-    // PO already picked, read-only, so the same physical purchase can
-    // never end up tax-inconsistent partway through its own PO -> PR ->
-    // PI chain. A standalone Purchase Invoice with no PO reference on
-    // any item row has nothing to mirror - both boxes stay locked AND
-    // unchecked rather than falling back to the old Supplier-driven Tax
-    // Rule auto-detect this file used to do, which is the intended nudge
-    // back towards "start from a Purchase Order" for anything tax-
-    // bearing (Purchase Order itself is still fully editable - see its
-    // own apply_ppn_category()).
+    // "Include PPN" / "Exclude PPN" / "Non PPN" - explicit ask (2026-08-10,
+    // extended 2026-08-26 for the third box): Include/Exclude/Non is a
+    // Purchase Order-only decision. Purchase Invoice just MIRRORS whichever
+    // Purchase Taxes and Charges Template the source PO already picked,
+    // read-only, so the same physical purchase can never end up tax-
+    // inconsistent partway through its own PO -> PR -> PI chain. A
+    // standalone Purchase Invoice with no PO reference on any item row has
+    // nothing to mirror - all three boxes stay locked AND unchecked rather
+    // than falling back to the old Supplier-driven Tax Rule auto-detect
+    // this file used to do, which is the intended nudge back towards
+    // "start from a Purchase Order" for anything tax-bearing (Purchase
+    // Order itself is still fully editable - see its own
+    // apply_ppn_category()).
+    const PPN_CATEGORY = { ppn_include: 'PPN Include', ppn_exclude: 'PPN Exclude', ppn_non: 'PPN Non' };
+    const PPN_FIELDS = Object.keys(PPN_CATEGORY);
+
     function lock_ppn_fields(frm) {
-        frm.set_df_property('ppn_include', 'read_only', 1);
-        frm.set_df_property('ppn_exclude', 'read_only', 1);
+        PPN_FIELDS.forEach((fieldname) => frm.set_df_property(fieldname, 'read_only', 1));
     }
 
     let ppn_synced_from_po = null;
@@ -217,21 +220,18 @@
         });
     }
 
-    // Keeps the two boxes reflecting whatever tax_category sync_ppn_
+    // Keeps the three boxes reflecting whatever tax_category sync_ppn_
     // from_source_po() (or, on a fresh "Get Items From" mapping, core's
     // own field copy) landed - polled the same "no discrete event to
     // hook" way this file's own item_tax_rate handling already is.
     function sync_ppn_checkboxes(frm) {
-        const want_include = frm.doc.tax_category === 'PPN Include' ? 1 : 0;
-        const want_exclude = frm.doc.tax_category === 'PPN Exclude' ? 1 : 0;
-        if (cint(frm.doc.ppn_include) !== want_include) {
-            frm.doc.ppn_include = want_include;
-            frm.refresh_field('ppn_include');
-        }
-        if (cint(frm.doc.ppn_exclude) !== want_exclude) {
-            frm.doc.ppn_exclude = want_exclude;
-            frm.refresh_field('ppn_exclude');
-        }
+        PPN_FIELDS.forEach((fieldname) => {
+            const want = frm.doc.tax_category === PPN_CATEGORY[fieldname] ? 1 : 0;
+            if (cint(frm.doc[fieldname]) !== want) {
+                frm.doc[fieldname] = want;
+                frm.refresh_field(fieldname);
+            }
+        });
     }
 
     // "Amount" (custom field amount_after_tax) = Subtotal + tax, mirroring
