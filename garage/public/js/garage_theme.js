@@ -1299,17 +1299,16 @@ frappe.ui.form.on('Payment Entry', {
     gpeApplyFieldVisibility(frm);
     gpeApplySupplierPaymentVisibility(frm);
     gpeRenderSourceInfo(frm);
-    // Only Cash and Wire Transfer used to be the valid payment methods for
-    // this garage - other Mode of Payment masters (Cheque, Credit Card,
-    // Bank Draft) exist in the system but shouldn't be selectable here.
-    // "Sales Payment"/"Purchase Payment" added 2026-08-27 (explicit
-    // request): these route into the Outstanding Receipts/Outstanding
-    // Payments clearing accounts instead of Bank BCA directly, so bank
-    // reconciliation has a clean, unmixed balance to match against - see
-    // that Mode of Payment's own Account mapping, not this list, for what
-    // actually enforces that.
+    // Only Cash and Wire Transfer are valid payment methods for this
+    // garage - other Mode of Payment masters (Cheque, Credit Card, Bank
+    // Draft) exist in the system but shouldn't be selectable here.
+    // "Sales Payment"/"Purchase Payment" (2026-08-27) briefly existed here
+    // for an Outstanding Receipts/Payments clearing-account plan that was
+    // then dropped in favor of Bank Reconciliation Tool + Bank Clearance
+    // matching straight against Bank BCA - reverted along with deleting
+    // those two Mode of Payment records themselves, explicit request.
     frm.set_query('mode_of_payment', () => ({
-      filters: { name: ['in', ['Cash', 'Wire Transfer', 'Sales Payment', 'Purchase Payment']] },
+      filters: { name: ['in', ['Cash', 'Wire Transfer']] },
     }));
   },
   on_submit(frm) {
