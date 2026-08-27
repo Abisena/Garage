@@ -85,6 +85,12 @@ def _ensure_template(tax_type: str, category: str, company: str) -> str | None:
             "account_head": _vat_account(company),
             "rate": 11,
             "included_in_print_rate": INCLUDED_IN_PRINT_RATE[category],
+            # "description" is mandatory on Sales Taxes and Charges on
+            # production (a site-specific constraint not present on the
+            # local bench this patch was first tested against) - this
+            # patch failed there with MandatoryError on exactly this field,
+            # confirmed live via the actual deploy traceback.
+            "description": "PPN 11%",
         })
     doc.insert(ignore_permissions=True)
     return doc.name
