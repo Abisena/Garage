@@ -237,9 +237,9 @@ def _notify_stock_alerts(alerts: list) -> None:
     rows_html = "".join(
         f"""
         <tr>
-            <td style="padding: 6px 12px 6px 0; border-bottom: 1px solid var(--border-color);">{frappe.utils.escape_html(a.part_name or a.spare_part)}</td>
-            <td style="padding: 6px 12px; text-align: right; color: #dc2626; font-weight: 700; border-bottom: 1px solid var(--border-color);">{_fmt(a.stock_qty)}</td>
-            <td style="padding: 6px 0; text-align: right; border-bottom: 1px solid var(--border-color);">{_fmt(a.reorder_level)}</td>
+            <td style="padding: 6px 12px 6px 0; border-bottom: 1px solid #d1d8dd;">{frappe.utils.escape_html(a.part_name or a.spare_part)}</td>
+            <td style="padding: 6px 12px; text-align: right; color: #dc2626; font-weight: 700; border-bottom: 1px solid #d1d8dd;">{_fmt(a.stock_qty)}</td>
+            <td style="padding: 6px 0; text-align: right; border-bottom: 1px solid #d1d8dd;">{_fmt(a.reorder_level)}</td>
         </tr>
         """
         for a in alerts
@@ -254,7 +254,7 @@ def _notify_stock_alerts(alerts: list) -> None:
         <div style="font-size: 14px;">
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 14px;">
                 <thead>
-                    <tr style="text-align: left; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .03em;">
+                    <tr style="text-align: left; color: #8d99a6; font-size: 11px; text-transform: uppercase; letter-spacing: .03em;">
                         <th style="padding: 0 12px 6px 0; font-weight: 600;">Item</th>
                         <th style="padding: 0 12px 6px; text-align: right; font-weight: 600;">Stok</th>
                         <th style="padding: 0 0 6px; text-align: right; font-weight: 600;">Min</th>
@@ -280,4 +280,24 @@ def _notify_stock_alerts(alerts: list) -> None:
             message={"title": title, "indicator": "red", "message": body},
             user=user,
             after_commit=True,
+        )
+
+    # Third channel: email, for whoever isn't watching Desk at all right
+    # now (the bell icon and realtime popup both need the user to be
+    # online/logged in) - reuses the exact same table/CTA already built
+    # above instead of composing separate email copy.
+    #
+    # `users` holds User.name, not necessarily an email address - e.g.
+    # Administrator's name is literally "Administrator" while its real
+    # address is admin@example.com - so resolve each one's actual email
+    # field instead of assuming name == email.
+    recipient_emails = [
+        email for email in (frappe.db.get_value("User", user, "email") for user in users) if email
+    ]
+    if recipient_emails:
+        frappe.sendmail(
+            recipients=recipient_emails,
+            subject=subject,
+            message=body,
+            now=False,
         )
