@@ -1,7 +1,10 @@
 """Garage DocType controller for Garage Stock Alert.
 
-Raised by check_low_stock_alerts() below (hourly, see hooks.py) whenever a
-Garage Spare Part's stock_qty drops to or below its own reorder_level.
+Raised event-driven, not on a schedule (explicit request: don't wait up to
+an hour for a stock breach to be noticed) - GarageSparePart.on_update() (see
+garage_spare_part.py) calls _evaluate_part_stock() below right after any
+save where stock_qty or reorder_level actually changed, whenever a part's
+stock_qty drops to or below its own reorder_level.
 Deliberately does NOT create a Garage Procurement Order by itself - explicit
 request: the alert is a review queue, not an auto-buy trigger. A human
 reviews it here and either approve()s it (which creates a Draft Garage
@@ -105,14 +108,55 @@ def bulk_approve(names) -> str:
     return order.name
 
 
-def check_low_stock_alerts() -> dict:
-    """Scheduled hourly (see hooks.py). Raises a Garage Stock Alert for
-    every Active Garage Spare Part whose stock_qty has dropped to or below
-    its own reorder_level, skipping parts that already have an Open alert
-    (dedup - Dismissed/Approved/Resolved ones don't block a fresh one).
-    Also auto-resolves any Open alert whose part has since recovered above
-    its reorder_level, typically because it got restocked some other way
-    before anyone acted on the alert.
+def _evaluate_part_stock(part_name: str, stock_qty, reorder_level) -> tuple[str, "Document"] | None:
+    """Create or resolve a single part's Garage Stock Alert as needed.
+
+    Shared by the event-driven on_update() hook (one part at a time, right
+    after its stock actually changes) and check_all_low_stock_alerts()
+    below (every part, for a manual "recheck everything" sweep). Returns
+    ("created", alert), ("resolved", alert), or None if nothing changed.
+    """
+    reorder_level = flt(reorder_level)
+    if reorder_level <= 0:
+        # No threshold configured for this part - nothing to compare
+        # against, same as ERPNext's own core reorder feature treating
+        # an unset Reorder Level as "not tracked", not "always breach".
+        return None
+
+    stock_qty = flt(stock_qty)
+    existing = frappe.db.get_value(
+        "Garage Stock Alert", {"spare_part": part_name, "status": "Open"}, "name"
+    )
+
+    if stock_qty <= reorder_level:
+        if existing:
+            # Dedup - Dismissed/Approved/Resolved ones don't block a fresh
+            # one, but an already-Open alert for this part does.
+            return None
+        alert = frappe.new_doc("Garage Stock Alert")
+        alert.spare_part = part_name
+        alert.stock_qty = stock_qty
+        alert.reorder_level = reorder_level
+        alert.insert(ignore_permissions=True)
+        return "created", alert
+
+    if existing:
+        # Recovered above reorder_level since the alert was raised -
+        # typically restocked some other way before anyone acted on it.
+        alert = frappe.get_doc("Garage Stock Alert", existing)
+        alert.status = "Resolved"
+        alert.resolved_on = now_datetime()
+        alert.save(ignore_permissions=True)
+        return "resolved", alert
+
+    return None
+
+
+def check_all_low_stock_alerts() -> dict:
+    """Manual sweep across every Active Garage Spare Part - not on any
+    schedule (the normal path is the event-driven on_update() hook, see
+    garage_spare_part.py), this is only for catching drift from stock_qty
+    changes that bypass a proper save (e.g. a raw SQL/db.set_value fix).
     """
     parts = frappe.get_all(
         "Garage Spare Part",
@@ -120,52 +164,24 @@ def check_low_stock_alerts() -> dict:
         fields=["name", "stock_qty", "reorder_level"],
     )
 
-    open_alerts = {
-        row.spare_part: row.name
-        for row in frappe.get_all(
-            "Garage Stock Alert", filters={"status": "Open"}, fields=["name", "spare_part"]
-        )
-    }
-
     created_docs = []
     created, resolved = [], []
 
     for part in parts:
-        reorder_level = flt(part.reorder_level)
-        if reorder_level <= 0:
-            # No threshold configured for this part - nothing to compare
-            # against, same as ERPNext's own core reorder feature treating
-            # an unset Reorder Level as "not tracked", not "always breach".
+        result = _evaluate_part_stock(part.name, part.stock_qty, part.reorder_level)
+        if not result:
             continue
-
-        stock_qty = flt(part.stock_qty)
-        existing = open_alerts.get(part.name)
-
-        if stock_qty <= reorder_level:
-            if existing:
-                continue
-            alert = frappe.new_doc("Garage Stock Alert")
-            alert.spare_part = part.name
-            alert.stock_qty = stock_qty
-            alert.reorder_level = reorder_level
-            alert.insert(ignore_permissions=True)
+        kind, alert = result
+        if kind == "created":
             created.append(alert.name)
             created_docs.append(alert)
-        elif existing:
-            alert = frappe.get_doc("Garage Stock Alert", existing)
-            alert.status = "Resolved"
-            alert.resolved_on = now_datetime()
-            alert.save(ignore_permissions=True)
+        else:
             resolved.append(alert.name)
-
-    if created or resolved:
-        frappe.db.commit()
 
     if created_docs:
         # One notification for the whole batch, not one per item - N
-        # separate popups stacking on top of each other when several parts
-        # breach together was exactly the "kalau banyak product" concern
-        # raised directly by the user.
+        # separate emails when several parts breach together was exactly
+        # the "kalau banyak product" concern raised directly by the user.
         _notify_stock_alerts(created_docs)
 
     return {"created": created, "resolved": resolved}
@@ -173,18 +189,17 @@ def check_low_stock_alerts() -> dict:
 
 def _notify_stock_alerts(alerts: list) -> None:
     """Two layers, not one - a document silently sitting in a list
-    somewhere isn't an alert, it's just data nobody's looking at (explicit
-    distinction the user asked about directly):
+    somewhere isn't an alert, it's just data nobody's looking at:
 
     1. Bell-icon Notification Log entry (Notification Type "Alert",
        already a stock fixture in Frappe core) - persists regardless of
        whether anyone's online right now, so it's still there whenever a
        Purchase Manager next opens Desk.
-    2. A live msgprint pushed over the realtime socket (explicit request:
-       "real-time saat itu juga") - pops up as an actual modal on screen
-       for anyone who happens to have Desk open at that exact moment.
-       Only reaches users who are online right now; #1 is what catches
-       everyone else on their next visit.
+    2. Email, sent regardless of whether anyone's online - the primary
+       channel (explicit request: no realtime popup modal - it doesn't
+       reach anyone who isn't already staring at Desk at that exact
+       moment, and stacks into multiple modals when several checks fire
+       close together).
 
     Always one notification for the whole `alerts` batch (even when it's a
     batch of one) rather than one call per alert - keeps the table format
@@ -268,24 +283,8 @@ def _notify_stock_alerts(alerts: list) -> None:
         </div>
     """
 
-    title = (
-        _("Stock Alert: {0}").format(frappe.utils.escape_html(alerts[0].part_name or alerts[0].spare_part))
-        if len(alerts) == 1
-        else _("Stock Alert: {0} item").format(len(alerts))
-    )
-
-    for user in users:
-        frappe.publish_realtime(
-            event="msgprint",
-            message={"title": title, "indicator": "red", "message": body},
-            user=user,
-            after_commit=True,
-        )
-
-    # Third channel: email, for whoever isn't watching Desk at all right
-    # now (the bell icon and realtime popup both need the user to be
-    # online/logged in) - reuses the exact same table/CTA already built
-    # above instead of composing separate email copy.
+    # Email is the primary channel here - reuses the exact same table/CTA
+    # already built above instead of composing separate email copy.
     #
     # `users` holds User.name, not necessarily an email address - e.g.
     # Administrator's name is literally "Administrator" while its real

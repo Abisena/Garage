@@ -255,7 +255,6 @@ jinja = {
 scheduler_events = {
 	"hourly": [
 		"garage.garage.doctype.customer_registration.customer_registration.process_booking_registrations",
-		"garage.garage.doctype.garage_stock_alert.garage_stock_alert.check_low_stock_alerts",
 	]
 }
 
