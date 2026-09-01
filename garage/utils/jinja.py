@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import base64
+from io import BytesIO
 from typing import Any, Dict, List, Optional
+from urllib.parse import quote
 
 import frappe
 from frappe.utils import flt
@@ -379,12 +382,35 @@ def _get_or_generate_spk_number(doc) -> str:
     return doc.name
 
 
+def _build_tracking_qr(license_plate: Optional[str]) -> Dict[str, str]:
+    """QR code (SVG data URI) linking to the public /lacak tracking page,
+    pre-filled with this vehicle's plate via a query param - the customer
+    still has to enter their phone number there, so printing this doesn't
+    put anything sensitive on paper. Same pyqrcode->SVG->base64 pattern as
+    frappe.twofactor.get_qr_svg_code (pyqrcode is already a core Frappe
+    dependency, no new package needed)."""
+    import pyqrcode
+
+    url = frappe.utils.get_url(f"/lacak?plate={quote(license_plate or '')}")
+    qr = pyqrcode.create(url)
+    stream = BytesIO()
+    qr.svg(stream, scale=4, background="#fff", module_color="#111827", quiet_zone=1)
+    svg_b64 = base64.b64encode(stream.getvalue()).decode()
+
+    return {
+        "tracking_url": url,
+        "tracking_qr": f"data:image/svg+xml;base64,{svg_b64}",
+    }
+
+
 def get_service_order_print_context(doc) -> Dict[str, Any]:
     """Context for the "Garage Service Order Print" (Surat Perintah Kerja)
-    format. Its only job right now is triggering spk_number generation as
-    a side effect of being called - see _get_or_generate_spk_number()."""
+    format. Triggers spk_number generation as a side effect of being called
+    (see _get_or_generate_spk_number()), and builds the customer-tracking QR."""
 
-    return {"spk_number": _get_or_generate_spk_number(doc)}
+    context = {"spk_number": _get_or_generate_spk_number(doc)}
+    context.update(_build_tracking_qr(doc.vehicle))
+    return context
 
 
 def get_vehicle_handover_context(doc) -> Dict[str, Any]:
