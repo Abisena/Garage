@@ -355,11 +355,12 @@ if (frappe.ui.form.QuickEntryForm && !frappe.ui.form.GarageVehicleQuickEntryForm
       // after the 6th to keep both columns even.
       this.mandatory = garage.splitIntoTwoColumns(this.mandatory, 'model');
 
-      // Vehicle ownership is a one-time assignment - lock "No. Customer"
-      // the moment it's set, even before the dialog is saved, same as the
-      // full form (garage_vehicle.js lockCustomerIfSet) and backed up
-      // server-side (garage_vehicle.py _lock_customer()). `onchange` has to
-      // be set on the docfield *before* frappe.ui.Dialog builds the control
+      // Lock "No. Customer" the moment it's picked in this dialog, even
+      // before it's saved - purely to stop an accidental re-pick while
+      // filling out this small quick-create dialog for a brand new vehicle.
+      // Unrelated to editing an existing vehicle's owner (see
+      // garage_vehicle.py's get_owner_history() for that flow).
+      // `onchange` has to be set on the docfield *before* frappe.ui.Dialog builds the control
       // from it - it's what base_control.js's set() calls after any
       // successful value assignment, including the nested "+ Create New
       // Garage Customer" flow (that resolves through dialog.set_value() too,

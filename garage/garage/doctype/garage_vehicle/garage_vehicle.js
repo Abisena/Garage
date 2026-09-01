@@ -41,15 +41,115 @@ const lockIfNeeded = (frm) => {
   }
 };
 
-// Vehicle ownership is a one-time assignment, not an editable attribute:
-// once "No. Customer" has a value - even on a brand new, not-yet-saved
-// record - it locks immediately and stays locked, including through
-// "Update" mode (which normally restores every other field's editability).
-// Backed up server-side in garage_vehicle.py's _lock_customer().
-const lockCustomerIfSet = (frm) => {
-  if (frm.doc.customer) {
-    frm.set_df_property('customer', 'read_only', 1);
-  }
+const OWNER_AVATAR_COLORS = ['#4f46e5', '#0891b2', '#059669', '#d97706', '#dc2626', '#7c3aed'];
+
+const ownerAvatarHtml = (name, size) => {
+  const clean = (name || '?').trim();
+  const parts = clean.split(/\s+/);
+  const initials = ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || clean[0].toUpperCase();
+  let hash = 0;
+  for (let i = 0; i < clean.length; i++) hash = clean.charCodeAt(i) + ((hash << 5) - hash);
+  const color = OWNER_AVATAR_COLORS[Math.abs(hash) % OWNER_AVATAR_COLORS.length];
+  return `
+    <div style="width:${size}px;height:${size}px;min-width:${size}px;border-radius:50%;background:${color}1a;
+      color:${color};display:flex;align-items:center;justify-content:center;font-weight:700;
+      font-size:${Math.round(size * 0.4)}px;">${frappe.utils.escape_html(initials)}</div>`;
+};
+
+const showOwnerHistoryDialog = (data) => {
+  const rows = (data.previous_owners || [])
+    .map((o) => {
+      const dateOnly = (o.changed_on || '').split(' ')[0];
+      const dateLabel = dateOnly ? frappe.datetime.str_to_user(dateOnly) : '-';
+      const ownerName = o.owner_name || o.owner || '-';
+      const changedBy = o.changed_by || '-';
+      return `
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:8px 14px 8px 10px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              ${ownerAvatarHtml(o.owner_name || o.owner, 24)}
+              <span style="font-weight:500;white-space:nowrap;">${frappe.utils.escape_html(ownerName)}</span>
+            </div>
+          </td>
+          <td style="padding:8px 14px 8px 10px;white-space:nowrap;color:#6b7280;">${frappe.utils.escape_html(o.phone || '-')}</td>
+          <td style="padding:8px 14px 8px 10px;white-space:nowrap;color:#6b7280;">${dateLabel}</td>
+          <td style="padding:8px 10px;white-space:nowrap;color:#6b7280;">${frappe.utils.escape_html(changedBy)}</td>
+        </tr>`;
+    })
+    .join('');
+
+  const tableHtml = rows
+    ? `<div style="margin-top:10px;border:1px solid #f1f5f9;border-radius:8px;overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <colgroup>
+            <col><col><col><col style="width:100%;">
+          </colgroup>
+          <thead>
+            <tr style="text-align:left;background:#f8fafc;color:#9ca3af;">
+              <th style="padding:8px 10px;white-space:nowrap;font-weight:600;">${__('PEMILIK')}</th>
+              <th style="padding:8px 10px;white-space:nowrap;font-weight:600;">${__('TELEPON')}</th>
+              <th style="padding:8px 10px;white-space:nowrap;font-weight:600;">${__('TGL DIUBAH')}</th>
+              <th style="padding:8px 10px;white-space:nowrap;font-weight:600;">${__('OLEH')}</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`
+    : `<div style="color:#9ca3af;font-size:12px;margin-top:10px;padding:14px;text-align:center;background:#f8fafc;border-radius:8px;">${__('Belum ada perubahan pemilik.')}</div>`;
+
+  const currentPhone = data.current_owner.phone
+    ? ` • ${frappe.utils.escape_html(data.current_owner.phone)}`
+    : '';
+
+  const d = new frappe.ui.Dialog({
+    title: __('Riwayat Pemilik'),
+    fields: [
+      {
+        fieldtype: 'HTML',
+        options: `
+          <div style="font-size:11px;font-weight:600;color:#9ca3af;letter-spacing:0.02em;">${frappe.utils.escape_html(data.vehicle)}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;padding:12px;background:#f8fafc;border:1px solid #eef2f7;border-radius:8px;">
+            <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+              ${ownerAvatarHtml(data.current_owner.owner_name, 38)}
+              <div style="min-width:0;">
+                <div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${frappe.utils.escape_html(data.current_owner.owner_name || '-')}</div>
+                <div style="font-size:11px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${frappe.utils.escape_html(data.current_owner.owner || '-')}${currentPhone}</div>
+              </div>
+            </div>
+            <span class="indicator-pill green" style="font-size:10px;white-space:nowrap;flex-shrink:0;">${__('PEMILIK SAAT INI')}</span>
+          </div>
+          <div style="font-size:11px;font-weight:600;color:#9ca3af;margin-top:16px;text-transform:uppercase;letter-spacing:0.02em;">${__('Pemilik Sebelumnya')}</div>
+          ${tableHtml}
+        `,
+      },
+    ],
+    primary_action_label: __('Tutup'),
+    primary_action() {
+      d.hide();
+    },
+  });
+  d.$wrapper.find('.modal-dialog').css({ 'max-width': '760px', margin: 'auto' });
+  d.show();
+};
+
+const refreshHistoryButton = (frm) => {
+  frm.remove_custom_button(__('Riwayat Pemilik'));
+  if (frm.is_new()) return;
+
+  frappe.call({
+    method: 'garage.garage.doctype.garage_vehicle.garage_vehicle.get_owner_history',
+    args: { vehicle: frm.doc.name },
+    callback(r) {
+      const data = r.message;
+      if (!data) return;
+
+      const hasHistory = (data.previous_owners || []).length > 0;
+      const $btn = frm.add_custom_button(__('Riwayat Pemilik'), () => showOwnerHistoryDialog(data));
+      $btn.prop('disabled', !hasHistory);
+      $btn.attr('title', hasHistory ? '' : __('Belum ada perubahan pemilik'));
+      $btn.css({ opacity: hasHistory ? '' : 0.5, cursor: hasHistory ? '' : 'not-allowed' });
+    },
+  });
 };
 
 frappe.ui.form.on('Garage Vehicle', {
@@ -69,26 +169,14 @@ frappe.ui.form.on('Garage Vehicle', {
     frm.set_df_property('customer_name', 'read_only', 1);
     garage.attachLicensePlateAutoFormat(frm.fields_dict.license_plate);
 
-    if (!frm.is_new() && !frm.__is_update_mode) {
-      frm.add_custom_button('Update', () => {
-        frm.__is_update_mode = true;
-        toggleFormEditable(frm, true);
-        lockCustomerIfSet(frm);
-      });
-    }
-
     lockIfNeeded(frm);
-    lockCustomerIfSet(frm);
+    refreshHistoryButton(frm);
   },
 
   after_save(frm) {
     frm.__is_update_mode = false;
     lockIfNeeded(frm);
-    lockCustomerIfSet(frm);
-  },
-
-  customer(frm) {
-    lockCustomerIfSet(frm);
+    refreshHistoryButton(frm);
   },
 
   brand(frm) {

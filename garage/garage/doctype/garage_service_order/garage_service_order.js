@@ -303,6 +303,60 @@ const setStartRepairAction = (frm) => {
   });
 };
 
+const refreshOwnerUpdateButton = (frm) => {
+  // vehicle can be set well after refresh() first runs (typed in, or
+  // filled by a dev/testing helper) - a plain field-set doesn't re-run the
+  // whole refresh(frm) handler, so this is also wired to the `vehicle`
+  // field trigger below, not just refresh().
+  frm.remove_custom_button(__('Update Data Pemilik'));
+  if (!frm.doc.vehicle) return;
+
+  frm.add_custom_button(__('Update Data Pemilik'), () => {
+    const d = new frappe.ui.Dialog({
+      title: __('Update Data Pemilik'),
+      fields: [
+        {
+          fieldtype: 'HTML',
+          options: `<div style="font-size:12px;color:#6b7280;margin-bottom:8px;">
+            Pemilik saat ini: <strong>${frappe.utils.escape_html(frm.doc.customer_display || '-')}</strong>
+          </div>`,
+        },
+        {
+          fieldtype: 'Link',
+          fieldname: 'customer',
+          label: __('Pemilik Baru'),
+          options: 'Customer',
+          reqd: 1,
+        },
+      ],
+      primary_action_label: __('Simpan'),
+      primary_action(values) {
+        frappe.call({
+          method: 'garage.garage.doctype.garage_vehicle.garage_vehicle.update_vehicle_owner',
+          args: { vehicle: frm.doc.vehicle, customer: values.customer },
+          freeze: true,
+          freeze_message: __('Menyimpan data pemilik...'),
+          callback(r) {
+            if (!r.message) return;
+            d.hide();
+            frappe.show_alert({ message: __('Data pemilik berhasil diperbarui.'), indicator: 'green' });
+
+            if (!frm.is_new()) {
+              frm.reload_doc();
+            } else {
+              // Not saved yet - no doc to reload, so re-trigger the
+              // vehicle -> customer fetch_from chain manually.
+              const vehicleName = frm.doc.vehicle;
+              frm.set_value('vehicle', '').then(() => frm.set_value('vehicle', vehicleName));
+            }
+          },
+        });
+      },
+    });
+    d.show();
+  });
+};
+
 frappe.ui.form.on('Garage Service Order', {
   validate(frm) {
     const missing = [];
@@ -336,6 +390,7 @@ frappe.ui.form.on('Garage Service Order', {
     }));
 
     fetchSentPartNames(frm);
+    refreshOwnerUpdateButton(frm);
 
     const lockedStatuses = ['Finished', 'QC Review', 'Waiting Payment', 'Completed'];
     if (lockedStatuses.includes(frm.doc.status)) {
@@ -1103,6 +1158,9 @@ frappe.ui.form.on('Garage Service Order', {
       d.$wrapper.find('.btn-primary').css({background: '#2563eb', border: 'none', fontWeight: '600'});
       d.show();
     }
+  },
+  vehicle(frm) {
+    refreshOwnerUpdateButton(frm);
   },
   service_order_type(frm) {
     autoApplyServiceFee(frm);
