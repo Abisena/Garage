@@ -1,0 +1,260 @@
+.lacak-container {
+	max-width: 640px;
+}
+
+.lacak-card {
+	background: #fff;
+	border: 1px solid #e2e5e9;
+	border-radius: 10px;
+	padding: 24px;
+	margin-bottom: 16px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.is-hidden {
+	display: none !important;
+}
+
+.lacak-spinner {
+	width: 32px;
+	height: 32px;
+	margin: 8px auto 0;
+	border: 3px solid #e5e7eb;
+	border-top-color: #2563eb;
+	border-radius: 50%;
+	animation: lacak-spin 0.8s linear infinite;
+}
+
+@keyframes lacak-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.lacak-vehicle-summary {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.lacak-plate {
+	font-size: 20px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+}
+
+/* Vertical timeline */
+.lacak-timeline {
+	margin: 8px 0 16px;
+}
+
+.lacak-tl-row {
+	display: grid;
+	grid-template-columns: 60px 20px 1fr;
+	gap: 12px;
+}
+
+.lacak-tl-when {
+	text-align: right;
+}
+
+.lacak-tl-date {
+	font-size: 10px;
+	color: #9ca3af;
+	white-space: nowrap;
+}
+
+.lacak-tl-time {
+	font-size: 13px;
+	font-weight: 700;
+	color: #374151;
+	white-space: nowrap;
+}
+
+.lacak-tl-time--empty {
+	color: #d1d5db;
+	font-weight: 400;
+}
+
+.lacak-tl-node {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.lacak-tl-dot {
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: #f1f3f5;
+	border: 3px solid #e5e7eb;
+	box-sizing: border-box;
+	flex-shrink: 0;
+}
+
+.lacak-tl-line {
+	width: 2px;
+	flex: 1 1 auto;
+	min-height: 24px;
+	background: #e5e7eb;
+	margin-top: 2px;
+}
+
+.lacak-tl-row:last-child .lacak-tl-line {
+	display: none;
+}
+
+.lacak-tl-row.is-complete .lacak-tl-dot {
+	background: #059669;
+	border-color: #059669;
+}
+
+.lacak-tl-row.is-complete .lacak-tl-line {
+	background: #059669;
+}
+
+.lacak-tl-row.is-active .lacak-tl-dot {
+	background: #fff;
+	border-color: #2563eb;
+	box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+.lacak-tl-content {
+	padding-bottom: 22px;
+}
+
+.lacak-tl-row:last-child .lacak-tl-content {
+	padding-bottom: 0;
+}
+
+.lacak-tl-label {
+	font-size: 13px;
+	font-weight: 600;
+	color: #9ca3af;
+}
+
+.lacak-tl-row.is-active .lacak-tl-label,
+.lacak-tl-row.is-complete .lacak-tl-label {
+	color: #111827;
+}
+
+.lacak-tl-sub {
+	font-size: 12px;
+	color: #6b7280;
+	margin-top: 2px;
+}
+
+.lacak-cancelled-badge {
+	display: inline-block;
+	background: #fee2e2;
+	color: #dc2626;
+	font-weight: 700;
+	padding: 8px 16px;
+	border-radius: 8px;
+	margin-bottom: 12px;
+}
+
+.lacak-order-details {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 14px;
+}
+
+.lacak-field-label {
+	font-size: 11px;
+	color: #9ca3af;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+	margin-bottom: 2px;
+}
+
+.lacak-parts {
+	margin-top: 16px;
+	padding-top: 16px;
+	border-top: 1px solid #f1f3f5;
+}
+
+.lacak-parts ul {
+	margin: 4px 0 0;
+	padding-left: 18px;
+	font-size: 13px;
+}
+
+.lacak-history-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 0;
+	border-bottom: 1px solid #f1f3f5;
+}
+
+.lacak-history-row:last-child {
+	border-bottom: none;
+}
+
+.lacak-history-type {
+	font-weight: 600;
+	font-size: 13px;
+}
+
+.lacak-badge {
+	font-size: 11px;
+	font-weight: 700;
+	padding: 3px 10px;
+	border-radius: 999px;
+	white-space: nowrap;
+}
+
+.lacak-badge--queue {
+	background: #eef2ff;
+	color: #4f46e5;
+}
+
+.lacak-badge--in-progress {
+	background: #fef3c7;
+	color: #b45309;
+}
+
+.lacak-badge--payment {
+	background: #ffe4e6;
+	color: #be123c;
+}
+
+.lacak-badge--ready {
+	background: #dbeafe;
+	color: #1d4ed8;
+}
+
+.lacak-badge--done {
+	background: #d1fae5;
+	color: #059669;
+}
+
+.lacak-badge--cancelled {
+	background: #fee2e2;
+	color: #dc2626;
+}
+
+.lacak-empty {
+	color: #9ca3af;
+	text-align: center;
+	padding: 20px 0;
+}
+
+@media (max-width: 480px) {
+	.lacak-tl-row {
+		grid-template-columns: 54px 20px 1fr;
+	}
+
+	.lacak-tl-date {
+		font-size: 9px;
+	}
+
+	.lacak-tl-time {
+		font-size: 12px;
+	}
+}

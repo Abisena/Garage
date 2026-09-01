@@ -1,0 +1,65 @@
+{% extends "templates/web.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_content %}
+<div class="container lacak-container">
+	<div class="text-center mt-5 mb-4">
+		<h2>Lacak Status Servis</h2>
+		<p class="lead text-muted">Masukkan nomor polisi dan nomor HP yang terdaftar untuk melihat status servis kendaraan Anda.</p>
+	</div>
+
+	<div id="lacak-search" class="lacak-card">
+		<form id="lacak-form">
+			<div class="form-group">
+				<label for="lacak-plate">No. Polisi</label>
+				<input type="text" class="form-control" id="lacak-plate" name="license_plate" placeholder="Contoh: B 1234 XYZ" value="{{ prefill_plate }}" required>
+			</div>
+			<div class="form-group">
+				<label for="lacak-phone">No. HP</label>
+				<input type="tel" class="form-control" id="lacak-phone" name="phone" placeholder="08xxxxxxxxxx" required>
+			</div>
+			<button type="submit" class="btn btn-primary form-control" id="lacak-submit">Cek Status</button>
+		</form>
+	</div>
+
+	<div id="lacak-loading" class="lacak-card text-center is-hidden">
+		<div class="lacak-spinner"></div>
+		<p class="text-muted mt-3">Mencari data servis...</p>
+	</div>
+
+	<div id="lacak-not-found" class="lacak-card is-hidden">
+		<div class="alert alert-warning mb-3">
+			Data tidak ditemukan. Pastikan No. Polisi dan No. HP yang Anda masukkan sudah benar.
+		</div>
+		<button class="btn btn-default form-control" id="lacak-retry">Coba Lagi</button>
+	</div>
+
+	<div id="lacak-error" class="lacak-card is-hidden">
+		<div class="alert alert-danger mb-3">
+			Terjadi kesalahan. Silakan coba lagi beberapa saat lagi.
+		</div>
+		<button class="btn btn-default form-control" id="lacak-retry-error">Coba Lagi</button>
+	</div>
+
+	<div id="lacak-result" class="is-hidden">
+		<div class="lacak-card lacak-vehicle-summary">
+			<div class="lacak-plate" id="lacak-result-plate"></div>
+			<div class="text-muted" id="lacak-result-vehicle"></div>
+		</div>
+
+		<div class="lacak-card" id="lacak-timeline-wrap"></div>
+
+		<div class="lacak-card" id="lacak-details-wrap"></div>
+
+		<div class="lacak-card is-hidden" id="lacak-history-wrap">
+			<h5>Riwayat Servis Sebelumnya</h5>
+			<div id="lacak-history-list"></div>
+		</div>
+
+		<div class="text-center mt-3 mb-5">
+			<a href="#" id="lacak-search-again">Cari kendaraan lain</a>
+		</div>
+	</div>
+</div>
+{% endblock %}
