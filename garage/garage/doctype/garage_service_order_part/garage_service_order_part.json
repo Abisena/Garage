@@ -15,9 +15,9 @@
   "engine": "InnoDB",
   "field_order": [
     "item_code",
+    "description",
     "item_name",
     "stock_status",
-    "description",
     "qty",
     "uom",
     "source",
@@ -32,7 +32,7 @@
     {
       "fieldname": "item_code",
       "fieldtype": "Link",
-      "label": "Item Code",
+      "label": "Item Name",
       "options": "Item",
       "in_list_view": 1,
       "columns": 2,
@@ -43,16 +43,15 @@
       "fieldname": "item_name",
       "fieldtype": "Data",
       "label": "Item Name",
-      "in_list_view": 1,
-      "read_only": 1,
-      "columns": 2
+      "read_only": 1
     },
     {
       "fetch_from": "item_code.description",
       "fieldname": "description",
       "fieldtype": "Small Text",
       "label": "Description",
-      "read_only": 1
+      "in_list_view": 1,
+      "columns": 2
     },
     {
       "fieldname": "qty",

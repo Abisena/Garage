@@ -418,7 +418,7 @@ frappe.ui.form.on('Garage Service Order', {
     if (grid) {
       grid.df.in_place_edit = 1;
 
-      // ITEM CODE | ITEM NAME | STATUS | QTY | RATE | DISC% | TAX% | SUB TOTAL
+      // ITEM NAME | DESCRIPTION | STATUS | QTY | RATE | DISC% | TAX% | SUB TOTAL
       const COL_FLEX_SEQ = [
         '1.0 1 0%', '2.6 1 0%', '1.3 1 0%', '0.4 1 0%', '1.0 1 0%',
         '0.5 1 0%', '0.5 1 0%', '1.2 1 0%',
@@ -502,6 +502,11 @@ frappe.ui.form.on('Garage Service Order', {
 
       frm.set_query('item_code', 'required_parts', () => ({
         query: 'garage.garage.doctype.garage_service_order.garage_service_order.item_query_with_stock',
+        filters: {
+          vehicle_brand: frm.doc.vehicle_brand,
+          vehicle_model: frm.doc.vehicle_model,
+          vehicle_transmission: frm.doc.vehicle_transmission,
+        },
       }));
 
       // Delete guard selalu di-apply ulang tiap refresh — jaga kalau grid object ter-recreate
@@ -1174,6 +1179,16 @@ frappe.ui.form.on('Garage Service Order', {
   },
 });
 
+// Item.description is a Text Editor (HTML) field, but the Required Parts
+// row's description is plain free text the user edits directly in the grid -
+// strip tags on fetch so it doesn't show up as raw "<div>...</div>".
+const stripHtml = (html) => {
+  if (!html) return '';
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return (tmp.textContent || tmp.innerText || '').trim();
+};
+
 const fetchItemDetails = (frm, cdt, cdn, row, isStock) => {
   // Rate comes from garage.utils.pricing.get_item_rate_api (Item Price),
   // not Item.standard_rate - that field is only ever shown on a brand new,
@@ -1196,7 +1211,7 @@ const fetchItemDetails = (frm, cdt, cdn, row, isStock) => {
     if (!itemRes.message) return;
     frappe.model.set_value(cdt, cdn, {
       item_name: itemRes.message.item_name,
-      description: itemRes.message.description,
+      description: stripHtml(itemRes.message.description),
       qty: 1,
       rate: flt(rateRes.message),
       uom: itemRes.message.stock_uom || 'Unit',

@@ -546,7 +546,38 @@ def get_stock_qty(item_code: str) -> dict[str, object]:
 
 @frappe.whitelist()
 def item_query_with_stock(doctype, txt, searchfield, start, page_len, filters):
-    items = frappe.db.sql("""
+    filters = frappe.parse_json(filters) if isinstance(filters, str) else (filters or {})
+
+    # Vehicle-aware filtering: an Item whose Brand/Model/Transmisi is left
+    # blank is treated as a universal part and always shown; one that has a
+    # value set must match the current vehicle. This keeps the dropdown from
+    # going empty just because most of the catalog hasn't been tagged yet.
+    conditions = ""
+    values = {
+        "txt": f"%{txt}%",
+        "start": start,
+        "page_len": 50,
+    }
+
+    vehicle_brand = (filters.get("vehicle_brand") or "").strip()
+    if vehicle_brand:
+        conditions += " AND (i.brand IS NULL OR i.brand = '' OR i.brand = %(brand)s)"
+        values["brand"] = vehicle_brand
+
+    vehicle_model = (filters.get("vehicle_model") or "").strip()
+    if vehicle_model:
+        conditions += " AND (i.custom_model IS NULL OR i.custom_model = '' OR i.custom_model = %(model)s)"
+        values["model"] = vehicle_model
+
+    vehicle_transmission = (filters.get("vehicle_transmission") or "").strip()
+    if vehicle_transmission:
+        # Item.custom_transmisi shares the exact same option set as Garage
+        # Vehicle.transmission (Manual (MT) / Automatic (AT) / CVT / DCT /
+        # Other), so this is a plain equality match - no keyword guessing.
+        conditions += " AND (i.custom_transmisi IS NULL OR i.custom_transmisi = '' OR i.custom_transmisi = %(transmisi)s)"
+        values["transmisi"] = vehicle_transmission
+
+    items = frappe.db.sql(f"""
         SELECT
             i.name,
             i.item_name,
@@ -557,14 +588,11 @@ def item_query_with_stock(doctype, txt, searchfield, start, page_len, filters):
         LEFT JOIN `tabBin` b ON b.item_code = i.name
         WHERE i.disabled = 0
           AND (i.name LIKE %(txt)s OR i.item_name LIKE %(txt)s)
+          {conditions}
         GROUP BY i.name
         ORDER BY i.name
         LIMIT %(start)s, %(page_len)s
-    """, {
-        "txt": f"%{txt}%",
-        "start": start,
-        "page_len": 50,
-    }, as_list=True)
+    """, values, as_list=True)
 
     results = []
     for row in items:
