@@ -17,6 +17,7 @@
     "item_code",
     "description",
     "item_name",
+    "item_group",
     "stock_status",
     "qty",
     "uom",
@@ -51,7 +52,16 @@
       "fieldtype": "Small Text",
       "label": "Description",
       "in_list_view": 1,
-      "columns": 2
+      "columns": 2,
+      "read_only_depends_on": "eval:doc.item_group != 'Services'"
+    },
+    {
+      "fetch_from": "item_code.item_group",
+      "fieldname": "item_group",
+      "fieldtype": "Data",
+      "label": "Item Group",
+      "read_only": 1,
+      "hidden": 1
     },
     {
       "fieldname": "qty",
@@ -99,7 +109,7 @@
       "label": "Rate",
       "in_list_view": 1,
       "columns": 1,
-      "read_only": 1
+      "read_only_depends_on": "eval:doc.item_group != 'Services'"
     },
     {
       "fieldname": "discount",

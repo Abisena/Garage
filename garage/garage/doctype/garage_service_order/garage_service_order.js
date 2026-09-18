@@ -96,6 +96,7 @@ const applyBundleItems = (frm, items, { replace = false } = {}) => {
     const row = frm.add_child('required_parts');
     row.item_code = item.item_code;
     row.item_name = item.item_name || '';
+    row.item_group = item.item_group || '';
     row.description = item.description || '';
     row.qty = item.qty || 1;
     row.rate = flt(item.rate);
@@ -181,6 +182,7 @@ const addServiceFeeRow = (frm, data) => {
 
   const row = frm.add_child('required_parts');
   row.item_name = label;
+  row.item_group = 'Services';
   row.qty = 1;
   row.rate = fee;
   row.discount = 0;
@@ -1200,7 +1202,7 @@ const fetchItemDetails = (frm, cdt, cdn, row, isStock) => {
       args: {
         doctype: 'Item',
         filters: { name: row.item_code },
-        fieldname: ['item_name', 'description', 'stock_uom'],
+        fieldname: ['item_name', 'description', 'stock_uom', 'item_group'],
       },
     }),
     frappe.call({
@@ -1212,6 +1214,7 @@ const fetchItemDetails = (frm, cdt, cdn, row, isStock) => {
     frappe.model.set_value(cdt, cdn, {
       item_name: itemRes.message.item_name,
       description: stripHtml(itemRes.message.description),
+      item_group: itemRes.message.item_group,
       qty: 1,
       rate: flt(rateRes.message),
       uom: itemRes.message.stock_uom || 'Unit',

@@ -491,6 +491,7 @@ def get_garage_bundle_items(bundle_name: str) -> list[dict[str, object]]:
             {
                 "item_code": get_or_create_bundle_fee_item(bundle),
                 "item_name": f"Jasa Paket {bundle.bundle_name}",
+                "item_group": "Services",
                 "qty": 1,
                 "rate": service_fee,
                 "description": "",
@@ -508,6 +509,7 @@ def get_garage_bundle_items(bundle_name: str) -> list[dict[str, object]]:
             {
                 "item_code": get_or_create_item_for_spare_part(part_code),
                 "item_name": row.get("item_name") or part_code,
+                "item_group": "Products",
                 "qty": qty,
                 "rate": flt(row.get("unit_price") or 0),
                 "description": "",
