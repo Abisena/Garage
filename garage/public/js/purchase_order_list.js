@@ -21,6 +21,34 @@
         "Delivered":              { bg: "#dcfce7", fg: "#15803d", border: "#22c55e" },
     };
 
+    // Purchase Order Workflow's own states, shown only while docstatus is
+    // still 0 (see get_status_display below) - once Approve actually
+    // submits the document (Workflow Document State "Approved" has
+    // doc_status:1, and its own avoid_status_override:1 makes core's
+    // frappe.get_indicator fall back to the native status below instead of
+    // staying stuck on "Approved" forever), the plain STATUS map above
+    // takes back over so "To Receive and Bill"/"Completed"/etc. still show
+    // normally post-approval. Same color convention as administrative_
+    // payment_voucher_list.js's own STATUS map for these same two labels.
+    const WORKFLOW_STATUS = {
+        "Pending Approval": { bg: "#fff7ed", fg: "#c2410c", border: "#f97316" },
+        "Rejected":         { bg: "#fee2e2", fg: "#b91c1c", border: "#ef4444" },
+    };
+
+    // Mirrors the same docstatus==0-only precedence this app's Workflow
+    // config now uses server-side (override_status:0, "Approved" state's
+    // own avoid_status_override:1) - see purchase_order.js/the Workflow
+    // "Purchase Order Workflow" doc itself. Without the docstatus guard, a
+    // stale workflow_state left over from before submission (core never
+    // clears the field) would otherwise keep overriding the real
+    // post-submit status here.
+    function get_status_display(doc) {
+        if (cint(doc.docstatus) === 0 && doc.workflow_state && doc.workflow_state !== "Draft") {
+            return { label: doc.workflow_state, style: WORKFLOW_STATUS[doc.workflow_state] || STATUS.Draft };
+        }
+        return { label: doc.status, style: STATUS[doc.status] || STATUS.Draft };
+    }
+
     function esc(v) { return frappe.utils.escape_html(v || ""); }
 
     // ID, Date, Supplier Name, Grand Total, Status (left to right) - Grand
@@ -55,7 +83,8 @@
     </div>`;
 
     function card(doc) {
-        const s = STATUS[doc.status] || STATUS.Draft;
+        const disp = get_status_display(doc);
+        const s = disp.style;
         const supplier = doc.supplier_name || doc.supplier || "";
         const date = doc.transaction_date ? frappe.datetime.str_to_user(doc.transaction_date) : "";
         const amount = format_currency(doc.grand_total || 0, doc.currency);
@@ -77,7 +106,7 @@
             <span class="po-c-date">${esc(date)}</span>
             <span class="po-c-supplier">${esc(supplier)}</span>
             <span class="po-c-amount">${amount}</span>
-            <span class="po-c-badge" style="background:${s.bg};color:${s.fg};">${esc(doc.status)}</span>
+            <span class="po-c-badge" style="background:${s.bg};color:${s.fg};">${esc(disp.label)}</span>
             <span class="po-c-ago">${ago}</span>
         </div>`;
     }
@@ -149,7 +178,7 @@
         hide_name_column: true,
         add_fields: Array.from(new Set([
             ...(existing.add_fields || []),
-            "supplier_name", "transaction_date", "status", "grand_total", "currency",
+            "supplier_name", "transaction_date", "status", "grand_total", "currency", "workflow_state",
         ])),
         onload(lv) {
             if (existing_onload) existing_onload(lv);
@@ -189,6 +218,6 @@
     // cause/fix as expense_request_list.js - see garage.
     // registerListRenderOverride()'s own comment (garage_theme.js).
     garage.registerListRenderOverride("Purchase Order", render, [
-        "supplier_name", "transaction_date", "status", "grand_total", "currency",
+        "supplier_name", "transaction_date", "status", "grand_total", "currency", "workflow_state",
     ]);
 })();
