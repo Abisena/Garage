@@ -172,7 +172,28 @@
     // Receipt"/"Advance Payment" bulk-action buttons in onload keep working.
     const existing = frappe.listview_settings["Purchase Order"] || {};
     const existing_onload = existing.onload;
-    const existing_get_indicator = existing.get_indicator;
+
+    // Plain color keyword per label (Frappe's page-indicator pill only
+    // accepts a fixed keyword palette - "orange"/"green"/etc, not the hex
+    // values in STATUS/WORKFLOW_STATUS above, those are for this file's
+    // own HTML card badge only). Covers every label get_status_display()
+    // can hand back: the two workflow states, plus every native `status`
+    // value ERPNext's own core get_indicator (purchase_order_list.js)
+    // used to derive from per_received/per_billed.
+    const INDICATOR_COLOR = {
+        "Draft": "red",
+        "Pending Approval": "orange",
+        "Rejected": "red",
+        "On Hold": "orange",
+        "To Receive and Bill": "orange",
+        "To Bill": "orange",
+        "To Receive": "orange",
+        "Partially Received": "yellow",
+        "Completed": "green",
+        "Closed": "green",
+        "Delivered": "green",
+        "Cancelled": "red",
+    };
 
     frappe.listview_settings["Purchase Order"] = Object.assign({}, existing, {
         hide_name_column: true,
@@ -187,21 +208,28 @@
             render(lv);
         },
         // Form view's own header badge calls frappe.get_indicator(doc,
-        // doctype), which falls through to this exact function
-        // (model/indicator.js) - core's own version re-derives "To
-        // Receive and Bill"/"To Receive" straight from per_received/
-        // per_billed, ignoring doc.status entirely for that branch, so
-        // the form view kept showing the old label even though the list
-        // view (via card()'s own STATUS map above, which reads doc.status
-        // directly) already showed "Partially Received" correctly. Same
-        // fix as the STATUS map: special-case it first, then defer to
-        // core's function for every other status so Close/On Hold/etc.
-        // still behave exactly as before.
+        // doctype), which reaches this same function - previously this
+        // special-cased "Partially Received" only and deferred everything
+        // else to ERPNext core's own get_indicator (re-derives "To Bill"/
+        // "To Receive and Bill"/etc from per_received/per_billed). That
+        // deferred call came back empty right after an Approve workflow
+        // action (frm.doc's per_received/per_billed apparently not yet
+        // reflecting the just-submitted state at that exact moment core's
+        // function ran) - indicator.js's own fallback for an empty result
+        // is a bare docstatus-based "Submitted", which is what actually
+        // showed. Deriving the label from the SAME get_status_display()
+        // the list card already uses - sourced from the plain `status`/
+        // `workflow_state` fields ERPNext's own set_status() and this
+        // app's Workflow both already computed and persisted - sidesteps
+        // that per_received/per_billed recompute (and any timing it can
+        // be sensitive to) entirely, and keeps the form badge and list
+        // card always showing the exact same label.
         get_indicator(doc) {
-            if (doc.status === "Partially Received") {
-                return [__("Partially Received"), "yellow", "status,=,Partially Received"];
-            }
-            return existing_get_indicator ? existing_get_indicator(doc) : undefined;
+            const disp = get_status_display(doc);
+            const color = INDICATOR_COLOR[disp.label] || "grey";
+            const is_workflow = cint(doc.docstatus) === 0 && doc.workflow_state && doc.workflow_state !== "Draft";
+            const filter = is_workflow ? `workflow_state,=,${disp.label}` : `status,=,${disp.label}`;
+            return [__(disp.label, null, "Purchase Order"), color, filter];
         },
     });
 
