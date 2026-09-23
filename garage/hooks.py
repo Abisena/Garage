@@ -1090,6 +1090,7 @@ doc_events = {
     "Purchase Order": {
         "validate": [
             "garage.utils.purchase_order_hooks.set_default_warehouse",
+            "garage.utils.purchase_order_hooks.flag_non_receivable_items_as_drop_ship",
             "garage.utils.purchase_order_tax_withholding.fix_service_only_withholding",
         ],
     },
