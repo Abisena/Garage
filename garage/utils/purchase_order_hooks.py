@@ -28,15 +28,25 @@ def flag_non_receivable_items_as_drop_ship(doc, method=None) -> None:
     items() (called from core's own validate()) backfills received_qty for
     flagged rows so per_received/status never sits stuck waiting on a GRN
     that will never happen for a service/consumable line.
-    Only ever sets the flag ON here - a row already inside
-    RECEIVABLE_ITEM_GROUPS is left exactly as-is, in case a real drop-ship-
-    to-customer row (this field's original, unrelated native purpose) was
-    set there some other way.
+
+    Sets AND clears the flag - an earlier version only ever set it, on the
+    theory that a real drop-ship-to-customer row (this field's original,
+    unrelated native purpose) might be sitting there for some other
+    reason. In practice a row's item_code/item_group can legitimately
+    change after this already ran once (Update Items, an Item's own group
+    getting corrected later - confirmed live: a "Products" row stuck
+    flagged from before its Item's group was fixed), and the one-way
+    version left it permanently excluded from Purchase Receipt with no way
+    back, silently marking it "received" (the same core hook backfills
+    received_qty for flagged rows) despite no GRN ever having been posted
+    for it. Real drop-ship rows always carry a sales_order - skipping
+    those here keeps this from ever touching one.
     """
 
     for item in doc.items or []:
-        if item.item_group not in RECEIVABLE_ITEM_GROUPS:
-            item.delivered_by_supplier = 1
+        if item.get("sales_order"):
+            continue
+        item.delivered_by_supplier = 0 if item.item_group in RECEIVABLE_ITEM_GROUPS else 1
 
 
 def set_default_warehouse(doc, method=None) -> None:
