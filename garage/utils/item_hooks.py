@@ -9,6 +9,53 @@ from garage.utils.pricing import get_item_rate
 
 REJECTED_STATUS = "Rejected"
 
+# Zero-pad width matching this app's existing item codes (SP-001 ...
+# SP-999, then plain SP-1000+ once past 3 digits - a real Frappe naming
+# series would behave the same way, padding only up to this width and
+# never truncating beyond it).
+ITEM_SERIES_PAD = 3
+
+
+def generate_item_code_from_prefix(doc, method=None) -> None:  # pragma: no cover - frappe lifecycle hook
+    """Item Code is picked manually today (Stock Settings.item_naming_by
+    stays "Item Code", not core's own "Naming Series" mode) - staff asked
+    for a new item under a known prefix (SP/JS/CSM/TE) to auto-continue
+    from the highest number already used for that prefix instead, so a
+    dropdown (Custom Field item_series_prefix, shown only on a new/unsaved
+    Item - see its own depends_on) was added for that choice.
+    Deliberately NOT implemented via core's own Naming Series machinery
+    (tabSeries counters) - that table isn't reachable through this app's
+    own deploy/data tools, and worse, seeding it wrong would silently
+    diverge from the real max in this data (many gaps from past deletes -
+    confirmed live: SP's own count doesn't match its highest number by a
+    wide margin) and start colliding with existing codes immediately.
+    Reading MAX(...) straight from the real Item rows on every use instead
+    is self-healing regardless of how many gaps exist or ever appear.
+    Only fires when item_code is still blank - an item_series_prefix
+    selected alongside a manually-typed item_code leaves that manual value
+    alone.
+    """
+
+    prefix = (doc.get("item_series_prefix") or "").strip()
+    if not prefix or doc.item_code:
+        return
+
+    doc.item_code = _next_prefixed_item_code(prefix)
+
+
+def _next_prefixed_item_code(prefix: str) -> str:
+    offset = len(prefix) + 1  # SQL SUBSTRING() is 1-indexed
+    row = frappe.db.sql(
+        """
+        select max(cast(substring(item_code, %s) as unsigned)) as max_num
+        from `tabItem`
+        where item_code like %s
+        """,
+        (offset, f"{prefix}%"),
+    )
+    max_num = row[0][0] if row and row[0] and row[0][0] is not None else 0
+    return f"{prefix}{int(max_num) + 1:0{ITEM_SERIES_PAD}d}"
+
 
 def _sync_spare_part_price(item_code: str) -> None:
     # This now also runs off the Item Price doc_event (see hooks.py), which
