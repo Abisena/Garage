@@ -1080,6 +1080,7 @@ doc_events = {
         "on_update": "garage.utils.vehicle_handover.handle_completed_service_order",
     },
     "Item": {
+        "validate": "garage.utils.item_hooks.validate_unique_item_identifiers",
         "on_trash": "garage.utils.item_hooks.block_delete_if_spare_part_requested",
         "on_update": "garage.utils.item_hooks.sync_garage_spare_part_price",
     },

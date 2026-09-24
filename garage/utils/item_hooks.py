@@ -67,6 +67,53 @@ def sync_garage_spare_part_price_from_item_price(doc, method=None) -> None:  # p
     _sync_spare_part_price(doc.item_code)
 
 
+def validate_unique_item_identifiers(doc, method=None) -> None:  # pragma: no cover - frappe lifecycle hook
+    """Item Code changing on an existing Item is invisible to the form body
+    (core hides the autoname="field:item_code" field once !doc.__islocal -
+    frappe/public/js/frappe/form/form.js), so the only normal path to
+    change it is the explicit Rename dialog, which already has its own
+    core duplicate check/message. This instead guards the paths that
+    dialog doesn't cover - a brand new Item saved with a code that
+    collides with an existing one, or item_code/item_name written directly
+    (API, Data Import, bulk edit) bypassing that dialog entirely - where
+    staff previously saw no message at all, just the value silently not
+    taking effect.
+    Item Name has no such native protection at all (ERPNext allows
+    duplicate item_name by design), so this is the first validation it
+    gets here.
+    has_value_changed() gates both checks so this only fires on an actual
+    attempt to change INTO a collision, never on an unrelated save of an
+    Item that happens to already share a name with another one from
+    before this validation existed - has_value_changed() returns True with
+    no prior guard reason on a brand new document (no "before" doc to
+    compare against yet), which is exactly the coverage wanted there too.
+    """
+
+    if doc.item_code and doc.has_value_changed("item_code"):
+        clash = frappe.db.get_value(
+            "Item", {"item_code": doc.item_code, "name": ["!=", doc.name]}, "name"
+        )
+        if clash:
+            frappe.throw(
+                _("Item Code {0} sudah dipakai oleh item lain ({1}). Item Code harus unik, pilih kode yang berbeda.").format(
+                    frappe.bold(doc.item_code), frappe.bold(clash)
+                ),
+                title=_("Item Code Duplikat"),
+            )
+
+    if doc.item_name and doc.has_value_changed("item_name"):
+        clash = frappe.db.get_value(
+            "Item", {"item_name": doc.item_name, "name": ["!=", doc.name]}, "name"
+        )
+        if clash:
+            frappe.throw(
+                _('Item Name "{0}" sudah dipakai oleh item lain ({1}). Pilih nama yang berbeda.').format(
+                    frappe.bold(doc.item_name), frappe.bold(clash)
+                ),
+                title=_("Item Name Duplikat"),
+            )
+
+
 def block_delete_if_spare_part_requested(doc, method=None) -> None:  # pragma: no cover - frappe lifecycle hook
     """Prevent deleting an Item that is still referenced by an active Spare Part Request."""
     requests = frappe.db.sql(
