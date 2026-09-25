@@ -401,15 +401,28 @@
     // trusting any single field-change event to have already-fresh totals
     // by the time it fires, is the same proven fix used there and on the
     // Bank Reconciliation Tool's main table for the same class of problem.
-    let pi_interval_bound = false;
     let latest_pi_frm = null;
+    let pi_interval_id = null;
+
+    // See purchase_order.js's own is_form_route_active() for the full
+    // reasoning - without this, this setInterval never stops once
+    // started, even long after the user has navigated away from this
+    // exact Purchase Invoice.
+    function is_form_route_active(frm) {
+        const route = frappe.get_route();
+        return route[0] === "Form" && route[1] === frm.doctype && route[2] === frm.doc.name;
+    }
 
     function watch_pi_form(frm) {
         latest_pi_frm = frm;
-        if (pi_interval_bound) return;
-        pi_interval_bound = true;
-        setInterval(() => {
-            if (!latest_pi_frm) return;
+        if (pi_interval_id) return;
+        pi_interval_id = setInterval(() => {
+            if (!latest_pi_frm || !is_form_route_active(latest_pi_frm)) {
+                clearInterval(pi_interval_id);
+                pi_interval_id = null;
+                latest_pi_frm = null;
+                return;
+            }
             disable_row_open(latest_pi_frm);
             render_totals_footer(latest_pi_frm);
             sync_ppn_from_source_po(latest_pi_frm);

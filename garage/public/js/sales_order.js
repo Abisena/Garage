@@ -302,16 +302,30 @@
         }
     }
 
-    let so_interval_bound = false;
     let latest_so_frm = null;
+    let so_interval_id = null;
     let last_seen_customer;
+
+    // See purchase_order.js's own is_form_route_active() for the full
+    // reasoning - without this, this setInterval (like that one) never
+    // stops once started, even long after the user has navigated away
+    // from this exact Sales Order.
+    function is_form_route_active(frm) {
+        const route = frappe.get_route();
+        return route[0] === "Form" && route[1] === frm.doctype && route[2] === frm.doc.name;
+    }
 
     function watch_so_form(frm) {
         latest_so_frm = frm;
-        if (so_interval_bound) return;
-        so_interval_bound = true;
-        setInterval(() => {
-            if (!latest_so_frm) return;
+        if (so_interval_id) return;
+        so_interval_id = setInterval(() => {
+            if (!latest_so_frm || !is_form_route_active(latest_so_frm)) {
+                clearInterval(so_interval_id);
+                so_interval_id = null;
+                latest_so_frm = null;
+                last_seen_customer = undefined;
+                return;
+            }
             // disable_row_open() also needs to run AFTER refresh_grid_if_idle()
             // here, not just before it - grid.refresh() (called inside
             // refresh_grid_if_idle whenever no row is actively being edited)

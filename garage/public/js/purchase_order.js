@@ -621,15 +621,43 @@
     // the flag was first set. Kept in the same polling loop as
     // refresh_grid_if_idle()/render_totals_footer() below anyway, since
     // it's cheap and already idempotent either way.
-    let po_interval_bound = false;
     let latest_po_frm = null;
+    let po_interval_id = null;
+
+    // Frappe's router keeps this same closure alive across every later
+    // route change (a "Form" view isn't torn down, just hidden - see
+    // this file's own is_form_route_active() copy in each of purchase_
+    // order.js/sales_order.js/purchase_invoice.js/purchase_receipt.js/
+    // sales_invoice.js), so a setInterval started here with no matching
+    // clearInterval never stops - confirmed live: opening even one
+    // Purchase Order leaves this poll running forever afterward,
+    // including on every other doctype's own list/form the user visits
+    // for the rest of that browser tab's life. Open one of each of those
+    // five doctypes in one session (an ordinary day of purchasing/sales
+    // work) and five of these permanent 400ms polls end up stacked,
+    // competing for the main thread on every subsequent navigation -
+    // reported directly by the user as "pindah antar-doctype jadi lambat".
+    // Checking the current route on every tick and clearing this interval
+    // the moment it no longer points at this exact form is what actually
+    // stops the work (not just skips it) once the user has navigated
+    // away - watch_po_form() below already reruns from this doctype's own
+    // refresh() every time the form is (re)opened, so a fresh interval
+    // starts cleanly next time rather than never being able to restart.
+    function is_form_route_active(frm) {
+        const route = frappe.get_route();
+        return route[0] === "Form" && route[1] === frm.doctype && route[2] === frm.doc.name;
+    }
 
     function watch_po_form(frm) {
         latest_po_frm = frm;
-        if (po_interval_bound) return;
-        po_interval_bound = true;
-        setInterval(() => {
-            if (!latest_po_frm) return;
+        if (po_interval_id) return;
+        po_interval_id = setInterval(() => {
+            if (!latest_po_frm || !is_form_route_active(latest_po_frm)) {
+                clearInterval(po_interval_id);
+                po_interval_id = null;
+                latest_po_frm = null;
+                return;
+            }
             disable_row_open(latest_po_frm);
             force_tds_editable(latest_po_frm);
             refresh_grid_if_idle(latest_po_frm);

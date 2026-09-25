@@ -221,15 +221,28 @@
     // in one shot with no single reliable completion hook either. Polling
     // is the same proven fix used for that same class of problem
     // throughout this app's own Purchase Order customizations.
-    let pr_interval_bound = false;
     let latest_pr_frm = null;
+    let pr_interval_id = null;
+
+    // See purchase_order.js's own is_form_route_active() for the full
+    // reasoning - without this, this setInterval never stops once
+    // started, even long after the user has navigated away from this
+    // exact Purchase Receipt.
+    function is_form_route_active(frm) {
+        const route = frappe.get_route();
+        return route[0] === "Form" && route[1] === frm.doctype && route[2] === frm.doc.name;
+    }
 
     function watch_pr_form(frm) {
         latest_pr_frm = frm;
-        if (pr_interval_bound) return;
-        pr_interval_bound = true;
-        setInterval(() => {
-            if (!latest_pr_frm) return;
+        if (pr_interval_id) return;
+        pr_interval_id = setInterval(() => {
+            if (!latest_pr_frm || !is_form_route_active(latest_pr_frm)) {
+                clearInterval(pr_interval_id);
+                pr_interval_id = null;
+                latest_pr_frm = null;
+                return;
+            }
             disable_row_open(latest_pr_frm);
             strip_service_items(latest_pr_frm);
             sync_ppn_from_source_po(latest_pr_frm);
