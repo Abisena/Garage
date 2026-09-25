@@ -15,6 +15,18 @@ REJECTED_STATUS = "Rejected"
 # never truncating beyond it).
 ITEM_SERIES_PAD = 3
 
+# TE deliberately has no entry - staff haven't confirmed which Item Group
+# it should map to, so it's left for manual selection same as before this
+# feature existed. Keep in sync with the same mapping in item.js
+# (item_series_prefix's own change handler - immediate UI feedback,
+# this one's the authoritative copy for API/Data Import paths that never
+# run that client script at all).
+PREFIX_ITEM_GROUP = {
+    "SP-": "Products",
+    "JS-": "Services",
+    "CSM-": "Consumable",
+}
+
 
 def generate_item_code_from_prefix(doc, method=None) -> None:  # pragma: no cover - frappe lifecycle hook
     """Item Code is picked manually today (Stock Settings.item_naming_by
@@ -31,16 +43,28 @@ def generate_item_code_from_prefix(doc, method=None) -> None:  # pragma: no cove
     wide margin) and start colliding with existing codes immediately.
     Reading MAX(...) straight from the real Item rows on every use instead
     is self-healing regardless of how many gaps exist or ever appear.
-    Only fires when item_code is still blank - an item_series_prefix
-    selected alongside a manually-typed item_code leaves that manual value
-    alone.
+    Item Code generation only fires when it's still blank - an
+    item_series_prefix selected alongside a manually-typed Item Code
+    leaves that manual value alone. Item Group is different: it's always
+    force-set to the prefix's own mapped group whenever one exists,
+    overwriting any earlier choice - picking a prefix here is exactly the
+    same "this item is a sparepart/a service/a consumable" declaration
+    the Item Group field itself makes, and letting the two disagree is
+    the exact bug this was built to prevent (see validate_unique_item_
+    identifiers's own sibling fix and the JS-002..005 item_group mixup
+    corrected directly in the data).
     """
 
     prefix = (doc.get("item_series_prefix") or "").strip()
-    if not prefix or doc.item_code:
+    if not prefix:
         return
 
-    doc.item_code = _next_prefixed_item_code(prefix)
+    item_group = PREFIX_ITEM_GROUP.get(prefix)
+    if item_group:
+        doc.item_group = item_group
+
+    if not doc.item_code:
+        doc.item_code = _next_prefixed_item_code(prefix)
 
 
 def _next_prefixed_item_code(prefix: str) -> str:
