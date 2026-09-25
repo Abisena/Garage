@@ -49,6 +49,28 @@ garage.registerListRenderOverride = function (doctype, renderFn, extraFields) {
     garage.__list_extra_fields[doctype] = extraFields;
   }
 
+  // This doctype's own list.js (the file calling this function) is
+  // fetched asynchronously the first time its List View loads in a
+  // session - on a slow connection, or simply unlucky timing, that fetch
+  // can still be in flight when ListView's own first refresh() already
+  // ran and painted Frappe's native row markup (no override registered
+  // yet at that moment, so the refresh patch below found nothing to
+  // call). Everything after this point only ever fires on the NEXT
+  // refresh - with no further user action, that native-looking list (a
+  // plain docstatus indicator pill, a stock percent-complete bar instead
+  // of this file's own colored card) is what's left on screen until
+  // something happens to trigger another refresh, e.g. the user
+  // noticing and clicking "Reload List" themselves - reported directly
+  // by the user for Purchase Order specifically. window.cur_list is
+  // Frappe's own reference to whichever ListView is the CURRENTLY
+  // showing one (list_factory.js) - if it's already this exact doctype's
+  // list, that first render already happened without the override, so
+  // render it retroactively right now instead of waiting for a refresh
+  // that might not come.
+  if (window.cur_list && window.cur_list.doctype === doctype && window.cur_list.$result) {
+    renderFn(window.cur_list);
+  }
+
   if (!frappe.views.ListView.prototype.__grs_refresh_patched) {
     frappe.views.ListView.prototype.__grs_refresh_patched = true;
 
