@@ -8,7 +8,7 @@
   "columns": 0,
   "default": null,
   "depends_on": "eval:doc.__islocal",
-  "description": "Pilih prefix ini untuk generate Item Code otomatis (nomor lanjut dari yang tertinggi sudah dipakai). Kosongkan kalau mau isi Item Code manual.",
+  "description": "Item Code otomatis, lanjut nomor tertinggi. Kosongkan untuk isi manual.",
   "docstatus": 0,
   "doctype": "Custom Field",
   "dt": "Item",
