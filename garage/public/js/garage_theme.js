@@ -796,64 +796,6 @@ if (
   };
 }
 
-// Testing-only "Reset Test Data" button: wipes transactional documents
-// (orders, invoices, payments, stock moves) and their GL/stock ledger
-// fallout, leaving master data (customers, vehicles, service types,
-// bundles, spare parts) untouched. System Manager only, and gated behind
-// a confirm dialog since garage.api.dev_tools.reset_test_transactions is
-// destructive - see that module for what it actually does.
-if (frappe.user.has_role('System Manager') && !$('#garage-reset-test-data-btn').length) {
-  const $btn = $(`
-    <button id="garage-reset-test-data-btn" title="Hapus semua transaksi test (Sales Invoice, Payment, Stock Entry, Service Order, dst). Master data aman." style="
-      position: fixed; bottom: 20px; right: 20px; z-index: 1100;
-      background: #dc2626; color: #fff; border: none; border-radius: 999px;
-      padding: 10px 18px; font-size: 12px; font-weight: 700;
-      box-shadow: 0 4px 12px rgba(220,38,38,0.35); cursor: pointer;
-      letter-spacing: 0.02em;
-    ">Reset Data Testing</button>
-  `).appendTo('body');
-
-  $btn.on('click', () => {
-    frappe.confirm(
-      `Ini akan <strong>menghapus semua data transaksi</strong> (Sales Invoice, Payment Entry, Stock Entry, Garage Service Order, Repair QC, Spare Part Request) beserta GL Entry & Stock Ledger Entry turunannya.<br><br>` +
-      `Master data (Customer, Vehicle, Service Type, Service Bundle, Spare Part) <strong>tidak</strong> akan disentuh.<br><br>` +
-      `Tindakan ini <strong>tidak bisa dibatalkan</strong>. Lanjutkan?`,
-      () => {
-        frappe.dom.freeze('Menghapus data transaksi test...');
-        frappe.call({
-          method: 'garage.api.dev_tools.reset_test_transactions',
-          args: { confirm: 1 },
-          callback(r) {
-            frappe.dom.unfreeze();
-            if (r.message) {
-              const errors = r.message._errors;
-              const lines = Object.entries(r.message)
-                .filter(([key]) => key !== '_errors')
-                .map(([doctype, count]) => `${doctype}: ${count}`)
-                .join('<br>');
-              const errorBlock = errors
-                ? '<br><br><strong>' + __('Otomatis diperbaiki (dihapus paksa), untuk info:') +
-                  '</strong><br>' +
-                  Object.entries(errors)
-                    .map(([doctype, msgs]) => `${doctype}:<br>` + msgs.map((m) => `&nbsp;&nbsp;- ${frappe.utils.escape_html(m)}`).join('<br>'))
-                    .join('<br>')
-                : '';
-              frappe.msgprint({
-                title: __('Data Testing Direset'),
-                indicator: errors ? 'yellow' : 'green',
-                message: lines + errorBlock,
-              });
-            }
-          },
-          error() {
-            frappe.dom.unfreeze();
-          },
-        });
-      }
-    );
-  });
-}
-
 // Sales Invoice: hide sections not relevant to this app's workflow
 
 // Mirrors the "${totalItems} item" badge garage_service_order.js prepends
