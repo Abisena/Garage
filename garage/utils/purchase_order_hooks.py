@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Optional
 
 import frappe
+from frappe.utils import flt
 
 
 # Item Groups whose purchases are physically received into stock (see the
@@ -46,7 +47,47 @@ def flag_non_receivable_items_as_drop_ship(doc, method=None) -> None:
     for item in doc.items or []:
         if item.get("sales_order"):
             continue
-        item.delivered_by_supplier = 0 if item.item_group in RECEIVABLE_ITEM_GROUPS else 1
+        if item.item_group in RECEIVABLE_ITEM_GROUPS:
+            item.delivered_by_supplier = 0
+        else:
+            item.delivered_by_supplier = 1
+            # core's own set_received_qty_for_drop_ship_items() (buying/
+            # doctype/purchase_order/purchase_order.py validate()) already
+            # ran by the time this hooks.py doc_event fires (Document.hook()
+            # calls the controller's own validate() first, hooks.py
+            # callbacks after - confirmed in frappe/model/document.py's
+            # compose()) - so on the very first save that flags a row here,
+            # core's backfill still saw the OLD delivered_by_supplier value
+            # and skipped it. Setting received_qty here too means this
+            # row is correct within this same save, not just from the next
+            # one onward.
+            item.received_qty = item.qty
+
+    _sync_per_received(doc)
+
+
+def _sync_per_received(doc) -> None:
+    """Purchase Order.per_received is normally only ever recalculated by
+    core in two places: update_child_qty_rate() (the "Update Items" tool,
+    erpnext/controllers/accounts_controller.py) and whatever a submitted
+    Purchase Receipt's own update_prevdoc_status() triggers - neither ever
+    runs for a delivered_by_supplier row, since it never gets a real
+    Purchase Receipt. Left alone, a PO made entirely (or partly) of such
+    rows has its own received_qty correctly backfilled on the item but the
+    PARENT's per_received/status never catches up - reproduced live: a PO
+    with one fully "received" Jasa row stuck showing per_received=0% and
+    status "To Receive" forever. Mirrors update_receiving_percentage()'s
+    own formula (same file, core) exactly, just triggered from validate()
+    instead of only those two core-controlled paths.
+    """
+
+    total_qty = 0.0
+    received_qty = 0.0
+    for item in doc.items or []:
+        total_qty += flt(item.qty)
+        received_qty += min(flt(item.received_qty), flt(item.qty))
+
+    doc.per_received = flt(received_qty / total_qty) * 100 if total_qty else 0
 
 
 def set_default_warehouse(doc, method=None) -> None:
