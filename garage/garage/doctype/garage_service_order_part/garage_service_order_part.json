@@ -108,8 +108,7 @@
       "fieldtype": "Currency",
       "label": "Rate",
       "in_list_view": 1,
-      "columns": 1,
-      "read_only_depends_on": "eval:doc.item_group != 'Services'"
+      "columns": 1
     },
     {
       "fieldname": "discount",
@@ -147,7 +146,7 @@
   "links": [],
   "make_attachments_public": 0,
   "max_attachments": 0,
-  "modified": "2024-06-02 00:00:00.000000",
+  "modified": "2026-10-01 00:00:00.000000",
   "module": "Garage",
   "name": "Garage Service Order Part",
   "naming_rule": "",
