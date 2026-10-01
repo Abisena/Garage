@@ -280,7 +280,6 @@
       "fieldtype": "Date",
       "label": "Tanggal",
       "default": "Today",
-      "read_only": 1,
       "bold": 1
     },
     {
@@ -449,7 +448,7 @@
   ],
   "make_attachments_public": 0,
   "max_attachments": 10,
-  "modified": "2026-07-18 02:20:00.000000",
+  "modified": "2026-10-01 00:00:00.000000",
   "module": "Garage",
   "name": "Garage Service Order",
   "naming_rule": "By \"Naming Series\" field",
