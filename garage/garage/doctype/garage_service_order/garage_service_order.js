@@ -1251,7 +1251,27 @@ frappe.ui.form.on('Garage Service Order Part', {
             callback(stockRes) {
               const stockQty = flt(stockRes.message?.stock_qty || 0);
               if (stockQty <= 0) {
-                frappe.model.set_value(cdt, cdn, 'item_code', '');
+                // Frappe's own fetch_from already populated item_name/description/
+                // item_group/uom off this item_code before this callback even ran -
+                // clearing item_code alone left those stale, so the row looked like
+                // a normal filled-in part (name, qty, rate) with no item_code behind
+                // it. That "ghost" row then silently vanished from every place that
+                // filters on item_code: Spare Part Request sync, Finish Repair's
+                // unresolved-parts check, and invoice generation - nobody could see
+                // why a part never reached procurement. Clear the whole row instead
+                // so a rejected pick leaves nothing behind to be mistaken for data.
+                frappe.model.set_value(cdt, cdn, {
+                  item_code: '',
+                  item_name: '',
+                  description: '',
+                  item_group: '',
+                  uom: '',
+                  rate: 0,
+                  discount: 0,
+                  tax: 0,
+                  amount: 0,
+                  stock_status: '',
+                });
                 frappe.show_alert({ message: __('Item ini stock habis, tidak bisa dipilih.'), indicator: 'red' }, 5);
                 return;
               }
