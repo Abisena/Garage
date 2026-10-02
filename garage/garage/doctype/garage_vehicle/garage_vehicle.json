@@ -129,6 +129,7 @@
       "options": "Garage Brand",
       "reqd": 1,
       "in_list_view": 1,
+      "in_standard_filter": 1,
       "bold": 1
     },
     {
@@ -189,8 +190,7 @@
       "fieldtype": "Link",
       "label": "Branch",
       "options": "Garage Branch",
-      "hidden": 1,
-      "in_standard_filter": 1
+      "hidden": 1
     },
     {
       "fieldname": "assembly_type",
@@ -217,7 +217,7 @@
   "hide_toolbar": 0,
   "index_web_pages_for_search": 1,
   "links": [],
-  "modified": "2026-07-17 22:25:00.000000",
+  "modified": "2026-10-02 00:00:00.000000",
   "module": "Garage",
   "name": "Garage Vehicle",
   "naming_rule": "By fieldname",
