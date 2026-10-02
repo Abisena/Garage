@@ -202,8 +202,16 @@ function add_simple_buttons(frm) {
     );
   };
 
-  frm.add_custom_button(__('Prepared All'), () => updateAll('Prepared'), __('Actions'));
-  frm.add_custom_button(__('Rejected All'), () => updateAll('Rejected'), __('Actions'));
+  // Standalone buttons, not grouped under "Actions" - a grouped custom
+  // button only ever renders as part of the "Actions" split-button
+  // dropdown, which itself only appears when the toolbar has room (or
+  // folds into the "..." menu on a narrower viewport/with several other
+  // toolbar buttons already present) - staff couldn't find "Prepared
+  // All"/"Rejected All" at all when that happened, reported directly by
+  // the user. A plain frm.add_custom_button() with no group renders as
+  // its own always-visible toolbar button instead.
+  frm.add_custom_button(__('Prepared All'), () => updateAll('Prepared'));
+  frm.add_custom_button(__('Rejected All'), () => updateAll('Rejected'));
 }
 
 frappe.ui.form.on('Spare Part Request Item', {});
