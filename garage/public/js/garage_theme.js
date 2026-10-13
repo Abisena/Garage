@@ -801,59 +801,69 @@ if (
 // fallout, leaving master data (customers, vehicles, service types,
 // bundles, spare parts) untouched. Previously gated to the System Manager
 // role (removed entirely in fc1063b5 over misuse risk - any System
-// Manager account could see it) - re-added here scoped tighter, to the
-// Administrator account specifically rather than the role, since that's
-// the one account this is actually meant for. Still behind a confirm
-// dialog since garage.api.dev_tools.reset_test_transactions is destructive.
+// Manager account could see it) - re-added scoped to the Administrator
+// account specifically, AND behind Garage Settings.enable_reset_test_data_
+// button so it can be switched on/off from a form (System Manager only)
+// without needing a fresh deploy every time testing starts/stops. Still
+// behind a confirm dialog since garage.api.dev_tools.reset_test_transactions
+// is destructive.
 if (frappe.session.user === 'Administrator' && !$('#garage-reset-test-data-btn').length) {
-  const $btn = $(`
-    <button id="garage-reset-test-data-btn" title="Hapus semua transaksi test (Sales Invoice, Payment, Stock Entry, Service Order, dst). Master data aman." style="
-      position: fixed; bottom: 20px; right: 20px; z-index: 1100;
-      background: #dc2626; color: #fff; border: none; border-radius: 999px;
-      padding: 10px 18px; font-size: 12px; font-weight: 700;
-      box-shadow: 0 4px 12px rgba(220,38,38,0.35); cursor: pointer;
-      letter-spacing: 0.02em;
-    ">Reset Data Testing</button>
-  `).appendTo('body');
+  frappe.call({
+    method: 'frappe.client.get_single_value',
+    args: { doctype: 'Garage Settings', field: 'enable_reset_test_data_button' },
+    callback(r) {
+      if (!r.message || $('#garage-reset-test-data-btn').length) return;
 
-  $btn.on('click', () => {
-    frappe.confirm(
-      `Ini akan <strong>menghapus semua data transaksi</strong> (Sales Invoice, Payment Entry, Stock Entry, Garage Service Order, Repair QC, Spare Part Request) beserta GL Entry & Stock Ledger Entry turunannya.<br><br>` +
-      `Master data (Customer, Vehicle, Service Type, Service Bundle, Spare Part) <strong>tidak</strong> akan disentuh.<br><br>` +
-      `Tindakan ini <strong>tidak bisa dibatalkan</strong>. Lanjutkan?`,
-      () => {
-        frappe.dom.freeze('Menghapus data transaksi test...');
-        frappe.call({
-          method: 'garage.api.dev_tools.reset_test_transactions',
-          args: { confirm: 1 },
-          callback(r) {
-            frappe.dom.unfreeze();
-            if (r.message) {
-              const errors = r.message._errors;
-              const lines = Object.entries(r.message)
-                .filter(([key]) => key !== '_errors')
-                .map(([doctype, count]) => `${doctype}: ${count}`)
-                .join('<br>');
-              const errorBlock = errors
-                ? '<br><br><strong>' + __('Otomatis diperbaiki (dihapus paksa), untuk info:') +
-                  '</strong><br>' +
-                  Object.entries(errors)
-                    .map(([doctype, msgs]) => `${doctype}:<br>` + msgs.map((m) => `&nbsp;&nbsp;- ${frappe.utils.escape_html(m)}`).join('<br>'))
-                    .join('<br>')
-                : '';
-              frappe.msgprint({
-                title: __('Data Testing Direset'),
-                indicator: errors ? 'yellow' : 'green',
-                message: lines + errorBlock,
-              });
-            }
-          },
-          error() {
-            frappe.dom.unfreeze();
-          },
-        });
-      }
-    );
+      const $btn = $(`
+        <button id="garage-reset-test-data-btn" title="Hapus semua transaksi test (Sales Invoice, Payment, Stock Entry, Service Order, dst). Master data aman." style="
+          position: fixed; bottom: 20px; right: 20px; z-index: 1100;
+          background: #dc2626; color: #fff; border: none; border-radius: 999px;
+          padding: 10px 18px; font-size: 12px; font-weight: 700;
+          box-shadow: 0 4px 12px rgba(220,38,38,0.35); cursor: pointer;
+          letter-spacing: 0.02em;
+        ">Reset Data Testing</button>
+      `).appendTo('body');
+
+      $btn.on('click', () => {
+        frappe.confirm(
+          `Ini akan <strong>menghapus semua data transaksi</strong> (Sales Invoice, Payment Entry, Stock Entry, Garage Service Order, Repair QC, Spare Part Request) beserta GL Entry & Stock Ledger Entry turunannya.<br><br>` +
+          `Master data (Customer, Vehicle, Service Type, Service Bundle, Spare Part) <strong>tidak</strong> akan disentuh.<br><br>` +
+          `Tindakan ini <strong>tidak bisa dibatalkan</strong>. Lanjutkan?`,
+          () => {
+            frappe.dom.freeze('Menghapus data transaksi test...');
+            frappe.call({
+              method: 'garage.api.dev_tools.reset_test_transactions',
+              args: { confirm: 1 },
+              callback(r2) {
+                frappe.dom.unfreeze();
+                if (r2.message) {
+                  const errors = r2.message._errors;
+                  const lines = Object.entries(r2.message)
+                    .filter(([key]) => key !== '_errors')
+                    .map(([doctype, count]) => `${doctype}: ${count}`)
+                    .join('<br>');
+                  const errorBlock = errors
+                    ? '<br><br><strong>' + __('Otomatis diperbaiki (dihapus paksa), untuk info:') +
+                      '</strong><br>' +
+                      Object.entries(errors)
+                        .map(([doctype, msgs]) => `${doctype}:<br>` + msgs.map((m) => `&nbsp;&nbsp;- ${frappe.utils.escape_html(m)}`).join('<br>'))
+                        .join('<br>')
+                    : '';
+                  frappe.msgprint({
+                    title: __('Data Testing Direset'),
+                    indicator: errors ? 'yellow' : 'green',
+                    message: lines + errorBlock,
+                  });
+                }
+              },
+              error() {
+                frappe.dom.unfreeze();
+              },
+            });
+          }
+        );
+      });
+    },
   });
 }
 

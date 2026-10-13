@@ -1,0 +1,46 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-13 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "enable_reset_test_data_button"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "description": "Kalau dicentang, tombol \"Reset Data Testing\" (hapus semua data transaksi test) akan tampil untuk akun Administrator di semua halaman. Matikan lagi kalau masa testing sudah selesai.",
+   "fieldname": "enable_reset_test_data_button",
+   "fieldtype": "Check",
+   "label": "Enable Reset Data Testing Button"
+  }
+ ],
+ "has_web_view": 0,
+ "hide_toolbar": 0,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-13 00:00:00.000000",
+ "module": "Garage",
+ "name": "Garage Settings",
+ "naming_rule": "",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "quick_entry": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "description": "App-wide toggles for Garage. Currently just gates the Administrator-only Reset Data Testing button, so it no longer takes a code deploy to turn that on/off."
+}
