@@ -936,16 +936,35 @@ def submit_to_qc(service_order_name: str) -> dict[str, object]:
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Garage Service Order - Sales Invoice")
 
+    if not invoice_name:
+        # _create_draft_sales_invoice can also come back empty without raising
+        # (missing customer/company/items) - that silent path is exactly how
+        # PPO-SPK-2026-00062 ended up sitting in Waiting Payment with no
+        # Sales Invoice at all and nobody finding out until a customer asked
+        # where their invoice was. Log every empty result, not just the ones
+        # that happen to raise, so there's always a trail to check.
+        frappe.log_error(
+            f"submit_to_qc: no Sales Invoice created for {doc.name} - "
+            "_create_draft_sales_invoice returned nothing (see its own "
+            "early-return checks: customer, items, company).",
+            "Garage Service Order - Sales Invoice",
+        )
+
     frappe.db.commit()
 
-    message = "Perbaikan selesai. Menunggu pembayaran."
     if invoice_name:
-        message += f" Draft Sales Invoice {invoice_name} telah dibuat."
+        message = f"Perbaikan selesai. Draft Sales Invoice {invoice_name} telah dibuat."
+    else:
+        message = (
+            "Perbaikan selesai, TAPI draft Sales Invoice GAGAL dibuat otomatis. "
+            "Mohon buat Sales Invoice manual untuk order ini."
+        )
 
     return {
         "status": "Waiting Payment",
         "message": message,
         "sales_invoice": invoice_name,
+        "invoice_failed": not bool(invoice_name),
     }
 
 

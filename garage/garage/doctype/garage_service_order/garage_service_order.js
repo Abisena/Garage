@@ -1079,7 +1079,15 @@ frappe.ui.form.on('Garage Service Order', {
               freeze: true,
               callback(r) {
                 if (r.message) {
-                  frappe.show_alert({ message: r.message.message, indicator: 'green' });
+                  const failed = r.message.invoice_failed;
+                  frappe.show_alert({ message: r.message.message, indicator: failed ? 'red' : 'green' }, failed ? 15 : 5);
+                  if (failed) {
+                    frappe.msgprint({
+                      title: __('Sales Invoice Gagal Dibuat'),
+                      message: __('SPK ini sudah masuk status Waiting Payment, tapi draft Sales Invoice-nya gagal dibuat otomatis. Mohon buat Sales Invoice manual untuk order ini.'),
+                      indicator: 'red',
+                    });
+                  }
                   frm.reload_doc();
                 }
               },
@@ -1251,27 +1259,18 @@ frappe.ui.form.on('Garage Service Order Part', {
             callback(stockRes) {
               const stockQty = flt(stockRes.message?.stock_qty || 0);
               if (stockQty <= 0) {
-                // Frappe's own fetch_from already populated item_name/description/
-                // item_group/uom off this item_code before this callback even ran -
-                // clearing item_code alone left those stale, so the row looked like
-                // a normal filled-in part (name, qty, rate) with no item_code behind
-                // it. That "ghost" row then silently vanished from every place that
-                // filters on item_code: Spare Part Request sync, Finish Repair's
-                // unresolved-parts check, and invoice generation - nobody could see
-                // why a part never reached procurement. Clear the whole row instead
-                // so a rejected pick leaves nothing behind to be mistaken for data.
-                frappe.model.set_value(cdt, cdn, {
-                  item_code: '',
-                  item_name: '',
-                  description: '',
-                  item_group: '',
-                  uom: '',
-                  rate: 0,
-                  discount: 0,
-                  tax: 0,
-                  amount: 0,
-                  stock_status: '',
-                });
+                // item_code has no `reqd` at the schema level (it's only_select,
+                // not mandatory), so merely blanking every field left a row that
+                // still saved fine and still counted toward the grid's "N item"
+                // badge (renderTableFooter just does required_parts.length) -
+                // staff saw "1 item" and a Save that succeeded for a part that
+                // was actually rejected. Remove the row outright instead; that
+                // also fires the required_parts_remove handler below, which
+                // refreshes the footer/badge for us.
+                const gridRow = frm.fields_dict.required_parts.grid.grid_rows_by_docname[cdn];
+                if (gridRow) {
+                  gridRow.remove();
+                }
                 frappe.show_alert({ message: __('Item ini stock habis, tidak bisa dipilih.'), indicator: 'red' }, 5);
                 return;
               }
