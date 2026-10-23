@@ -870,15 +870,33 @@ body .layout-main .desk-sidebar .standard-sidebar-section .desk-sidebar-item.sta
     font-size: 12px !important;
   }
 
-  /* Stack labels on mobile */
-  .frappe-control .form-group {
+  /* Stack labels on mobile.
+     These must out-specify the inline label-left/input-right rules near the top of this
+     file, which are written as `.frappe-control[data-fieldtype="Select"] .form-group
+     .clearfix` (0,4,0). The previous version of this block used
+     `.frappe-control .form-group .clearfix` (0,3,0) - lower specificity, and since both
+     sides are !important the desktop rule kept winning. The result was a half-applied
+     override: flex-direction did flip to column (nothing competed for it), while
+     `flex: 0 0 160px` and `align-items: center` survived - so the label's 160px COLUMN
+     WIDTH became a 160px ROW HEIGHT and every value sat centred under a tall empty gap.
+     Leading `body` + the bare [data-fieldtype] attribute puts these at (0,4,1), which
+     beats the desktop rules outright instead of relying on source order. */
+  body .frappe-control[data-fieldtype] .form-group {
     flex-direction: column !important;
-    align-items: flex-start !important;
+    /* stretch, not flex-start: in a column container flex-start shrinks each child to its
+       own content width, which would leave inputs narrower than the field. */
+    align-items: stretch !important;
+    gap: 0 !important;
   }
 
-  .frappe-control .form-group .clearfix {
-    flex: unset !important;
-    min-width: unset !important;
+  body .frappe-control[data-fieldtype] .form-group .clearfix {
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+  }
+
+  body .frappe-control[data-fieldtype] .form-group .control-input-wrapper {
+    flex: 0 0 auto !important;
+    width: 100% !important;
   }
 
   .frappe-control .control-label {
