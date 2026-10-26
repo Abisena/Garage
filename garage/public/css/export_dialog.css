@@ -1,0 +1,325 @@
+/* ============================================================
+   Export Data dialog (frappe.data_import.DataExporter)
+   ------------------------------------------------------------
+   Everything here is scoped under .garage-export-dialog, a class
+   export_template.js puts on that one dialog's wrapper, so none of it
+   can reach another dialog. The extra hook classes it adds
+   (.garage-export-options, .garage-export-fields-toolbar) exist
+   because the surrounding markup is frappe's and has no handle of
+   its own.
+
+   Most rules carry !important because garage_desk.css styles every
+   .frappe-control app-wide with !important - label on the left in a
+   fixed 160px column, input on the right. That reads well on a wide
+   form page and badly in a modal, where it strands a short label next
+   to a stretched input, so this file puts labels back above their
+   inputs for this dialog only.
+
+   Colors are frappe's semantic tokens (--modal-bg, --subtle-accent,
+   --border-color, --text-muted, --fg-hover-color), never literals, so
+   the dialog follows the light/dark theme the user is on. Note which
+   tokens are off limits: garage_desk.css pins --card-bg, --control-bg,
+   --bg-color and --disabled-control-bg to light literals with
+   !important at :root, so those four stay light even under
+   [data-theme="dark"] - using --card-bg for a surface here would paint
+   a white panel under light text in dark mode. --modal-bg is the
+   dialog's own surface and is left alone, so surfaces use that.
+   ============================================================ */
+
+.garage-export-dialog .modal-dialog {
+	/* 840px on a desktop, never wider than the viewport on a phone. */
+	max-width: min(840px, calc(100vw - 24px));
+}
+
+/* ── Labels above their inputs, not beside them ─────────── */
+
+.garage-export-dialog .frappe-control .form-group {
+	display: block !important;
+	margin-bottom: 0 !important;
+}
+
+.garage-export-dialog .frappe-control .form-group > .clearfix {
+	flex: none !important;
+	min-width: 0 !important;
+	margin-bottom: 4px !important;
+}
+
+.garage-export-dialog .frappe-control .control-label {
+	font-size: 11px !important;
+	font-weight: 600 !important;
+	letter-spacing: 0.04em !important;
+	color: var(--text-muted) !important;
+}
+
+/* "N records will be exported" and friends */
+.garage-export-dialog .frappe-control .help-box {
+	margin: 4px 0 0 !important;
+	font-size: 11px !important;
+	line-height: 1.4 !important;
+	color: var(--text-muted) !important;
+}
+
+/* ── Export options: File Type + Export Type side by side ─ */
+
+.garage-export-dialog .garage-export-options > form {
+	display: grid !important;
+	grid-template-columns: 1fr 1fr;
+	gap: 14px 18px;
+	align-items: start;
+}
+
+.garage-export-dialog
+	.garage-export-options
+	> form
+	> .frappe-control[data-fieldname="filter_area"] {
+	grid-column: 1 / -1;
+}
+
+/* Selects, undoing two app-wide rules from garage_desk.css that do not
+   survive the move into a modal:
+
+   - `[data-fieldtype="Select"] select { width: 150px }` pins every select
+     to 150px. The .control-input around it still fills the column, and
+     frappe's chevron is absolutely positioned against that, so the arrow
+     ended up stranded at the far right of the dialog, a hand's width away
+     from the box it belongs to. Full width puts them back together.
+   - `height: 42px` on the same rule, which an earlier revision here
+     overrode with a flat 30px. With the theme's own
+     `padding: 8px 12px` + 13px text that is less than the content needs,
+     so the text was being clipped off at the bottom. Height is left to
+     the padding now, with min-height only as a floor.
+
+   The arrow is drawn as the select's own background image (the theme's
+   approach, restated here so it does not depend on cascade order) and
+   frappe's duplicate .select-icon is hidden - two arrows otherwise land
+   on the same spot once the box is full width. */
+.garage-export-dialog
+	.garage-export-options
+	> form
+	> .frappe-control[data-fieldtype="Select"]
+	select,
+.garage-export-dialog .garage-export-template-select select {
+	width: 100% !important;
+	height: auto !important;
+	min-height: 34px !important;
+	line-height: 1.4 !important;
+	padding-right: 30px !important;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E") !important;
+	background-repeat: no-repeat !important;
+	background-position: right 11px center !important;
+}
+
+/* Deliberately scoped to the same three selects, not the dialog: the
+   filter rows build their own controls and already sit right. */
+.garage-export-dialog .garage-export-options > form > .frappe-control > .select-icon,
+.garage-export-dialog
+	.garage-export-options
+	> form
+	> .frappe-control
+	.control-input
+	> .select-icon,
+.garage-export-dialog .garage-export-template-select .select-icon {
+	display: none !important;
+}
+
+@media (max-width: 575px) {
+	.garage-export-dialog .garage-export-options > form {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* ── Filter area as a panel of its own ──────────────────── */
+
+.garage-export-dialog .filter-area {
+	background: var(--subtle-accent);
+	border: 1px solid var(--border-color);
+	border-radius: var(--border-radius-md);
+	padding: 10px 12px;
+}
+
+.garage-export-dialog .filter-area .divider {
+	display: none;
+}
+
+.garage-export-dialog .filter-area .filter-action-buttons {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-top: 8px !important;
+}
+
+.garage-export-dialog .filter-area .empty-filters {
+	padding: 6px 0;
+	font-size: 12px;
+}
+
+/* ── Shared block chrome: template box + field toolbar ──── */
+
+.garage-export-dialog .garage-export-template,
+.garage-export-dialog .garage-export-fields-toolbar {
+	background: var(--subtle-accent);
+	border: 1px solid var(--border-color);
+	border-radius: var(--border-radius-md);
+	padding: 12px 14px;
+	margin: 0 0 12px !important;
+}
+
+.garage-export-dialog .garage-export-block-head {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 4px 10px;
+	margin-bottom: 10px;
+}
+
+.garage-export-dialog .form-section-heading {
+	margin: 0 !important;
+	padding-left: 8px;
+	border-left: 3px solid var(--text-muted);
+	font-size: 11px !important;
+	font-weight: 700 !important;
+	letter-spacing: 0.06em;
+	line-height: 1.3;
+	color: var(--text-color) !important;
+}
+
+.garage-export-dialog .garage-export-block-hint {
+	font-size: 11px;
+	color: var(--text-muted);
+}
+
+/* ── Export template row ────────────────────────────────── */
+
+.garage-export-dialog .garage-export-template-row {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.garage-export-dialog .garage-export-template-select {
+	flex: 1 1 220px;
+	min-width: 170px;
+}
+
+.garage-export-dialog .garage-export-template-select .frappe-control {
+	margin-bottom: 0 !important;
+}
+
+.garage-export-dialog .garage-export-template-actions {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-left: auto;
+}
+
+/* ── Buttons: one height, one shape ─────────────────────── */
+
+.garage-export-dialog .garage-export-template-actions .btn,
+.garage-export-dialog .garage-export-fields-toolbar .btn {
+	display: inline-flex;
+	align-items: center;
+	height: 28px;
+	padding: 0 11px;
+	font-size: 12px;
+	border: 1px solid var(--border-color);
+	border-radius: var(--border-radius);
+	background: var(--modal-bg);
+	white-space: nowrap;
+}
+
+.garage-export-dialog .garage-export-template-actions .btn:hover,
+.garage-export-dialog .garage-export-fields-toolbar .btn:hover {
+	background: var(--fg-hover-color);
+}
+
+/* The one action that creates something, so it carries the weight. */
+.garage-export-dialog .garage-save-template {
+	font-weight: 500;
+	border-color: var(--text-muted) !important;
+}
+
+.garage-export-dialog .garage-export-template-actions .btn:disabled,
+.garage-export-dialog .garage-export-template-actions .btn[disabled] {
+	opacity: 0.45;
+	background: var(--modal-bg);
+}
+
+/* ── Field picker ───────────────────────────────────────── */
+
+.garage-export-dialog .garage-export-fields-toolbar {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.garage-export-dialog .garage-export-fields-toolbar .form-section-heading {
+	flex: 1 1 100%;
+	margin-bottom: 4px !important;
+}
+
+/* Doctype / child-table group name above each checkbox block */
+.garage-export-dialog .frappe-control[data-fieldtype="MultiCheck"] {
+	margin-bottom: 14px !important;
+}
+
+.garage-export-dialog .frappe-control[data-fieldtype="MultiCheck"] > .control-label {
+	display: block !important;
+	margin: 0 0 6px !important;
+	padding-left: 8px;
+	border-left: 3px solid var(--text-muted);
+	font-size: 11px !important;
+	font-weight: 700 !important;
+	text-transform: uppercase;
+	letter-spacing: 0.06em !important;
+	color: var(--text-color) !important;
+}
+
+/* Core sets padding: 1em on this element inline, hence !important. The
+   two-column flow itself comes from frappe's
+   `.checkbox-options { columns: var(--checkbox-options-columns) }`. */
+.garage-export-dialog .checkbox-options {
+	padding: 6px !important;
+	border: 1px solid var(--border-color);
+	border-radius: var(--border-radius-md);
+	background: var(--modal-bg);
+	column-gap: 14px;
+}
+
+.garage-export-dialog .checkbox-options .unit-checkbox {
+	margin: 0 !important;
+	/* multi-column layout will otherwise split a row's hover background
+     across the column boundary */
+	break-inside: avoid;
+	-webkit-column-break-inside: avoid;
+}
+
+.garage-export-dialog .checkbox-options .unit-checkbox > label {
+	margin: 0;
+	padding: 5px 8px;
+	gap: 8px;
+	border-radius: var(--border-radius);
+	font-size: 12px;
+	line-height: 1.4;
+	cursor: pointer;
+}
+
+.garage-export-dialog .checkbox-options .unit-checkbox > label:hover {
+	background: var(--fg-hover-color);
+}
+
+/* Underlining the label on hover is for the role editor's checkbox
+   lists; here the whole row already highlights. */
+.garage-export-dialog .checkbox-options .unit-checkbox .label-area:hover {
+	text-decoration: none;
+}
+
+/* ── Section break between options and field picker ─────── */
+
+.garage-export-dialog .form-section + .form-section {
+	border-top: 1px solid var(--border-color);
+	margin-top: 14px !important;
+	padding-top: 14px !important;
+}

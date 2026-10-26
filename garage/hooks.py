@@ -25,8 +25,20 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = "/assets/garage/css/garage_desk.css?v=372"
-app_include_js = ["/assets/garage/js/route_aliases.js?v=1", "/assets/garage/js/garage_theme.js?v=85"]
+app_include_css = [
+    "/assets/garage/css/garage_desk.css?v=372",
+    # Must stay after garage_desk.css: it re-scopes that file's app-wide
+    # label-left/input-right control layout back to label-above-input for
+    # the Export Data dialog, and both sides use !important.
+    "/assets/garage/css/export_dialog.css?v=2",
+]
+app_include_js = [
+    "/assets/garage/js/route_aliases.js?v=1",
+    "/assets/garage/js/garage_theme.js?v=85",
+    # Patches frappe.data_import.DataExporter the moment its lazily-required
+    # bundle defines it, so it has to be loaded with the desk, not per doctype.
+    "/assets/garage/js/export_template.js?v=3",
+]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/garage/css/garage.css"
