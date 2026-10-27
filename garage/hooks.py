@@ -34,7 +34,14 @@ app_include_css = [
 ]
 app_include_js = [
     "/assets/garage/js/route_aliases.js?v=1",
-    "/assets/garage/js/garage_theme.js?v=85",
+    # Bump this whenever garage_theme.js changes. It sat at v=85 from
+    # 2026-08-27 through five commits to the file, so browsers that had
+    # cached that URL kept serving a pre-gate copy of the Reset Data Testing
+    # button - one that only checked for Administrator and never read
+    # Garage Settings.enable_reset_test_data_button - which is why the
+    # button reappeared on production for Administrator in one browser
+    # while the setting was already off.
+    "/assets/garage/js/garage_theme.js?v=86",
     # Patches frappe.data_import.DataExporter the moment its lazily-required
     # bundle defines it, so it has to be loaded with the desk, not per doctype.
     "/assets/garage/js/export_template.js?v=3",
