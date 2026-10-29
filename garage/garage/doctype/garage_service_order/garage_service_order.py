@@ -657,13 +657,19 @@ def item_query_with_stock(doctype, txt, searchfield, start, page_len, filters):
         conditions += " AND (i.brand IS NULL OR i.brand = '' OR i.brand = %(brand)s)"
         values["brand"] = vehicle_brand
 
+    # `custom_model` and `custom_transmisi` are Custom Fields this app ships in
+    # its fixtures. On a site that hasn't synced them yet the column is simply
+    # absent, which turned every Required Parts item lookup into a 1054
+    # "Unknown column" crash - an empty dropdown with no way to pick anything.
+    # Drop the filter instead: showing the whole catalogue is a far better
+    # failure than showing nothing.
     vehicle_model = (filters.get("vehicle_model") or "").strip()
-    if vehicle_model:
+    if vehicle_model and frappe.db.has_column("Item", "custom_model"):
         conditions += " AND (i.custom_model IS NULL OR i.custom_model = '' OR i.custom_model = %(model)s)"
         values["model"] = vehicle_model
 
     vehicle_transmission = (filters.get("vehicle_transmission") or "").strip()
-    if vehicle_transmission:
+    if vehicle_transmission and frappe.db.has_column("Item", "custom_transmisi"):
         # Item.custom_transmisi shares the exact same option set as Garage
         # Vehicle.transmission (Manual (MT) / Automatic (AT) / CVT / DCT /
         # Other), so this is a plain equality match - no keyword guessing.
