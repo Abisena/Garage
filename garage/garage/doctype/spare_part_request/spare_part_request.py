@@ -150,6 +150,11 @@ class SparePartRequest(Document):
         )
 
         resolved_statuses = {"prepared", "rejected", "out of stock", "issued", "received", "approved"}
+        # "Partial" is deliberately NOT bumped here: it means some parts never
+        # made it into this request because they were out of stock, so the order
+        # isn't fully prepared even when every row that WAS requested is done.
+        # It stays Partial until the remainder is restocked and re-sent, which
+        # routes through send_order_part and sets the status itself.
         if service_doc.status == "Waiting Part":
             stock_parts = [
                 row for row in service_doc.required_parts or []

@@ -360,11 +360,11 @@ class GarageServiceOrder(Document):
         if self.is_new():
             return
 
-        required_parts = [
-            row for row in getattr(self, "required_parts", [])
-            if getattr(row, "item_code", None)
-            and frappe.db.get_value("Item", row.item_code, "is_stock_item")
-        ]
+        # Only rows the warehouse can actually cover are mirrored into the
+        # request; the out-of-stock remainder stays on this order until it is
+        # restocked and re-sent. Rows already in the request are kept by
+        # `_split_parts_by_stock` regardless of current stock.
+        required_parts, _blocked = _split_parts_by_stock(self)
         if not required_parts:
             return
 
@@ -411,7 +411,7 @@ class GarageServiceOrder(Document):
                     "description": getattr(part, "description", None),
                     "qty": getattr(part, "qty", None),
                     "uom": getattr(part, "uom", None),
-                    "stock_qty": flt(bin_data.actual_qty) if bin_data else 0,
+                    "stock_qty": get_available_stock(item_code, getattr(part, "warehouse", None)),
                     "warehouse": bin_data.warehouse if bin_data else "",
                     "source_warehouse": getattr(part, "warehouse", None),
                     "approval_status": approval_status or "Request Part",
@@ -538,12 +538,103 @@ def get_package_items(bundle_name: str | None = None) -> dict[str, object]:
     return {"items": items}
 
 
+def get_available_stock(item_code: str, warehouse: Optional[str] = None) -> float:
+    """Total Bin.actual_qty for an item, optionally pinned to one warehouse.
+
+    Deliberately a SUM: the previous one-row
+    `frappe.db.get_value("Bin", {"item_code": ...}, "actual_qty")` handed back
+    whichever Bin the DB listed first, so an item split across warehouses
+    reported an arbitrary slice of its real stock.
+    """
+    if not item_code:
+        return 0.0
+
+    values = {"item_code": item_code}
+    condition = ""
+    if warehouse:
+        condition = " AND warehouse = %(warehouse)s"
+        values["warehouse"] = warehouse
+
+    row = frappe.db.sql(
+        f"SELECT COALESCE(SUM(actual_qty), 0) FROM `tabBin` WHERE item_code = %(item_code)s{condition}",
+        values,
+    )
+    return flt(row[0][0]) if row else 0.0
+
+
 @frappe.whitelist()
 def get_stock_qty(item_code: str) -> dict[str, object]:
-    if not item_code:
-        return {"stock_qty": 0}
-    qty = flt(frappe.db.get_value("Bin", {"item_code": item_code}, "actual_qty"))
-    return {"stock_qty": qty}
+    return {"stock_qty": get_available_stock(item_code)}
+
+
+def _split_parts_by_stock(doc) -> tuple[list, list]:
+    """Partition stock-tracked Required Parts rows into (sendable, blocked).
+
+    `blocked` rows are the ones whose stock can't cover the requested qty. They
+    stay on the Service Order as "Request Spare Part" and are offered again once
+    the item is restocked - that partial send is what puts the order in
+    "Partial" instead of "Waiting Part".
+
+    A row already mirrored into the Spare Part Request always counts as
+    sendable: it has been requested (and may already be prepared and issued), so
+    a re-sync must never silently drop it just because stock has since run down.
+    """
+    already_sent: set[str] = set()
+    if not doc.is_new():
+        already_sent = {cstr(name) for name in get_sent_part_row_names(doc.name)}
+
+    sendable: list = []
+    blocked: list = []
+    for row in getattr(doc, "required_parts", []) or []:
+        item_code = getattr(row, "item_code", None)
+        if not item_code:
+            continue
+        # Jasa/labor rows never reach the Spare Part Request at all.
+        if not frappe.db.get_value("Item", item_code, "is_stock_item"):
+            continue
+        if cstr(row.name) in already_sent:
+            sendable.append(row)
+            continue
+
+        qty = flt(getattr(row, "qty", 0)) or 1
+        stock = get_available_stock(item_code, getattr(row, "warehouse", None))
+        if stock >= qty:
+            sendable.append(row)
+        else:
+            blocked.append({
+                "row_name": cstr(row.name),
+                "item_code": item_code,
+                "item_name": getattr(row, "item_name", None) or item_code,
+                "qty": qty,
+                "stock": stock,
+            })
+
+    return sendable, blocked
+
+
+def _describe_blocked_parts(blocked: list[dict]) -> str:
+    return "<br>".join(
+        f"• {row['item_name']} — butuh {flt(row['qty']):g}, stok {flt(row['stock']):g}"
+        for row in blocked
+    )
+
+
+@frappe.whitelist()
+def get_order_part_preview(service_order_name: str) -> dict[str, object]:
+    """What `send_order_part` would do right now - drives the confirm dialog."""
+    doc = frappe.get_doc("Garage Service Order", service_order_name)
+    sendable, blocked = _split_parts_by_stock(doc)
+    return {
+        "sendable": [
+            {
+                "item_code": row.item_code,
+                "item_name": getattr(row, "item_name", None) or row.item_code,
+                "qty": flt(getattr(row, "qty", 0)) or 1,
+            }
+            for row in sendable
+        ],
+        "blocked": blocked,
+    }
 
 
 @frappe.whitelist()
@@ -585,7 +676,7 @@ def item_query_with_stock(doctype, txt, searchfield, start, page_len, filters):
             i.item_name,
             i.item_group,
             i.is_stock_item,
-            COALESCE(b.actual_qty, 0) as stock_qty
+            COALESCE(SUM(b.actual_qty), 0) as stock_qty
         FROM `tabItem` i
         LEFT JOIN `tabBin` b ON b.item_code = i.name
         WHERE i.disabled = 0
@@ -660,20 +751,43 @@ def get_sent_part_row_names(service_order_name: str) -> list[str]:
 def send_order_part(service_order_name: str) -> dict[str, object]:
     doc = frappe.get_doc("Garage Service Order", service_order_name)
 
-    if doc.status not in ("Open", "Waiting Part", "Prepared"):
-        frappe.throw("Order part hanya bisa dikirim saat status Open, Waiting Part, atau Prepared.")
+    if doc.status not in ("Open", "Waiting Part", "Partial", "Prepared"):
+        frappe.throw("Order part hanya bisa dikirim saat status Open, Waiting Part, Partial, atau Prepared.")
 
     required_parts = [row for row in getattr(doc, "required_parts", []) if getattr(row, "item_code", None)]
     if not required_parts:
         frappe.throw("Tidak ada item dengan Item Code di Required Parts.")
 
+    # Out-of-stock parts are allowed onto the order (so the mechanic's full list
+    # survives), but they can't be requested from the spare part team yet -
+    # there is nothing to prepare. Send what's covered, leave the rest behind.
+    sendable, blocked = _split_parts_by_stock(doc)
+    if blocked and not sendable:
+        frappe.throw(
+            "Order part tidak bisa dikirim - stok semua spare part yang diminta tidak cukup:<br>"
+            + _describe_blocked_parts(blocked)
+        )
+
     doc._sync_spare_part_request()
 
-    doc.status = "Waiting Part"
+    doc.status = "Partial" if blocked else "Waiting Part"
     doc.save(ignore_permissions=True)
     frappe.db.commit()
 
-    return {"status": "Waiting Part", "message": "Order part berhasil dikirim."}
+    if blocked:
+        message = (
+            f"{len(sendable)} item dikirim ke Spare Part Request. "
+            f"{len(blocked)} item tertinggal karena stok tidak cukup."
+        )
+    else:
+        message = "Order part berhasil dikirim."
+
+    return {
+        "status": doc.status,
+        "message": message,
+        "sent_count": len(sendable),
+        "blocked": blocked,
+    }
 
 
 @frappe.whitelist()
@@ -688,9 +802,16 @@ def start_repair(service_order_name: str) -> dict[str, object]:
     # Jasa-only orders (no physical part in Required Parts) have nothing for the
     # spare part team to prepare, so they can start repair straight from Open -
     # everyone else still has to go through Waiting Part first.
-    allowed_statuses = ("Waiting Part", "Prepared") if has_stock_parts else ("Waiting Part", "Prepared", "Open")
+    # "Partial" is in here on purpose: an order waiting on one back-ordered part
+    # can still be worked on with the parts that did arrive - same rule as
+    # Waiting Part (at least one part must be Prepared, enforced below).
+    allowed_statuses = (
+        ("Waiting Part", "Partial", "Prepared")
+        if has_stock_parts
+        else ("Waiting Part", "Partial", "Prepared", "Open")
+    )
     if doc.status not in allowed_statuses:
-        frappe.throw("Start Repair hanya bisa dilakukan saat status Waiting Part atau Prepared.")
+        frappe.throw("Start Repair hanya bisa dilakukan saat status Waiting Part, Partial, atau Prepared.")
 
     if not doc.spk_number:
         frappe.throw(
@@ -729,6 +850,17 @@ def send_additional_part(service_order_name: str) -> dict[str, object]:
     ]
     if not new_parts:
         frappe.throw("Tidak ada item baru dengan status Request Spare Part.")
+
+    # Without this the sync below would silently skip every out-of-stock row and
+    # still report "Part tambahan berhasil dikirim".
+    sendable, blocked = _split_parts_by_stock(doc)
+    sendable_names = {cstr(row.name) for row in sendable}
+    new_names = {cstr(row.name) for row in new_parts}
+    if not (new_names & sendable_names):
+        frappe.throw(
+            "Part tambahan belum bisa dikirim - stoknya tidak cukup:<br>"
+            + _describe_blocked_parts([row for row in blocked if row["row_name"] in new_names])
+        )
 
     doc._sync_spare_part_request()
     doc.save(ignore_permissions=True)

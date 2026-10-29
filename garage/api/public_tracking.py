@@ -22,6 +22,7 @@ STEP_ORDER = ["queue", "in_progress", "payment", "ready", "done"]
 STATUS_BUCKETS = {
 	"Open": ("queue", None),
 	"Waiting Part": ("in_progress", "menunggu sparepart"),
+	"Partial": ("in_progress", "menunggu sparepart"),
 	"Prepared": ("in_progress", "sedang dikerjakan mekanik"),
 	"In Progress": ("in_progress", "sedang dikerjakan mekanik"),
 	"Finished": ("in_progress", "servis selesai, menunggu pemeriksaan akhir"),
@@ -38,7 +39,7 @@ STATUS_BUCKETS = {
 # alongside "done", never as its own timestamped event.
 STEP_STATUS_GROUPS = {
 	"queue": ["Open"],
-	"in_progress": ["Waiting Part", "Prepared", "In Progress", "Finished", "QC Review"],
+	"in_progress": ["Waiting Part", "Partial", "Prepared", "In Progress", "Finished", "QC Review"],
 	"payment": ["Waiting Payment"],
 	"ready": [],
 	"done": ["Completed"],

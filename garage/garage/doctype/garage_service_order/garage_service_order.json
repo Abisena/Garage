@@ -169,7 +169,7 @@
       "fieldname": "status",
       "fieldtype": "Select",
       "label": "Status",
-      "options": "Open\nWaiting Part\nPrepared\nIn Progress\nFinished\nQC Review\nWaiting Payment\nCompleted\nCancelled",
+      "options": "Open\nWaiting Part\nPartial\nPrepared\nIn Progress\nFinished\nQC Review\nWaiting Payment\nCompleted\nCancelled",
       "default": "Open",
       "read_only": 1,
       "in_list_view": 1,
@@ -503,6 +503,10 @@
     {
       "title": "Waiting Part",
       "color": "Yellow"
+    },
+    {
+      "title": "Partial",
+      "color": "Orange"
     },
     {
       "title": "In Progress",

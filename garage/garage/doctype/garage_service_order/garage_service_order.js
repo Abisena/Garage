@@ -31,6 +31,7 @@ const isPartRowLocked = (frm, rowDoc) => {
 const STATUS_COLORS = {
   Open: 'blue',
   'Waiting Part': 'yellow',
+  Partial: 'orange',
   Prepared: 'green',
   'In Progress': 'light-blue',
   Finished: 'cyan',
@@ -38,6 +39,146 @@ const STATUS_COLORS = {
   'Waiting Payment': 'orange',
   Completed: 'green',
   Cancelled: 'red',
+};
+
+const fmtQty = (value) => Math.round(flt(value) * 100) / 100;
+
+// Out-of-stock parts are allowed onto the order, so "Send Order Part" is the
+// point where stock actually gates things: it sends what the warehouse can
+// cover and leaves the rest on the order (status "Partial"). With nothing
+// coverable at all it refuses outright - otherwise the failure only surfaces
+// later as a raw Negative Stock Error when spare part tries to prepare it.
+const showSendOrderPartDialog = (frm, preview) => {
+  const sendable = preview.sendable || [];
+  const blocked = preview.blocked || [];
+  const reenable = () => frm.page.btn_primary.prop('disabled', false);
+
+  const blockedRows = blocked.map(b => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid #fde8e8;">
+      <span style="font-size:12px;color:#1f2937;text-align:left;">${frappe.utils.escape_html(b.item_name)}</span>
+      <span style="font-size:11px;color:#b91c1c;font-weight:600;white-space:nowrap;">butuh ${fmtQty(b.qty)} / stok ${fmtQty(b.stock)}</span>
+    </div>`).join('');
+
+  if (blocked.length && !sendable.length) {
+    const blockDialog = new frappe.ui.Dialog({
+      title: ' ',
+      fields: [{
+        fieldtype: 'HTML',
+        options: `
+          <div style="text-align:center;padding:10px 0;">
+            <div style="width:56px;height:56px;border-radius:50%;background:#fee2e2;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
+              <svg width="28" height="28" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
+              </svg>
+            </div>
+            <div style="font-size:15px;font-weight:700;color:#b91c1c;margin-bottom:6px;">Tidak Bisa Request Part</div>
+            <div style="font-size:12px;color:#6b7280;line-height:1.5;margin-bottom:12px;">
+              Stok semua spare part yang diminta tidak cukup.<br>Lakukan pengadaan dulu, lalu kirim ulang.
+            </div>
+            <div style="text-align:left;padding:10px 14px;background:#fef2f2;border-radius:6px;">${blockedRows}</div>
+          </div>`
+      }],
+      primary_action_label: __('Mengerti'),
+      primary_action() { blockDialog.hide(); },
+      onhide: reenable,
+    });
+    blockDialog.$wrapper.find('.modal-dialog').css({'max-width': '420px', 'margin': 'auto'});
+    blockDialog.show();
+    return;
+  }
+
+  const isPartial = blocked.length > 0;
+  const heading = isPartial ? 'Kirim Sebagian Item?' : 'Kirim Order Part?';
+  const summary = isPartial
+    ? `<strong>${sendable.length} item</strong> akan dikirim ke <strong>Spare Part Request</strong>.<br>
+       <strong style="color:#b91c1c;">${blocked.length} item</strong> tertinggal karena stok tidak cukup.`
+    : `<strong>${sendable.length} item</strong> akan dikirim ke<br><strong>Spare Part Request</strong>`;
+  const blockedPanel = isPartial
+    ? `<div style="margin-top:12px;text-align:left;padding:10px 14px;background:#fef2f2;border-radius:6px;">
+         <div style="font-size:11px;font-weight:700;color:#b91c1c;margin-bottom:4px;">Tertinggal di Service Order:</div>
+         ${blockedRows}
+       </div>`
+    : '';
+
+  const d = new frappe.ui.Dialog({
+    title: ' ',
+    fields: [{
+      fieldtype: 'HTML',
+      options: `
+        <div style="text-align:center;padding:10px 0;">
+          <div style="width:56px;height:56px;border-radius:50%;background:#fef3c7;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
+            <svg width="28" height="28" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="M9 12l2 2 4-4"/>
+            </svg>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:#1f2937;margin-bottom:6px;">${heading}</div>
+          <div style="font-size:12px;color:#6b7280;line-height:1.5;">${summary}</div>
+          <div style="margin-top:12px;padding:8px 14px;background:#f8fafc;border-radius:6px;display:inline-block;">
+            <span style="font-size:11px;color:#64748b;">No. WO:</span>
+            <span style="font-size:11px;font-weight:700;color:#1f2937;">${frm.doc.name}</span>
+          </div>
+          ${blockedPanel}
+        </div>`
+    }],
+    primary_action_label: isPartial ? `Kirim ${sendable.length} Item` : 'Kirim Sekarang',
+    primary_action() {
+      d.hide();
+      frappe.call({
+        method: 'garage.garage.doctype.garage_service_order.garage_service_order.send_order_part',
+        args: { service_order_name: frm.doc.name },
+        freeze: true,
+        freeze_message: 'Mengirim order part...',
+        callback(r) {
+          if (!r.message) return;
+          const newStatus = r.message.status || 'Waiting Part';
+          const leftover = (r.message.blocked || []).length;
+          const successDialog = new frappe.ui.Dialog({
+            title: ' ',
+            fields: [{
+              fieldtype: 'HTML',
+              options: `
+                <div style="text-align:center;padding:10px 0;">
+                  <div style="width:56px;height:56px;border-radius:50%;background:#d1fae5;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
+                    <svg width="28" height="28" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                      <path d="M20 6L9 17l-5-5"/>
+                    </svg>
+                  </div>
+                  <div style="font-size:15px;font-weight:700;color:#059669;margin-bottom:6px;">
+                    ${leftover ? 'Sebagian Item Terkirim!' : 'Order Part Terkirim!'}
+                  </div>
+                  <div style="font-size:12px;color:#6b7280;">Status berubah menjadi <strong style="color:#d97706;">${newStatus}</strong></div>
+                  ${leftover ? `<div style="font-size:11px;color:#b91c1c;margin-top:6px;">${leftover} item masih menunggu pengadaan</div>` : ''}
+                </div>`
+            }],
+            primary_action_label: 'OK',
+            primary_action() {
+              successDialog.hide();
+              frm.reload_doc();
+            },
+          });
+          successDialog.$wrapper.find('.modal-dialog').css({'max-width': '380px', 'margin': 'auto'});
+          successDialog.show();
+        },
+      });
+    },
+    secondary_action_label: 'Batal',
+    secondary_action: reenable,
+    onhide() {
+      if (!d.primary_action_triggered) {
+        reenable();
+      }
+    },
+  });
+  d.primary_action_triggered = false;
+  const origPrimary = d.primary_action;
+  d.primary_action = function() {
+    d.primary_action_triggered = true;
+    origPrimary.call(this);
+  };
+  d.$wrapper.find('.modal-dialog').css({'max-width': isPartial ? '420px' : '380px', 'margin': 'auto'});
+  d.$wrapper.find('.btn-primary').css({background: '#d97706', border: 'none', fontWeight: '600'});
+  d.show();
 };
 
 const formatStockStatus = (value) => {
@@ -647,90 +788,26 @@ frappe.ui.form.on('Garage Service Order', {
     } else if (frm.doc.status === 'Open' && !frm.is_new() && openHasStockPart) {
       frm.page.set_primary_action(__('Send Order Part'), () => {
         frm.page.btn_primary.prop('disabled', true);
-
-        const itemCount = (frm.doc.required_parts || []).filter(r => r.item_code).length;
-        const d = new frappe.ui.Dialog({
-          title: ' ',
-          fields: [{
-            fieldtype: 'HTML',
-            options: `
-              <div style="text-align:center;padding:10px 0;">
-                <div style="width:56px;height:56px;border-radius:50%;background:#fef3c7;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
-                  <svg width="28" height="28" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                    <path d="M9 12l2 2 4-4"/>
-                  </svg>
-                </div>
-                <div style="font-size:15px;font-weight:700;color:#1f2937;margin-bottom:6px;">Kirim Order Part?</div>
-                <div style="font-size:12px;color:#6b7280;line-height:1.5;">
-                  <strong>${itemCount} item</strong> akan dikirim ke<br><strong>Spare Part Request</strong>
-                </div>
-                <div style="margin-top:12px;padding:8px 14px;background:#f8fafc;border-radius:6px;display:inline-block;">
-                  <span style="font-size:11px;color:#64748b;">No. WO:</span>
-                  <span style="font-size:11px;font-weight:700;color:#1f2937;">${frm.doc.name}</span>
-                </div>
-              </div>`
-          }],
-          primary_action_label: 'Kirim Sekarang',
-          primary_action() {
-            d.hide();
-            frappe.call({
-              method: 'garage.garage.doctype.garage_service_order.garage_service_order.send_order_part',
-              args: { service_order_name: frm.doc.name },
-              freeze: true,
-              freeze_message: 'Mengirim order part...',
-              callback(r) {
-                if (r.message) {
-                  const successDialog = new frappe.ui.Dialog({
-                    title: ' ',
-                    fields: [{
-                      fieldtype: 'HTML',
-                      options: `
-                        <div style="text-align:center;padding:10px 0;">
-                          <div style="width:56px;height:56px;border-radius:50%;background:#d1fae5;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
-                            <svg width="28" height="28" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                              <path d="M20 6L9 17l-5-5"/>
-                            </svg>
-                          </div>
-                          <div style="font-size:15px;font-weight:700;color:#059669;margin-bottom:6px;">Order Part Terkirim!</div>
-                          <div style="font-size:12px;color:#6b7280;">Status berubah menjadi <strong style="color:#d97706;">Waiting Part</strong></div>
-                        </div>`
-                    }],
-                    primary_action_label: 'OK',
-                    primary_action() {
-                      successDialog.hide();
-                      frm.reload_doc();
-                    },
-                  });
-                  successDialog.$wrapper.find('.modal-dialog').css({'max-width': '380px', 'margin': 'auto'});
-                  successDialog.show();
-                }
-              },
-            });
+        frappe.call({
+          method: 'garage.garage.doctype.garage_service_order.garage_service_order.get_order_part_preview',
+          args: { service_order_name: frm.doc.name },
+          freeze: true,
+          freeze_message: __('Memeriksa stok...'),
+          callback(r) {
+            if (!r.message) {
+              frm.page.btn_primary.prop('disabled', false);
+              return;
+            }
+            showSendOrderPartDialog(frm, r.message);
           },
-          secondary_action_label: 'Batal',
-          secondary_action() {
+          error() {
             frm.page.btn_primary.prop('disabled', false);
           },
-          onhide() {
-            if (!d.primary_action_triggered) {
-              frm.page.btn_primary.prop('disabled', false);
-            }
-          },
         });
-        d.primary_action_triggered = false;
-        const origPrimary = d.primary_action;
-        d.primary_action = function() {
-          d.primary_action_triggered = true;
-          origPrimary.call(this);
-        };
-        d.$wrapper.find('.modal-dialog').css({'max-width': '380px', 'margin': 'auto'});
-        d.$wrapper.find('.btn-primary').css({background: '#d97706', border: 'none', fontWeight: '600'});
-        d.show();
       });
     }
 
-    if (['Waiting Part', 'Prepared'].includes(frm.doc.status) && !frm.is_new()) {
+    if (['Waiting Part', 'Partial', 'Prepared'].includes(frm.doc.status) && !frm.is_new()) {
       const preparedStatuses = ['prepared', 'received', 'issued', 'approved'];
       const partsWithCode = (frm.doc.required_parts || []).filter(r => r.item_code);
       const anyPrepared = partsWithCode.length > 0 && partsWithCode.some(
@@ -748,10 +825,43 @@ frappe.ui.form.on('Garage Service Order', {
         frm.page.set_primary_action(__('Send New Part'), () => {
           frm.page.btn_primary.prop('disabled', true);
 
-          const newItems = partsWithCode
-            .filter(r => (r.stock_status || '').toLowerCase() === 'request spare part'
-              && !sentNames.has(String(r.name)))
-            .map(r => r.item_name || r.item_code);
+          const newRows = partsWithCode.filter(
+            r => (r.stock_status || '').toLowerCase() === 'request spare part'
+              && !sentNames.has(String(r.name))
+          );
+
+          frappe.call({
+            method: 'garage.garage.doctype.garage_service_order.garage_service_order.get_order_part_preview',
+            args: { service_order_name: frm.doc.name },
+            freeze: true,
+            freeze_message: __('Memeriksa stok...'),
+            callback(res) {
+              if (!res.message) {
+                frm.page.btn_primary.prop('disabled', false);
+                return;
+              }
+
+              const newNames = new Set(newRows.map(r => String(r.name)));
+              const blockedNew = (res.message.blocked || []).filter(b => newNames.has(String(b.row_name)));
+              const blockedNames = new Set(blockedNew.map(b => String(b.row_name)));
+
+              // Every new row is still short on stock - refuse outright rather
+              // than report a send that would quietly drop all of them.
+              if (blockedNew.length && blockedNew.length === newRows.length) {
+                showSendOrderPartDialog(frm, { sendable: [], blocked: blockedNew });
+                return;
+              }
+
+              const newItems = newRows
+                .filter(r => !blockedNames.has(String(r.name)))
+                .map(r => r.item_name || r.item_code);
+
+          const blockedNote = blockedNew.length
+            ? `<div style="margin-top:10px;text-align:left;padding:8px 14px;background:#fef2f2;border-radius:6px;">
+                 <div style="font-size:11px;font-weight:700;color:#b91c1c;margin-bottom:4px;">Masih menunggu pengadaan:</div>
+                 ${blockedNew.map(b => `<div style="font-size:11px;color:#1f2937;padding:2px 0;">${frappe.utils.escape_html(b.item_name)} \u2014 butuh ${fmtQty(b.qty)} / stok ${fmtQty(b.stock)}</div>`).join('')}
+               </div>`
+            : '';
 
           const itemList = newItems.map(n =>
             `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">
@@ -774,6 +884,7 @@ frappe.ui.form.on('Garage Service Order', {
                   <div style="font-size:15px;font-weight:700;color:#1f2937;margin-bottom:4px;">Kirim Item Baru?</div>
                   <div style="font-size:12px;color:#6b7280;margin-bottom:10px;"><strong>${newItems.length} item baru</strong> akan dikirim ke Spare Part Request</div>
                   <div style="text-align:left;padding:4px 16px;">${itemList}</div>
+                  ${blockedNote}
                 </div>`
             }],
             primary_action_label: 'Kirim Sekarang',
@@ -811,6 +922,11 @@ frappe.ui.form.on('Garage Service Order', {
           d.$wrapper.find('.modal-dialog').css({'max-width': '380px', 'margin': 'auto'});
           d.$wrapper.find('.btn-primary').css({background: '#2563eb', border: 'none', fontWeight: '600'});
           d.show();
+            },
+            error() {
+              frm.page.btn_primary.prop('disabled', false);
+            },
+          });
         });
       } else if (anyPrepared) {
         // Only offer Start Repair once something has actually been prepared by
@@ -1259,20 +1375,15 @@ frappe.ui.form.on('Garage Service Order Part', {
             callback(stockRes) {
               const stockQty = flt(stockRes.message?.stock_qty || 0);
               if (stockQty <= 0) {
-                // item_code has no `reqd` at the schema level (it's only_select,
-                // not mandatory), so merely blanking every field left a row that
-                // still saved fine and still counted toward the grid's "N item"
-                // badge (renderTableFooter just does required_parts.length) -
-                // staff saw "1 item" and a Save that succeeded for a part that
-                // was actually rejected. Remove the row outright instead; that
-                // also fires the required_parts_remove handler below, which
-                // refreshes the footer/badge for us.
-                const gridRow = frm.fields_dict.required_parts.grid.grid_rows_by_docname[cdn];
-                if (gridRow) {
-                  gridRow.remove();
-                }
-                frappe.show_alert({ message: __('Item ini stock habis, tidak bisa dipilih.'), indicator: 'red' }, 5);
-                return;
+                // Deliberately NOT blocked any more: the mechanic's part list
+                // should reflect what the car actually needs, stock or not. The
+                // gate moved to "Send Order Part", which refuses to request a
+                // part the warehouse can't cover and leaves it on the order
+                // (status "Partial") until it's restocked.
+                frappe.show_alert({
+                  message: __('Stock item ini habis. Item tetap tersimpan, tapi belum bisa di-request ke Spare Part.'),
+                  indicator: 'orange',
+                }, 7);
               }
               fetchItemDetails(frm, cdt, cdn, row, true);
             },
