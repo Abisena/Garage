@@ -63,6 +63,10 @@ app_include_js = [
 
 # include js in doctype views
 doctype_js = {
+    # Tames the general-purpose Notification console down to the few settings
+    # staff actually maintain - see the file header for why it hides rather
+    # than replaces. Scoped to this app's own rules by docname.
+    "Notification": "public/js/notification.js",
     "Product Bundle": "public/js/product_bundle.js",
     "Payment Entry": "public/js/payment_entry.js",
     "Bank Statement Import": "public/js/bank_statement_import.js",
@@ -1044,6 +1048,20 @@ fixtures = [
             "custom",
             "=",
             1,
+        ]],
+    },
+    {
+        # Email alerts the admin is meant to retune from the UI (who gets
+        # them, extra CC addresses, the wording) - shipped as a fixture so
+        # the default still arrives with the app instead of having to be
+        # rebuilt by hand on every site.
+        "doctype": "Notification",
+        "filters": [[
+            "name",
+            "in",
+            [
+                "Purchase Order Butuh Approval",
+            ],
         ]],
     },
 ]

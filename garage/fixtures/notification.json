@@ -1,0 +1,48 @@
+[
+ {
+  "attach_files": "",
+  "attach_print": 0,
+  "channel": "Email",
+  "condition": "doc.workflow_state == \"Pending Approval\"",
+  "date_changed": null,
+  "days_in_advance": 0,
+  "docstatus": 0,
+  "doctype": "Notification",
+  "document_type": "Purchase Order",
+  "enabled": 1,
+  "event": "Value Change",
+  "from_attach_field": null,
+  "is_standard": 0,
+  "message": "<div style=\"margin:0;padding:0;background:#f1f5f9;\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n       style=\"background:#f1f5f9;padding:24px 12px;\">\n  <tr>\n    <td align=\"center\">\n      <table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n             style=\"width:600px;max-width:100%;background:#ffffff;border-radius:10px;\n                    overflow:hidden;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\n                    box-shadow:0 1px 3px rgba(15,23,42,.08);\">\n\n        <!-- kepala -->\n        <tr>\n          <td style=\"background:#1e293b;padding:20px 28px;\">\n            <div style=\"font-size:11px;font-weight:700;letter-spacing:1.2px;color:#94a3b8;\">\n              PURCHASE ORDER\n            </div>\n            <div style=\"font-size:19px;font-weight:700;color:#ffffff;margin-top:3px;\">\n              Menunggu Persetujuan Anda\n            </div>\n          </td>\n        </tr>\n\n        <!-- ringkasan -->\n        <tr>\n          <td style=\"padding:26px 28px 6px;\">\n            <div style=\"font-size:13px;color:#475569;line-height:1.6;margin-bottom:20px;\">\n              Purchase Order berikut diajukan oleh\n              <strong style=\"color:#1e293b;\">{{ frappe.db.get_value(\"User\", doc.owner, \"full_name\") or doc.owner }}</strong>\n              dan menunggu persetujuan Anda.\n            </div>\n\n            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n                   style=\"background:#f8fafc;border-radius:8px;border-left:3px solid #4f46e5;\">\n              <tr>\n                <td style=\"padding:16px 18px;\">\n                  <div style=\"font-size:17px;font-weight:700;color:#1e293b;letter-spacing:-.2px;\">\n                    {{ doc.name }}\n                  </div>\n                  <div style=\"font-size:13px;color:#475569;margin-top:3px;\">\n                    {{ doc.supplier_name or doc.supplier }}\n                  </div>\n                  <div style=\"font-size:21px;font-weight:700;color:#4f46e5;margin-top:10px;\">\n                    {{ frappe.utils.fmt_money(doc.grand_total, currency=doc.currency) }}\n                  </div>\n                </td>\n              </tr>\n            </table>\n          </td>\n        </tr>\n\n        <!-- keterangan -->\n        <tr>\n          <td style=\"padding:20px 28px 0;\">\n            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n                   style=\"font-size:13px;\">\n              <tr>\n                <td style=\"padding:7px 0;color:#64748b;width:42%;\">Tanggal PO</td>\n                <td style=\"padding:7px 0;color:#1e293b;font-weight:600;\">\n                  {{ frappe.utils.formatdate(doc.transaction_date) }}\n                </td>\n              </tr>\n              {% if doc.schedule_date %}\n              <tr>\n                <td style=\"padding:7px 0;color:#64748b;border-top:1px solid #f1f5f9;\">Dibutuhkan</td>\n                <td style=\"padding:7px 0;color:#1e293b;font-weight:600;border-top:1px solid #f1f5f9;\">\n                  {{ frappe.utils.formatdate(doc.schedule_date) }}\n                </td>\n              </tr>\n              {% endif %}\n              <tr>\n                <td style=\"padding:7px 0;color:#64748b;border-top:1px solid #f1f5f9;\">Jumlah item</td>\n                <td style=\"padding:7px 0;color:#1e293b;font-weight:600;border-top:1px solid #f1f5f9;\">\n                  {{ doc.items | length }} item\n                </td>\n              </tr>\n            </table>\n          </td>\n        </tr>\n\n        <!-- rincian item: approver bisa menimbang tanpa membuka sistem -->\n        <tr>\n          <td style=\"padding:22px 28px 0;\">\n            <div style=\"font-size:11px;font-weight:700;letter-spacing:.6px;color:#94a3b8;margin-bottom:8px;\">\n              RINCIAN ITEM\n            </div>\n            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"\n                   style=\"font-size:12px;border-collapse:collapse;\">\n              {% for row in doc.items[:6] %}\n              <tr>\n                <td style=\"padding:8px 0;color:#1e293b;border-bottom:1px solid #f1f5f9;\">\n                  {{ row.item_name or row.item_code }}\n                  <span style=\"color:#94a3b8;\">&times; {{ row.qty | int }}</span>\n                </td>\n                <td align=\"right\" style=\"padding:8px 0;color:#1e293b;font-weight:600;white-space:nowrap;\n                                         border-bottom:1px solid #f1f5f9;\">\n                  {{ frappe.utils.fmt_money(row.amount, currency=doc.currency) }}\n                </td>\n              </tr>\n              {% endfor %}\n              {% if doc.items | length > 6 %}\n              <tr>\n                <td colspan=\"2\" style=\"padding:8px 0;color:#94a3b8;font-size:11px;\">\n                  dan {{ (doc.items | length) - 6 }} item lainnya\n                </td>\n              </tr>\n              {% endif %}\n              <tr>\n                <td style=\"padding:11px 0 0;color:#1e293b;font-weight:700;\">Total</td>\n                <td align=\"right\" style=\"padding:11px 0 0;color:#4f46e5;font-weight:700;font-size:14px;\">\n                  {{ frappe.utils.fmt_money(doc.grand_total, currency=doc.currency) }}\n                </td>\n              </tr>\n            </table>\n          </td>\n        </tr>\n\n        <!-- tombol -->\n        <tr>\n          <td align=\"center\" style=\"padding:28px 28px 8px;\">\n            <a href=\"{{ frappe.utils.get_url_to_form(doc.doctype, doc.name) }}\"\n               style=\"display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;\n                      font-size:14px;font-weight:600;padding:12px 30px;border-radius:7px;\">\n              Tinjau &amp; Setujui\n            </a>\n          </td>\n        </tr>\n\n        <tr>\n          <td align=\"center\" style=\"padding:0 28px 26px;\">\n            <div style=\"font-size:11px;color:#94a3b8;line-height:1.6;\">\n              Email otomatis dari sistem Garage. Mohon jangan dibalas.\n            </div>\n          </td>\n        </tr>\n\n      </table>\n    </td>\n  </tr>\n</table>\n</div>",
+  "message_type": "HTML",
+  "method": null,
+  "modified": "2026-10-29 14:51:25.057568",
+  "module": null,
+  "name": "Purchase Order Butuh Approval",
+  "notification_message": null,
+  "notification_title": "Approve PO",
+  "notification_type": "Alert",
+  "print_format": null,
+  "property_value": null,
+  "recipients": [
+   {
+    "bcc": null,
+    "cc": null,
+    "condition": null,
+    "parent": "Purchase Order Butuh Approval",
+    "parentfield": "recipients",
+    "parenttype": "Notification",
+    "receiver_by_document_field": "owner",
+    "receiver_by_role": null
+   }
+  ],
+  "send_system_notification": 1,
+  "send_to_all_assignees": 0,
+  "sender": "",
+  "sender_email": "",
+  "set_property_after_alert": null,
+  "slack_webhook_url": null,
+  "subject": "PO {{ doc.name }} dari {{ (frappe.db.get_value(\"User\", doc.owner, \"full_name\") or doc.owner) | trim }} menunggu approval",
+  "value_changed": "workflow_state"
+ }
+]
