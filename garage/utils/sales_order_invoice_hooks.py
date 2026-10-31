@@ -26,7 +26,9 @@ def make_sales_invoice_with_vehicle(source_name, target_doc=None, ignore_permiss
         make_sales_invoice as make_sales_invoice_from_so,
     )
 
-    invoice = make_sales_invoice_from_so(source_name, target_doc, ignore_permissions, args)
+    invoice = make_sales_invoice_from_so(
+        source_name, target_doc=target_doc, ignore_permissions=ignore_permissions, args=args
+    )
 
     vehicle = frappe.db.get_value("Sales Order", source_name, "vehicle")
     if vehicle:
