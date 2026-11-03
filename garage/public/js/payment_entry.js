@@ -124,6 +124,50 @@ function syncReferenceInvoiceField(frm) {
   frm.refresh_field('reference_purchase_invoice');
 }
 
+// Paying multiple Purchase Invoices by hand in the References grid (no
+// "Get Outstanding Invoices" dialog - garage_theme.js's own
+// gpeApplySupplierPaymentVisibility hides that button for this exact Pay+
+// Supplier flow) looks like it should just add Paid Amount up as rows get
+// picked, but ERPNext's own core reference_name handler (payment_entry.js)
+// caps each row's auto-filled allocated_amount at frm.doc.unallocated_amount
+// - which is itself derived FROM paid_amount. With Paid Amount starting at
+// 0 (nothing typed yet, the normal case here), every row picked gets
+// allocated_amount=0 too, and Paid Amount never grows no matter how many
+// invoices get added - the two fields are stuck waiting on each other.
+// Backfills each row from its own outstanding_amount whenever that
+// circular zero left it unset, then syncs Paid Amount to the resulting
+// running total so core's own paid_amount handler (base_paid_amount,
+// Received Amount, Unallocated Amount) takes over from there exactly like
+// it would for a manually-typed figure.
+function isHandPickedSupplierPayment(frm) {
+  return frm.doc.payment_type === 'Pay' && frm.doc.party_type === 'Supplier';
+}
+
+function backfillAllocatedAmount(frm, cdt, cdn) {
+  if (!isHandPickedSupplierPayment(frm)) return;
+  const row = locals[cdt][cdn];
+  if (!row.reference_name || flt(row.allocated_amount) || !flt(row.outstanding_amount)) return;
+  frappe.model.set_value(cdt, cdn, 'allocated_amount', row.outstanding_amount);
+}
+
+function syncPaidAmountFromAllocations(frm) {
+  if (!isHandPickedSupplierPayment(frm)) return;
+  const total = flt(frm.doc.total_allocated_amount);
+  if (total && flt(frm.doc.paid_amount) !== total) frm.set_value('paid_amount', total);
+}
+
+frappe.ui.form.on('Payment Entry Reference', {
+  reference_name(frm, cdt, cdn) {
+    backfillAllocatedAmount(frm, cdt, cdn);
+  },
+  allocated_amount(frm) {
+    syncPaidAmountFromAllocations(frm);
+  },
+  references_remove(frm) {
+    syncPaidAmountFromAllocations(frm);
+  },
+});
+
 frappe.ui.form.on('Payment Entry', {
   refresh(frm) {
     lockPaymentReferences(frm);
