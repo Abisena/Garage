@@ -1296,6 +1296,56 @@ const gpeApplySupplierPaymentVisibility = (frm) => {
   }
 };
 
+// Neither gpeApplyFieldVisibility (Receive+Customer) nor
+// gpeApplySupplierPaymentVisibility (Pay+Supplier) ever runs for Internal
+// Transfer (or Pay against a non-Supplier party) - but every brand new
+// Payment Entry briefly starts out as Receive/Customer regardless (the
+// doctype's own default), so gpeApplyFieldVisibility already fired once
+// and hid payment_accounts_section/payment_amounts_section + relocated
+// Paid Amount/Paid To before the user ever touched Payment Type. With no
+// Internal Transfer branch to undo that, switching to it left Account
+// Paid From, Paid Amount and Received Amount permanently hidden - only
+// Account Paid To survived, because it's the one field that gets
+// physically moved elsewhere rather than just hidden. Runs whenever
+// neither specialized flow's shape matches, restoring the native layout.
+const gpeIsKnownPaymentFlow = (frm) => gpeIsServiceOrderSettlement(frm) || gpeIsSupplierPayment(frm);
+
+const gpeResetFieldVisibility = (frm) => {
+  if (gpeIsKnownPaymentFlow(frm)) return;
+
+  frm.set_df_property('payment_accounts_section', 'hidden', 0);
+  frm.set_df_property('payment_amounts_section', 'hidden', 0);
+
+  // Same reasoning as gpeApplySupplierPaymentVisibility's own tail: a
+  // collapsible=1 section with no collapsible_depends_on gets force-shut
+  // by frappe/form/layout.js's refresh_section_collapse() on every
+  // refresh - turning collapsibility off is what actually keeps Paid
+  // From/Paid To visible instead of collapsed behind a "Accounts" header.
+  const accountsSection = frm.fields_dict.payment_accounts_section;
+  if (accountsSection) {
+    accountsSection.df.collapsible = 0;
+    accountsSection.collapse(false);
+  }
+
+  // Move Paid Amount and Paid To back to their native spots. received_amount
+  // and paid_to_account_type are plain fields neither flow above ever
+  // relocates, so anchoring on their (always-in-place) wrappers reaches each
+  // field's real original position regardless of how it got moved around -
+  // the same trick gpeApplySupplierPaymentVisibility already uses for
+  // paid_to.
+  const paidAmountField = frm.get_field('paid_amount');
+  const receivedAmountField = frm.get_field('received_amount');
+  if (paidAmountField && receivedAmountField) {
+    paidAmountField.$wrapper.insertBefore(receivedAmountField.$wrapper);
+  }
+
+  const paidToField = frm.get_field('paid_to');
+  const paidToAccountTypeField = frm.get_field('paid_to_account_type');
+  if (paidToField && paidToAccountTypeField) {
+    paidToField.$wrapper.appendTo(paidToAccountTypeField.$wrapper.parent());
+  }
+};
+
 // Delivery Note: mirrors the same "hide sections this garage never uses"
 // treatment already applied to Sales Invoice above - Delivery Note is
 // created straight from a Sales Invoice/Service Order here, always same
@@ -1334,6 +1384,7 @@ frappe.ui.form.on('Payment Entry', {
   refresh(frm) {
     gpeApplyFieldVisibility(frm);
     gpeApplySupplierPaymentVisibility(frm);
+    gpeResetFieldVisibility(frm);
     gpeRenderSourceInfo(frm);
     // Only Cash and Wire Transfer are valid payment methods for this
     // garage - other Mode of Payment masters (Cheque, Credit Card, Bank
@@ -1357,10 +1408,12 @@ frappe.ui.form.on('Payment Entry', {
   party_type(frm) {
     gpeApplyFieldVisibility(frm);
     gpeApplySupplierPaymentVisibility(frm);
+    gpeResetFieldVisibility(frm);
   },
   payment_type(frm) {
     gpeApplyFieldVisibility(frm);
     gpeApplySupplierPaymentVisibility(frm);
+    gpeResetFieldVisibility(frm);
   },
   mode_of_payment(frm) {
     if (!frm.doc.mode_of_payment && frm.doc.paid_to) frm.set_value('paid_to', '');

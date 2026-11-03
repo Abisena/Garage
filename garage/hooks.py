@@ -41,7 +41,7 @@ app_include_js = [
     # Garage Settings.enable_reset_test_data_button - which is why the
     # button reappeared on production for Administrator in one browser
     # while the setting was already off.
-    "/assets/garage/js/garage_theme.js?v=86",
+    "/assets/garage/js/garage_theme.js?v=87",
     # Patches frappe.data_import.DataExporter the moment its lazily-required
     # bundle defines it, so it has to be loaded with the desk, not per doctype.
     "/assets/garage/js/export_template.js?v=3",
