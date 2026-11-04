@@ -1390,6 +1390,7 @@ body[data-route*="Repair QC"] [data-fieldname="spare_parts_verification"] .frapp
 .pe-c-party,
 .pe-c-plate,
 .pe-c-type,
+.pe-c-amount,
 .pe-c-date,
 .pe-c-mode,
 .pe-c-badge,
@@ -1406,6 +1407,7 @@ body[data-route*="Repair QC"] [data-fieldname="spare_parts_verification"] .frapp
 .pe-c-party     { flex: 2.2 1 0%; font-size: 13px; font-weight: 700; }
 .pe-c-plate     { flex: 1.5 1 0%; font-weight: 600; letter-spacing: 0.03em; }
 .pe-c-type      { flex: 1.6 1 0%; color: var(--g-text-muted); }
+.pe-c-amount    { flex: 1.8 1 0%; font-weight: 700; text-align: right; }
 .pe-c-date      { flex: 1.3 1 0%; color: var(--g-text-muted); }
 .pe-c-mode      { flex: 1.8 1 0%; color: var(--g-text-muted); }
 .pe-c-badge     { flex: 1.3 1 0%; font-size: 10.5px; font-weight: 700;

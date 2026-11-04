@@ -22,6 +22,7 @@
         <span class="pe-c-party pe-hdr">PARTY</span>
         <span class="pe-c-plate pe-hdr">NO. POLISI</span>
         <span class="pe-c-type pe-hdr">TIPE PEMBAYARAN</span>
+        <span class="pe-c-amount pe-hdr">AMOUNT</span>
         <span class="pe-c-date pe-hdr">TANGGAL</span>
         <span class="pe-c-mode pe-hdr">METODE PEMBAYARAN</span>
         <span class="pe-c-badge pe-hdr">STATUS</span>
@@ -34,6 +35,16 @@
         const party = doc.title || doc.party || doc.name;
         const plate = doc.no_polisi || "";
         const type  = doc.payment_type || "";
+        // "Receive" moves money in the Received Amount currency (paid_to's
+        // account), every other type (Pay/Internal Transfer) moves it in
+        // Paid Amount's (paid_from's account) - showing whichever one is
+        // this entry's own "money actually moved" figure, not always the
+        // same field, same convention core ERPNext's own Payment Entry
+        // print/PDF uses for its headline amount.
+        const amount = doc.payment_type === 'Receive' ? doc.received_amount : doc.paid_amount;
+        const amount_currency = doc.payment_type === 'Receive'
+            ? doc.paid_to_account_currency
+            : doc.paid_from_account_currency;
         const date  = doc.posting_date ? frappe.datetime.str_to_user(doc.posting_date) : "";
         const mode  = doc.mode_of_payment || "";
         const ago   = doc.modified ? frappe.datetime.comment_when(doc.modified, true) : "";
@@ -53,6 +64,7 @@
             <span class="pe-c-party">${esc(party)}</span>
             <span class="pe-c-plate">${plate ? esc(plate) : '<span style="color:#cbd5e1;">&mdash;</span>'}</span>
             <span class="pe-c-type">${esc(type)}</span>
+            <span class="pe-c-amount">${format_currency(amount || 0, amount_currency)}</span>
             <span class="pe-c-date">${esc(date)}</span>
             <span class="pe-c-mode">${mode ? esc(mode) : '<span style="color:#cbd5e1;">&mdash;</span>'}</span>
             <span class="pe-c-badge" style="background:${s.bg};color:${s.fg};">${s.label}</span>
@@ -131,6 +143,7 @@
         add_fields: Array.from(new Set([
             ...(existing.add_fields || []),
             "title", "party", "no_polisi", "payment_type", "posting_date", "mode_of_payment", "docstatus",
+            "paid_amount", "received_amount", "paid_from_account_currency", "paid_to_account_currency",
         ])),
         onload(lv) {
             if (existing_onload) existing_onload(lv);
@@ -154,5 +167,6 @@
     // doctype affected by this quirk.
     garage.registerListRenderOverride("Payment Entry", render, [
         "title", "party", "no_polisi", "payment_type", "posting_date", "mode_of_payment",
+        "paid_amount", "received_amount", "paid_from_account_currency", "paid_to_account_currency",
     ]);
 })();
