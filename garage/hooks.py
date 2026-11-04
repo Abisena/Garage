@@ -297,6 +297,9 @@ override_whitelisted_methods = {
     "erpnext.selling.doctype.sales_order.sales_order.make_sales_invoice": (
         "garage.utils.sales_order_invoice_hooks.make_sales_invoice_with_vehicle"
     ),
+    "erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.create_journal_entry_bts": (
+        "garage.utils.bank_reconciliation_hooks.create_journal_entry_bts_with_party_outstanding"
+    ),
 }
 #
 # each overriding function accepts a `data` argument;
