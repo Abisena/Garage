@@ -5806,21 +5806,5 @@
   "property_type": "Text",
   "row_name": null,
   "value": "\nSales\nMaintenance\nShopping Cart\nNon Spare Part"
- },
- {
-  "default_value": null,
-  "doc_type": "Purchase Order",
-  "docstatus": 0,
-  "doctype": "Property Setter",
-  "doctype_or_field": "DocField",
-  "field_name": "is_internal_supplier",
-  "is_system_generated": 0,
-  "modified": "2026-11-03 00:00:00.000000",
-  "module": null,
-  "name": "Purchase Order-is_internal_supplier-hidden",
-  "property": "hidden",
-  "property_type": "Check",
-  "row_name": null,
-  "value": "1"
  }
 ]
