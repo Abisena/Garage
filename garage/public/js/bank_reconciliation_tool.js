@@ -924,6 +924,25 @@ function toggle_primary_action(dialog_manager, excess) {
 // update_live_allocation()'s own semantics: Allocated/Unallocated Amount
 // are shown as what they will become AFTER this voucher, not the
 // transaction's standing figures.
+// Link/Dynamic Link controls' own get_value() (frappe/form/controls/base_
+// control.js) returns the LIVE <input> text while the field is focused/
+// being typed into - not the last actually-selected value - so polling
+// it mid-keystroke made every keystroke look like a brand new Account/
+// Party, each one round-tripping to the server and then calling
+// dialog.set_value() on Allocated/Unallocated Amount. That set_value()
+// triggers Frappe's own cross-field refresh_dependency() pass across the
+// WHOLE dialog (several other fields here are depends_on/mandatory_
+// depends_on-gated), which re-renders every control - Account's own
+// input included - from its real, still-empty committed value, wiping
+// out whatever the user had just typed before they could finish picking
+// an option. Skipping every tick the user is actively focused inside
+// Account/Party Type/Party avoids both the bogus per-keystroke "change"
+// AND the disruptive refresh it was causing.
+function is_focused_inside(control) {
+    const el = control && control.$wrapper && control.$wrapper[0];
+    return !!(el && document.activeElement && el.contains(document.activeElement));
+}
+
 function bind_create_voucher_preview(frm) {
     const dialog_manager = frm.bank_reconciliation_data_table_manager
         && frm.bank_reconciliation_data_table_manager.dialog_manager;
@@ -932,6 +951,14 @@ function bind_create_voucher_preview(frm) {
 
     const control = dialog.fields_dict.unallocated_amount;
     if (!control) return;
+
+    if (
+        is_focused_inside(dialog.fields_dict.second_account)
+        || is_focused_inside(dialog.fields_dict.party_type)
+        || is_focused_inside(dialog.fields_dict.party)
+    ) {
+        return;
+    }
 
     const action = dialog.get_value('action');
     const document_type = dialog.get_value('document_type');
