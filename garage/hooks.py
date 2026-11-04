@@ -26,7 +26,7 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 app_include_css = [
-    "/assets/garage/css/garage_desk.css?v=372",
+    "/assets/garage/css/garage_desk.css?v=373",
     # Must stay after garage_desk.css: it re-scopes that file's app-wide
     # label-left/input-right control layout back to label-above-input for
     # the Export Data dialog, and both sides use !important.

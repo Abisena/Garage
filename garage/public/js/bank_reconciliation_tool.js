@@ -539,6 +539,7 @@ function watch_reconcile_dialog(frm) {
         fix_voucher_table_columns(frm);
         flatten_description_scrollbar();
         align_detail_field_inputs();
+        bind_create_voucher_preview(frm);
     }, 400);
 }
 
@@ -907,6 +908,114 @@ function toggle_primary_action(dialog_manager, excess) {
     const action = dialog_manager.dialog.get_value('action');
     const should_block = action === 'Match Against Voucher' && excess > 0.005;
     dialog_manager.dialog.get_primary_btn().prop('disabled', should_block);
+}
+
+// "Create Voucher" + Journal Entry mode has the exact same blind spot
+// Match Against Voucher mode had before update_live_allocation() above
+// was built: picking Account/Party Type/Party doesn't touch Allocated/
+// Unallocated Amount at all client-side either - those stay frozen at
+// whatever the transaction's OWN prior-reconciliation state already was,
+// giving no preview of what THIS voucher is actually about to post
+// (garage.utils.bank_reconciliation_hooks.create_journal_entry_bts_with_
+// party_outstanding now caps it at the selected party's real outstanding
+// balance server-side - explicit user request after that cap was invisible
+// in the dialog itself, leaving staff unable to tell Rp 508,736 was about
+// to be journaled instead of the Rp 1,178,736 still shown here). Mirrors
+// update_live_allocation()'s own semantics: Allocated/Unallocated Amount
+// are shown as what they will become AFTER this voucher, not the
+// transaction's standing figures.
+function bind_create_voucher_preview(frm) {
+    const dialog_manager = frm.bank_reconciliation_data_table_manager
+        && frm.bank_reconciliation_data_table_manager.dialog_manager;
+    const dialog = dialog_manager && dialog_manager.dialog;
+    if (!dialog) return;
+
+    const control = dialog.fields_dict.unallocated_amount;
+    if (!control) return;
+
+    const action = dialog.get_value('action');
+    const document_type = dialog.get_value('document_type');
+    const second_account = dialog.get_value('second_account');
+    const party_type = dialog.get_value('party_type');
+    const party = dialog.get_value('party');
+
+    const is_create_journal_voucher = action === 'Create Voucher' && document_type === 'Journal Entry';
+
+    if (!is_create_journal_voucher || !second_account) {
+        if (dialog_manager.__grs_cv_cache_key) {
+            dialog_manager.__grs_cv_cache_key = null;
+            clear_create_voucher_preview(dialog_manager, control);
+        }
+        return;
+    }
+
+    // Only one Account/Party combination actually needs a fresh server
+    // round trip - re-asking on every 400ms tick this interval already
+    // runs at would hammer the server for nothing once nothing's changed.
+    const cache_key = [dialog_manager.bank_transaction_name, second_account, party_type, party].join('|');
+    if (dialog_manager.__grs_cv_cache_key === cache_key) return;
+    dialog_manager.__grs_cv_cache_key = cache_key;
+
+    frappe.call({
+        method: 'garage.utils.bank_reconciliation_hooks.get_create_voucher_preview_amount',
+        args: {
+            bank_transaction_name: dialog_manager.bank_transaction_name,
+            second_account,
+            party_type,
+            party,
+        },
+        callback: (r) => {
+            if (!r.message) return;
+            // The user may have changed Account/Party again, or switched
+            // away from Create Voucher + Journal Entry, while this call
+            // was in flight - only apply a response that still matches
+            // what's currently selected.
+            if (dialog_manager.__grs_cv_cache_key !== cache_key) return;
+            render_create_voucher_preview(dialog_manager, control, r.message);
+        },
+    });
+}
+
+function clear_create_voucher_preview(dialog_manager, control) {
+    control.$wrapper.find('.grs-voucher-amount-note').hide();
+    control.$wrapper.toggleClass('grs-over-allocated', false);
+    control.$wrapper.toggleClass('grs-fully-matched', false);
+
+    // Restores the transaction's own real Allocated/Unallocated Amount
+    // (not a projection) once the dialog is no longer previewing a
+    // Create Voucher + Journal Entry voucher - otherwise switching Action/
+    // Document Type away leaves the last projected figures on screen,
+    // looking like the transaction's own standing state.
+    const bt = dialog_manager.bank_transaction;
+    if (bt) {
+        dialog_manager.dialog.set_value('allocated_amount', flt(bt.allocated_amount));
+        dialog_manager.dialog.set_value('unallocated_amount', flt(bt.unallocated_amount));
+    }
+}
+
+function render_create_voucher_preview(dialog_manager, control, data) {
+    const currency = dialog_manager.bank_transaction && dialog_manager.bank_transaction.currency;
+    const amount = flt(data.amount);
+    const projected_allocated = flt(data.original_allocated_amount) + amount;
+    const projected_unallocated = Math.max(0, flt(data.original_unallocated_amount) - amount);
+
+    dialog_manager.dialog.set_value('allocated_amount', projected_allocated);
+    dialog_manager.dialog.set_value('unallocated_amount', projected_unallocated);
+    show_allocation_state(dialog_manager, projected_unallocated, 0);
+
+    let $note = control.$wrapper.find('.grs-voucher-amount-note');
+    if (!$note.length) {
+        $note = $('<div class="grs-voucher-amount-note"></div>').appendTo(control.$wrapper);
+    }
+    const formatted = format_currency(amount, currency);
+    const capped_by_party = data.account_type && ['Receivable', 'Payable'].includes(data.account_type);
+    $note
+        .text(
+            capped_by_party
+                ? __('Journal Entry akan dibuat senilai {0} (dibatasi saldo outstanding party ini).', [formatted])
+                : __('Journal Entry akan dibuat senilai {0}.', [formatted])
+        )
+        .show();
 }
 
 function fill_closing_balance(frm) {

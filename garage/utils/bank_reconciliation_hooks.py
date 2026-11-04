@@ -70,6 +70,35 @@ def _resolve_voucher_amount(bank_transaction, second_account, account_type, part
 
 
 @frappe.whitelist()
+def get_create_voucher_preview_amount(bank_transaction_name, second_account, party_type=None, party=None):
+    """Read-only preview for the dialog's own JS (bank_reconciliation_tool.js,
+    garage app) - explicit user request: the "Reconcile the Bank
+    Transaction" dialog's Allocated/Unallocated Amount fields looked
+    unchanged no matter what Account/Party got picked, so there was no way
+    to tell from the UI alone what amount Create Voucher was actually
+    about to post - staff had no way to catch a wrong figure before
+    submitting. Returns exactly what create_journal_entry_bts_with_party_
+    outstanding() above would use, so the dialog can show it live as the
+    user picks Account/Party Type/Party, before committing to anything."""
+    bank_transaction = frappe.db.get_values(
+        "Bank Transaction",
+        bank_transaction_name,
+        fieldname=["deposit", "withdrawal", "unallocated_amount", "allocated_amount"],
+        as_dict=True,
+    )[0]
+
+    account_type = frappe.db.get_value("Account", second_account, "account_type") if second_account else None
+    amount = _resolve_voucher_amount(bank_transaction, second_account, account_type, party_type, party)
+
+    return {
+        "amount": amount,
+        "account_type": account_type,
+        "original_allocated_amount": flt(bank_transaction.allocated_amount),
+        "original_unallocated_amount": flt(bank_transaction.unallocated_amount),
+    }
+
+
+@frappe.whitelist()
 def create_journal_entry_bts_with_party_outstanding(
     bank_transaction_name,
     reference_number=None,

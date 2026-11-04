@@ -7200,6 +7200,20 @@ body[data-route*="Bank Statement Import"] .dt-dropdown__toggle {
   letter-spacing: 0.04em;
 }
 
+/* "Create Voucher" + Journal Entry preview (render_create_voucher_preview()
+   in bank_reconciliation_tool.js) - states plainly, next to Unallocated
+   Amount, exactly what amount the Journal Entry about to be created will
+   use, since that can be smaller than the transaction's own withdrawal/
+   deposit once capped at the selected party's real outstanding balance. */
+.grs-reconcile-dialog .grs-voucher-amount-note {
+  display: none;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #1d4ed8;
+}
+
 /* read_only:1 fields (Date, Description, Allocated/Unallocated Amount -
    all of them here) never actually show their real <input>/<textarea> -
    base_input.js's refresh() hides input_area and shows disp_area (a plain
