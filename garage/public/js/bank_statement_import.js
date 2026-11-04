@@ -41,6 +41,7 @@ function watch_preview_datatable(frm) {
             simplify_date_header(frm);
             bind_preview_pagination(frm);
             add_preview_row_borders(frm);
+            render_preview_summary(frm);
         });
         frm.__bsip_observer.observe(node, { childList: true, subtree: true });
         frm.__bsip_node = node;
@@ -52,6 +53,96 @@ function watch_preview_datatable(frm) {
     add_preview_row_borders(frm);
     bind_preview_resize_listener(frm);
     bind_preview_pagination(frm);
+    render_preview_summary(frm);
+}
+
+// Explicit request: show Saldo Awal/Uang Masuk/Uang Keluar/Transaksi/Saldo
+// Akhir above the preview table, the same shape as the summary cards
+// shown on another Imogi site's own Bank Statement Import page - that
+// site's app isn't part of this codebase, so this is a fresh
+// implementation against this file's own data (get_cleaned_preview_summary,
+// garage.utils.bca_bank_statement_import), not a port of its code.
+// Totals come from the WHOLE cleaned file (every page), unlike the
+// datatable itself which only ever shows one page at a time - fetched
+// once per document and cached on frm, then just redrawn (no re-fetch)
+// whenever core's own make_wrapper() wipes this field's DOM out from
+// under us, same resilience pattern as bind_preview_pagination() above.
+function render_preview_summary(frm) {
+    const field = frm.get_field('import_preview');
+    if (!field || !field.$wrapper) return;
+    if (!frm.doc.name || frm.doc.name.startsWith('New ')) return;
+    if (field.$wrapper.find('.bsip-summary').length) return;
+
+    if (frm.__bsip_summary_doc !== frm.doc.name) {
+        frm.__bsip_summary_doc = frm.doc.name;
+        frm.__bsip_summary_data = null;
+    }
+
+    if (frm.__bsip_summary_data) {
+        draw_preview_summary(frm, field, frm.__bsip_summary_data);
+        return;
+    }
+
+    frappe.call({
+        method: 'garage.utils.bca_bank_statement_import.get_cleaned_preview_summary',
+        args: { bank_statement_import_name: frm.doc.name },
+        callback: (r) => {
+            if (!r.message || !r.message.transaction_count) return;
+            frm.__bsip_summary_data = r.message;
+            draw_preview_summary(frm, field, r.message);
+        },
+    });
+}
+
+function fmt_idr(value) {
+    return frappe.format(flt(value), { fieldtype: 'Currency', options: 'IDR' }, { only_value: true });
+}
+
+function summary_tile(label, value, color) {
+    return `
+        <div style="flex:1 1 140px; min-width:140px;">
+            <div style="
+                font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase;
+                letter-spacing:0.04em; margin-bottom:4px;
+            ">${label}</div>
+            <div style="font-size:18px; font-weight:700; color:${color || '#1a1d21'};">${value}</div>
+        </div>`;
+}
+
+function draw_preview_summary(frm, field, data) {
+    if (field.$wrapper.find('.bsip-summary').length) return;
+
+    const $summary = $(`
+        <div class="bsip-summary" style="
+            display:flex; flex-wrap:wrap; gap:20px;
+            background:#fff; border:1px solid #e5e7eb; border-radius:10px;
+            padding:16px 18px; margin-bottom:14px;
+        ">
+            ${summary_tile('Saldo Awal', fmt_idr(data.opening_balance))}
+            ${summary_tile('Uang Masuk', fmt_idr(data.total_deposit), '#16a34a')}
+            ${summary_tile('Uang Keluar', fmt_idr(data.total_withdrawal), '#dc2626')}
+            ${summary_tile('Transaksi', data.transaction_count)}
+            ${summary_tile('Saldo Akhir', fmt_idr(data.closing_balance))}
+        </div>
+    `);
+    field.$wrapper.prepend($summary);
+
+    // Rows still "PEND" (no settled date yet) never made it into the
+    // cleaned file at all (see clean_import_file()'s own doc.
+    // skipped_row_count) - called out here so it reads the same way as
+    // the reference design's own "N baris ... belum diproses" banner,
+    // reusing a field this doctype already tracks rather than adding a
+    // new one.
+    const skipped = cint(frm.doc.skipped_row_count);
+    if (skipped > 0) {
+        $(`
+            <div class="bsip-skipped-note" style="
+                display:flex; gap:10px; align-items:center;
+                background:#fff7ed; border:1px solid #fed7aa; border-radius:8px;
+                padding:8px 14px; margin-bottom:14px; font-size:12px; color:#9a3412;
+            ">${__('{0} baris masih berstatus PENDING di bank (belum settle, belum ada tanggal transaksi final) sehingga tidak ikut diimpor.', [skipped])}</div>
+        `).insertAfter(field.$wrapper.find('.bsip-summary'));
+    }
 }
 
 // Core's own Preview is hard-capped at 10 rows *server-side*

@@ -597,3 +597,73 @@ def get_cleaned_preview_page(bank_statement_import_name: str, page=1) -> dict:
         "page": page,
         "page_size": PREVIEW_PAGE_SIZE,
     }
+
+
+def _to_float(value: str) -> float:
+    value = (value or "").strip()
+    if not value:
+        return 0.0
+    try:
+        return float(value.replace(",", ""))
+    except ValueError:
+        return 0.0
+
+
+@frappe.whitelist()
+def get_cleaned_preview_summary(bank_statement_import_name: str) -> dict:
+    """Uang Masuk/Keluar/Transaksi/Saldo Awal/Saldo Akhir across the WHOLE
+    cleaned file - get_cleaned_preview_page() above only ever returns one
+    page's worth of rows, not enough to total up a multi-page statement.
+    Saldo Awal (opening balance) isn't a column BCA/Mandiri ever gives
+    directly - both only report a running Balance *after* each row - so
+    it's derived from the first row's own balance minus that same row's
+    own net movement, i.e. whatever balance must have existed right before
+    that first transaction posted.
+    """
+    empty = {
+        "total_deposit": 0.0,
+        "total_withdrawal": 0.0,
+        "transaction_count": 0,
+        "opening_balance": None,
+        "closing_balance": None,
+    }
+
+    file_url = frappe.db.get_value("Bank Statement Import", bank_statement_import_name, "import_file")
+    if not file_url:
+        return empty
+
+    try:
+        file_doc = frappe.get_doc("File", {"file_url": file_url})
+    except frappe.DoesNotExistError:
+        return empty
+
+    try:
+        with open(file_doc.get_full_path(), "r", encoding="utf-8", errors="replace") as f:
+            rows = list(csv.reader(f))
+    except OSError:
+        return empty
+
+    if not rows or [c.strip() for c in rows[0]] != CLEANED_HEADER:
+        return empty
+
+    data_rows = [r for r in rows[1:] if r]
+    if not data_rows:
+        return empty
+
+    total_deposit = sum(_to_float(r[2]) for r in data_rows)
+    total_withdrawal = sum(_to_float(r[3]) for r in data_rows)
+
+    first_deposit = _to_float(data_rows[0][2])
+    first_withdrawal = _to_float(data_rows[0][3])
+    first_balance = _to_float(data_rows[0][5])
+    opening_balance = first_balance - first_deposit + first_withdrawal
+
+    closing_balance = _to_float(data_rows[-1][5])
+
+    return {
+        "total_deposit": total_deposit,
+        "total_withdrawal": total_withdrawal,
+        "transaction_count": len(data_rows),
+        "opening_balance": opening_balance,
+        "closing_balance": closing_balance,
+    }
