@@ -1109,7 +1109,10 @@ doc_events = {
         "on_update": "garage.utils.sales_invoice_handler.handle_sales_invoice_paid",
     },
     "Payment Entry": {
-        "validate": "garage.utils.payment_hooks.sync_no_polisi",
+        "validate": [
+            "garage.utils.payment_hooks.sync_no_polisi",
+            "garage.utils.payment_hooks.default_bank_reference",
+        ],
         "on_update": "garage.utils.vehicle_handover.handle_paid_payment_entry",
         "on_submit": "garage.utils.payment_hooks.handle_payment_entry_submit",
         "before_cancel": "garage.utils.reconciliation_guard.block_cancel_if_reconciled",

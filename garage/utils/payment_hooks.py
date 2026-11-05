@@ -69,6 +69,36 @@ def _resolve_vehicle_from_garage_sales_invoice(invoice_name: str) -> Optional[st
     return frappe.db.get_value("Garage Service Order", invoice.source_name, "vehicle")
 
 
+def default_bank_reference(doc, method=None) -> None:
+    """Server-side mirror of garage_theme.js's own reference_no/reference_
+    date fallback (gpeApplyFieldVisibility/gpeApplySupplierPaymentVisibility
+    there both default these to posting_date for the same two shapes below,
+    alongside hiding the Transaction ID section entirely since this garage
+    takes cash/QRIS at the counter and doesn't track real bank references
+    per transaction).
+
+    That client-side default only ever runs once a human opens the form in
+    a browser - a Payment Entry created straight server-side (e.g. the
+    bulk "Create Payment" action on a Purchase Invoice list, erpnext.
+    bulk_transaction_processing) never gets it, and then fails to submit
+    with "Reference No and Reference Date is mandatory for Bank
+    transaction" - with no way to even see/fix the field by hand, since
+    that section stays hidden here regardless of how the document was
+    created. Reported case: three Payment Entries bulk-created against
+    Bank BCA (an Account Type "Bank" account) all stuck on submit with
+    reference_date set but reference_no still blank.
+    """
+    is_receive_customer = doc.payment_type == "Receive" and doc.party_type == "Customer"
+    is_pay_supplier = doc.payment_type == "Pay" and doc.party_type == "Supplier"
+    if not (is_receive_customer or is_pay_supplier):
+        return
+
+    if not doc.reference_no:
+        doc.reference_no = doc.posting_date
+    if not doc.reference_date:
+        doc.reference_date = doc.posting_date
+
+
 def handle_payment_entry_submit(doc, _method=None) -> None:
     """Complete service orders when Payment Entry fully pays linked invoices."""
 
