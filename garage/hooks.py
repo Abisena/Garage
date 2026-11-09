@@ -44,7 +44,7 @@ app_include_js = [
     "/assets/garage/js/garage_theme.js?v=87",
     # Patches frappe.data_import.DataExporter the moment its lazily-required
     # bundle defines it, so it has to be loaded with the desk, not per doctype.
-    "/assets/garage/js/export_template.js?v=3",
+    "/assets/garage/js/export_template.js?v=4",
 ]
 
 # include js, css files in header of web template

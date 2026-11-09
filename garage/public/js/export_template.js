@@ -311,13 +311,27 @@ frappe.provide("garage.export_template");
 				if (template.file_type) {
 					this.dialog.set_value("file_type", template.file_type);
 				}
-				if (template.export_records) {
-					this.dialog.set_value("export_records", template.export_records);
-				}
 
-				if (this.filter_group) {
-					this.filter_group.clear_filters();
-					this.filter_group.add_filters_to_filter_group(template.export_filters || []);
+				// Opening Export Data from a list view with rows checked
+				// pre-fills export_records="by_filter" plus a "Name in
+				// [those rows]" filter before the user touches anything -
+				// loading a template used to overwrite both unconditionally
+				// with whatever that template happened to be saved with
+				// (reported case: exporting 3 hand-picked Purchase Invoices,
+				// loading a field-selection template silently swapped that
+				// scope for "All Records", exporting all 112 instead of the
+				// 3 actually selected). A template is still fully applied
+				// (export type + filters included) when opened normally -
+				// only an explicit row selection already in progress is
+				// protected from being silently discarded.
+				if (!this.garage_has_explicit_row_selection()) {
+					if (template.export_records) {
+						this.dialog.set_value("export_records", template.export_records);
+					}
+					if (this.filter_group) {
+						this.filter_group.clear_filters();
+						this.filter_group.add_filters_to_filter_group(template.export_filters || []);
+					}
 				}
 
 				const { missing } = this.garage_apply_field_selection(
@@ -341,6 +355,22 @@ frappe.provide("garage.export_template");
 						7
 					);
 				}
+			},
+
+			// True when the dialog is currently scoped to a hand-picked set
+			// of rows (list view "select some rows -> Actions -> Export"),
+			// detected by its own tell: export_records="by_filter" plus a
+			// filter on "name" with operator "in" - exactly what that path
+			// pre-fills and nothing else normally produces. filter_list.js's
+			// own get_filters() returns [doctype, fieldname, operator,
+			// value] tuples.
+			garage_has_explicit_row_selection() {
+				if (this.dialog.get_value("export_records") !== "by_filter") return false;
+				if (!this.filter_group || !this.filter_group.get_filters) return false;
+
+				return this.filter_group
+					.get_filters()
+					.some((f) => f[1] === "name" && cstr(f[2]).toLowerCase() === "in");
 			},
 
 			garage_save_template() {
