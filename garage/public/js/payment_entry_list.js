@@ -26,8 +26,35 @@
         <span class="pe-c-date pe-hdr">TANGGAL</span>
         <span class="pe-c-mode pe-hdr">METODE PEMBAYARAN</span>
         <span class="pe-c-badge pe-hdr">STATUS</span>
+        <span class="pe-c-recon pe-hdr">RECON</span>
         <span class="pe-c-ago pe-hdr"></span>
     </div>`;
+
+    // "Reconciled" here means core ERPNext's own bank-reconciliation sense,
+    // not just "Submitted": Payment Entry's clearance_date (a real,
+    // standard field - see erpnext/accounts/doctype/payment_entry/
+    // payment_entry.json) only gets set by bank_transaction.py's own
+    // clear_linked_payment_entry(), the moment this exact payment is
+    // actually matched against a real bank transaction in the Bank
+    // Reconciliation Tool. garage_theme.js hides that field on the form
+    // entirely for the Receive/Customer flow ("bank-clearing field, not
+    // used" - true for the counter-cash flow that comment was written for,
+    // but plenty of Payment Entries here DO go through real bank
+    // reconciliation) - explicit request after staff had no way to tell
+    // reconciled Submitted entries apart from ones still sitting
+    // unmatched against the bank statement.
+    function recon_badge(doc) {
+        if (Number(doc.docstatus) !== 1) {
+            return '<span class="pe-c-recon" style="color:#cbd5e1;">&mdash;</span>';
+        }
+        if (doc.clearance_date) {
+            const cleared = frappe.datetime.str_to_user(doc.clearance_date);
+            return `<span class="pe-c-recon pe-c-recon-yes" title="${esc(
+                __('Reconciled {0}', [cleared])
+            )}">${esc(__('Reconciled'))}</span>`;
+        }
+        return `<span class="pe-c-recon pe-c-recon-no">${esc(__('Unreconciled'))}</span>`;
+    }
 
     function card(doc) {
         const s = STATUS[String(doc.docstatus)] || STATUS["0"];
@@ -68,6 +95,7 @@
             <span class="pe-c-date">${esc(date)}</span>
             <span class="pe-c-mode">${mode ? esc(mode) : '<span style="color:#cbd5e1;">&mdash;</span>'}</span>
             <span class="pe-c-badge" style="background:${s.bg};color:${s.fg};">${s.label}</span>
+            ${recon_badge(doc)}
             <span class="pe-c-ago">${ago}</span>
         </div>`;
     }
@@ -144,6 +172,7 @@
             ...(existing.add_fields || []),
             "title", "party", "no_polisi", "payment_type", "posting_date", "mode_of_payment", "docstatus",
             "paid_amount", "received_amount", "paid_from_account_currency", "paid_to_account_currency",
+            "clearance_date",
         ])),
         onload(lv) {
             if (existing_onload) existing_onload(lv);
@@ -168,5 +197,6 @@
     garage.registerListRenderOverride("Payment Entry", render, [
         "title", "party", "no_polisi", "payment_type", "posting_date", "mode_of_payment",
         "paid_amount", "received_amount", "paid_from_account_currency", "paid_to_account_currency",
+        "clearance_date",
     ]);
 })();
