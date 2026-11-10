@@ -1431,6 +1431,17 @@ body[data-route*="Repair QC"] [data-fieldname="spare_parts_verification"] .frapp
   padding: 0 !important;
 }
 
+/* AMOUNT/AGO's own data cells sit right-aligned (a currency value, a
+   relative timestamp) - the header LABEL inheriting that same right
+   alignment pushed it flush against the next column's left-aligned
+   label with no breathing room (AMOUNT crowding straight into TANGGAL),
+   unlike every other header here, which stays left-aligned regardless
+   of what its own column's data does. */
+.pe-c-amount.pe-hdr,
+.pe-c-ago.pe-hdr {
+  text-align: left !important;
+}
+
 /* ── Vehicle Handover Card List View (vehicle_handover_list.js) ── */
 
 .vh-list .list-row {
