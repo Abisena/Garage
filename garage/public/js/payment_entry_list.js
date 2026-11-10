@@ -19,10 +19,10 @@
     ">
         <div style="flex:0 0 36px;"></div>
         <span class="pe-c-id pe-hdr">ID</span>
-        <span class="pe-c-party pe-hdr">PARTY</span>
+        <span class="pe-c-party pe-hdr">PIHAK</span>
         <span class="pe-c-plate pe-hdr">NO. POLISI</span>
         <span class="pe-c-type pe-hdr">TIPE PEMBAYARAN</span>
-        <span class="pe-c-amount pe-hdr">AMOUNT</span>
+        <span class="pe-c-amount pe-hdr">JUMLAH</span>
         <span class="pe-c-date pe-hdr">TANGGAL</span>
         <span class="pe-c-mode pe-hdr">METODE</span>
         <span class="pe-c-badge pe-hdr">STATUS</span>
