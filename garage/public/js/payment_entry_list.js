@@ -24,7 +24,7 @@
         <span class="pe-c-type pe-hdr">TIPE PEMBAYARAN</span>
         <span class="pe-c-amount pe-hdr">AMOUNT</span>
         <span class="pe-c-date pe-hdr">TANGGAL</span>
-        <span class="pe-c-mode pe-hdr">METODE PEMBAYARAN</span>
+        <span class="pe-c-mode pe-hdr">METODE</span>
         <span class="pe-c-badge pe-hdr">STATUS</span>
         <span class="pe-c-recon pe-hdr">RECON</span>
         <span class="pe-c-ago pe-hdr"></span>
