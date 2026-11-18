@@ -27,7 +27,7 @@
   "recipients": [
    {
     "bcc": null,
-    "cc": null,
+    "cc": "unaisahnai6@gmail.com, zulfikaraditia@cao-group.co.id, abisena1123@gmail.com",
     "condition": null,
     "parent": "Purchase Order Butuh Approval",
     "parentfield": "recipients",
